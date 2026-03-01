@@ -41,7 +41,17 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
       .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)) // ✅
       .authorizeHttpRequests(auth -> auth
           .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-          .requestMatchers("/auth/**", "/oauth2/**", "/login/**", "/error").permitAll()
+          .requestMatchers(
+              "/auth/register",
+              "/auth/login",
+              "/auth/forgot-password",
+              "/auth/reset-password",
+              "/auth/verify-email",
+              "/auth/resend-verification",
+              "/oauth2/**",
+              "/login/**",
+              "/error"
+          ).permitAll()
           .anyRequest().authenticated()
       )
       .oauth2Login(oauth -> oauth.successHandler(oAuth2SuccessHandler)) // ✅ TON handler

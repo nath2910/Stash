@@ -7,7 +7,7 @@
           @click="goBack"
           class="inline-flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-xs font-medium text-slate-200 transition hover:border-violet-400/50 hover:text-white"
         >
-          <span class="text-sm">←</span>
+          <span class="text-sm"><-</span>
           <span>Retour</span>
         </button>
       </div>
@@ -158,8 +158,6 @@
               {{ loading ? 'Modification...' : 'Mettre a jour' }}
             </button>
           </form>
-
-          
         </section>
       </div>
     </div>

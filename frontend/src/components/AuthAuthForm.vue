@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="min-h-screen overflow-hidden bg-slate-950 px-4 py-4 sm:py-6 flex items-center">
     <div class="mx-auto w-full max-w-5xl">
       <div class="grid items-center gap-6 md:grid-cols-[0.9fr_1.1fr]">
@@ -360,7 +360,7 @@ const submitLogin = async () => {
 
     setAuth({ user, token })
 
-    success.value = 'Connexion reussie '
+    success.value = 'Connexion reussie'
     await router.replace({ name: 'home' })
   } catch (err) {
     console.error(err)
@@ -397,8 +397,11 @@ const submitSignup = async () => {
   }
 }
 
+const googleAuthUrl =
+  import.meta.env.VITE_GOOGLE_OAUTH_URL ||
+  'https://governing-irina-sneaknik-1b4023c1.koyeb.app/oauth2/authorization/google'
+
 const loginWithGoogle = () => {
-  window.location.href =
-    'https://governing-irina-sneaknik-1b4023c1.koyeb.app/oauth2/authorization/google'
+  window.location.href = googleAuthUrl
 }
 </script>

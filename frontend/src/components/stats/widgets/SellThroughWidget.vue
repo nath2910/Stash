@@ -52,7 +52,12 @@ import { normalizeKpi, normalizeSeries } from '@/services/statsAdapters'
 import { formatDateFR, formatPct } from '@/utils/formatters'
 import KpiCard from './_parts/KpiCard.vue'
 
-const props = defineProps({ from: String, to: String, bucket: { type: String, default: 'week' } })
+const props = defineProps({
+  from: String,
+  to: String,
+  bucket: { type: String, default: 'week' },
+  categories: { type: Array, default: () => [] },
+})
 const accent = '#38BDF8'
 const target = 50
 
@@ -68,8 +73,8 @@ async function load() {
   error.value = ''
   try {
     const [k, s] = await Promise.all([
-      StatsServices.kpi('sellThrough', props.from, props.to),
-      StatsServices.series('sellThrough', props.from, props.to, props.bucket),
+      StatsServices.kpi('sellThrough', props.from, props.to, props.categories),
+      StatsServices.series('sellThrough', props.from, props.to, props.bucket, props.categories),
     ])
     if (id !== req) return
     kpi.value = normalizeKpi(k.data)
@@ -83,7 +88,7 @@ async function load() {
 }
 
 onMounted(load)
-watch(() => [props.from, props.to, props.bucket], load)
+watch(() => [props.from, props.to, props.bucket, props.categories], load)
 
 const valueText = computed(() => formatPct(kpi.value.value, { digits: 1 }))
 const spark = computed(() => series.value.slice(-18).map((p) => p.value))

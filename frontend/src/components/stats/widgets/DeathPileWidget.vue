@@ -48,7 +48,11 @@ import { normalizeBreakdown } from '@/services/statsAdapters'
 import { formatDateFR, formatNumber } from '@/utils/formatters'
 import WidgetCard from './_parts/WidgetCard.vue'
 
-const props = defineProps({ from: String, to: String })
+const props = defineProps({
+  from: String,
+  to: String,
+  categories: { type: Array, default: () => [] },
+})
 const accent = '#EF4444'
 
 const loading = ref(false)
@@ -61,7 +65,12 @@ async function load() {
   loading.value = true
   error.value = ''
   try {
-    const { data } = await StatsServices.breakdown('deathPileAge', props.from, props.to)
+    const { data } = await StatsServices.breakdown(
+      'deathPileAge',
+      props.from,
+      props.to,
+      props.categories,
+    )
     if (id !== req) return
     buckets.value = normalizeBreakdown(data)
   } catch (e) {
@@ -73,7 +82,7 @@ async function load() {
 }
 
 onMounted(load)
-watch(() => [props.from, props.to], load)
+watch(() => [props.from, props.to, props.categories], load)
 
 function formatLabel(raw) {
   const s = String(raw ?? '').trim()

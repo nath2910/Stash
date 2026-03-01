@@ -78,7 +78,12 @@ import { normalizeKpi, normalizeSeries, parseYmdLocal } from '@/services/statsAd
 import { formatDateFR, formatEUR, signFmt } from '@/utils/formatters'
 import WidgetCard from './_parts/WidgetCard.vue'
 
-const props = defineProps({ from: String, to: String, bucket: { type: String, default: 'day' } })
+const props = defineProps({
+  from: String,
+  to: String,
+  bucket: { type: String, default: 'day' },
+  categories: { type: Array, default: () => [] },
+})
 const accent = '#3B82F6'
 
 const loading = ref(false)
@@ -103,8 +108,8 @@ async function load() {
   error.value = ''
   try {
     const [k, s] = await Promise.all([
-      StatsServices.kpi('grossRevenue', props.from, props.to),
-      StatsServices.series('grossRevenue', props.from, props.to, effectiveBucket.value),
+      StatsServices.kpi('grossRevenue', props.from, props.to, props.categories),
+      StatsServices.series('grossRevenue', props.from, props.to, effectiveBucket.value, props.categories),
     ])
     if (id !== req) return
     kpi.value = normalizeKpi(k.data)
@@ -118,7 +123,7 @@ async function load() {
 }
 
 onMounted(load)
-watch(() => [props.from, props.to, props.bucket, effectiveBucket.value], load)
+watch(() => [props.from, props.to, props.bucket, effectiveBucket.value, props.categories], load)
 
 const totalValue = computed(() => {
   const k = Number(kpi.value.value ?? 0)

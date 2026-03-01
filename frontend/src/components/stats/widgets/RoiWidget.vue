@@ -63,7 +63,11 @@ import { normalizeKpi, normalizeRank, prevPeriod } from '@/services/statsAdapter
 import { formatDateFR, formatEUR, formatPct, signFmt } from '@/utils/formatters'
 import WidgetCard from './_parts/WidgetCard.vue'
 
-const props = defineProps({ from: String, to: String })
+const props = defineProps({
+  from: String,
+  to: String,
+  categories: { type: Array, default: () => [] },
+})
 const accent = '#8B5CF6'
 const loading = ref(false)
 const error = ref('')
@@ -79,9 +83,9 @@ async function load() {
   try {
     const { from: prevFrom, to: prevTo } = prevPeriod(props.from, props.to)
     const [k, kPrev, c] = await Promise.all([
-      StatsServices.kpi('roi', props.from, props.to),
-      StatsServices.kpi('roi', prevFrom, prevTo),
-      StatsServices.rank('topCategoriesProfit', props.from, props.to, 4),
+      StatsServices.kpi('roi', props.from, props.to, props.categories),
+      StatsServices.kpi('roi', prevFrom, prevTo, props.categories),
+      StatsServices.rank('topCategoriesProfit', props.from, props.to, 4, props.categories),
     ])
     if (id !== req) return
     kpi.value = normalizeKpi(k.data)
@@ -96,7 +100,7 @@ async function load() {
 }
 
 onMounted(load)
-watch(() => [props.from, props.to], load)
+watch(() => [props.from, props.to, props.categories], load)
 
 const roiText = computed(() => formatPct(kpi.value.value, { digits: 1 }))
 const deltaPts = computed(() => {

@@ -1,7 +1,6 @@
 import api from './api'
 
-//permet d'envoyer des requetes concernant les comptes et l'authetification vers le back
-
+// permet d'envoyer des requetes concernant les comptes et l'authetification vers le back
 class AuthService {
   async register(payload) {
     // payload = { email, password, firstName, lastName, ... } selon ton RegisterRequest
@@ -22,8 +21,10 @@ class AuthService {
     token = token || res.data?.token || res.data?.accessToken
 
     if (!token) {
-      console.error('Réponse login:', res.data, res.headers)
-      throw new Error('Token manquant dans la réponse /auth/login')
+      if (import.meta.env.DEV) {
+        console.error('Reponse login:', res.data, res.headers)
+      }
+      throw new Error('Token manquant dans la reponse /auth/login')
     }
 
     const user = res.data?.user ?? res.data?.utilisateur ?? null
@@ -57,12 +58,12 @@ class AuthService {
   }
 
   async verifyEmail(payload) {
-    const res = await api.get('/auth/verify-email', { params: { token: payload.token } }) // attente du back 
-    const token = res.data?.token || res.data?.accessToken || null // decoupage en token et user
+    const res = await api.get('/auth/verify-email', { params: { token: payload.token } })
+    const token = res.data?.token || res.data?.accessToken || null
     const user = res.data?.user ?? res.data?.utilisateur ?? null
 
     if (token) {
-      localStorage.setItem('snk_token', token) //stockage du token 
+      localStorage.setItem('snk_token', token)
     }
     if (user) {
       localStorage.setItem('snk_user', JSON.stringify(user))

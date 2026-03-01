@@ -47,7 +47,12 @@ import { normalizeKpi, normalizeSeries, normalizeTopSales } from '@/services/sta
 import { formatDateFR, formatEUR, signFmt } from '@/utils/formatters'
 import KpiCard from './_parts/KpiCard.vue'
 
-const props = defineProps({ from: String, to: String, bucket: { type: String, default: 'week' } })
+const props = defineProps({
+  from: String,
+  to: String,
+  bucket: { type: String, default: 'week' },
+  categories: { type: Array, default: () => [] },
+})
 const accent = '#F59E0B'
 
 const loading = ref(false)
@@ -70,9 +75,9 @@ async function load() {
   error.value = ''
   try {
     const [k, s, t] = await Promise.all([
-      StatsServices.kpi('avgMargin', props.from, props.to),
-      StatsServices.series('avgMargin', props.from, props.to, props.bucket),
-      StatsServices.topSales(props.from, props.to, 3),
+      StatsServices.kpi('avgMargin', props.from, props.to, props.categories),
+      StatsServices.series('avgMargin', props.from, props.to, props.bucket, props.categories),
+      StatsServices.topSales(props.from, props.to, 3, props.categories),
     ])
     if (id !== req) return
     kpi.value = normalizeKpi(k.data)
@@ -87,7 +92,7 @@ async function load() {
 }
 
 onMounted(load)
-watch(() => [props.from, props.to, props.bucket], load)
+watch(() => [props.from, props.to, props.bucket, props.categories], load)
 
 const valueText = computed(() => formatEUR(kpi.value.value, { compact: true }))
 const deltaText = computed(() => (kpi.value.deltaPct == null ? '' : signFmt(kpi.value.deltaPct)))

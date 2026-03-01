@@ -79,7 +79,14 @@ public class snkVenteService {
 
   @Transactional
   public void deleteVente(Long userId, Integer id) {
-    snkVenteRepository.deleteByIdAndUser_Id(id, userId);
+    SnkVente existing = snkVenteRepository.findById(id)
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Vente introuvable"));
+
+    if (existing.getUser() == null || !userId.equals(existing.getUser().getId())) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Acces interdit");
+    }
+
+    snkVenteRepository.delete(existing);
   }
 
   public List<TopVenteProjection> getTop3VentesAnneeCourante(Long userId) {

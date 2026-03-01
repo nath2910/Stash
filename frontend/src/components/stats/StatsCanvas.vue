@@ -257,6 +257,12 @@ const profileDraft = ref({ ...DEFAULT_PROFILE_NAMES, p1Color: PROFILE_COLORS.p1,
 
 const minDate = ref('')
 const maxDate = ref('')
+const settingsCategories = ref<string[]>([])
+const categoriesCache = new Map<string, string[]>()
+
+const categoryOptions = computed(() =>
+  settingsCategories.value.map((c) => ({ label: c, value: c })),
+)
 
 /* ===== Mode édition/figé ===== */
 // Le mode edition est stocke par utilisateur pour eviter les fuites d'etat UI.
@@ -317,6 +323,33 @@ function clampDate(v: string) {
   if (minDate.value && out < minDate.value) out = minDate.value
   if (maxDate.value && out > maxDate.value) out = maxDate.value
   return out
+}
+
+/* ===== Range persist per profile ===== */
+const RANGE_KEY_PREFIX = 'snk_stats_range_v1'
+const rangeKey = (profileId: string) => `${RANGE_KEY_PREFIX}_${userId.value}_${profileId}`
+
+function loadRangeForProfile(profileId: string) {
+  try {
+    const raw = localStorage.getItem(rangeKey(profileId))
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    const f = typeof parsed?.from === 'string' ? parsed.from : ''
+    const t = typeof parsed?.to === 'string' ? parsed.to : ''
+    if (!f || !t) return null
+    return f <= t ? { from: f, to: t } : { from: t, to: f }
+  } catch {
+    return null
+  }
+}
+
+function saveRangeForProfile(profileId: string, f: string, t: string) {
+  if (!f || !t) return
+  try {
+    localStorage.setItem(rangeKey(profileId), JSON.stringify({ from: f, to: t }))
+  } catch {
+    // ignore
+  }
 }
 
 function preset(kind: 'month' | 'ytd' | 'year') {
@@ -408,6 +441,13 @@ function preset(kind: 'month' | 'ytd' | 'year') {
     applyRange(subYearsClamp(today, 1), today)
   }
 }
+
+watch(
+  () => [from.value, to.value, activeProfile.value],
+  () => {
+    saveRangeForProfile(activeProfile.value, from.value, to.value)
+  },
+)
 
 /* ===== Layout ===== */
 const GRID = 10
@@ -512,6 +552,12 @@ function normalizeLayout(raw: unknown): Widget[] | null {
       props: { ...def.defaultProps, ...((item as any)?.props ?? {}) },
     }
 
+    if (typeof (w.props as any)?.category === 'string' && !(w.props as any)?.categories) {
+      const legacy = String((w.props as any).category || '').trim()
+      if (legacy) (w.props as any).categories = [legacy]
+      delete (w.props as any).category
+    }
+
     if (
       def.type === 'roi' ||
       def.type === 'textTitle' ||
@@ -595,6 +641,15 @@ function loadLayoutForUser() {
 }
 
 loadLayoutForUser()
+
+function applyStoredRangeForActiveProfile() {
+  const stored = loadRangeForProfile(activeProfile.value)
+  if (!stored) return
+  localFrom.value = stored.from
+  localTo.value = stored.to
+  emit('update:from', stored.from)
+  emit('update:to', stored.to)
+}
 
 let saveTimer: number | null = null
 let toastTimer: number | null = null
@@ -747,6 +802,19 @@ function widgetTo(w: Widget) {
   return useGlobal ? to.value : (w.props?.to ?? to.value)
 }
 
+function widgetCategoryRange(w: Widget) {
+  const def = getWidgetDef(w.type)
+  const useGlobal = w.props?.useGlobalRange !== false
+  if (def?.dateMode === 'asOf') {
+    const base = useGlobal
+      ? (to.value || from.value)
+      : (w.props?.asOf ?? w.props?.to ?? w.props?.from ?? to.value ?? from.value)
+    const baseStr = typeof base === 'string' ? base : ''
+    return { from: baseStr, to: baseStr }
+  }
+  return { from: widgetFrom(w), to: widgetTo(w) }
+}
+
 /* ===== Settings ===== */
 const settingsOpen = ref(false)
 const settingsWidgetId = ref<string | null>(null)
@@ -781,6 +849,10 @@ const settingsFields = computed(() => {
     return f
   })
 
+  const categoryField = def?.categoryFilter
+    ? [{ key: 'categories', label: 'Categories', type: 'multiselect', options: categoryOptions.value }]
+    : []
+
   return [
     {
       key: 'useGlobalRange',
@@ -789,6 +861,7 @@ const settingsFields = computed(() => {
       hint: 'Active par defaut',
     },
     ...rangeFields,
+    ...categoryField,
     ...mappedBase,
   ]
 })
@@ -799,6 +872,12 @@ const settingsModel = computed(() => {
     from: base.from ?? localFrom.value,
     to: base.to ?? localTo.value,
     asOf: base.asOf ?? localTo.value,
+    categories:
+      Array.isArray(base.categories) && base.categories.length
+        ? base.categories
+        : typeof base.category === 'string' && base.category
+          ? [base.category]
+          : [],
     ...base,
   }
 })
@@ -806,6 +885,8 @@ const settingsModel = computed(() => {
 function openSettings(w: Widget) {
   settingsWidgetId.value = w.id
   settingsOpen.value = true
+  const range = widgetCategoryRange(w)
+  loadCategories(range.from, range.to)
 }
 function closeSettings() {
   settingsOpen.value = false
@@ -822,6 +903,15 @@ function applySettings(newModel: Record<string, unknown>) {
   const w = settingsWidget.value
   if (!w) return
   const next = { ...(w.props ?? {}), ...newModel }
+  if (Array.isArray((next as any).categories)) {
+    ;(next as any).categories = (next as any).categories
+      .map((v: unknown) => String(v ?? '').trim())
+      .filter((v: string) => v.length > 0)
+  } else if (typeof (next as any).categories === 'string') {
+    const v = String((next as any).categories || '').trim()
+    ;(next as any).categories = v ? [v] : []
+  }
+  delete (next as any).category
   const fromVal = typeof next.from === 'string' ? next.from : ''
   const toVal = typeof next.to === 'string' ? next.to : ''
   if (fromVal) next.from = clampDate(fromVal)
@@ -1150,6 +1240,7 @@ watch(
     loadEditMode()
     detachAllInteract()
     loadLayoutForUser()
+    applyStoredRangeForActiveProfile()
     await nextTick()
     widgets.value.forEach((w) => clampWidget(w))
     centerView()
@@ -1157,6 +1248,7 @@ watch(
       await loadLayoutFromServer()
     }
     await loadDateBounds()
+    await loadCategories(from.value, to.value)
   },
   { immediate: false },
 )
@@ -1169,6 +1261,44 @@ async function loadDateBounds() {
   } catch {
     minDate.value = ''
     maxDate.value = ''
+  }
+}
+
+async function loadCategories(fromVal?: string, toVal?: string) {
+  const key = `${fromVal || ''}__${toVal || ''}`
+  const cached = categoriesCache.get(key)
+  if (cached) {
+    settingsCategories.value = cached
+    return
+  }
+  try {
+    const res = await StatsServices.categories(fromVal, toVal)
+    const raw = Array.isArray(res?.data) ? res.data : []
+    const cleaned = raw
+      .map((v) => String(v ?? '').trim())
+      .filter((v) => v.length > 0)
+    const unique = Array.from(
+      new Map(cleaned.map((v) => [v.toLowerCase(), v])).values(),
+    )
+    if (unique.length) {
+      settingsCategories.value = unique
+      categoriesCache.set(key, unique)
+      return
+    }
+    const fallback = await StatsServices.categories()
+    const fallbackRaw = Array.isArray(fallback?.data) ? fallback.data : []
+    const fallbackClean = fallbackRaw
+      .map((v) => String(v ?? '').trim())
+      .filter((v) => v.length > 0)
+    const fallbackUnique = Array.from(
+      new Map(fallbackClean.map((v) => [v.toLowerCase(), v])).values(),
+    )
+    settingsCategories.value = fallbackUnique
+    if (fallbackUnique.length) {
+      categoriesCache.set('all', fallbackUnique)
+    }
+  } catch {
+    settingsCategories.value = []
   }
 }
 
@@ -1261,6 +1391,8 @@ onMounted(async () => {
     await loadLayoutFromServer()
   }
   await loadDateBounds()
+  await loadCategories(from.value, to.value)
+  applyStoredRangeForActiveProfile()
 })
 
 onBeforeUnmount(() => {
@@ -1271,9 +1403,17 @@ onBeforeUnmount(() => {
 function switchProfile(profileId: string) {
   const next = pickProfileId(profileId)
   if (next === activeProfile.value) return
+  saveRangeForProfile(activeProfile.value, from.value, to.value)
   saveBundleNow(false)
   applyProfileLayout(layoutBundle.value, next)
   saveBundleNow(false)
+  const nextRange = loadRangeForProfile(next)
+  if (nextRange) {
+    localFrom.value = nextRange.from
+    localTo.value = nextRange.to
+    emit('update:from', nextRange.from)
+    emit('update:to', nextRange.to)
+  }
   nextTick(() => {
     widgets.value.forEach((w) => clampWidget(w))
     centerView()

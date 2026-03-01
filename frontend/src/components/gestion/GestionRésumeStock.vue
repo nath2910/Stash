@@ -1,9 +1,9 @@
 <template>
   <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-    <StatBadge label="Nombre total d'item acheté" :value="totalPaires" />
+    <StatBadge label="Nombre total d'item achete" :value="totalPaires" />
     <StatBadge label="En stock" tone="success" :value="nbEnStock" />
     <StatBadge label="Vendues" tone="accent" :value="nbVendues" />
-    <StatBadge label="Valeur stock" :value="valeurStock.toFixed(2) + ' €'" />
+    <StatBadge label="Valeur stock" :value="valeurStock.toFixed(2) + ' EUR'" />
   </div>
 </template>
 

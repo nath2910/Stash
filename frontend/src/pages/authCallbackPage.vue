@@ -24,7 +24,7 @@ onMounted(async () => {
     const { data: me } = await api.get('/auth/me')
     auth.setAuth({ user: me, token })
   } catch (e) {
-    console.error('Erreur /auth/me après SSO', e)
+    console.error('Erreur /auth/me apres SSO', e)
     auth.logout()
     router.replace({ name: 'auth', query: { mode: 'login' } })
     return

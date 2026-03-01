@@ -5,10 +5,10 @@
       <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" @click.self="close"></div>
 
       <!-- modal -->
-    <div class="relative z-10 flex items-center justify-center min-h-full p-4">
-      <div
-        class="modal-card w-full max-w-3xl max-h-[85vh] rounded-2xl bg-gray-800 border border-gray-700 shadow-2xl"
-      >
+      <div class="relative z-10 flex items-center justify-center min-h-full p-4">
+        <div
+          class="modal-card w-full max-w-3xl max-h-[85vh] rounded-2xl bg-gray-800 border border-gray-700 shadow-2xl"
+        >
           <!-- Header -->
           <div class="flex items-start justify-between p-5 border-b border-gray-700">
             <div>
@@ -38,15 +38,15 @@
             v-if="error"
             class="mx-6 mt-4 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200"
           >
-            ⚠️ {{ error }}
+            {{ error }}
           </div>
 
-          <!-- Succès -->
+          <!-- Succes -->
           <div
             v-if="success"
             class="mx-6 mt-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm text-emerald-200"
           >
-            ✅ Modifications enregistrées.
+            Modifications enregistrees.
           </div>
 
           <!-- Formulaire -->
@@ -62,9 +62,9 @@
                   class="w-full rounded-lg border border-gray-600 bg-gray-900 text-gray-100 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500"
                 />
               </div>
-              <!-- Catégorie -->
+              <!-- Categorie -->
               <div>
-                <label class="block text-sm font-medium text-gray-200 mb-2">Catégorie</label>
+                <label class="block text-sm font-medium text-gray-200 mb-2">Categorie</label>
                 <input
                   type="text"
                   v-model="form.categorie"
@@ -74,7 +74,7 @@
 
               <!-- Prix retail -->
               <div>
-                <label class="block text-sm font-medium text-gray-200 mb-2">Prix Retail (€)</label>
+                <label class="block text-sm font-medium text-gray-200 mb-2">Prix Retail (EUR)</label>
                 <input
                   type="number"
                   v-model.number="form.prixRetail"
@@ -85,9 +85,9 @@
                 />
               </div>
 
-              <!-- Prix resell -->
+              <!-- Prix revente -->
               <div>
-                <label class="block text-sm font-medium text-gray-200 mb-2">Prix Revente (€)</label>
+                <label class="block text-sm font-medium text-gray-200 mb-2">Prix Revente (EUR)</label>
                 <input
                   type="number"
                   v-model.number="form.prixResell"
@@ -175,7 +175,7 @@ const form = ref({
   categorie: '',
 })
 
-// quand on reçoit une vente à éditer => on pré-remplit
+// quand on recoit une vente a editer => on pre-remplit
 watch(
   () => props.vente,
   (v) => {

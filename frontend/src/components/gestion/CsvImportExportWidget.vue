@@ -4,7 +4,7 @@
     <div class="flex items-start justify-between gap-3">
       <div>
         <h3 class="text-lg font-semibold text-white">Export / Import CSV</h3>
-        <p class="text-sm text-white/70">Réutilise ta base de donnée existante !</p>
+        <p class="text-sm text-white/70">Reutilise ta base de donnee existante.</p>
       </div>
     </div>
 
@@ -20,7 +20,7 @@
         <span
           class="inline-flex items-center justify-center h-9 w-9 rounded-xl bg-white/5 border border-white/10"
         >
-          ⬇️
+          Export
         </span>
         <div class="text-left">
           <div class="text-sm font-semibold">Exporter le CSV</div>
@@ -54,7 +54,7 @@
               :disabled="importing || !selectedFile"
               @click="importNow"
             >
-              {{ importing ? 'Import…' : 'Importer' }}
+              {{ importing ? 'Import...' : 'Importer' }}
             </button>
           </div>
         </div>
@@ -91,18 +91,17 @@ import Papa, { type ParseResult } from 'papaparse'
 import SnkVenteServices from '@/services/SnkVenteServices.js'
 
 /**
- * ✅ Tu m’as dit : “garde le filtre”
- * Donc ici on exporte par défaut CE QUE TU PASSES EN filteredRows
+ * Exporte par defaut ce que tu passes dans filteredRows.
  */
 const props = defineProps<{
-  filteredRows: any[] // <- tu passes filteredVentes
+  filteredRows: any[]
 }>()
 
 const emit = defineEmits<{
   (e: 'imported'): void
 }>()
 
-/* ------------------ EXPORT (ton code) ------------------ */
+/* ------------------ EXPORT ------------------ */
 const rowsToExport = computed(() => (Array.isArray(props.filteredRows) ? props.filteredRows : []))
 
 function exportCsv() {
@@ -148,7 +147,7 @@ function exportCsv() {
     }),
   ]
 
-  const csvContent = '\uFEFF' + lines.join('\n') // ✅ BOM Excel FR
+  const csvContent = '\uFEFF' + lines.join('\n') // BOM Excel FR
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
 
@@ -162,7 +161,7 @@ function exportCsv() {
   URL.revokeObjectURL(url)
 }
 
-/* ------------------ IMPORT (robuste) ------------------ */
+/* ------------------ IMPORT ------------------ */
 type CsvRow = Record<string, string>
 
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -222,8 +221,8 @@ function findHeader(headers: string[], synonyms: string[]) {
 function looksBadName(name: string) {
   const t = (name || '').trim()
   if (!t) return true
-  if (t.length <= 1) return true // "P"
-  if (t === '-' || t === '—') return true
+  if (t.length <= 1) return true
+  if (t === '-' || t === '--') return true
   return false
 }
 
@@ -292,7 +291,6 @@ function buildPayload(rows: CsvRow[], headers: string[]) {
     'name',
     'model',
     'modele',
-    'modèle',
   ])
 
   const colPrixRetail = findHeader(headers, [
@@ -305,7 +303,7 @@ function buildPayload(rows: CsvRow[], headers: string[]) {
     'purchase',
     'cost',
   ])
-  //faire en sorte que tout a peut pres marche
+
   const colPrixResell = findHeader(headers, [
     'prix resell',
     'prix revente',
@@ -338,7 +336,6 @@ function buildPayload(rows: CsvRow[], headers: string[]) {
 
   const colCategorie = findHeader(headers, [
     'categorie',
-    'catégorie',
     'category',
     'brand',
     'marque',
@@ -354,11 +351,11 @@ function buildPayload(rows: CsvRow[], headers: string[]) {
 
   if (!colNomItem) {
     throw new Error(
-      'Impossible de trouver la colonne du NOM (nom / item / produit / nom item). Renomme une colonne et ré-essaie.',
+      'Impossible de trouver la colonne du NOM (nom / item / produit / nom item). Renomme une colonne et re-essaie.',
     )
   }
 
-  // ✅ éviter achat=vente si même colonne
+  // eviter achat=vente si meme colonne
   const dateAchatCol = colDateAchat
   let dateVenteCol = colDateVente
   if (dateAchatCol && dateVenteCol && dateAchatCol === dateVenteCol) {
@@ -383,7 +380,7 @@ function buildPayload(rows: CsvRow[], headers: string[]) {
     .filter(Boolean)
 
   if (!payload.length) {
-    throw new Error('Aucune ligne importable : colonne NOM vide ou fichier mal parsé (séparateur).')
+    throw new Error('Aucune ligne importable : colonne NOM vide ou fichier mal parse.')
   }
 
   return payload
@@ -403,16 +400,16 @@ async function importNow() {
     const rows = (parsed.data ?? []).filter(Boolean)
 
     if (headers.length < 2) {
-      throw new Error('CSV illisible : trop peu de colonnes détectées. (mauvais séparateur)')
+      throw new Error('CSV illisible : trop peu de colonnes detectees (mauvais separateur).')
     }
 
     const payload = buildPayload(rows, headers)
     const res = await SnkVenteServices.importBulk(payload)
 
     const created = res?.data?.created ?? null
-    if (created === 0) throw new Error('Import fait mais 0 ligne créée.')
+    if (created === 0) throw new Error('Import fait mais 0 ligne creee.')
 
-    successMsg.value = `Import OK ✅ (${created ?? payload.length} lignes)`
+    successMsg.value = `Import OK (${created ?? payload.length} lignes)`
     emit('imported')
 
     selectedFile.value = null

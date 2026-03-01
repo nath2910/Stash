@@ -1,4 +1,4 @@
-package backend.repository;
+﻿package backend.repository;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -62,7 +62,7 @@ List<SnkVente> findByUser_IdOrderByCreatedAtDesc(Long userId, Pageable pageable)
 
 
 
-  // Delete sécurisé : un user ne peut supprimer que ses ventes
+  // Delete sÃ©curisÃ© : un user ne peut supprimer que ses ventes
     void deleteByIdAndUser_Id(Integer id, Long userId);
 
   // Delete toutes les ventes d'un user (suppression compte)
@@ -160,7 +160,7 @@ List<SnkVente> findByUser_IdOrderByCreatedAtDesc(Long userId, Pageable pageable)
 
     
 
-    // Top ventes par nom d’item sur une période + user
+    // Top ventes par nom dâ€™item sur une pÃ©riode + user
 @Query("""
     SELECT 
       v.nomItem AS nomItem,
@@ -169,6 +169,7 @@ List<SnkVente> findByUser_IdOrderByCreatedAtDesc(Long userId, Pageable pageable)
     WHERE v.user.id = :userId
       AND v.dateVente IS NOT NULL
       AND v.dateVente BETWEEN :start AND :end
+      AND (:categoriesAll = true OR COALESCE(NULLIF(trim(v.categorie), ''), 'Autre') IN (:categories))
       AND v.prixResell IS NOT NULL
       AND v.prixRetail IS NOT NULL
     GROUP BY v.nomItem
@@ -177,14 +178,18 @@ List<SnkVente> findByUser_IdOrderByCreatedAtDesc(Long userId, Pageable pageable)
 List<TopVenteProjection> topVentesBetween(
         @Param("userId") Long userId,
         @Param("start") LocalDate start,
-        @Param("end") LocalDate end
+        @Param("end") LocalDate end,
+        @Param("categories") List<String> categories,
+        @Param("categoriesAll") boolean categoriesAll
 );
     
 default List<TopVenteProjection> topVentesYear(Long userId, int year) {
     return topVentesBetween(
             userId,
             LocalDate.of(year, 1, 1),
-            LocalDate.of(year, 12, 31)
+            LocalDate.of(year, 12, 31),
+            List.of("__all__"),
+            true
     );
 }
  
@@ -221,49 +226,64 @@ List<LabelCount> topItemsByCategorie(
   FROM public.tableauventes t
   WHERE t.user_id = :userId
     AND t.date_vente BETWEEN :start AND :end
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
     AND t.prix_resell IS NOT NULL
 """, nativeQuery = true)
 BigDecimal caBetween(@Param("userId") Long userId,
                      @Param("start") LocalDate start,
-                     @Param("end") LocalDate end);
+                     @Param("end") LocalDate end,
+                     @Param("categories") String[] categories,
+                      @Param("categoriesAll") boolean categoriesAll);
 
 @Query(value = """
   SELECT COALESCE(SUM(t.prix_resell - t.prix_retail), 0)
   FROM public.tableauventes t
   WHERE t.user_id = :userId
     AND t.date_vente BETWEEN :start AND :end
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
     AND t.prix_resell IS NOT NULL
     AND t.prix_retail IS NOT NULL
 """, nativeQuery = true)
 BigDecimal profitBetween(@Param("userId") Long userId,
                          @Param("start") LocalDate start,
-                         @Param("end") LocalDate end);
+                         @Param("end") LocalDate end,
+                         @Param("categories") String[] categories,
+                      @Param("categoriesAll") boolean categoriesAll);
 
 @Query(value = """
   SELECT COUNT(*)
   FROM public.tableauventes t
   WHERE t.user_id = :userId
     AND t.date_vente BETWEEN :start AND :end
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
 """, nativeQuery = true)
 long countSoldBetween(@Param("userId") Long userId,
                       @Param("start") LocalDate start,
-                      @Param("end") LocalDate end);
+                      @Param("end") LocalDate end,
+                      @Param("categories") String[] categories,
+                      @Param("categoriesAll") boolean categoriesAll);
 
 @Query(value = """
   SELECT COUNT(*)
   FROM public.tableauventes t
   WHERE t.user_id = :userId
     AND t.date_vente IS NULL
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
 """, nativeQuery = true)
-long countInStock(@Param("userId") Long userId);
+long countInStock(@Param("userId") Long userId,
+                  @Param("categories") String[] categories,
+                      @Param("categoriesAll") boolean categoriesAll);
 
 @Query(value = """
   SELECT COALESCE(SUM(COALESCE(t.prix_retail, 0)), 0)
   FROM public.tableauventes t
   WHERE t.user_id = :userId
     AND t.date_vente IS NULL
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
 """, nativeQuery = true)
-BigDecimal stockValue(@Param("userId") Long userId);
+BigDecimal stockValue(@Param("userId") Long userId,
+                      @Param("categories") String[] categories,
+                      @Param("categoriesAll") boolean categoriesAll);
 
 @Query(value = """
   SELECT MIN(t.date_achat)
@@ -288,8 +308,12 @@ LocalDate minVenteDate(@Param("userId") Long userId);
     AND t.date_achat IS NOT NULL
     AND t.date_achat <= :asOf
     AND (t.date_vente IS NULL OR t.date_vente > :asOf)
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
 """, nativeQuery = true)
-long countInStockAt(@Param("userId") Long userId, @Param("asOf") LocalDate asOf);
+long countInStockAt(@Param("userId") Long userId,
+                    @Param("asOf") LocalDate asOf,
+                    @Param("categories") String[] categories,
+                      @Param("categoriesAll") boolean categoriesAll);
 
 @Query(value = """
   SELECT COALESCE(SUM(COALESCE(t.prix_retail, 0)), 0)
@@ -298,8 +322,12 @@ long countInStockAt(@Param("userId") Long userId, @Param("asOf") LocalDate asOf)
     AND t.date_achat IS NOT NULL
     AND t.date_achat <= :asOf
     AND (t.date_vente IS NULL OR t.date_vente > :asOf)
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
 """, nativeQuery = true)
-BigDecimal stockValueAt(@Param("userId") Long userId, @Param("asOf") LocalDate asOf);
+BigDecimal stockValueAt(@Param("userId") Long userId,
+                        @Param("asOf") LocalDate asOf,
+                        @Param("categories") String[] categories,
+                      @Param("categoriesAll") boolean categoriesAll);
 
 @Query(value = """
   SELECT (date_trunc('day', t.date_vente))::date AS bucket,
@@ -308,13 +336,16 @@ BigDecimal stockValueAt(@Param("userId") Long userId, @Param("asOf") LocalDate a
   FROM public.tableauventes t
   WHERE t.user_id = :userId
     AND t.date_vente BETWEEN :start AND :end
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
     AND t.prix_resell IS NOT NULL
   GROUP BY bucket
   ORDER BY bucket
 """, nativeQuery = true)
 List<TimePointRow> timeseriesDay(@Param("userId") Long userId,
                                  @Param("start") LocalDate start,
-                                 @Param("end") LocalDate end);
+                                 @Param("end") LocalDate end,
+                                 @Param("categories") String[] categories,
+                      @Param("categoriesAll") boolean categoriesAll);
 
 @Query(value = """
   SELECT (date_trunc('week', t.date_vente))::date AS bucket,
@@ -323,13 +354,16 @@ List<TimePointRow> timeseriesDay(@Param("userId") Long userId,
   FROM public.tableauventes t
   WHERE t.user_id = :userId
     AND t.date_vente BETWEEN :start AND :end
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
     AND t.prix_resell IS NOT NULL
   GROUP BY bucket
   ORDER BY bucket
 """, nativeQuery = true)
 List<TimePointRow> timeseriesWeek(@Param("userId") Long userId,
                                   @Param("start") LocalDate start,
-                                  @Param("end") LocalDate end);
+                                  @Param("end") LocalDate end,
+                                  @Param("categories") String[] categories,
+                      @Param("categoriesAll") boolean categoriesAll);
 
 @Query(value = """
   SELECT (date_trunc('month', t.date_vente))::date AS bucket,
@@ -338,13 +372,16 @@ List<TimePointRow> timeseriesWeek(@Param("userId") Long userId,
   FROM public.tableauventes t
   WHERE t.user_id = :userId
     AND t.date_vente BETWEEN :start AND :end
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
     AND t.prix_resell IS NOT NULL
   GROUP BY bucket
   ORDER BY bucket
 """, nativeQuery = true)
 List<TimePointRow> timeseriesMonth(@Param("userId") Long userId,
                                    @Param("start") LocalDate start,
-                                   @Param("end") LocalDate end);
+                                   @Param("end") LocalDate end,
+                                   @Param("categories") String[] categories,
+                      @Param("categoriesAll") boolean categoriesAll);
 
 @Query(value = """
   SELECT (date_trunc('day', t.date_vente))::date AS bucket,
@@ -354,13 +391,16 @@ List<TimePointRow> timeseriesMonth(@Param("userId") Long userId,
   FROM public.tableauventes t
   WHERE t.user_id = :userId
     AND t.date_vente BETWEEN :start AND :end
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
     AND t.prix_resell IS NOT NULL
   GROUP BY bucket
   ORDER BY bucket
 """, nativeQuery = true)
 List<TimePointFullRow> timeseriesDayFull(@Param("userId") Long userId,
                                          @Param("start") LocalDate start,
-                                         @Param("end") LocalDate end);
+                                         @Param("end") LocalDate end,
+                                         @Param("categories") String[] categories,
+                      @Param("categoriesAll") boolean categoriesAll);
 
 @Query(value = """
   SELECT (date_trunc('week', t.date_vente))::date AS bucket,
@@ -370,13 +410,16 @@ List<TimePointFullRow> timeseriesDayFull(@Param("userId") Long userId,
   FROM public.tableauventes t
   WHERE t.user_id = :userId
     AND t.date_vente BETWEEN :start AND :end
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
     AND t.prix_resell IS NOT NULL
   GROUP BY bucket
   ORDER BY bucket
 """, nativeQuery = true)
 List<TimePointFullRow> timeseriesWeekFull(@Param("userId") Long userId,
                                           @Param("start") LocalDate start,
-                                          @Param("end") LocalDate end);
+                                          @Param("end") LocalDate end,
+                                          @Param("categories") String[] categories,
+                      @Param("categoriesAll") boolean categoriesAll);
 
 @Query(value = """
   SELECT (date_trunc('month', t.date_vente))::date AS bucket,
@@ -386,13 +429,16 @@ List<TimePointFullRow> timeseriesWeekFull(@Param("userId") Long userId,
   FROM public.tableauventes t
   WHERE t.user_id = :userId
     AND t.date_vente BETWEEN :start AND :end
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
     AND t.prix_resell IS NOT NULL
   GROUP BY bucket
   ORDER BY bucket
 """, nativeQuery = true)
 List<TimePointFullRow> timeseriesMonthFull(@Param("userId") Long userId,
                                            @Param("start") LocalDate start,
-                                           @Param("end") LocalDate end);
+                                           @Param("end") LocalDate end,
+                                           @Param("categories") String[] categories,
+                      @Param("categoriesAll") boolean categoriesAll);
 
 @Query(value = """
   SELECT (date_trunc('day', t.date_vente))::date AS bucket,
@@ -402,12 +448,15 @@ List<TimePointFullRow> timeseriesMonthFull(@Param("userId") Long userId,
     AND t.date_vente BETWEEN :start AND :end
     AND t.date_vente IS NOT NULL
     AND t.date_achat IS NOT NULL
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
   GROUP BY bucket
   ORDER BY bucket
 """, nativeQuery = true)
 List<AvgDaysRow> avgDaysToSellDay(@Param("userId") Long userId,
                                   @Param("start") LocalDate start,
-                                  @Param("end") LocalDate end);
+                                  @Param("end") LocalDate end,
+                                  @Param("categories") String[] categories,
+                      @Param("categoriesAll") boolean categoriesAll);
 
 @Query(value = """
   SELECT (date_trunc('week', t.date_vente))::date AS bucket,
@@ -417,12 +466,15 @@ List<AvgDaysRow> avgDaysToSellDay(@Param("userId") Long userId,
     AND t.date_vente BETWEEN :start AND :end
     AND t.date_vente IS NOT NULL
     AND t.date_achat IS NOT NULL
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
   GROUP BY bucket
   ORDER BY bucket
 """, nativeQuery = true)
 List<AvgDaysRow> avgDaysToSellWeek(@Param("userId") Long userId,
                                    @Param("start") LocalDate start,
-                                   @Param("end") LocalDate end);
+                                   @Param("end") LocalDate end,
+                                   @Param("categories") String[] categories,
+                      @Param("categoriesAll") boolean categoriesAll);
 
 @Query(value = """
   SELECT (date_trunc('month', t.date_vente))::date AS bucket,
@@ -432,12 +484,15 @@ List<AvgDaysRow> avgDaysToSellWeek(@Param("userId") Long userId,
     AND t.date_vente BETWEEN :start AND :end
     AND t.date_vente IS NOT NULL
     AND t.date_achat IS NOT NULL
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
   GROUP BY bucket
   ORDER BY bucket
 """, nativeQuery = true)
 List<AvgDaysRow> avgDaysToSellMonth(@Param("userId") Long userId,
                                     @Param("start") LocalDate start,
-                                    @Param("end") LocalDate end);
+                                    @Param("end") LocalDate end,
+                                    @Param("categories") String[] categories,
+                      @Param("categoriesAll") boolean categoriesAll);
 
 @Query(value = """
   SELECT AVG(t.date_vente - t.date_achat) AS avg_days
@@ -446,10 +501,13 @@ List<AvgDaysRow> avgDaysToSellMonth(@Param("userId") Long userId,
     AND t.date_vente BETWEEN :start AND :end
     AND t.date_vente IS NOT NULL
     AND t.date_achat IS NOT NULL
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
 """, nativeQuery = true)
 Double avgDaysToSellBetween(@Param("userId") Long userId,
                             @Param("start") LocalDate start,
-                            @Param("end") LocalDate end);
+                            @Param("end") LocalDate end,
+                            @Param("categories") String[] categories,
+                      @Param("categoriesAll") boolean categoriesAll);
 
 @Query(value = """
   SELECT
@@ -467,6 +525,7 @@ Double avgDaysToSellBetween(@Param("userId") Long userId,
     WHERE t.user_id = :userId
       AND t.date_vente IS NULL
       AND t.date_achat IS NOT NULL
+      AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
   ) s
   GROUP BY s.label
   ORDER BY
@@ -477,7 +536,9 @@ Double avgDaysToSellBetween(@Param("userId") Long userId,
       ELSE 4
     END
 """, nativeQuery = true)
-List<LabelValueRow> deathPileAge(@Param("userId") Long userId);
+List<LabelValueRow> deathPileAge(@Param("userId") Long userId,
+                                 @Param("categories") String[] categories,
+                      @Param("categoriesAll") boolean categoriesAll);
 
 @Query("""
   SELECT
@@ -489,6 +550,7 @@ List<LabelValueRow> deathPileAge(@Param("userId") Long userId);
   FROM SnkVente v
   WHERE v.user.id = :userId
     AND v.dateVente BETWEEN :start AND :end
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(v.categorie), ''), 'Autre') IN (:categories))
     AND v.prixResell IS NOT NULL
     AND v.prixRetail IS NOT NULL
   GROUP BY
@@ -500,7 +562,9 @@ List<LabelValueRow> deathPileAge(@Param("userId") Long userId);
 """)
 List<LabelValueRow> topBrandsProfit(@Param("userId") Long userId,
                                     @Param("start") LocalDate start,
-                                    @Param("end") LocalDate end);
+                                    @Param("end") LocalDate end,
+                                    @Param("categories") List<String> categories,
+                                    @Param("categoriesAll") boolean categoriesAll);
 
 @Query("""
   SELECT
@@ -512,6 +576,7 @@ List<LabelValueRow> topBrandsProfit(@Param("userId") Long userId,
   FROM SnkVente v
   WHERE v.user.id = :userId
     AND v.dateVente BETWEEN :start AND :end
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(v.categorie), ''), 'Autre') IN (:categories))
     AND v.prixResell IS NOT NULL
     AND v.prixRetail IS NOT NULL
   GROUP BY
@@ -523,7 +588,9 @@ List<LabelValueRow> topBrandsProfit(@Param("userId") Long userId,
 """)
 List<LabelValueRow> topCategoriesProfit(@Param("userId") Long userId,
                                         @Param("start") LocalDate start,
-                                        @Param("end") LocalDate end);
+                                        @Param("end") LocalDate end,
+                                        @Param("categories") List<String> categories,
+                                    @Param("categoriesAll") boolean categoriesAll);
 
 
 @Query("""
@@ -539,6 +606,7 @@ List<LabelValueRow> topCategoriesProfit(@Param("userId") Long userId,
   FROM SnkVente v
   WHERE v.user.id = :userId
     AND v.dateVente BETWEEN :start AND :end
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(v.categorie), ''), 'Autre') IN (:categories))
   GROUP BY
     CASE
       WHEN lower(v.nomItem) LIKE '%nike%' THEN 'Nike'
@@ -551,10 +619,60 @@ List<LabelValueRow> topCategoriesProfit(@Param("userId") Long userId,
 """)
 List<LabelCount> brandBreakdownSales(@Param("userId") Long userId,
                                     @Param("start") LocalDate start,
-                                    @Param("end") LocalDate end);
+                                    @Param("end") LocalDate end,
+                                    @Param("categories") List<String> categories,
+                                    @Param("categoriesAll") boolean categoriesAll);
+
+@Query("""
+  SELECT DISTINCT
+    CASE
+      WHEN v.categorie IS NULL OR trim(v.categorie) = '' THEN 'Autre'
+      ELSE v.categorie
+    END
+  FROM SnkVente v
+  WHERE v.user.id = :userId
+  ORDER BY
+    CASE
+      WHEN v.categorie IS NULL OR trim(v.categorie) = '' THEN 'Autre'
+      ELSE v.categorie
+    END
+""")
+List<String> distinctCategories(@Param("userId") Long userId);
+
+@Query("""
+  SELECT DISTINCT
+    CASE
+      WHEN v.categorie IS NULL OR trim(v.categorie) = '' THEN 'Autre'
+      ELSE v.categorie
+    END
+  FROM SnkVente v
+  WHERE v.user.id = :userId
+    AND (
+      (v.dateVente BETWEEN :from AND :to)
+      OR (v.dateAchat BETWEEN :from AND :to)
+    )
+  ORDER BY
+    CASE
+      WHEN v.categorie IS NULL OR trim(v.categorie) = '' THEN 'Autre'
+      ELSE v.categorie
+    END
+""")
+List<String> distinctCategoriesBetween(
+    @Param("userId") Long userId,
+    @Param("from") LocalDate from,
+    @Param("to") LocalDate to
+);
                                 
 
 
 
 }
+
+
+
+
+
+
+
+
 

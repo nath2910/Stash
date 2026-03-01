@@ -2,9 +2,9 @@
 import api from './api'
 
 class SnkVenteServices {
-  // liste complète de l’utilisateur courant
+  // liste complete de l'utilisateur courant
   getSnkVente() {
-    return api.get('/snkVente') // header X-USER-ID ajouté par api.js
+    return api.get('/snkVente')
   }
 
   recent(limit = 8) {
@@ -27,7 +27,6 @@ class SnkVenteServices {
   }
 
   ajouter(vente) {
-    // X-USER-ID sera ajouté automatiquement
     return api.post('/snkVente/add', vente)
   }
 

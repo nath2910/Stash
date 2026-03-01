@@ -25,7 +25,7 @@
             leaveTo="opacity-0 scale-95 translate-y-1"
           >
             <DialogPanel class="glass-panel w-full max-w-lg rounded-[22px]">
-              <div class="glass-header px-5 py-4 flex items-center">
+              <div class="glass-header px-4 py-3 flex items-center">
                 <DialogTitle class="text-white font-semibold text-lg">{{ title }}</DialogTitle>
                 <button
                   class="glass-iconbtn ml-auto h-8 w-8 grid place-items-center rounded-xl"
@@ -35,7 +35,7 @@
                 </button>
               </div>
 
-              <div class="p-5 space-y-4">
+              <div class="p-4 space-y-4">
                 <div v-if="!fields.length" class="text-sm text-white/60">
                   Pas de reglages pour ce widget.
                 </div>
@@ -47,15 +47,51 @@
                   >
                     <div class="text-sm text-white/80 font-semibold">{{ f.label }}</div>
 
-                    <select
-                      v-if="f.type === 'select'"
-                      v-model="draft[f.key]"
-                      class="glass-field w-full h-10 rounded-xl px-3"
-                    >
-                      <option v-for="o in f.options" :key="o.value" :value="o.value">
-                        {{ o.label }}
-                      </option>
-                    </select>
+                    <div v-if="f.type === 'select'" class="select-wrap">
+                      <select v-model="draft[f.key]" class="glass-field select-field w-full h-10 rounded-xl px-3">
+                        <option v-for="o in f.options" :key="o.value" :value="o.value">
+                          {{ o.label }}
+                        </option>
+                      </select>
+                      <span class="select-chevron" aria-hidden="true"></span>
+                    </div>
+                    <div v-else-if="f.type === 'multiselect'" class="multi-select">
+                      <div class="multi-preview">
+                        <template v-if="(draft[f.key] || []).length">
+                          <span
+                            v-for="tag in draft[f.key]"
+                            :key="tag"
+                            class="multi-pill"
+                          >
+                            {{ tag }}
+                          </span>
+                        </template>
+                        <span v-else class="multi-placeholder">Toutes categories</span>
+                      </div>
+                      <div class="multi-actions">
+                        <button
+                          type="button"
+                          class="multi-btn"
+                          @click="selectAllMulti(f.key, f.options)"
+                        >
+                          Tout selectionner
+                        </button>
+                      </div>
+                      <div class="multi-list">
+                        <label
+                          v-for="o in f.options"
+                          :key="o.value"
+                          class="multi-option"
+                        >
+                          <input
+                            type="checkbox"
+                            :checked="Array.isArray(draft[f.key]) && draft[f.key].includes(o.value)"
+                            @change="toggleMulti(f.key, o.value)"
+                          />
+                          <span>{{ o.label }}</span>
+                        </label>
+                      </div>
+                    </div>
 
                     <div v-else-if="f.type === 'number'" class="number-field">
                       <button
@@ -122,7 +158,7 @@
                 </template>
               </div>
 
-              <div class="glass-footer px-5 py-4 flex justify-end gap-2">
+              <div class="glass-footer px-4 py-3 flex justify-end gap-2">
                 <button
                   class="glass-btn px-4 h-10 rounded-xl"
                   @click="$emit('close')"
@@ -200,12 +236,41 @@ function onSave() {
   emit('save', { ...draft })
 }
 
+function toggleMulti(key, value) {
+  const list = ensureMultiList(key)
+  const idx = list.indexOf(value)
+  if (idx >= 0) list.splice(idx, 1)
+  else list.push(value)
+}
+
+function selectAllMulti(key, options) {
+  const list = ensureMultiList(key)
+  if (!Array.isArray(options) || options.length === 0) return
+  const values = options
+    .map((o) => o?.value)
+    .filter((v) => v !== undefined && v !== null)
+  list.splice(0, list.length, ...Array.from(new Set(values)))
+}
+
+function ensureMultiList(key) {
+  if (!Array.isArray(draft[key])) {
+    draft[key] = []
+  }
+  return draft[key]
+}
+
 watch(
   () => props.open,
   (isOpen) => {
     if (!isOpen) return
     Object.keys(draft).forEach((k) => delete draft[k])
     Object.assign(draft, props.model || {})
+    for (const field of props.fields || []) {
+      if (field?.type === 'multiselect' && !Array.isArray(draft[field.key])) {
+        const raw = draft[field.key]
+        draft[field.key] = typeof raw === 'string' && raw ? [raw] : []
+      }
+    }
   },
   { immediate: true },
 )
@@ -324,6 +389,119 @@ watch(
 }
 .glass-btn-primary::before {
   opacity: 0.45;
+}
+.select-wrap {
+  position: relative;
+}
+.select-field {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 38px;
+  cursor: pointer;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.02)),
+    rgba(8, 10, 16, 0.65);
+}
+.select-field:focus {
+  outline: none;
+  box-shadow:
+    0 0 0 1px rgba(96, 165, 250, 0.6),
+    0 0 0 4px rgba(96, 165, 250, 0.18);
+}
+.select-chevron {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  transform: translateY(-50%) rotate(45deg);
+  border-right: 2px solid rgba(226, 232, 240, 0.8);
+  border-bottom: 2px solid rgba(226, 232, 240, 0.8);
+  pointer-events: none;
+}
+.multi-select {
+  display: grid;
+  gap: 8px;
+}
+.multi-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+.multi-btn {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(226, 232, 240, 0.85);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.multi-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+.multi-preview {
+  min-height: 34px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(8, 10, 16, 0.6);
+}
+.multi-pill {
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  color: rgba(226, 232, 240, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(148, 163, 184, 0.12);
+}
+.multi-placeholder {
+  font-size: 12px;
+  color: rgba(226, 232, 240, 0.45);
+}
+.multi-list {
+  max-height: none;
+  overflow: visible;
+  padding: 6px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(8, 10, 16, 0.5);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 10px;
+}
+.multi-list .multi-option {
+  min-height: 28px;
+}
+.multi-list .multi-option span {
+  line-height: 1.1;
+}
+@media (min-width: 520px) {
+  .multi-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+.multi-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: rgba(226, 232, 240, 0.85);
+  padding: 6px 6px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+}
+.multi-option:hover {
+  border-color: rgba(148, 163, 184, 0.25);
+  background: rgba(255, 255, 255, 0.04);
+}
+.multi-option input {
+  accent-color: #60a5fa;
 }
 .number-field {
   display: grid;

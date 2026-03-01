@@ -17,7 +17,7 @@
             @click="close"
             :disabled="loading"
           >
-            ✕
+            X
           </button>
         </div>
       </div>
@@ -49,7 +49,7 @@
           @click="setMode('bulk')"
           :disabled="loading"
         >
-          Sélection ({{ selectedIds.length }})
+          Selection ({{ selectedIds.length }})
         </button>
       </div>
 
@@ -58,7 +58,7 @@
         v-if="success"
         class="mb-3 rounded border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800"
       >
-        ✅ Suppression effectuée.
+        OK. Suppression effectuee.
       </div>
 
       <div
@@ -93,12 +93,12 @@
               @click="selectVente(v)"
             >
               <div class="font-medium text-gray-900">{{ v.nomItem || v.nom_item }}</div>
-              <div class="text-xs text-gray-500">ID: {{ v.id }} • {{ v.categorie || '—' }}</div>
+              <div class="text-xs text-gray-500">ID: {{ v.id }} - {{ v.categorie || '-' }}</div>
             </button>
           </div>
 
           <p v-if="selected" class="mt-2 text-xs text-gray-600">
-            Sélection : <b>{{ selected.nomItem || selected.nom_item }}</b> (ID {{ selected.id }})
+            Selection : <b>{{ selected.nomItem || selected.nom_item }}</b> (ID {{ selected.id }})
           </p>
         </div>
 
@@ -129,7 +129,7 @@
       <!-- MODE: BULK -->
       <div v-else class="space-y-3">
         <p class="text-sm text-gray-700">
-          Tu vas supprimer <b>{{ selectedIds.length }}</b> item(s). Action définitive.
+          Tu vas supprimer <b>{{ selectedIds.length }}</b> item(s). Action definitive.
         </p>
 
         <div class="flex justify-end gap-2 pt-1">
@@ -150,7 +150,7 @@
               :disabled="loading || !selectedIds.length"
               @click="deleteBulk"
             >
-              {{ loading ? 'Suppression...' : 'Supprimer la sélection' }}
+              {{ loading ? 'Suppression...' : 'Supprimer la selection' }}
             </button>
           </div>
         </div>
@@ -248,7 +248,7 @@ const deleteBulk = async () => {
   error.value = ''
 
   try {
-    // ✅ plus robuste que Promise.all (gère les erreurs item par item)
+    // plus robuste que Promise.all (gere les erreurs item par item)
     const results = await Promise.allSettled(
       props.selectedIds.map((id) => SnkVenteServices.supprimer(id)),
     )
@@ -259,7 +259,7 @@ const deleteBulk = async () => {
     const failedCount = results.filter((r) => r.status === 'rejected').length
 
     if (!ok.length) {
-      error.value = "Aucune suppression n'a réussi."
+      error.value = "Aucune suppression n'a reussi."
       return
     }
 
@@ -267,13 +267,13 @@ const deleteBulk = async () => {
     success.value = true
 
     if (failedCount) {
-      error.value = `${failedCount} suppression(s) ont échoué, mais le reste a été supprimé.`
+      error.value = `${failedCount} suppression(s) ont echoue, mais le reste a ete supprime.`
     } else {
       setTimeout(() => close(), 400)
     }
   } catch (e) {
     console.error(e)
-    error.value = 'Erreur lors de la suppression de la sélection'
+    error.value = 'Erreur lors de la suppression de la selection'
   } finally {
     loading.value = false
   }

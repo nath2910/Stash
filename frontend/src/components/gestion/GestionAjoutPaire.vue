@@ -1,214 +1,206 @@
 <!-- src/components/AjoutPaire.vue -->
 <template>
   <teleport to="body">
-  <div class="fixed inset-0 z-[9999]">
-    <!-- overlay -->
-    <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" @click.self="handleClose"></div>
+    <div class="fixed inset-0 z-[9999]">
+      <!-- overlay -->
+      <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" @click.self="handleClose"></div>
 
-    <!-- modal -->
-    <div class="relative z-10 flex items-center justify-center min-h-full p-4">
-      <div
-        class="modal-card w-full max-w-3xl max-h-[85vh] rounded-2xl bg-gray-800 border border-gray-700 shadow-2xl"
-        @click.stop
-      >
-        <!-- Header -->
-        <div class="flex items-start justify-between p-5 border-b border-gray-700">
-          <div>
-            <h3 class="text-xl font-semibold text-gray-100">Ajouter une vente</h3>
-            <p class="text-sm text-gray-400 mt-1">
-              Renseigne les infos de l'item pour l'ajouter dans ton suivi.
-            </p>
-          </div>
-
-          <!-- Close -->
-          <button
-            type="button"
-            @click="handleClose"
-            class="rounded-lg p-2 text-gray-300 transition hover:bg-gray-700/60 hover:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/30"
-            aria-label="Fermer"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </div>
-
-        <!-- Alerts -->
+      <!-- modal -->
+      <div class="relative z-10 flex items-center justify-center min-h-full p-4">
         <div
-          v-if="error"
-          class="mx-6 mt-4 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200"
+          class="modal-card w-full max-w-3xl max-h-[85vh] rounded-2xl bg-gray-800 border border-gray-700 shadow-2xl"
+          @click.stop
         >
-          ⚠️ {{ error }}
-        </div>
-
-        <div
-          v-if="success"
-          class="mx-6 mt-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm text-emerald-200"
-        >
-          ✅ Vente{{ copies > 1 ? 's' : '' }} ajoutée{{ copies > 1 ? 's' : '' }} avec succès.
-        </div>
-
-        <!-- Form -->
-        <form class="p-6 space-y-6" @submit.prevent="createSales">
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <!-- Nom -->
+          <!-- Header -->
+          <div class="flex items-start justify-between p-5 border-b border-gray-700">
             <div>
-              <label for="nomItem" class="block text-sm font-medium text-gray-200 mb-2">
-                Nom de l'item
-              </label>
-              <input
-                id="nomItem"
-                type="text"
-                v-model.trim="form.nomItem"
-                placeholder="Dunk low, Bundle 151, Ruinart ..."
-                required
-                class="w-full rounded-lg border border-gray-600 bg-gray-900 text-gray-100 px-3 py-2.5 text-sm placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500"
-              />
-            </div>
-
-            <!-- Catégorie -->
-            <div>
-              <label for="categorie" class="block text-sm font-medium text-gray-200 mb-2">
-                Catégorie
-              </label>
-              <input
-                id="categorie"
-                type="text"
-                v-model.trim="form.categorie"
-                placeholder="Jordan, Hennessy, One Piece ..."
-                class="w-full rounded-lg border border-gray-600 bg-gray-900 text-gray-100 px-3 py-2.5 text-sm placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500"
-              />
-            </div>
-
-            <!-- Nombre d'exemplaires -->
-            <div>
-              <label for="copies" class="block text-sm font-medium text-gray-200 mb-2">
-                Nombre d'exemplaires
-              </label>
-              <input
-                id="copies"
-                type="number"
-                v-model.number="copies"
-                min="1"
-                max="50"
-                step="1"
-                required
-                class="w-full rounded-lg border border-gray-600 bg-gray-900 text-gray-100 px-3 py-2.5 text-sm placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500"
-              />
-              <p class="mt-1 text-xs text-gray-500">
-                Determine la quantité voulue !
+              <h3 class="text-xl font-semibold text-gray-100">Ajouter une vente</h3>
+              <p class="text-sm text-gray-400 mt-1">
+                Renseigne les infos de l'item pour l'ajouter dans ton suivi.
               </p>
             </div>
 
-            <!-- Prix retail -->
-            <div>
-              <label for="prixRetail" class="block text-sm font-medium text-gray-200 mb-2">
-                Prix Retail (€)
-              </label>
-              <input
-                id="prixRetail"
-                type="number"
-                v-model.number="form.prixRetail"
-                placeholder="110 €"
-                min="0"
-                step="0.01"
-                required
-                class="w-full rounded-lg border border-gray-600 bg-gray-900 text-gray-100 px-3 py-2.5 text-sm placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500"
-              />
-            </div>
-
-            <!-- Prix resell -->
-            <div>
-              <label for="prixResell" class="block text-sm font-medium text-gray-200 mb-2">
-                Prix Revente (€)
-              </label>
-              <input
-                id="prixResell"
-                type="number"
-                v-model.number="form.prixResell"
-                placeholder="180 €"
-                min="0"
-                step="0.01"
-                class="w-full rounded-lg border border-gray-600 bg-gray-900 text-gray-100 px-3 py-2.5 text-sm placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500"
-              />
-            </div>
-
-            <!-- Date achat -->
-            <div>
-              <label for="dateAchat" class="block text-sm font-medium text-gray-200 mb-2">
-                Date d'achat
-              </label>
-              <CompactDateInput
-                id="dateAchat"
-                v-model="form.dateAchat"
-                class="w-full"
-              />
-            </div>
-
-            <!-- Date vente -->
-            <div>
-              <label for="dateVente" class="block text-sm font-medium text-gray-200 mb-2">
-                Date de vente
-              </label>
-              <CompactDateInput
-                id="dateVente"
-                v-model="form.dateVente"
-                class="w-full"
-              />
-              <p class="mt-1 text-xs text-gray-500">Laisse vide si pas encore vendue.</p>
-            </div>
-
-            <!-- Description -->
-            <div class="sm:col-span-2">
-              <label for="description" class="block text-sm font-medium text-gray-200 mb-2">
-                Description
-              </label>
-              <textarea
-                id="description"
-                v-model.trim="form.description"
-                rows="3"
-                placeholder="Etat, taille, notes perso..."
-                class="w-full rounded-lg border border-gray-600 bg-gray-900 text-gray-100 px-3 py-2.5 text-sm placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500"
-              ></textarea>
-            </div>
-          </div>
-
-          <!-- Footer -->
-          <div class="pt-4 border-t border-gray-700 flex items-center justify-end gap-2">
+            <!-- Close -->
             <button
               type="button"
               @click="handleClose"
-              class="px-4 py-2 text-sm rounded-lg border border-gray-600 text-gray-200 hover:bg-gray-700/50 transition disabled:opacity-60 disabled:cursor-not-allowed"
-              :disabled="loading"
+              class="rounded-lg p-2 text-gray-300 transition hover:bg-gray-700/60 hover:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/30"
+              aria-label="Fermer"
             >
-              Annuler
-            </button>
-
-            <button
-              type="submit"
-              :disabled="loading"
-              class="px-5 py-2 text-sm rounded-lg text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 disabled:opacity-60 disabled:cursor-not-allowed transition whitespace-nowrap inline-flex items-center gap-2"
-            >
-              <span>
-                {{
-                  loading
-                    ? 'Enregistrement...'
-                    : copies > 1
-                      ? `Enregistrer ${copies} ventes`
-                      : 'Enregistrer la vente'
-                }}
-              </span>
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
             </button>
           </div>
-        </form>
+
+          <!-- Alerts -->
+          <div
+            v-if="error"
+            class="mx-6 mt-4 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200"
+          >
+            {{ error }}
+          </div>
+
+          <div
+            v-if="success"
+            class="mx-6 mt-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm text-emerald-200"
+          >
+            Vente{{ copies > 1 ? 's' : '' }} ajoutee{{ copies > 1 ? 's' : '' }} avec succes.
+          </div>
+
+          <!-- Form -->
+          <form class="p-6 space-y-6" @submit.prevent="createSales">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <!-- Nom -->
+              <div>
+                <label for="nomItem" class="block text-sm font-medium text-gray-200 mb-2">
+                  Nom de l'item
+                </label>
+                <input
+                  id="nomItem"
+                  type="text"
+                  v-model.trim="form.nomItem"
+                  placeholder="Dunk low, Bundle 151, Ruinart ..."
+                  required
+                  class="w-full rounded-lg border border-gray-600 bg-gray-900 text-gray-100 px-3 py-2.5 text-sm placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500"
+                />
+              </div>
+
+              <!-- Categorie -->
+              <div>
+                <label for="categorie" class="block text-sm font-medium text-gray-200 mb-2">
+                  Categorie
+                </label>
+                <input
+                  id="categorie"
+                  type="text"
+                  v-model.trim="form.categorie"
+                  placeholder="Jordan, Hennessy, One Piece ..."
+                  class="w-full rounded-lg border border-gray-600 bg-gray-900 text-gray-100 px-3 py-2.5 text-sm placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500"
+                />
+              </div>
+
+              <!-- Nombre d'exemplaires -->
+              <div>
+                <label for="copies" class="block text-sm font-medium text-gray-200 mb-2">
+                  Nombre d'exemplaires
+                </label>
+                <input
+                  id="copies"
+                  type="number"
+                  v-model.number="copies"
+                  min="1"
+                  max="50"
+                  step="1"
+                  required
+                  class="w-full rounded-lg border border-gray-600 bg-gray-900 text-gray-100 px-3 py-2.5 text-sm placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500"
+                />
+                <p class="mt-1 text-xs text-gray-500">
+                  Determine la quantite voulue.
+                </p>
+              </div>
+
+              <!-- Prix retail -->
+              <div>
+                <label for="prixRetail" class="block text-sm font-medium text-gray-200 mb-2">
+                  Prix Retail (EUR)
+                </label>
+                <input
+                  id="prixRetail"
+                  type="number"
+                  v-model.number="form.prixRetail"
+                  placeholder="110"
+                  min="0"
+                  step="0.01"
+                  required
+                  class="w-full rounded-lg border border-gray-600 bg-gray-900 text-gray-100 px-3 py-2.5 text-sm placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500"
+                />
+              </div>
+
+              <!-- Prix revente -->
+              <div>
+                <label for="prixResell" class="block text-sm font-medium text-gray-200 mb-2">
+                  Prix Revente (EUR)
+                </label>
+                <input
+                  id="prixResell"
+                  type="number"
+                  v-model.number="form.prixResell"
+                  placeholder="180"
+                  min="0"
+                  step="0.01"
+                  class="w-full rounded-lg border border-gray-600 bg-gray-900 text-gray-100 px-3 py-2.5 text-sm placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500"
+                />
+              </div>
+
+              <!-- Date achat -->
+              <div>
+                <label for="dateAchat" class="block text-sm font-medium text-gray-200 mb-2">
+                  Date d'achat
+                </label>
+                <CompactDateInput id="dateAchat" v-model="form.dateAchat" class="w-full" />
+              </div>
+
+              <!-- Date vente -->
+              <div>
+                <label for="dateVente" class="block text-sm font-medium text-gray-200 mb-2">
+                  Date de vente
+                </label>
+                <CompactDateInput id="dateVente" v-model="form.dateVente" class="w-full" />
+                <p class="mt-1 text-xs text-gray-500">Laisse vide si pas encore vendue.</p>
+              </div>
+
+              <!-- Description -->
+              <div class="sm:col-span-2">
+                <label for="description" class="block text-sm font-medium text-gray-200 mb-2">
+                  Description
+                </label>
+                <textarea
+                  id="description"
+                  v-model.trim="form.description"
+                  rows="3"
+                  placeholder="Etat, taille, notes perso..."
+                  class="w-full rounded-lg border border-gray-600 bg-gray-900 text-gray-100 px-3 py-2.5 text-sm placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500"
+                ></textarea>
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="pt-4 border-t border-gray-700 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                @click="handleClose"
+                class="px-4 py-2 text-sm rounded-lg border border-gray-600 text-gray-200 hover:bg-gray-700/50 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                :disabled="loading"
+              >
+                Annuler
+              </button>
+
+              <button
+                type="submit"
+                :disabled="loading"
+                class="px-5 py-2 text-sm rounded-lg text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 disabled:opacity-60 disabled:cursor-not-allowed transition whitespace-nowrap inline-flex items-center gap-2"
+              >
+                <span>
+                  {{
+                    loading
+                      ? 'Enregistrement...'
+                      : copies > 1
+                        ? `Enregistrer ${copies} ventes`
+                        : 'Enregistrer la vente'
+                  }}
+                </span>
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
-  </div>
   </teleport>
 </template>
 
@@ -298,7 +290,7 @@ watch(
   },
 )
 
-// si on remplit prixResell et qu'une date existe déjà, nettoyer erreur éventuelle
+// si on remplit prixResell et qu'une date existe deja, nettoyer erreur eventuelle
 watch(
   () => form.value.prixResell,
   () => {
@@ -320,7 +312,7 @@ const createSales = async () => {
     const n = Math.min(50, Math.max(1, Number(copies.value || 1)))
     const payload = buildPayload()
 
-    // Série = plus stable (évite de spam le backend)
+    // Serie = plus stable (evite de spam le backend)
     for (let i = 0; i < n; i++) {
       await SnkVenteServices.ajouter({ ...payload })
     }
@@ -336,16 +328,16 @@ const createSales = async () => {
         }
       : {}
 
-    // Reset form (garde éventuellement certains champs)
+    // Reset form (garde eventuellement certains champs)
     setTimeout(() => {
       form.value = emptyForm(prefill)
       copies.value = 1
       success.value = false
-      // Si tu préfères garder le modal ouvert, commente la ligne suivante :
+      // Si tu preferes garder le modal ouvert, commente la ligne suivante :
       handleClose()
     }, 700)
   } catch (err) {
-    error.value = err?.response?.data?.message || 'Erreur lors de la création de la vente'
+    error.value = err?.response?.data?.message || 'Erreur lors de la creation de la vente'
 
     console.error('Erreur:', err)
   } finally {
@@ -354,7 +346,6 @@ const createSales = async () => {
 }
 </script>
 
-<style></style>
 <style scoped>
 .modal-card {
   overflow-y: auto;

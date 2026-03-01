@@ -44,15 +44,23 @@ public class UserService {
     }
 
     public User register(RegisterRequest request) {
-        userRepository.findByEmail(request.getEmail())
+        if (request == null || request.getEmail() == null || request.getEmail().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email manquant");
+        }
+        if (request.getPassword() == null || request.getPassword().length() < 6) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mot de passe trop court");
+        }
+
+        String email = request.getEmail().trim().toLowerCase();
+        userRepository.findByEmail(email)
                 .ifPresent(u -> {
-                    throw new RuntimeException("Email déjà utilisé");
+                    throw new ResponseStatusException(HttpStatus.CONFLICT, "Email deja utilise");
                 });
 
         String hashedPassword = passwordEncoder.encode(request.getPassword());
 
         User user = new User();
-        user.setEmail(request.getEmail().toLowerCase());
+        user.setEmail(email);
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
         user.setPassword(hashedPassword);
@@ -63,44 +71,60 @@ public class UserService {
     }
 
     public User login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.getEmail().toLowerCase())
-                .orElseThrow(() -> new RuntimeException("Email ou mot de passe invalide"));
+        if (request == null || request.getEmail() == null || request.getEmail().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email manquant");
+        }
+        if (request.getPassword() == null || request.getPassword().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mot de passe manquant");
+        }
+
+        String email = request.getEmail().trim().toLowerCase();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Email ou mot de passe invalide"));
+
+        if (user.getPassword() == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Email ou mot de passe invalide");
+        }
 
         boolean ok = passwordEncoder.matches(request.getPassword(), user.getPassword());
         if (!ok) {
-            throw new RuntimeException("Email ou mot de passe invalide");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Email ou mot de passe invalide");
         }
 
-        // Pour l’instant, on renvoie juste le user (sans le hash dans la version front)
+        // Pour l'instant, on renvoie juste le user (sans le hash dans la version front)
         return user;
     }
 
     public void changePassword(Long userId, ChangePasswordRequest request) {
-    if (request.getCurrentPassword() == null || request.getNewPassword() == null) {
-        throw new RuntimeException("Champs manquants");
+        if (request == null || request.getCurrentPassword() == null || request.getNewPassword() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Champs manquants");
+        }
+
+        if (request.getNewPassword().length() < 6) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "Le nouveau mot de passe doit faire au moins 6 caracteres");
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Utilisateur introuvable"));
+
+        if (user.getPassword() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Compte sans mot de passe local");
+        }
+
+        boolean ok = passwordEncoder.matches(request.getCurrentPassword(), user.getPassword());
+        if (!ok) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Mot de passe actuel incorrect");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
     }
-
-   if (request.getNewPassword() == null || request.getNewPassword().length() < 6) {
-  throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-      "Le nouveau mot de passe doit faire au moins 6 caractères");
-}
-
-    User user = userRepository.findById(userId)
-            .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
-
-    boolean ok = passwordEncoder.matches(request.getCurrentPassword(), user.getPassword());
-    if (!ok) {
-        throw new RuntimeException("Mot de passe actuel incorrect");
-    }
-
-    user.setPassword(passwordEncoder.encode(request.getNewPassword()));
-    userRepository.save(user);
-}
 
     @org.springframework.transaction.annotation.Transactional
     public void deleteAccount(Long userId) {
         if (userId == null) {
-            throw new RuntimeException("Utilisateur introuvable");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Utilisateur introuvable");
         }
 
         passwordResetTokenRepository.deleteByUser_Id(userId);

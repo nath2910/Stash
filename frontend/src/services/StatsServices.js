@@ -5,13 +5,14 @@ import api from './api'
  * Controller accepts: start/end OR from/to.
  * We send both to be robust.
  */
-function dateParams(from, to, asOf) {
+function dateParams(from, to, asOf, categories) {
   return {
     from,
     to,
     start: from,
     end: to,
     asOf,
+    categories,
   }
 }
 
@@ -20,20 +21,21 @@ function dateParams(from, to, asOf) {
  *  - summary(from, to)
  *  - summary({ from, to })
  */
-function resolveRange(a, b) {
+function resolveRange(a, b, categories) {
   if (a && typeof a === 'object') {
-    return { from: a.from, to: a.to, asOf: a.asOf }
+    return { from: a.from, to: a.to, asOf: a.asOf, categories: a.categories }
   }
-  return { from: a, to: b, asOf: undefined }
+  return { from: a, to: b, asOf: undefined, categories }
 }
 
-function summary(a, b) {
-  const { from, to, asOf } = resolveRange(a, b)
-  return api.get('/stats/summary', { params: dateParams(from, to, asOf) })
+function summary(a, b, categories) {
+  const { from, to, asOf, categories: cats } = resolveRange(a, b, categories)
+  const safeCats = Array.isArray(cats) && cats.length ? cats : undefined
+  return api.get('/stats/summary', { params: dateParams(from, to, asOf, safeCats) })
 }
 
-function timeseries(a, b, granularityOrOpts = 'day') {
-  const { from, to } = resolveRange(a, b)
+function timeseries(a, b, granularityOrOpts = 'day', categories) {
+  const { from, to, categories: cats } = resolveRange(a, b, categories)
 
   let granularity = 'day'
   if (typeof granularityOrOpts === 'string') {
@@ -43,27 +45,33 @@ function timeseries(a, b, granularityOrOpts = 'day') {
   }
 
   return api.get('/stats/timeseries', {
-    params: { ...dateParams(from, to), granularity },
+    params: { ...dateParams(from, to, undefined, Array.isArray(cats) && cats.length ? cats : undefined), granularity },
   })
 }
 
-function brands(a, b) {
-  const { from, to } = resolveRange(a, b)
-  return api.get('/stats/brands', { params: dateParams(from, to) })
+function brands(a, b, categories) {
+  const { from, to, categories: cats } = resolveRange(a, b, categories)
+  return api.get('/stats/brands', {
+    params: dateParams(from, to, undefined, Array.isArray(cats) && cats.length ? cats : undefined),
+  })
 }
 
-function topSales(a, b, limit = 3) {
-  const { from, to } = resolveRange(a, b)
-  return api.get('/stats/top-sales', { params: { ...dateParams(from, to), limit } })
+function topSales(a, b, limit = 3, categories) {
+  const { from, to, categories: cats } = resolveRange(a, b, categories)
+  return api.get('/stats/top-sales', {
+    params: { ...dateParams(from, to, undefined, Array.isArray(cats) && cats.length ? cats : undefined), limit },
+  })
 }
 
-function kpi(metric, a, b) {
-  const { from, to } = resolveRange(a, b)
-  return api.get(`/stats/kpi/${metric}`, { params: dateParams(from, to) })
+function kpi(metric, a, b, categories) {
+  const { from, to, categories: cats } = resolveRange(a, b, categories)
+  return api.get(`/stats/kpi/${metric}`, {
+    params: dateParams(from, to, undefined, Array.isArray(cats) && cats.length ? cats : undefined),
+  })
 }
 
-function series(metric, a, b, granularityOrOpts = 'day') {
-  const { from, to } = resolveRange(a, b)
+function series(metric, a, b, granularityOrOpts = 'day', categories) {
+  const { from, to, categories: cats } = resolveRange(a, b, categories)
 
   let granularity = 'day'
   if (typeof granularityOrOpts === 'string') {
@@ -73,22 +81,35 @@ function series(metric, a, b, granularityOrOpts = 'day') {
   }
 
   return api.get(`/stats/series/${metric}`, {
-    params: { ...dateParams(from, to), granularity },
+    params: { ...dateParams(from, to, undefined, Array.isArray(cats) && cats.length ? cats : undefined), granularity },
   })
 }
 
-function breakdown(metric, a, b) {
-  const { from, to } = resolveRange(a, b)
-  return api.get(`/stats/breakdown/${metric}`, { params: dateParams(from, to) })
+function breakdown(metric, a, b, categories) {
+  const { from, to, categories: cats } = resolveRange(a, b, categories)
+  return api.get(`/stats/breakdown/${metric}`, {
+    params: dateParams(from, to, undefined, Array.isArray(cats) && cats.length ? cats : undefined),
+  })
 }
 
-function rank(metric, a, b, limit = 10) {
-  const { from, to } = resolveRange(a, b)
-  return api.get(`/stats/rank/${metric}`, { params: { ...dateParams(from, to), limit } })
+function rank(metric, a, b, limit = 10, categories) {
+  const { from, to, categories: cats } = resolveRange(a, b, categories)
+  return api.get(`/stats/rank/${metric}`, {
+    params: { ...dateParams(from, to, undefined, Array.isArray(cats) && cats.length ? cats : undefined), limit },
+  })
 }
 
 function dateBounds() {
   return api.get('/stats/date-bounds')
+}
+
+function categories(from, to) {
+  const params = {}
+  if (/^\d{4}-\d{2}-\d{2}$/.test(String(from || '')) && /^\d{4}-\d{2}-\d{2}$/.test(String(to || ''))) {
+    params.from = from
+    params.to = to
+  }
+  return api.get('/stats/categories', { params })
 }
 
 // Persistance du layout cote backend (prive / multi-appareil).
@@ -110,6 +131,7 @@ export default {
   breakdown,
   rank,
   dateBounds,
+  categories,
   getLayout,
   saveLayout,
 }

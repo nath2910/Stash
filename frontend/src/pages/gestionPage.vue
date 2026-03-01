@@ -1,7 +1,6 @@
 <template>
   <div class="min-h-screen text-slate-100">
     <div class="relative w-full px-4 sm:px-6 lg:px-10 py-8 space-y-8">
-
       <header
         class="rounded-[28px] border border-slate-800/80 bg-gradient-to-br from-slate-900/95 via-slate-900/85 to-slate-950/80 px-6 py-6 shadow-2xl backdrop-blur sm:px-8"
       >
@@ -12,14 +11,14 @@
             </p>
             <h1 class="text-3xl font-semibold text-white sm:text-4xl">Gestion des ventes</h1>
             <p class="text-base text-slate-400">
-              Ajoute, modifie, recherche, sélectionne et supprime en un seul endroit.
+              Ajoute, modifie, recherche, selectionne et supprime en un seul endroit.
             </p>
           </div>
           <div class="flex flex-wrap gap-2 text-xs">
             <span
               class="inline-flex items-center rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1 text-slate-300"
             >
-              Inventaire centralisé
+              Inventaire centralise
             </span>
             <span
               class="inline-flex items-center rounded-full border border-violet-400/30 bg-violet-400/10 px-3 py-1 text-violet-200"
@@ -48,7 +47,7 @@
             <div class="flex items-center justify-between">
               <div>
                 <h2 class="text-base font-semibold text-white">Recherche rapide</h2>
-                <p class="text-xs text-slate-400">Nom, catégorie, description.</p>
+                <p class="text-xs text-slate-400">Nom, categorie, description.</p>
               </div>
             </div>
             <div class="mt-3">
@@ -67,9 +66,9 @@
             <div>
               <h2 class="text-lg font-semibold text-slate-100 leading-tight">Liste des items</h2>
               <p class="text-xs text-slate-400">
-                {{ filteredVentes.length }} item(s) trouvée(s)
+                {{ filteredVentes.length }} item(s) trouvee(s)
                 <span v-if="selectedIds.length">
-                  • {{ selectedIds.length }} sélectionnée(s)
+                  - {{ selectedIds.length }} selectionnee(s)
                 </span>
               </p>
             </div>
@@ -126,7 +125,6 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import { useAuthStore } from '@/store/authStore'
 import SnkVenteServices from '@/services/SnkVenteServices.js'
-import DashboardHeader from '@/components/HeaderDePage.vue'
 import StockSummaryRow from '@/components/gestion/GestionRésumeStock.vue'
 import SearchBarre from '@/components/gestion/GestionSearchBarre.vue'
 import GestionActionsPanel from '@/components/gestion/GestionBlocBoutonAddDelete.vue'
@@ -195,7 +193,7 @@ const filteredVentes = computed(() => {
   })
 })
 
-// Sélection logique : si tu filtres, on garde seulement ce qui est visible
+// Selection logique : si tu filtres, on garde seulement ce qui est visible
 watch(filteredVentes, (list) => {
   const visible = new Set(list.map((v) => v.id))
   selectedIds.value = selectedIds.value.filter((id) => visible.has(id))

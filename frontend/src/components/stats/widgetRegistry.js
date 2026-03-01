@@ -111,8 +111,9 @@ export const WIDGET_DEFS = [
     component: NetProfitWidget,
     forms: ['number'],
     defaultSize: { w: 520, h: 240 },
-    defaultProps: { bucket: 'week', autoHeight: false },
+    defaultProps: { bucket: 'week', autoHeight: false, categories: [] },
     settings: [],
+    categoryFilter: true,
   },
   {
     type: 'roi',
@@ -123,8 +124,9 @@ export const WIDGET_DEFS = [
     component: RoiWidget,
     forms: ['number'],
     defaultSize: { w: 520, h: 260 },
-    defaultProps: { autoHeight: true },
+    defaultProps: { autoHeight: true, categories: [] },
     settings: [],
+    categoryFilter: true,
   },
   {
     type: 'grossRevenue',
@@ -135,8 +137,9 @@ export const WIDGET_DEFS = [
     component: GrossRevenueWidget,
     forms: ['line'],
     defaultSize: { w: 820, h: 520 },
-    defaultProps: { bucket: 'day', autoHeight: true },
+    defaultProps: { bucket: 'day', autoHeight: true, categories: [] },
     settings: [],
+    categoryFilter: true,
   },
   {
     type: 'avgMargin',
@@ -148,8 +151,9 @@ export const WIDGET_DEFS = [
     forms: ['number'],
     defaultSize: { w: 520, h: 200 },
     minSize: { w: 320, h: 180 },
-    defaultProps: { bucket: 'week', autoHeight: true },
+    defaultProps: { bucket: 'week', autoHeight: true, categories: [] },
     settings: [],
+    categoryFilter: true,
   },
   // 📦 Stock & vélocité
   {
@@ -161,9 +165,10 @@ export const WIDGET_DEFS = [
     component: InventoryValueWidget,
     forms: ['number'],
     defaultSize: { w: 520, h: 240 },
-    defaultProps: { autoHeight: false, useGlobalRange: false, asOf: '' },
+    defaultProps: { autoHeight: false, useGlobalRange: false, asOf: '', categories: [] },
     settings: [{ key: 'asOf', label: 'Date', type: 'date' }],
     dateMode: 'asOf',
+    categoryFilter: true,
   },
   {
     type: 'sellThrough',
@@ -174,8 +179,9 @@ export const WIDGET_DEFS = [
     component: SellThroughWidget,
     forms: ['bars'],
     defaultSize: { w: 520, h: 260 },
-    defaultProps: { bucket: 'week', autoHeight: true },
+    defaultProps: { bucket: 'week', autoHeight: true, categories: [] },
     settings: [],
+    categoryFilter: true,
   },
   {
     type: 'avgDaysToSell',
@@ -186,8 +192,9 @@ export const WIDGET_DEFS = [
     component: AvgDaysToSellWidget,
     forms: ['number'],
     defaultSize: { w: 520, h: 240 },
-    defaultProps: { bucket: 'week', autoHeight: false },
+    defaultProps: { bucket: 'week', autoHeight: false, categories: [] },
     settings: [],
+    categoryFilter: true,
   },
   {
     type: 'deathPile',
@@ -199,8 +206,9 @@ export const WIDGET_DEFS = [
     forms: ['bars'],
     defaultSize: { w: 620, h: 470 },
     minSize: { w: 520, h: 470 },
-    defaultProps: { autoHeight: false },
+    defaultProps: { autoHeight: false, categories: [] },
     settings: [],
+    categoryFilter: true,
   },
   {
     type: 'activeListings',
@@ -211,8 +219,9 @@ export const WIDGET_DEFS = [
     component: ActiveListingsWidget,
     forms: ['number'],
     defaultSize: { w: 520, h: 240 },
-    defaultProps: { bucket: 'week', autoHeight: false },
+    defaultProps: { bucket: 'week', autoHeight: false, categories: [] },
     settings: [],
+    categoryFilter: true,
   },
 
   // 🚀 Performance
@@ -225,7 +234,7 @@ export const WIDGET_DEFS = [
     component: TopProfitDriversWidget,
     forms: ['bars', 'pie', 'treemap', 'heatmap'],
     defaultSize: { w: 720, h: 360 },
-    defaultProps: { top: 8, autoHeight: true, view: 'bars' },
+    defaultProps: { top: 8, autoHeight: true, view: 'bars', categories: [] },
     settings: [
       {
         key: 'top',
@@ -237,6 +246,7 @@ export const WIDGET_DEFS = [
         help: 'Entre 1 et 15',
       },
     ],
+    categoryFilter: true,
   },
   {
     type: 'asp',
@@ -247,8 +257,9 @@ export const WIDGET_DEFS = [
     component: AspWidget,
     forms: ['number'],
     defaultSize: { w: 520, h: 240 },
-    defaultProps: { bucket: 'week', autoHeight: false },
+    defaultProps: { bucket: 'week', autoHeight: false, categories: [] },
     settings: [],
+    categoryFilter: true,
   },
   {
     type: 'cashFlow',
@@ -259,8 +270,9 @@ export const WIDGET_DEFS = [
     component: CashFlowWidget,
     forms: ['number'],
     defaultSize: { w: 520, h: 240 },
-    defaultProps: { bucket: 'week', autoHeight: false },
+    defaultProps: { bucket: 'week', autoHeight: false, categories: [] },
     settings: [],
+    categoryFilter: true,
   },
 
   // Bonus (si tu veux garder)
@@ -273,7 +285,7 @@ export const WIDGET_DEFS = [
     component: BrandsWidget,
     forms: ['bars', 'treemap', 'heatmap'],
     defaultSize: { w: 720, h: 420 },
-    defaultProps: { top: 8, autoHeight: false, view: 'bars' },
+    defaultProps: { top: 8, autoHeight: false, view: 'bars', categories: [] },
     settings: [
       {
         key: 'top',
@@ -285,6 +297,7 @@ export const WIDGET_DEFS = [
         help: 'Entre 1 et 15',
       },
     ],
+    categoryFilter: true,
   },
   {
     type: 'topSales',
@@ -295,7 +308,7 @@ export const WIDGET_DEFS = [
     component: TopSalesWidget,
     forms: ['bars'],
     defaultSize: { w: 620, h: 420 },
-    defaultProps: { limit: 5, autoHeight: true },
+    defaultProps: { limit: 5, autoHeight: true, categories: [] },
     settings: [
       {
         key: 'limit',
@@ -307,6 +320,7 @@ export const WIDGET_DEFS = [
         help: 'Entre 1 et 15',
       },
     ],
+    categoryFilter: true,
   },
 ]
 

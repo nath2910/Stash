@@ -22,23 +22,42 @@ public class StatsService {
   }
 
   public StatsSummaryResponse summary(Long userId, LocalDate from, LocalDate to) {
-    return summary(userId, from, to, null);
+    return summary(userId, from, to, null, null);
   }
 
   public StatsSummaryResponse summary(Long userId, LocalDate from, LocalDate to, LocalDate asOf) {
+    return summary(userId, from, to, asOf, null);
+  }
+
+  public StatsSummaryResponse summary(
+      Long userId,
+      LocalDate from,
+      LocalDate to,
+      LocalDate asOf,
+      List<String> categories
+  ) {
+    List<String> cats = normalizeCategories(categories);
+    boolean categoriesAll = isAllCategories(cats);
+    String[] catArray = toArray(cats);
     LocalDateRange range = normalizeRange(from, to);
     LocalDate asOfDate = asOf != null ? asOf : range.to();
 
-    BigDecimal ca = repo.caBetween(userId, range.from(), range.to());
-    BigDecimal profit = repo.profitBetween(userId, range.from(), range.to());
-    long sold = repo.countSoldBetween(userId, range.from(), range.to());
+    BigDecimal ca = repo.caBetween(userId, range.from(), range.to(), catArray, categoriesAll);
+    BigDecimal profit = repo.profitBetween(userId, range.from(), range.to(), catArray, categoriesAll);
+    long sold = repo.countSoldBetween(userId, range.from(), range.to(), catArray, categoriesAll);
 
-    long stock = asOf != null ? repo.countInStockAt(userId, asOfDate) : repo.countInStock(userId);
-    BigDecimal stockValue = asOf != null ? repo.stockValueAt(userId, asOfDate) : repo.stockValue(userId);
+    long stock = asOf != null
+        ? repo.countInStockAt(userId, asOfDate, catArray, categoriesAll)
+        : repo.countInStock(userId, catArray, categoriesAll);
+    BigDecimal stockValue = asOf != null
+        ? repo.stockValueAt(userId, asOfDate, catArray, categoriesAll)
+        : repo.stockValue(userId, catArray, categoriesAll);
 
     BigDecimal margin = BigDecimal.ZERO;
-    if (ca != null && ca.compareTo(BigDecimal.ZERO) > 0) {
-      margin = profit.divide(ca, 4, RoundingMode.HALF_UP);
+    BigDecimal safeCa = nz(ca);
+    BigDecimal safeProfit = nz(profit);
+    if (safeCa.compareTo(BigDecimal.ZERO) > 0) {
+      margin = safeProfit.divide(safeCa, 4, RoundingMode.HALF_UP);
     }
 
     return new StatsSummaryResponse(
@@ -52,12 +71,25 @@ public class StatsService {
   }
 
   public List<StatsPointResponse> timeseries(Long userId, LocalDate from, LocalDate to, String granularity) {
+    return timeseries(userId, from, to, granularity, null);
+  }
+
+  public List<StatsPointResponse> timeseries(
+      Long userId,
+      LocalDate from,
+      LocalDate to,
+      String granularity,
+      List<String> categories
+  ) {
+    List<String> cats = normalizeCategories(categories);
+    boolean categoriesAll = isAllCategories(cats);
+    String[] catArray = toArray(cats);
     LocalDateRange range = normalizeRange(from, to);
     var rows = "week".equalsIgnoreCase(granularity)
-        ? repo.timeseriesWeek(userId, range.from(), range.to())
+        ? repo.timeseriesWeek(userId, range.from(), range.to(), catArray, categoriesAll)
         : "month".equalsIgnoreCase(granularity)
-            ? repo.timeseriesMonth(userId, range.from(), range.to())
-            : repo.timeseriesDay(userId, range.from(), range.to());
+            ? repo.timeseriesMonth(userId, range.from(), range.to(), catArray, categoriesAll)
+            : repo.timeseriesDay(userId, range.from(), range.to(), catArray, categoriesAll);
 
     return rows.stream()
         .map(r -> new StatsPointResponse(r.getBucket(), r.getCa(), r.getProfit()))
@@ -65,27 +97,67 @@ public class StatsService {
   }
 
   public List<StatsBreakdownResponse> brandBreakdown(Long userId, LocalDate from, LocalDate to) {
+    return brandBreakdown(userId, from, to, null);
+  }
+
+  public List<StatsBreakdownResponse> brandBreakdown(
+      Long userId,
+      LocalDate from,
+      LocalDate to,
+      List<String> categories
+  ) {
+    List<String> cats = normalizeCategories(categories);
+    boolean categoriesAll = isAllCategories(cats);
+    List<String> catsIn = ensureNonEmpty(cats);
     LocalDateRange range = normalizeRange(from, to);
-    return repo.brandBreakdownSales(userId, range.from(), range.to()).stream()
+    return repo.brandBreakdownSales(userId, range.from(), range.to(), catsIn, categoriesAll).stream()
         .map(r -> new StatsBreakdownResponse(r.getLabel(), r.getNb()))
         .toList();
   }
 
   public List<TopVenteProjection> topSales(Long userId, LocalDate from, LocalDate to, int limit) {
+    return topSales(userId, from, to, limit, null);
+  }
+
+  public List<TopVenteProjection> topSales(
+      Long userId,
+      LocalDate from,
+      LocalDate to,
+      int limit,
+      List<String> categories
+  ) {
+    List<String> cats = normalizeCategories(categories);
+    boolean categoriesAll = isAllCategories(cats);
+    List<String> catsIn = ensureNonEmpty(cats);
     LocalDateRange range = normalizeRange(from, to);
     int safe = Math.min(Math.max(limit, 1), 20);
-    return repo.topVentesBetween(userId, range.from(), range.to()).stream().limit(safe).toList();
+    return repo.topVentesBetween(userId, range.from(), range.to(), catsIn, categoriesAll)
+        .stream()
+        .limit(safe)
+        .toList();
   }
 
   public StatsKpiResponse kpi(Long userId, LocalDate from, LocalDate to, String metric) {
+    return kpi(userId, from, to, metric, null);
+  }
+
+  public StatsKpiResponse kpi(
+      Long userId,
+      LocalDate from,
+      LocalDate to,
+      String metric,
+      List<String> categories
+  ) {
+    List<String> cats = normalizeCategories(categories);
+    boolean categoriesAll = isAllCategories(cats);
     LocalDateRange range = normalizeRange(from, to);
     LocalDateRange prev = prevRange(range.from(), range.to());
 
-    StatsSummaryResponse curr = summary(userId, range.from(), range.to());
-    StatsSummaryResponse prevSummary = summary(userId, prev.from(), prev.to());
+    StatsSummaryResponse curr = summary(userId, range.from(), range.to(), null, cats);
+    StatsSummaryResponse prevSummary = summary(userId, prev.from(), prev.to(), null, cats);
 
-    BigDecimal currentValue = metricFromSummary(userId, curr, metric, range.from(), range.to());
-    BigDecimal prevValue = metricFromSummary(userId, prevSummary, metric, prev.from(), prev.to());
+    BigDecimal currentValue = metricFromSummary(userId, curr, metric, range.from(), range.to(), cats);
+    BigDecimal prevValue = metricFromSummary(userId, prevSummary, metric, prev.from(), prev.to(), cats);
     BigDecimal delta = deltaPct(currentValue, prevValue);
 
     return new StatsKpiResponse(currentValue, delta);
@@ -98,17 +170,31 @@ public class StatsService {
       String metric,
       String granularity
   ) {
+    return series(userId, from, to, metric, granularity, null);
+  }
+
+  public List<StatsSeriesPointResponse> series(
+      Long userId,
+      LocalDate from,
+      LocalDate to,
+      String metric,
+      String granularity,
+      List<String> categories
+  ) {
+    List<String> cats = normalizeCategories(categories);
+    boolean categoriesAll = isAllCategories(cats);
+    String[] catArray = toArray(cats);
     LocalDateRange range = normalizeRange(from, to);
 
     if ("avgDaysToSell".equalsIgnoreCase(metric)) {
-      var rows = avgDaysRows(userId, range.from(), range.to(), granularity);
+      var rows = avgDaysRows(userId, range.from(), range.to(), granularity, catArray, categoriesAll);
       return rows.stream()
           .map(r -> new StatsSeriesPointResponse(r.getBucket(), toBigDecimal(r.getAvgDays())))
           .toList();
     }
 
-    var rows = timeseriesFull(userId, range.from(), range.to(), granularity);
-    long stockNow = repo.countInStock(userId);
+    var rows = timeseriesFull(userId, range.from(), range.to(), granularity, catArray, categoriesAll);
+    long stockNow = repo.countInStock(userId, catArray, categoriesAll);
 
     return rows.stream()
         .map(r -> new StatsSeriesPointResponse(
@@ -124,16 +210,30 @@ public class StatsService {
       LocalDate from,
       LocalDate to
   ) {
+    return breakdown(userId, metric, from, to, null);
+  }
+
+  public List<StatsLabelValueResponse> breakdown(
+      Long userId,
+      String metric,
+      LocalDate from,
+      LocalDate to,
+      List<String> categories
+  ) {
+    List<String> cats = normalizeCategories(categories);
+    boolean categoriesAll = isAllCategories(cats);
+    String[] catArray = toArray(cats);
     LocalDateRange range = normalizeRange(from, to);
 
     if ("deathPileAge".equalsIgnoreCase(metric)) {
-      return repo.deathPileAge(userId).stream()
+      return repo.deathPileAge(userId, catArray, categoriesAll).stream()
           .map(r -> new StatsLabelValueResponse(r.getLabel(), r.getValue()))
           .toList();
     }
 
     if ("brands".equalsIgnoreCase(metric)) {
-      return repo.brandBreakdownSales(userId, range.from(), range.to()).stream()
+      List<String> catsIn = ensureNonEmpty(cats);
+      return repo.brandBreakdownSales(userId, range.from(), range.to(), catsIn, categoriesAll).stream()
           .map(r -> new StatsLabelValueResponse(r.getLabel(), BigDecimal.valueOf(r.getNb())))
           .toList();
     }
@@ -148,18 +248,32 @@ public class StatsService {
       String metric,
       int limit
   ) {
+    return rank(userId, from, to, metric, limit, null);
+  }
+
+  public List<StatsLabelValueResponse> rank(
+      Long userId,
+      LocalDate from,
+      LocalDate to,
+      String metric,
+      int limit,
+      List<String> categories
+  ) {
+    List<String> cats = normalizeCategories(categories);
+    boolean categoriesAll = isAllCategories(cats);
     LocalDateRange range = normalizeRange(from, to);
     int safe = Math.min(Math.max(limit, 1), 50);
+    List<String> catsIn = ensureNonEmpty(cats);
 
     if ("topBrandsProfit".equalsIgnoreCase(metric)) {
-      return repo.topBrandsProfit(userId, range.from(), range.to()).stream()
+      return repo.topBrandsProfit(userId, range.from(), range.to(), catsIn, categoriesAll).stream()
           .limit(safe)
           .map(r -> new StatsLabelValueResponse(r.getLabel(), r.getValue()))
           .toList();
     }
 
     if ("topCategoriesProfit".equalsIgnoreCase(metric)) {
-      return repo.topCategoriesProfit(userId, range.from(), range.to()).stream()
+      return repo.topCategoriesProfit(userId, range.from(), range.to(), catsIn, categoriesAll).stream()
           .limit(safe)
           .map(r -> new StatsLabelValueResponse(r.getLabel(), r.getValue()))
           .toList();
@@ -208,7 +322,8 @@ public class StatsService {
       StatsSummaryResponse summary,
       String metric,
       LocalDate from,
-      LocalDate to
+      LocalDate to,
+      List<String> categories
   ) {
     BigDecimal ca = nz(summary.ca());
     BigDecimal profit = nz(summary.profit());
@@ -238,7 +353,7 @@ public class StatsService {
       return profit;
     }
     if ("avgDaysToSell".equalsIgnoreCase(metric)) {
-      Double avg = repo.avgDaysToSellBetween(userId, from, to);
+      Double avg = repo.avgDaysToSellBetween(userId, from, to, toArray(categories), isAllCategories(categories));
       return toBigDecimal(avg);
     }
     if ("grossRevenue".equalsIgnoreCase(metric) || "ca".equalsIgnoreCase(metric)) {
@@ -280,7 +395,7 @@ public class StatsService {
     if ("activeListings".equalsIgnoreCase(metric)) {
       return BigDecimal.valueOf(stockNow);
     }
-    if ("grossRevenue".equalsIgnoreCase(metric) || "ca".equalsIgnoreCase(metric) || "asp".equalsIgnoreCase(metric)) {
+    if ("grossRevenue".equalsIgnoreCase(metric) || "ca".equalsIgnoreCase(metric)) {
       return safeCa;
     }
     if ("netProfit".equalsIgnoreCase(metric) || "profit".equalsIgnoreCase(metric) || "cashAvailable".equalsIgnoreCase(metric)) {
@@ -293,30 +408,71 @@ public class StatsService {
       Long userId,
       LocalDate from,
       LocalDate to,
-      String granularity
+      String granularity,
+      String[] categories,
+      boolean categoriesAll
   ) {
     if ("week".equalsIgnoreCase(granularity)) {
-      return repo.avgDaysToSellWeek(userId, from, to);
+      return repo.avgDaysToSellWeek(userId, from, to, categories, categoriesAll);
     }
     if ("month".equalsIgnoreCase(granularity)) {
-      return repo.avgDaysToSellMonth(userId, from, to);
+      return repo.avgDaysToSellMonth(userId, from, to, categories, categoriesAll);
     }
-    return repo.avgDaysToSellDay(userId, from, to);
+    return repo.avgDaysToSellDay(userId, from, to, categories, categoriesAll);
   }
 
   private List<SnkVenteRepository.TimePointFullRow> timeseriesFull(
       Long userId,
       LocalDate from,
       LocalDate to,
-      String granularity
+      String granularity,
+      String[] categories,
+      boolean categoriesAll
   ) {
     if ("week".equalsIgnoreCase(granularity)) {
-      return repo.timeseriesWeekFull(userId, from, to);
+      return repo.timeseriesWeekFull(userId, from, to, categories, categoriesAll);
     }
     if ("month".equalsIgnoreCase(granularity)) {
-      return repo.timeseriesMonthFull(userId, from, to);
+      return repo.timeseriesMonthFull(userId, from, to, categories, categoriesAll);
     }
-    return repo.timeseriesDayFull(userId, from, to);
+    return repo.timeseriesDayFull(userId, from, to, categories, categoriesAll);
+  }
+
+  public List<String> categories(Long userId, LocalDate from, LocalDate to) {
+    List<String> scoped = null;
+    if (from != null && to != null) {
+      scoped = repo.distinctCategoriesBetween(userId, from, to);
+    }
+    if (scoped != null && !scoped.isEmpty()) {
+      return scoped;
+    }
+    return repo.distinctCategories(userId);
+  }
+
+  private List<String> normalizeCategories(List<String> categories) {
+    if (categories == null) return null;
+    var cleaned = categories.stream()
+        .filter(c -> c != null && !c.trim().isEmpty())
+        .map(String::trim)
+        .distinct()
+        .toList();
+    return cleaned.isEmpty() ? null : cleaned;
+  }
+
+  private boolean isAllCategories(List<String> categories) {
+    return categories == null || categories.isEmpty();
+  }
+
+  private List<String> ensureNonEmpty(List<String> categories) {
+    if (categories == null || categories.isEmpty()) {
+      return List.of("__all__");
+    }
+    return categories;
+  }
+
+  private String[] toArray(List<String> categories) {
+    if (categories == null || categories.isEmpty()) return new String[0];
+    return categories.toArray(new String[0]);
   }
 
   private BigDecimal deltaPct(BigDecimal current, BigDecimal previous) {

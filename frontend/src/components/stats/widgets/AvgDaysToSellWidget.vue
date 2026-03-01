@@ -35,7 +35,12 @@ import { normalizeKpi, normalizeSeries, prevPeriod } from '@/services/statsAdapt
 import { formatDateFR } from '@/utils/formatters'
 import KpiCard from './_parts/KpiCard.vue'
 
-const props = defineProps({ from: String, to: String, bucket: { type: String, default: 'week' } })
+const props = defineProps({
+  from: String,
+  to: String,
+  bucket: { type: String, default: 'week' },
+  categories: { type: Array, default: () => [] },
+})
 const accent = '#60A5FA'
 
 const loading = ref(false)
@@ -52,9 +57,9 @@ async function load() {
   try {
     const { from: prevFrom, to: prevTo } = prevPeriod(props.from, props.to)
     const [k, s, kPrev] = await Promise.all([
-      StatsServices.kpi('avgDaysToSell', props.from, props.to),
-      StatsServices.series('avgDaysToSell', props.from, props.to, props.bucket),
-      StatsServices.kpi('avgDaysToSell', prevFrom, prevTo),
+      StatsServices.kpi('avgDaysToSell', props.from, props.to, props.categories),
+      StatsServices.series('avgDaysToSell', props.from, props.to, props.bucket, props.categories),
+      StatsServices.kpi('avgDaysToSell', prevFrom, prevTo, props.categories),
     ])
     if (id !== req) return
     kpi.value = normalizeKpi(k.data)
@@ -69,7 +74,7 @@ async function load() {
 }
 
 onMounted(load)
-watch(() => [props.from, props.to, props.bucket], load)
+watch(() => [props.from, props.to, props.bucket, props.categories], load)
 
 const valueText = computed(() => `${Number(kpi.value.value ?? 0).toFixed(0)} j`)
 const deltaDays = computed(() => {

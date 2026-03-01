@@ -1,22 +1,22 @@
 <template>
   <div class="overflow-x-auto">
-    <!-- mini barre sélection -->
+    <!-- mini barre selection -->
     <div v-if="selectable" class="mb-3 flex items-center justify-between">
-      <p class="text-xs text-gray-400">{{ modelValue.length }} sélectionnée(s)</p>
+      <p class="text-xs text-gray-400">{{ modelValue.length }} selectionnee(s)</p>
 
       <button
         type="button"
         class="text-xs text-gray-300 underline hover:text-white"
         @click="toggleAll"
       >
-        {{ allSelected ? 'Tout désélectionner' : 'Tout sélectionner' }}
+        {{ allSelected ? 'Tout deselectionner' : 'Tout selectionner' }}
       </button>
     </div>
 
     <table class="min-w-full text-sm text-gray-100">
       <thead class="bg-gray-900 border-b border-gray-700">
         <tr>
-          <!-- ✅ nouvelle colonne sélection -->
+          <!-- nouvelle colonne selection -->
           <th
             v-if="selectable"
             class="px-4 py-3 text-left font-semibold text-xs uppercase tracking-wide text-gray-400"
@@ -100,7 +100,7 @@
               class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-medium"
               :class="badgeClass(vente.categorie)"
             >
-              {{ vente.categorie || '—' }}
+              {{ vente.categorie || '-' }}
             </span>
           </td>
 
@@ -120,7 +120,7 @@
             {{
               vente.dateVente || vente.date_vente
                 ? formatDate(vente.dateVente ?? vente.date_vente)
-                : '—'
+                : '-'
             }}
           </td>
 
@@ -153,7 +153,7 @@
 
         <tr v-if="!snkVentes.length">
           <td :colspan="selectable ? 9 : 8" class="px-4 py-8 text-center text-sm text-gray-400">
-            Aucun item à afficher pour le moment.
+            Aucun item a afficher pour le moment.
           </td>
         </tr>
       </tbody>
@@ -169,10 +169,10 @@ import { profitOf } from '@/utils/snkVente'
 const props = defineProps({
   snkVentes: { type: Array, required: true },
 
-  // ✅ mode sélection
+  // mode selection
   selectable: { type: Boolean, default: false },
 
-  // ✅ v-model = liste d’IDs sélectionnés
+  // v-model = liste d'IDs selectionnes
   modelValue: { type: Array, default: () => [] },
 })
 
@@ -196,7 +196,7 @@ const toggleAll = () => {
   const visibleIds = props.snkVentes.map((v) => v.id)
 
   if (allSelected.value) {
-    // enlève ceux visibles
+    // enleve ceux visibles
     const next = props.modelValue.filter((id) => !visibleIds.includes(id))
     emit('update:modelValue', next)
   } else {
@@ -209,7 +209,7 @@ const toggleAll = () => {
 
 const formatCurrency = (val) => {
   const num = Number(val)
-  if (!val || Number.isNaN(num)) return '--'
+  if (val === null || val === undefined || Number.isNaN(num)) return '--'
   return formatEUR(num, { digits: 0 })
 }
 
