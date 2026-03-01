@@ -19,6 +19,8 @@ import java.util.stream.Collectors;
 
 
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 @Configuration
 @EnableWebSecurity
@@ -54,7 +56,14 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
           ).permitAll()
           .anyRequest().authenticated()
       )
-      .oauth2Login(oauth -> oauth.successHandler(oAuth2SuccessHandler)) // ✅ TON handler
+      .oauth2Login(oauth -> oauth
+          .successHandler(oAuth2SuccessHandler)
+          .failureHandler((req, res, ex) -> {
+            ex.printStackTrace(); // log minimal (Koyeb stdout)
+            String msg = URLEncoder.encode(ex.getMessage(), StandardCharsets.UTF_8);
+            res.sendRedirect("/login?error=" + msg);
+          })
+      )
       .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
       .build();
 }
