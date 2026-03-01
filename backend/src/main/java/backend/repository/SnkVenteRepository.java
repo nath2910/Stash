@@ -1,4 +1,4 @@
-﻿package backend.repository;
+package backend.repository;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
