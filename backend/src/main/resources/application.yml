@@ -2,7 +2,7 @@ spring:
   config:
     import: optional:file:.env[.properties],optional:file:backend/.env[.properties]
   profiles:
-    active: dev # par defaut en local
+    active: ${SPRING_PROFILES_ACTIVE:dev} # dev par défaut, override en prod via env
 
   mail:
     host: ${SPRING_MAIL_HOST:}
@@ -24,11 +24,13 @@ spring:
 
 app:
   jwt:
-    secret: ${JWT_SECRET:dev-secret-change-me-dev-secret-change-me}
+    # Pas de secret par défaut : doit être fourni ; une valeur de dev est ajoutée dans le profil dev
+    secret: ${JWT_SECRET:}
     expiration-minutes: 60
 
   oauth2:
-    success-redirect: ${OAUTH2_SUCCESS_REDIRECT:http://localhost:5173/auth/callback}
+    # défini par profil (dev/prod)
+    success-redirect: ${OAUTH2_SUCCESS_REDIRECT:}
 
   frontend:
     reset-password-url: ${APP_FRONTEND_RESET_PASSWORD_URL:http://localhost:5173/reset-password}
@@ -68,6 +70,14 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
+app:
+  jwt:
+    secret: ${JWT_SECRET:dev-secret-change-me-dev-secret-change-me}
+  oauth2:
+    success-redirect: ${OAUTH2_SUCCESS_REDIRECT:http://localhost:5173/auth/callback}
+  cors:
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173}
+
 logging:
   level:
     org.springframework.security: DEBUG
@@ -97,6 +107,14 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+
+app:
+  jwt:
+    secret: ${JWT_SECRET} # obligatoire en prod
+  oauth2:
+    success-redirect: ${OAUTH2_SUCCESS_REDIRECT} # obligatoire en prod
+  cors:
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS} # obligatoire en prod
 
 server:
   forward-headers-strategy: framework

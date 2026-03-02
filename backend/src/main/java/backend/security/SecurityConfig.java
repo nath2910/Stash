@@ -5,6 +5,8 @@ import java.util.List;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -28,11 +30,16 @@ public class SecurityConfig {
 
   private final JwtAuthFilter jwtAuthFilter;
   private final OAuth2SuccessHandler oAuth2SuccessHandler;
+  private final Environment environment;
+
+  @Value("${app.cors.allowed-origins:}")
+  private String allowedOrigins;
 
 
-public SecurityConfig(JwtAuthFilter jwtAuthFilter, OAuth2SuccessHandler oAuth2SuccessHandler) {
+public SecurityConfig(JwtAuthFilter jwtAuthFilter, OAuth2SuccessHandler oAuth2SuccessHandler, Environment environment) {
   this.jwtAuthFilter = jwtAuthFilter;
   this.oAuth2SuccessHandler = oAuth2SuccessHandler;
+  this.environment = environment;
 }
 
 @Bean
@@ -73,14 +80,14 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
 public CorsConfigurationSource corsConfigurationSource() {
   CorsConfiguration config = new CorsConfiguration();
 
-  // 🔥 Lis une variable d'env/propriété :
-  // app.cors.allowed-origins = "http://localhost:5173,https://ton-front.onrender.com"
-  String raw = System.getProperty("app.cors.allowed-origins");
+  String raw = allowedOrigins;
+  boolean isDev = Arrays.asList(environment.getActiveProfiles()).contains("dev");
   if (raw == null || raw.isBlank()) {
-    raw = System.getenv("APP_CORS_ALLOWED_ORIGINS");
-  }
-  if (raw == null || raw.isBlank()) {
-    raw = "http://localhost:5173";
+    if (isDev) {
+      raw = "http://localhost:5173";
+    } else {
+      throw new IllegalStateException("APP_CORS_ALLOWED_ORIGINS must be set when not in dev profile");
+    }
   }
 
   var origins = Arrays.stream(raw.split(","))
