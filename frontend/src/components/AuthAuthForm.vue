@@ -463,16 +463,19 @@ const submitSignup = async () => {
   }
 }
 
+const apiBase =
+  (import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '') ||
+  window.location.origin
+
 const googleAuthUrl =
-  import.meta.env.VITE_GOOGLE_OAUTH_URL ||
-  'https://governing-irina-sneaknik-1b4023c1.koyeb.app/oauth2/authorization/google'
+  import.meta.env.VITE_GOOGLE_OAUTH_URL || `${apiBase}/oauth2/authorization/google`
 
 const loginWithGoogle = () => {
   window.location.href = googleAuthUrl
 }
 
 const discordAuthUrl =
-  import.meta.env.VITE_DISCORD_OAUTH_URL || 'http://localhost:8080/oauth2/authorization/discord'
+  import.meta.env.VITE_DISCORD_OAUTH_URL || `${apiBase}/oauth2/authorization/discord`
 
 const loginWithDiscord = () => {
   window.location.href = discordAuthUrl

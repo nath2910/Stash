@@ -49,6 +49,29 @@ class SnkVenteServices {
   importBulk(items) {
     return api.post('/snkVente/import', items)
   }
+
+  // Attachments
+  listAttachments(id) {
+    return api.get(`/snkVente/${id}/attachments`)
+  }
+
+  uploadAttachment(id, file) {
+    const form = new FormData()
+    form.append('file', file)
+    return api.post(`/snkVente/${id}/attachments`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  }
+
+  deleteAttachment(id, attachmentId) {
+    return api.delete(`/snkVente/${id}/attachments/${attachmentId}`)
+  }
+
+  downloadAttachment(id, attachmentId) {
+    return api.get(`/snkVente/${id}/attachments/${attachmentId}/download`, {
+      responseType: 'blob',
+    })
+  }
 }
 
 export default new SnkVenteServices()

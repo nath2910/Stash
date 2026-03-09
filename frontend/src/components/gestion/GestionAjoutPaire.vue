@@ -56,6 +56,27 @@
           <!-- Form -->
           <form class="p-6 space-y-6" @submit.prevent="createSales">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <!-- Type -->
+              <div class="sm:col-span-2">
+                <label class="block text-sm font-medium text-gray-200 mb-2">Type d'item</label>
+                <div class="flex flex-wrap gap-2">
+                  <button
+                    v-for="option in ITEM_TYPES"
+                    :key="option.value"
+                    type="button"
+                    @click="form.type = option.value"
+                    class="px-3 py-2 rounded-lg border text-sm transition"
+                    :class="
+                      form.type === option.value
+                        ? 'border-emerald-400 bg-emerald-400/10 text-emerald-100'
+                        : 'border-gray-600 bg-gray-900 text-gray-300 hover:border-gray-500'
+                    "
+                  >
+                    {{ option.label }}
+                  </button>
+                </div>
+              </div>
+
               <!-- Nom -->
               <div>
                 <label for="nomItem" class="block text-sm font-medium text-gray-200 mb-2">
@@ -168,6 +189,31 @@
                   class="w-full rounded-lg border border-gray-600 bg-gray-900 text-gray-100 px-3 py-2.5 text-sm placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500"
                 ></textarea>
               </div>
+
+              <!-- Champs spécifiques -->
+              <div class="sm:col-span-2">
+                <div class="flex items-center justify-between mb-2">
+                  <p class="text-sm font-medium text-gray-200">Champs spécifiques</p>
+                  <p class="text-xs text-gray-400">
+                    Adaptés au type {{ currentTypeLabel.toLowerCase() }}
+                  </p>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div v-for="field in metadataFields" :key="field.key" class="space-y-1">
+                    <label class="text-xs text-gray-300">{{ field.label }}</label>
+                    <input
+                      type="text"
+                      v-model.trim="form.metadata[field.key]"
+                      :placeholder="field.placeholder"
+                      class="w-full rounded-lg border border-gray-600 bg-gray-900 text-gray-100 px-3 py-2 text-sm placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/40 focus:border-purple-500"
+                    />
+                  </div>
+                </div>
+                <p v-if="form.type === 'TICKET'" class="mt-2 text-xs text-amber-200/80">
+                  Tu pourras ensuite ajouter un PDF ou une image du ticket dans la fiche (onglet
+                  pièces jointes).
+                </p>
+              </div>
             </div>
 
             <!-- Footer -->
@@ -209,6 +255,7 @@ import { computed, ref, watch } from 'vue'
 import SnkVenteServices from '@/services/SnkVenteServices.js'
 import { useAuthStore } from '@/store/authStore'
 import CompactDateInput from '@/components/ui/CompactDateInput.vue'
+import { ITEM_TYPES, METADATA_FIELDS, typeLabel } from '@/constants/itemTypes'
 
 const emit = defineEmits(['close', 'added'])
 
@@ -232,6 +279,8 @@ const emptyForm = (prefill = {}) => ({
   dateVente: null,
   description: '',
   categorie: '',
+  type: 'SNEAKER',
+  metadata: {},
   ...prefill,
 })
 
@@ -262,6 +311,8 @@ const buildPayload = () => ({
   dateVente: form.value.dateVente,
   description: form.value.description,
   categorie: form.value.categorie,
+  type: form.value.type,
+  metadata: cleanedMetadata.value,
   user: currentUserId.value ? { id: currentUserId.value } : null,
 })
 
@@ -297,6 +348,17 @@ watch(
     if (requiresDateVente.value && form.value.dateVente) error.value = null
   },
 )
+
+const metadataFields = computed(() => METADATA_FIELDS[form.value.type] || [])
+const cleanedMetadata = computed(() => {
+  const out = {}
+  for (const f of metadataFields.value) {
+    const v = form.value.metadata?.[f.key]
+    if (v !== undefined && v !== null && String(v).trim() !== '') out[f.key] = String(v).trim()
+  }
+  return out
+})
+const currentTypeLabel = computed(() => typeLabel(form.value.type))
 
 const createSales = async () => {
   loading.value = true

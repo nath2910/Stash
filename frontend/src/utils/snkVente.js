@@ -26,3 +26,10 @@ export function profitOf(vente) {
 export function hasResell(vente) {
   return prixResellOf(vente) > 0
 }
+
+export function typeOf(vente) {
+  return (
+    vente.type ||
+    (vente.metadata?.type ? vente.metadata.type : vente.categorie === 'Pokemon' ? 'POKEMON_CARD' : 'SNEAKER')
+  )
+}

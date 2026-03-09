@@ -162,6 +162,8 @@ function exportCsv() {
     'prixResell',
     'dateAchat',
     'dateVente',
+    'type',
+    'metadata',
     'description',
   ]
 
@@ -175,6 +177,8 @@ function exportCsv() {
         prixResell: v.prixResell ?? v.prix_resell ?? '',
         dateAchat: toIsoDate(v.dateAchat ?? v.date_achat),
         dateVente: toIsoDate(v.dateVente ?? v.date_vente),
+        type: v.type ?? 'SNEAKER',
+        metadata: JSON.stringify(v.metadata || {}),
         description: v.description ?? '',
       }
 
@@ -351,6 +355,20 @@ function parseDateSmart(v: unknown) {
   return Number.isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10)
 }
 
+function parseMetadata(v: unknown) {
+  if (v == null) return null
+  if (typeof v === 'object') return v as Record<string, unknown>
+  const s = String(v).trim()
+  if (!s) return null
+  try {
+    const parsed = JSON.parse(s)
+    if (parsed && typeof parsed === 'object') return parsed as Record<string, unknown>
+  } catch (e) {
+    // ignore parse error
+  }
+  return null
+}
+
 type ParsedTable = { headers: string[]; rows: CsvRow[] }
 
 function isExcelFile(file: File) {
@@ -519,6 +537,8 @@ function buildPayload(rows: CsvRow[], headers: string[]) {
     'commentaire',
     'comment',
   ])
+  const colType = findHeader(headers, ['type'])
+  const colMetadata = findHeader(headers, ['metadata', 'meta'])
 
   if (!colNomItem) {
     throw new Error(
@@ -546,6 +566,8 @@ function buildPayload(rows: CsvRow[], headers: string[]) {
         dateVente: dateVenteCol ? parseDateSmart(r[dateVenteCol]) : null,
         categorie: colCategorie ? String(r[colCategorie] ?? '').trim() : null,
         description: colDescription ? String(r[colDescription] ?? '').trim() : null,
+        type: colType ? String(r[colType] ?? '').trim().toUpperCase() || null : null,
+        metadata: colMetadata ? parseMetadata(r[colMetadata]) : null,
       }
     })
     .filter(Boolean)

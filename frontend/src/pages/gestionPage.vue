@@ -133,6 +133,7 @@ import EditVenteModal from '@/components/gestion/GestionModifierItem.vue'
 import SupprimerModal from '@/components/gestion/GestionSupprimerModal.vue'
 import CsvImportExportWidget from '@/components/gestion/CsvImportExportWidget.vue'
 import { isVendue, prixRetailOf } from '@/utils/snkVente'
+import { typeLabel } from '@/constants/itemTypes'
 
 const snkVentes = ref([])
 const searchTerm = ref('')
@@ -189,7 +190,14 @@ const filteredVentes = computed(() => {
     const name = String(v.nomItem ?? v.nom_item ?? '').toLowerCase()
     const cat = String(v.categorie ?? '').toLowerCase()
     const desc = String(v.description ?? '').toLowerCase()
-    return idStr.includes(term) || name.includes(term) || cat.includes(term) || desc.includes(term)
+    const type = typeLabel(v.type || 'SNEAKER').toLowerCase()
+    return (
+      idStr.includes(term) ||
+      name.includes(term) ||
+      cat.includes(term) ||
+      desc.includes(term) ||
+      type.includes(term)
+    )
   })
 })
 

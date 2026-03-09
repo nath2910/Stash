@@ -3,7 +3,9 @@ package backend.service;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.Year;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
@@ -13,6 +15,7 @@ import org.springframework.web.server.ResponseStatusException;
 import backend.dto.SnkVenteCreateDto;
 import backend.dto.SnkVenteImportDto;
 import backend.dto.TopVenteProjection;
+import backend.entity.ItemType;
 import backend.entity.SnkVente;
 import backend.entity.User;
 import backend.repository.SnkVenteRepository;
@@ -161,9 +164,12 @@ public class snkVenteService {
     target.setDateVente(dateVente);
     target.setDescription(description);
     target.setCategorie(categorie);
+    target.setType(target.getType() != null ? target.getType() : ItemType.SNEAKER);
   }
 
   private void applyFields(SnkVente target, SnkVenteCreateDto dto) {
+    ItemType resolvedType = dto.type() != null ? dto.type() : ItemType.SNEAKER;
+    Map<String, Object> metadata = sanitizeMetadata(resolvedType, dto.metadata());
     applyFields(
         target,
         dto.nomItem(),
@@ -174,9 +180,13 @@ public class snkVenteService {
         dto.description(),
         dto.categorie()
     );
+    target.setType(resolvedType);
+    target.setMetadata(metadata);
   }
 
   private void applyFields(SnkVente target, SnkVente payload) {
+    ItemType resolvedType = payload.getType() != null ? payload.getType() : ItemType.SNEAKER;
+    Map<String, Object> metadata = sanitizeMetadata(resolvedType, payload.getMetadata());
     applyFields(
         target,
         payload.getNomItem(),
@@ -187,9 +197,13 @@ public class snkVenteService {
         payload.getDescription(),
         payload.getCategorie()
     );
+    target.setType(resolvedType);
+    target.setMetadata(metadata);
   }
 
   private void applyFields(SnkVente target, SnkVenteImportDto dto) {
+    ItemType resolvedType = dto.getType() != null ? dto.getType() : ItemType.SNEAKER;
+    Map<String, Object> metadata = sanitizeMetadata(resolvedType, dto.getMetadata());
     applyFields(
         target,
         dto.getNomItem(),
@@ -200,5 +214,34 @@ public class snkVenteService {
         dto.getDescription(),
         dto.getCategorie()
     );
+    target.setType(resolvedType);
+    target.setMetadata(metadata);
+  }
+
+  private Map<String, Object> sanitizeMetadata(ItemType type, Map<String, Object> metadata) {
+    if (metadata == null) return new HashMap<>();
+    Map<String, Object> cleaned = new HashMap<>();
+    metadata.forEach((k, v) -> {
+      if (k == null || v == null) return;
+      String key = k.trim();
+      if (key.isEmpty()) return;
+      Object val = (v instanceof String s) ? s.trim() : v;
+      switch (type) {
+        case TICKET -> {
+          if (key.matches("^(eventDate|venue|section|row|seat|status)$")) cleaned.put(key, val);
+        }
+        case POKEMON_CARD -> {
+          if (key.matches("^(set|language|rarity|condition|grade)$")) cleaned.put(key, val);
+        }
+        case SNEAKER -> {
+          if (key.matches("^(size|sku|colorway|condition|boxCondition)$")) cleaned.put(key, val);
+        }
+        case OTHER -> {
+          // pas de champs imposés pour OTHER : tout est ignoré pour éviter du bruit côté BDD
+        }
+        default -> { }
+      }
+    });
+    return cleaned;
   }
 }

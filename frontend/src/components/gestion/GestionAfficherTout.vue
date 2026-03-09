@@ -37,6 +37,11 @@
           <th
             class="px-4 py-3 text-left font-semibold text-xs uppercase tracking-wide text-gray-400"
           >
+            type
+          </th>
+          <th
+            class="px-4 py-3 text-left font-semibold text-xs uppercase tracking-wide text-gray-400"
+          >
             categorie
           </th>
           <th
@@ -97,6 +102,15 @@
 
           <td class="px-4 py-3">
             <span
+              class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wide"
+              :class="typeBadgeClass(vente.type)"
+            >
+              {{ typeLabelDisplay(vente.type) }}
+            </span>
+          </td>
+
+          <td class="px-4 py-3">
+            <span
               class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-medium"
               :class="badgeClass(vente.categorie)"
             >
@@ -152,7 +166,7 @@
         </tr>
 
         <tr v-if="!snkVentes.length">
-          <td :colspan="selectable ? 9 : 8" class="px-4 py-8 text-center text-sm text-gray-400">
+          <td :colspan="selectable ? 10 : 9" class="px-4 py-8 text-center text-sm text-gray-400">
             Aucun item a afficher pour le moment.
           </td>
         </tr>
@@ -165,6 +179,7 @@
 import { computed } from 'vue'
 import { formatDateFR, formatEUR } from '@/utils/formatters'
 import { profitOf } from '@/utils/snkVente'
+import { typeLabel } from '@/constants/itemTypes'
 
 const props = defineProps({
   snkVentes: { type: Array, required: true },
@@ -227,4 +242,17 @@ const badgeClass = (cat) => {
   }
   return 'bg-gray-700 text-gray-100 border border-gray-500/60'
 }
+const typeBadgeClass = (type) => {
+  switch (type) {
+    case 'TICKET':
+      return 'bg-amber-500/15 text-amber-200 border border-amber-400/60'
+    case 'POKEMON_CARD':
+      return 'bg-cyan-500/15 text-cyan-200 border border-cyan-400/60'
+    case 'OTHER':
+      return 'bg-slate-500/15 text-slate-200 border border-slate-400/60'
+    default:
+      return 'bg-purple-500/10 text-purple-200 border border-purple-400/60'
+  }
+}
+const typeLabelDisplay = (type) => typeLabel(type || 'SNEAKER')
 </script>
