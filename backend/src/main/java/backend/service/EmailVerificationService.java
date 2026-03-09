@@ -1,8 +1,9 @@
 package backend.service;
 
+import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.UUID;
+import java.util.Base64;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
@@ -32,6 +33,7 @@ public class EmailVerificationService {
   private final String verifyEmailUrl;
   private final String mailFrom;
   private final Logger logger = LoggerFactory.getLogger(EmailVerificationService.class);
+  private final SecureRandom secureRandom = new SecureRandom();
 
   public EmailVerificationService(
       EmailVerificationTokenRepository tokenRepository,
@@ -67,7 +69,7 @@ public class EmailVerificationService {
 
       tokenRepository.deleteByUserIdAndUsedAtIsNull(user.getId());
 
-      String token = UUID.randomUUID().toString().replace("-", "");
+      String token = generateToken();
       EmailVerificationToken verificationToken = new EmailVerificationToken();
       verificationToken.setUser(user);
       verificationToken.setToken(token);
@@ -204,9 +206,20 @@ public class EmailVerificationService {
   }
 
   private String buildVerifyLink(String token) {
+    if (verifyEmailUrl.contains("{token}")) {
+      return verifyEmailUrl.replace("{token}", token);
+    }
+
     return UriComponentsBuilder
         .fromUriString(verifyEmailUrl)
         .queryParam("token", token)
         .toUriString();
+  }
+
+  private String generateToken() {
+    // 128 bits -> 22 chars Base64URL sans padding (plus court qu'un UUID)
+    byte[] bytes = new byte[16];
+    secureRandom.nextBytes(bytes);
+    return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
   }
 }

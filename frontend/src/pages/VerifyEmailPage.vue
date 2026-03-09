@@ -76,7 +76,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AuthService from '@/services/AuthService'
 import { useAuthStore } from '@/store/authStore'
@@ -90,7 +90,7 @@ const errorMessage = ref('')
 const resendLoading = ref(false)
 const resendMessage = ref('')
 
-const token = computed(() => (route.query.token || '').toString())
+const token = computed(() => (route.query.token || route.params.token || '').toString())
 // L'email est optionnel ici; il sert seulement au bouton de renvoi.
 const email = computed(() => (route.query.email || '').toString())
 
@@ -157,7 +157,45 @@ const resendEmail = async () => {
   }
 }
 
-onMounted(verify)
+const handleLoginFromStorage = async () => {
+  const storedToken = localStorage.getItem('snk_token')
+  if (!storedToken) return
+
+  let storedUser = null
+  try {
+    storedUser = JSON.parse(localStorage.getItem('snk_user') || 'null')
+  } catch {
+    storedUser = null
+  }
+
+  auth.setAuth({ user: storedUser, token: storedToken })
+  try {
+    const me = await AuthService.me()
+    auth.setUser(me)
+  } catch (err) {
+    console.warn('Unable to refresh user after storage event', err)
+  }
+
+  await router.replace({ name: 'home' })
+}
+
+const onStorage = (event) => {
+  if (event.key === 'snk_token' && event.newValue) {
+    handleLoginFromStorage()
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('storage', onStorage)
+  verify()
+  // Si l'autre onglet a deja mis le token avant l'event storage
+  handleLoginFromStorage()
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('storage', onStorage)
+})
+
 watch(token, verify)
 </script>
 

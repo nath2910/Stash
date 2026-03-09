@@ -61,6 +61,13 @@ const router = createRouter({
       component: VerifyEmailPage,
       meta: { fullBleed: true },
     },
+    // lien court depuis l'email: /v/<token>
+    {
+      path: '/v/:token',
+      name: 'verify-email-short',
+      component: VerifyEmailPage,
+      meta: { fullBleed: true },
+    },
 
     // ✅ pages protégées, required auth permet de bloque des pages si pas connecte
     {
@@ -119,6 +126,7 @@ const publicRoutes = new Set([
   'forgot-password',
   'reset-password',
   'verify-email',
+  'verify-email-short',
 ])
 
 router.beforeEach(async (to) => {
