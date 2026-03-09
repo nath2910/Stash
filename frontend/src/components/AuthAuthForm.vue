@@ -457,6 +457,21 @@ const submitSignup = async () => {
     router.replace({ name: 'verify-email', query: { email: signupForm.value.email } })
   } catch (err) {
     console.error(err)
+
+    // Cas frequent : compte deja cree (conflit 409) -> on renvoie vers la verification
+    if (err?.response?.status === 409 && signupForm.value.email) {
+      success.value =
+        err.response?.data?.message ||
+        "Ce compte existe deja. Si l'email n'est pas valide, un lien vient d'etre renvoye."
+      try {
+        await AuthService.resendVerification({ email: signupForm.value.email })
+      } catch (resendErr) {
+        console.warn('Resend verification failed', resendErr)
+      }
+      router.replace({ name: 'verify-email', query: { email: signupForm.value.email, existing: '1' } })
+      return
+    }
+
     error.value = err.response?.data?.message || 'Erreur lors de la creation du compte.'
   } finally {
     loading.value = false

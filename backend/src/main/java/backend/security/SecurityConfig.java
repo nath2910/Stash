@@ -24,6 +24,9 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
+import org.springframework.security.oauth2.client.endpoint.OAuth2AccessTokenResponseClient;
+import org.springframework.security.oauth2.client.endpoint.OAuth2AuthorizationCodeGrantRequest;
+
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
@@ -66,6 +69,9 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
       )
       .oauth2Login(oauth -> oauth
           .successHandler(oAuth2SuccessHandler)
+          .tokenEndpoint(token -> token
+              .accessTokenResponseClient(retryingTokenClient())
+          )
           .failureHandler((req, res, ex) -> {
             ex.printStackTrace(); // log minimal (Koyeb stdout)
             String msg = URLEncoder.encode(ex.getMessage(), StandardCharsets.UTF_8);
@@ -75,6 +81,11 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
       .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
       .build();
 }
+
+ @Bean
+ public OAuth2AccessTokenResponseClient<OAuth2AuthorizationCodeGrantRequest> retryingTokenClient() {
+   return new RetryingTokenResponseClient();
+ }
 
 
  @Bean

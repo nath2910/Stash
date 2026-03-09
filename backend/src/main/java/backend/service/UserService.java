@@ -1,6 +1,7 @@
 package backend.service;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -65,9 +66,14 @@ public class UserService {
         user.setLastName(request.getLastName());
         user.setPassword(hashedPassword);
 
-        User savedUser = userRepository.save(user);
-        emailVerificationService.sendVerification(savedUser);
-        return savedUser;
+        try {
+            User savedUser = userRepository.save(user);
+            emailVerificationService.sendVerification(savedUser);
+            return savedUser;
+        } catch (DataIntegrityViolationException ex) {
+            // Si une contrainte d'unicite est levee (course condition ou compte deja existant)
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email deja utilise");
+        }
     }
 
     public User login(LoginRequest request) {

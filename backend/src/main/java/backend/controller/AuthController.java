@@ -19,6 +19,10 @@ import backend.entity.User;
 import backend.service.EmailVerificationService;
 import backend.service.PasswordResetService;
 import backend.service.UserService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/auth")
@@ -40,10 +44,20 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    @ResponseStatus(HttpStatus.CREATED)
-    public UserMeResponse register(@RequestBody RegisterRequest request) {
-        User user = userService.register(request);
-        return UserMapper.toMe(user);
+    public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
+        try {
+            User user = userService.register(request);
+            return ResponseEntity.status(HttpStatus.CREATED).body(UserMapper.toMe(user));
+        } catch (ResponseStatusException ex) {
+            if (ex.getStatusCode() == HttpStatus.CONFLICT && request != null && request.getEmail() != null) {
+                // Compte déjà présent : on renvoie un message explicite et on renvoie le lien de vérification au besoin.
+                emailVerificationService.requestVerification(request.getEmail());
+                return ResponseEntity.status(HttpStatus.ACCEPTED).body(
+                    Map.of("message", "Compte déjà existant. Si l'email n'est pas validé, un nouveau lien vient d'être envoyé.")
+                );
+            }
+            throw ex;
+        }
     }
 
     @PostMapping("/login")
