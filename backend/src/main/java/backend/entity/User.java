@@ -21,8 +21,8 @@ public class User {
   private String email;
 
   @JsonIgnore
- @Column(nullable = true)
-private String password;
+  @Column(nullable = false)
+  private String password = "";
 
   @Column(length = 20, nullable = false)
   private String provider = "LOCAL"; // LOCAL | GOOGLE
@@ -35,6 +35,18 @@ private String password;
 
   @Column(name = "picture_url")
   private String pictureUrl;
+
+  @Column(name = "stripe_customer_id", length = 255)
+  private String stripeCustomerId;
+
+  @Column(name = "subscription_status", length = 32, nullable = false)
+  private String subscriptionStatus = "inactive"; // inactive | active | past_due | canceled
+
+  @Column(name = "subscription_current_period_end")
+  private java.time.OffsetDateTime subscriptionCurrentPeriodEnd;
+
+  @Column(name = "discord_id", length = 255)
+  private String discordId;
 
   public User() {}
 
@@ -63,4 +75,18 @@ private String password;
 
   public String getPictureUrl() { return pictureUrl; }
   public void setPictureUrl(String pictureUrl) { this.pictureUrl = pictureUrl; }
+
+  public String getStripeCustomerId() { return stripeCustomerId; }
+  public void setStripeCustomerId(String stripeCustomerId) { this.stripeCustomerId = stripeCustomerId; }
+
+  public String getSubscriptionStatus() { return subscriptionStatus; }
+  public void setSubscriptionStatus(String subscriptionStatus) { this.subscriptionStatus = subscriptionStatus; }
+
+  public java.time.OffsetDateTime getSubscriptionCurrentPeriodEnd() { return subscriptionCurrentPeriodEnd; }
+  public void setSubscriptionCurrentPeriodEnd(java.time.OffsetDateTime subscriptionCurrentPeriodEnd) {
+    this.subscriptionCurrentPeriodEnd = subscriptionCurrentPeriodEnd;
+  }
+
+  public String getDiscordId() { return discordId; }
+  public void setDiscordId(String discordId) { this.discordId = discordId; }
 }

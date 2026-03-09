@@ -106,6 +106,18 @@ public class snkVenteController {
     snkVenteService.deleteVente(userId(currentUser), id);
   }
 
+  @PostMapping(path = "/bulk-delete", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+  public ResponseEntity<Map<String, Integer>> deleteBulk(
+      @AuthenticationPrincipal User currentUser,
+      @RequestBody List<Integer> ids
+  ) {
+    if (currentUser == null) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("deleted", 0));
+    }
+    int deleted = snkVenteService.deleteBulk(userId(currentUser), ids);
+    return ResponseEntity.ok(Map.of("deleted", deleted));
+  }
+
   @GetMapping("/topVentes")
   public List<TopVenteProjection> topVentes(@AuthenticationPrincipal User currentUser) {
     return snkVenteService.getTop3VentesAnneeCourante(userId(currentUser));

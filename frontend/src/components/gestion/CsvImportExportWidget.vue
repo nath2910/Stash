@@ -1,40 +1,72 @@
 <template>
-  <section class="rounded-2xl border border-white/10 bg-slate-900/60 p-4 sm:p-5 space-y-4">
-    <!-- Header -->
-    <div class="flex items-start justify-between gap-3">
+  <section
+    class="rounded-3xl border border-white/10 bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-slate-950/80 p-5 sm:p-6 shadow-2xl space-y-4 relative overflow-hidden"
+  >
+    <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,#7c3aed22,transparent_35%),radial-gradient(circle_at_80%_0%,#22c55e22,transparent_35%)]"></div>
+    <div class="relative flex items-start justify-between gap-3">
       <div>
-        <h3 class="text-lg font-semibold text-white">Export / Import CSV</h3>
-        <p class="text-sm text-white/70">Reutilise ta base de donnee existante.</p>
+        <p class="text-[11px] uppercase tracking-[0.2em] text-violet-200/70">Données</p>
+        <h3 class="text-xl font-semibold text-white">Import / Export</h3>
+      </div>
+      <div class="hidden sm:flex items-center gap-2 text-xs text-slate-300/70">
+        <span class="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_10px_#34d39999]"></span>
+        Prêt
       </div>
     </div>
 
     <!-- Actions -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <div class="relative grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div
+        v-if="importing"
+        class="absolute inset-0 rounded-2xl border border-violet-400/20 bg-slate-950/70 backdrop-blur-sm flex flex-col gap-3 items-center justify-center z-10 text-white text-sm"
+      >
+        <div class="loading-spinner h-8 w-8 border-2 border-violet-200 border-t-transparent rounded-full"></div>
+        <div class="text-center leading-tight">
+          <div class="font-semibold">Import en cours...</div>
+          <div class="text-xs text-slate-300">{{ progress }}%</div>
+        </div>
+        <div class="w-40 h-2 bg-slate-800 rounded-full overflow-hidden">
+          <div
+            class="h-full bg-gradient-to-r from-violet-500 via-blue-400 to-emerald-400 transition-all duration-200"
+            :style="{ width: progress + '%' }"
+          ></div>
+        </div>
+      </div>
+
       <!-- EXPORT -->
       <button
         type="button"
-        class="w-full px-4 py-3 rounded-2xl bg-gray-700/70 hover:bg-gray-700 border border-white/10 text-white transition flex items-center justify-center gap-2 disabled:opacity-50"
+        class="w-full px-4 py-3 rounded-2xl bg-slate-800/70 hover:bg-slate-800 border border-white/10 text-white transition flex items-center justify-between gap-3 disabled:opacity-50 relative overflow-hidden"
         :disabled="!rowsToExport.length"
         @click="exportCsv"
       >
-        <span
-          class="inline-flex items-center justify-center h-9 w-9 rounded-xl bg-white/5 border border-white/10"
-        >
-          Export
-        </span>
-        <div class="text-left">
-          <div class="text-sm font-semibold">Exporter le CSV</div>
-          <div class="text-xs text-white/60">{{ rowsToExport.length }} ligne(s)</div>
+        <div class="flex items-center gap-3">
+          <span
+            class="inline-flex items-center justify-center h-10 w-10 rounded-2xl bg-white/5 border border-white/10 text-xs font-semibold"
+          >
+            CSV
+          </span>
+          <div class="text-left">
+            <div class="text-sm font-semibold">Exporter le CSV</div>
+            <div class="text-xs text-white/60">{{ rowsToExport.length }} ligne(s)</div>
+          </div>
+        </div>
+        <div class="text-[10px] px-2 py-1 rounded-full bg-emerald-500/15 border border-emerald-400/20 text-emerald-200">
+          1 clic
         </div>
       </button>
 
       <!-- IMPORT -->
-      <div class="rounded-2xl border border-white/10 bg-white/0 p-3">
+      <div class="rounded-2xl border border-white/10 bg-slate-900/50 p-4 space-y-3">
         <div class="flex items-center justify-between gap-3">
           <div class="min-w-0">
-            <div class="text-sm font-semibold text-white">Importer un CSV</div>
-            <div class="text-xs text-white/60 truncate">
+            <div class="text-sm font-semibold text-white flex items-center gap-2">
+              <span class="h-2 w-2 rounded-full bg-violet-400 shadow-[0_0_10px_#a78bfa]"></span>
+              Importer un fichier
+            </div>
+            <div class="text-xs text-white/60 truncate flex items-center gap-1">
               {{ fileName ? fileName : 'Choisis un fichier CSV (export Excel)' }}
+              <span v-if="selectedFile" class="text-[10px] text-violet-200/70">({{ prettySize }})</span>
             </div>
           </div>
 
@@ -50,10 +82,11 @@
 
             <button
               type="button"
-              class="px-3 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm disabled:opacity-50 transition"
+              class="px-3 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm disabled:opacity-50 transition inline-flex items-center gap-2"
               :disabled="importing || !selectedFile"
               @click="importNow"
             >
+              <span v-if="importing" class="loading-spinner h-4 w-4 border-2 border-white/50 border-t-transparent rounded-full"></span>
               {{ importing ? 'Import...' : 'Importer' }}
             </button>
           </div>
@@ -63,14 +96,15 @@
           ref="fileInput"
           type="file"
           class="hidden"
-          accept=".csv,text/csv"
+          accept=".csv,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
           @change="onFilePicked"
         />
 
         <div
           v-if="successMsg"
-          class="mt-3 rounded-xl border border-emerald-400/20 bg-emerald-400/10 p-3 text-sm text-emerald-100"
+          class="mt-3 rounded-xl border border-emerald-400/30 bg-emerald-400/10 p-3 text-sm text-emerald-100 flex items-center gap-2"
         >
+          <span class="h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_8px_#34d399]"></span>
           {{ successMsg }}
         </div>
 
@@ -87,7 +121,8 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import Papa, { type ParseResult } from 'papaparse'
+import Papa from 'papaparse'
+import * as XLSX from 'xlsx'
 import SnkVenteServices from '@/services/SnkVenteServices.js'
 
 /**
@@ -169,8 +204,18 @@ const selectedFile = ref<File | null>(null)
 const fileName = ref('')
 
 const importing = ref(false)
+const progress = ref(0)
 const successMsg = ref('')
 const errorMsg = ref('')
+let progressTimer: number | null = null
+
+const prettySize = computed(() => {
+  const f = selectedFile.value
+  if (!f) return ''
+  if (f.size < 1024) return f.size + ' o'
+  if (f.size < 1024 * 1024) return (f.size / 1024).toFixed(1) + ' ko'
+  return (f.size / (1024 * 1024)).toFixed(2) + ' Mo'
+})
 
 function pickFile() {
   successMsg.value = ''
@@ -185,6 +230,28 @@ function onFilePicked(e: Event) {
   fileName.value = file?.name ?? ''
   successMsg.value = ''
   errorMsg.value = ''
+}
+
+function startProgress() {
+  progress.value = 8
+  if (progressTimer) window.clearInterval(progressTimer)
+  progressTimer = window.setInterval(() => {
+    // ease toward 90%
+    if (progress.value < 90) {
+      progress.value = Math.min(90, progress.value + Math.random() * 10)
+    }
+  }, 200)
+}
+
+function stopProgress(finalValue = 100) {
+  if (progressTimer) {
+    window.clearInterval(progressTimer)
+    progressTimer = null
+  }
+  progress.value = finalValue
+  setTimeout(() => {
+    progress.value = 0
+  }, 600)
 }
 
 function normalize(s: string) {
@@ -237,11 +304,35 @@ function toNumberSmart(v: unknown) {
   return Number.isFinite(n) ? n : null
 }
 
+function excelSerialToIso(value: number) {
+  // Excel's day 1 = 1899-12-31, but there is an extra fake 1900 leap day; XLSX handles it via SSF
+  const parsed = XLSX.SSF.parse_date_code(value)
+  if (!parsed || !parsed.y || !parsed.m || !parsed.d) return null
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${parsed.y}-${pad(parsed.m)}-${pad(parsed.d)}`
+}
+
 function parseDateSmart(v: unknown) {
   if (v == null) return null
+
+  // Excel numeric serials or numeric strings
+  if (typeof v === 'number') {
+    if (v > 30000 && v < 60000) {
+      const iso = excelSerialToIso(v)
+      if (iso) return iso
+    }
+  }
+
   const s = String(v).trim()
   if (!s) return null
   if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10)
+
+  // numeric string that looks like Excel serial
+  if (/^\d{4,6}(\.\d+)?$/.test(s)) {
+    const num = Number(s)
+    const iso = excelSerialToIso(num)
+    if (iso) return iso
+  }
 
   const x = s.replace(/\./g, '/').replace(/-/g, '/')
   const parts = x.split('/')
@@ -260,30 +351,110 @@ function parseDateSmart(v: unknown) {
   return Number.isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10)
 }
 
-/** parse best delimiter : ; , tab, auto */
-async function parseBest(file: File): Promise<ParseResult<CsvRow>> {
-  const tries: Array<string | undefined> = [';', ',', '\t', undefined]
+type ParsedTable = { headers: string[]; rows: CsvRow[] }
 
-  const results = await Promise.all(
-    tries.map(
-      (delimiter) =>
-        new Promise<ParseResult<CsvRow>>((resolve) => {
-          Papa.parse<CsvRow>(file, {
-            header: true,
-            skipEmptyLines: 'greedy',
-            delimiter: delimiter as any,
-            complete: (res) => resolve(res),
-          })
-        }),
-    ),
+function isExcelFile(file: File) {
+  return (
+    file.type.includes('spreadsheet') ||
+    /\.xlsx?$/i.test(file.name || '') ||
+    file.type === 'application/vnd.ms-excel'
   )
+}
 
-  return results.sort((a, b) => (b.meta.fields?.length ?? 0) - (a.meta.fields?.length ?? 0))[0]
+function extractTableFrom2D(rows2D: any[][]): ParsedTable {
+  // trouve la première ligne qui contient au moins 2 valeurs non vides pour servir d'en-têtes
+  const headerIndex = rows2D.findIndex((row) => (row || []).filter((c) => String(c).trim()).length >= 2)
+  if (headerIndex === -1) return { headers: [], rows: [] }
+
+  const rawHeaders = rows2D[headerIndex] || []
+  const headers = rawHeaders.map((h, idx) => {
+    const s = String(h ?? '').trim()
+    return s || `col${idx + 1}`
+  })
+
+  const dataRows = rows2D.slice(headerIndex + 1).map((r) => {
+    const obj: CsvRow = {}
+    headers.forEach((h, i) => {
+      obj[h] = (r && r[i] !== undefined ? r[i] : '') as any
+    })
+    return obj
+  })
+
+  return { headers, rows: dataRows }
+}
+
+async function parseExcel(file: File): Promise<ParsedTable> {
+  const buffer = await file.arrayBuffer()
+  const workbook = XLSX.read(buffer, { type: 'array' })
+  const sheetNameWithData =
+    workbook.SheetNames.find((name) => {
+      const rows = XLSX.utils.sheet_to_json<any[]>(workbook.Sheets[name], { header: 1, defval: '' }) as
+        | any[][]
+        | undefined
+      if (!rows) return false
+      return rows.some((row) => (row || []).some((c) => String(c).trim()))
+    }) || workbook.SheetNames[0]
+
+  const sheet = workbook.Sheets[sheetNameWithData]
+  if (!sheet) return { headers: [], rows: [] }
+
+  const rows2D = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1, defval: '' }) as any[][] | undefined
+  return extractTableFrom2D(rows2D || [])
+}
+
+async function parseCsv(file: File): Promise<ParsedTable> {
+  const attempt = (delimiter?: string) =>
+    new Promise<{ headers: string[]; rows: CsvRow[] }>((resolve) => {
+      Papa.parse<CsvRow>(file, {
+        header: true,
+        skipEmptyLines: 'greedy',
+        delimiter,
+        worker: true,
+        complete: (res) => {
+          resolve({
+            headers: (res.meta.fields ?? []) as string[],
+            rows: (res.data ?? []).filter(Boolean) as CsvRow[],
+          })
+        },
+      })
+    })
+
+  const auto = await attempt()
+  if (auto.headers.length >= 2) return auto
+
+  const semicolon = await attempt(';')
+  const best = semicolon.headers.length > auto.headers.length ? semicolon : auto
+
+  // fallback : reparser sans header pour récupérer la première ligne non vide comme entête
+  const fallback = await new Promise<ParsedTable>((resolve) => {
+    Papa.parse<string[]>(file, {
+      header: false,
+      skipEmptyLines: 'greedy',
+      delimiter: best.headers.length ? undefined : ';',
+      complete: (res) => {
+        const rows2D = res.data as any[][]
+        resolve(extractTableFrom2D(rows2D || []))
+      },
+    })
+  })
+
+  return fallback.headers.length >= 2 ? fallback : best
+}
+
+async function parseFileSmart(file: File): Promise<ParsedTable> {
+  const table = isExcelFile(file) ? await parseExcel(file) : await parseCsv(file)
+  // si le header est vide (ex: 1re ligne vide ou colonnes fusionnées), on reprend les clés détectées
+  if (table.headers.length < 2 && table.rows.length) {
+    table.headers = Object.keys(table.rows[0] ?? {}).map((h) => h || '')
+  }
+  return table
 }
 
 function buildPayload(rows: CsvRow[], headers: string[]) {
   const colNomItem = findHeader(headers, [
     'nom item',
+    "nom de l'item",
+    'nom de l item',
     'nom',
     'item',
     'produit',
@@ -391,13 +562,14 @@ async function importNow() {
   if (!file) return
 
   importing.value = true
+  startProgress()
   successMsg.value = ''
   errorMsg.value = ''
 
   try {
-    const parsed = await parseBest(file)
-    const headers = (parsed.meta.fields ?? []) as string[]
-    const rows = (parsed.data ?? []).filter(Boolean)
+    const parsed = await parseFileSmart(file)
+    const headers = parsed.headers
+    const rows = parsed.rows
 
     if (headers.length < 2) {
       throw new Error('CSV illisible : trop peu de colonnes detectees (mauvais separateur).')
@@ -407,13 +579,14 @@ async function importNow() {
     const res = await SnkVenteServices.importBulk(payload)
 
     const created = res?.data?.created ?? null
-    if (created === 0) throw new Error('Import fait mais 0 ligne creee.')
+    if (created === 0) throw new Error('Import fait mais 0 ligne créee.')
 
     successMsg.value = `Import OK (${created ?? payload.length} lignes)`
     emit('imported')
 
     selectedFile.value = null
     fileName.value = ''
+    stopProgress(100)
   } catch (err: any) {
     console.error(err)
     errorMsg.value =
@@ -421,9 +594,21 @@ async function importNow() {
       err?.response?.data?.error ||
       err?.message ||
       'Erreur import CSV'
+    stopProgress(0)
   } finally {
     importing.value = false
     if (fileInput.value) fileInput.value.value = ''
   }
 }
 </script>
+
+<style scoped>
+.loading-spinner {
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+</style>

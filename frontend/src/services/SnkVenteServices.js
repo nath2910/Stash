@@ -34,6 +34,10 @@ class SnkVenteServices {
     return api.delete(`/snkVente/${id}`)
   }
 
+  supprimerEnMasse(ids) {
+    return api.post('/snkVente/bulk-delete', ids)
+  }
+
   topVentes() {
     return api.get('/snkVente/topVentes')
   }

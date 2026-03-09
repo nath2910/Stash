@@ -31,6 +31,26 @@
     overflow-y: auto; /* ✅ scrollbar normale */
   }
 
+  /* Scrollbar discrète */
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: #94a3b8 #0b1224; /* pouce / piste */
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0b1224;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: #94a3b8;
+    border-radius: 9999px;
+    border: 2px solid #0b1224;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: #cbd5e1;
+  }
+
   body.no-scroll {
     overflow: hidden; /* ✅ uniquement quand on veut lock */
   }

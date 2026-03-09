@@ -89,6 +89,12 @@ public class snkVenteService {
     snkVenteRepository.delete(existing);
   }
 
+  @Transactional
+  public int deleteBulk(Long userId, List<Integer> ids) {
+    if (ids == null || ids.isEmpty()) return 0;
+    return snkVenteRepository.deleteByUserAndIds(userId, ids);
+  }
+
   public List<TopVenteProjection> getTop3VentesAnneeCourante(Long userId) {
     int currentYear = Year.now().getValue();
     return snkVenteRepository.topVentesYear(userId, currentYear).stream().limit(3).toList();
@@ -119,7 +125,6 @@ public class snkVenteService {
     return getDernieresVentesParUser(userId, 7);
   }
 
-  @Transactional
   public int importBulk(Long userId, List<SnkVenteImportDto> items) {
     User user = getUserOrThrow(userId);
     if (items == null || items.isEmpty()) return 0;

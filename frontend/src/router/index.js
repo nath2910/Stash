@@ -1,10 +1,13 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/store/authStore.js'
+import { useBillingStore } from '@/store/billingStore.js'
 import AuthService from '@/services/AuthService.js'
 
 const HomePage = () => import('@/pages/homePage.vue')
 const StatsPage = () => import('@/pages/statsPage.vue')
 const GestionPage = () => import('@/pages/gestionPage.vue')
+const AboPage = () => import('@/pages/aboPage.vue')
+const AboViewPage = () => import('@/pages/aboViewPage.vue')
 const AuthPage = () => import('@/pages/AuthPage.vue')
 const AccountPage = () => import('@/pages/accountPage.vue')
 const AuthCallbackPage = () => import('@/pages/authCallbackPage.vue')
@@ -89,6 +92,18 @@ const router = createRouter({
       component: AccountPage,
       meta: { requiresAuth: true, fullBleed: true },
     },
+    {
+      path: '/abo',
+      name: 'abo',
+      component: AboPage,
+      meta: { requiresAuth: true, allowInactive: true, fullBleed: true, allowScroll: true },
+    },
+    {
+      path: '/mon-abonnement',
+      name: 'abo-view',
+      component: AboViewPage,
+      meta: { requiresAuth: true, fullBleed: true },
+    },
 
     // ✅ toujours en dernier
     { path: '/:pathMatch(.*)*', name: 'not-found', redirect: '/' },
@@ -108,6 +123,7 @@ const publicRoutes = new Set([
 
 router.beforeEach(async (to) => {
   const auth = useAuthStore()
+  const billing = useBillingStore()
   const token = auth.token.value
   const hasToken = !!token
   const isPublic = publicRoutes.has(to.name)
@@ -136,7 +152,26 @@ router.beforeEach(async (to) => {
   }
 
   if (to.name === 'auth' && auth.token.value) {
-    return { name: 'home' }
+    await billing.fetchStatus()
+    return billing.status.value === 'active' ? { name: 'home' } : { name: 'abo' }
+  }
+
+  // Si page protégée, vérifier l'abo (sauf si allowInactive)
+  const requiresAuth = to.meta.requiresAuth === true
+  const allowInactive = to.meta.allowInactive === true
+  if (requiresAuth) {
+    await billing.fetchStatus()
+    if (!allowInactive && billing.status.value !== 'active') {
+      return { name: 'abo', query: { returnTo: to.fullPath } }
+    }
+    // Si abo actif et il vient sur /abo, on redirige vers la vue abonnement
+    if (to.name === 'abo' && billing.status.value === 'active') {
+      const target = (to.query?.returnTo || '/')
+      if (target && typeof target === 'string') {
+        return target.startsWith('/') ? target : { path: target }
+      }
+      return { name: 'home' }
+    }
   }
 })
 

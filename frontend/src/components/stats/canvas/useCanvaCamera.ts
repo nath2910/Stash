@@ -140,6 +140,27 @@ export function useCanvasCamera(
     panzoom.pan(dx, dy, { relative: true, force: true } as any)
   }
 
+  function computeFitScale() {
+    const r = getRects()
+    if (!r) return null
+    const scaleX = r.vpRect.width / BOARD_W
+    const scaleY = r.vpRect.height / BOARD_H
+    const target = Math.min(scaleX, scaleY) * 0.94
+    const min = opts.minScale ?? 0.15
+    const max = opts.maxScale ?? 3
+    const clamped = Math.min(Math.max(target, min), max)
+    return Number.isFinite(clamped) ? clamped : null
+  }
+
+  function applyFit(center = true, animate = false) {
+    if (!panzoom) return
+    const s = computeFitScale()
+    if (!s) return
+    panzoom.setOptions?.({ minScale: Math.max(s * 0.9, opts.minScale ?? 0.15) })
+    panzoom.zoom(s, { animate } as any)
+    if (center) centerOn(BOARD_W / 2, BOARD_H / 2)
+  }
+
   function zoomIn() {
     if (!panzoom) return
     const anchor = boardPointFromViewportCenter()
@@ -152,8 +173,13 @@ export function useCanvasCamera(
     panzoom.zoomOut?.()
     centerOn(anchor.x, anchor.y)
   }
+  function zoomTo(targetScale: number, options?: Record<string, unknown>) {
+    if (!panzoom) return
+    panzoom.zoom(targetScale, options as any)
+  }
   function resetZoom() {
-    panzoom?.reset?.({ force: true } as any)
+    if (!panzoom) return
+    applyFit(true, true)
   }
 
   function init(onReadyOnce?: () => void) {
@@ -162,10 +188,11 @@ export function useCanvasCamera(
     if (!board || !vp) return
 
     panzoom = Panzoom(board, {
-      maxScale: opts.maxScale ?? 3,
+      maxScale: opts.maxScale ?? 3.5,
       minScale: opts.minScale ?? 0.15,
       contain: opts.contain ?? 'outside',
       excludeClass: EXCLUDE_CLASS,
+      touchAction: 'pan-x pan-y',
       canvas: true, // ✅ Lucidchart feel (drag la “feuille”)
       cursor: 'grab',
 
@@ -218,22 +245,26 @@ export function useCanvasCamera(
 
     // reset propre (évite les anciens transforms)
     panzoom.reset?.({ force: true } as any)
+    applyFit(false)
     onPanzoomChange()
 
     // ✅ ready = quand le viewport a une vraie taille
     didReady = false
     ro = new ResizeObserver(() => {
-      if (didReady) return
       const r = getRects()
       if (!r) return
-      didReady = true
-
-      // double RAF = layout ultra stable
-      requestAnimationFrame(() => {
+      if (!didReady) {
+        didReady = true
+        // double RAF = layout ultra stable
         requestAnimationFrame(() => {
-          onReadyOnce?.()
+          requestAnimationFrame(() => {
+            applyFit(true)
+            onReadyOnce?.()
+          })
         })
-      })
+      } else {
+        applyFit(true)
+      }
     })
     ro.observe(vp)
   }
@@ -270,9 +301,11 @@ export function useCanvasCamera(
     zoomIn,
     zoomOut,
     resetZoom,
+    zoomTo,
     centerOn,
     boardPointFromViewport,
     boardPointFromViewportCenter,
+    fitToViewport: () => applyFit(true, true),
     getPanzoom: () => panzoom,
   }
 }

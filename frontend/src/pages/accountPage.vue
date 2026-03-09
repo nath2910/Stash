@@ -26,6 +26,15 @@
               <h1 class="text-xl font-semibold text-white sm:text-2xl">Mon compte</h1>
               <p class="mt-1 text-sm text-slate-400">{{ currentUser.email || '-' }}</p>
             </div>
+            <div class="ml-auto">
+              <button
+                type="button"
+                class="rounded-xl border border-emerald-300/40 bg-emerald-300/10 px-3 py-2 text-xs font-semibold text-emerald-100 hover:bg-emerald-300/15"
+                @click="goAbo"
+              >
+                Gérer l'abonnement
+              </button>
+            </div>
           </div>
 
           <div class="mt-6 grid gap-3 text-sm text-slate-200 sm:grid-cols-2">
@@ -267,5 +276,9 @@ const goBack = () => {
   } else {
     router.push({ name: 'home' })
   }
+}
+
+const goAbo = () => {
+  router.push({ name: 'abo' })
 }
 </script>

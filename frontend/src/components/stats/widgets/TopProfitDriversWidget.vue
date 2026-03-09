@@ -18,7 +18,7 @@
 
     <div v-if="props.view === 'pie'" class="tp-main">
       <div class="tp-legend">
-        <div v-if="!items.length" class="tp-empty">Aucune donnees sur la periode.</div>
+        <div v-if="!items.length" class="tp-empty">Aucune données sur la periode.</div>
         <div v-else class="tp-list">
           <div v-for="row in rows" :key="row.label" class="tp-row">
             <span class="tp-dot" :style="{ background: row.color }"></span>
@@ -36,7 +36,7 @@
     <template v-else>
       <VChart class="tp-chart" :style="chartStyle" :option="option" autoresize />
       <div class="tp-legend">
-        <div v-if="!items.length" class="tp-empty">Aucune donnees sur la periode.</div>
+        <div v-if="!items.length" class="tp-empty">Aucune données sur la periode.</div>
         <div v-else class="tp-list">
           <div v-for="row in rows" :key="row.label" class="tp-row">
             <span class="tp-dot" :style="{ background: row.color }"></span>

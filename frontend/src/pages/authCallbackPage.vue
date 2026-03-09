@@ -11,6 +11,12 @@ onMounted(async () => {
   const hash = window.location.hash || ''
   const params = new URLSearchParams(hash.replace('#', ''))
   const token = params.get('token')
+  const error = params.get('error')
+
+  if (error) {
+    router.replace({ name: 'auth', query: { mode: 'login', ssoError: error } })
+    return
+  }
 
   if (!token) {
     router.replace({ name: 'auth', query: { mode: 'login' } })

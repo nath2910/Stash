@@ -112,6 +112,15 @@ function categories(from, to) {
   return api.get('/stats/categories', { params })
 }
 
+// Billing (backend à implémenter côté API Spring)
+function billingStatus() {
+  return api.get('/billing/status')
+}
+
+function billingCheckout(promoCode, discord) {
+  return api.post('/billing/checkout', { promoCode, discord })
+}
+
 // Persistance du layout cote backend (prive / multi-appareil).
 function getLayout() {
   return api.get('/stats/layout')
@@ -134,4 +143,6 @@ export default {
   categories,
   getLayout,
   saveLayout,
+  billingStatus,
+  billingCheckout,
 }

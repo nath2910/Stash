@@ -1,6 +1,55 @@
 <template>
   <div class="min-h-screen text-slate-100">
     <section class="relative w-full px-4 sm:px-6 lg:px-10 py-6 sm:py-10 space-y-8">
+      <teleport to="body">
+        <div v-if="showOnboarding" class="fixed inset-0 z-50">
+          <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="closeOnboarding"></div>
+          <div
+            class="absolute inset-0 flex items-center justify-center px-4"
+            aria-modal="true"
+            role="dialog"
+          >
+            <div class="relative w-full max-w-lg rounded-3xl border border-slate-800 bg-slate-900/90 p-6 shadow-2xl">
+              <button
+                type="button"
+                class="absolute right-3 top-3 text-slate-400 hover:text-white"
+                aria-label="Fermer"
+                @click="closeOnboarding"
+              >
+                ✕
+              </button>
+              <p class="text-xs uppercase tracking-[0.3em] text-emerald-200/80 mb-2">Bienvenue</p>
+              <h2 class="text-2xl font-semibold text-white mb-2">Abonnement actif</h2>
+              <p class="text-sm text-slate-300 mb-4">
+                Explore les tableaux Stats, suit ton stock dans Gestion et retrouve tout ton compte ici.
+              </p>
+              <div class="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  class="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-900 shadow-md hover:bg-emerald-400"
+                  @click="goToStatsFromModal"
+                >
+                  Ouvrir les stats
+                </button>
+                <button
+                  type="button"
+                  class="rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-100 hover:border-emerald-300/60"
+                  @click="goToGestionFromModal"
+                >
+                  Voir Gestion
+                </button>
+                <button
+                  type="button"
+                  class="rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-200 hover:border-slate-500"
+                  @click="closeOnboarding"
+                >
+                  Plus tard
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </teleport>
 
       <!-- Hero -->
       <header
@@ -69,7 +118,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import Affichage10 from '@/components/AcceuilDernierItem.vue'
 import HomeOverview from '@/components/AcceuilWidgetLateral.vue'
 import SnkVenteServices from '@/services/SnkVenteServices.js'
@@ -78,6 +127,11 @@ import { isVendue, prixRetailOf, prixResellOf } from '@/utils/snkVente'
 import { formatEUR, formatNumber } from '@/utils/formatters'
 
 const router = useRouter()
+const route = useRoute()
+
+const ONBOARD_PENDING = 'snk_onboarding_pending'
+const ONBOARD_SEEN = 'snk_onboarding_seen'
+const showOnboarding = ref(false)
 
 const { user } = useAuthStore()
 const currentUser = user
@@ -105,7 +159,22 @@ const chargerVentes = async () => {
   }
 }
 
-onMounted(chargerVentes)
+onMounted(() => {
+  chargerVentes()
+  try {
+    const pending = localStorage.getItem(ONBOARD_PENDING) === '1' || route.query.onboarding === '1'
+    const seen = localStorage.getItem(ONBOARD_SEEN) === '1'
+    if (pending && !seen) {
+      showOnboarding.value = true
+      localStorage.setItem(ONBOARD_SEEN, '1')
+    }
+    if (pending) {
+      localStorage.removeItem(ONBOARD_PENDING)
+    }
+  } catch (e) {
+    console.warn('onboarding check', e)
+  }
+})
 
 /**
  * Stats globales stock
@@ -161,6 +230,20 @@ const formattedMonthlyNbVendues = computed(() =>
 )
 const formattedNbEnStock = computed(() => formatNumber(nbEnStock.value, { compact: true }))
 const beneficePositive = computed(() => monthlyTotalBenefice.value >= 0)
+
+const closeOnboarding = () => {
+  showOnboarding.value = false
+}
+
+const goToStatsFromModal = () => {
+  closeOnboarding()
+  goToStats()
+}
+
+const goToGestionFromModal = () => {
+  closeOnboarding()
+  goToGestion()
+}
 
 const goToGestion = () => router.push('/gestion')
 const goToStats = () => router.push('/stats')

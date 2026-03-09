@@ -6,9 +6,9 @@
     :loading="loading"
     :error="error"
   >
-    <div class="flex flex-col gap-3">
-      <div class="flex items-start justify-between gap-6">
-        <div class="min-w-0">
+    <div class="roi-layout">
+      <div class="roi-top">
+        <div class="roi-kpi min-w-0">
           <div class="text-3xl font-bold text-white leading-none tracking-tight">{{ roiText }}</div>
           <div class="mt-2 flex flex-wrap items-center gap-2">
             <span
@@ -34,11 +34,11 @@
         </div>
       </div>
 
-      <div class="pt-2 border-t border-white/5">
-        <div class="text-[10px] uppercase tracking-[0.2em] text-white/40">
+      <div class="roi-categories" :class="{ 'is-empty': !topCategories.length }">
+        <div class="text-[10px] uppercase tracking-[0.2em] text-white/40 mb-2 shrink-0">
           Meilleures categories (benefice)
         </div>
-        <ul class="mt-2 space-y-1">
+        <ul class="roi-list space-y-1">
           <li
             v-for="item in topCategories"
             :key="item.label"
@@ -131,6 +131,41 @@ const toLabel = computed(() =>
 </script>
 
 <style scoped>
+.roi-layout {
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  gap: 14px;
+  min-height: 100%;
+}
+.roi-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+.roi-kpi {
+  flex: 1 1 320px;
+}
+.roi-categories {
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.roi-categories.is-empty {
+  flex: 0 0 auto;
+}
+.roi-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 100%;
+  overflow: auto;
+  padding-right: 4px;
+}
 .period-chip {
   display: inline-flex;
   align-items: center;
@@ -156,9 +191,6 @@ const toLabel = computed(() =>
   letter-spacing: 0.02em;
   text-transform: none;
   color: rgba(226, 232, 240, 0.9);
-}
-.roi-period {
-  margin-top: 66px;
 }
 .objective-chip {
   display: inline-flex;

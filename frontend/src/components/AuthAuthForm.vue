@@ -10,14 +10,14 @@
           <p class="mt-2 text-sm text-slate-400">
             {{
               mode === 'login'
-                ? 'Accede a ton espace Stash.'
-                : 'Cree ton compte en quelques secondes.'
+                ? 'Accède à ton espace Stash.'
+                : 'Crée ton compte en quelques secondes.'
             }}
           </p>
           <div
             class="mt-4 hidden md:inline-flex items-center rounded-2xl border border-violet-400/30 bg-violet-400/10 px-4 py-2 text-xs text-violet-200"
           >
-            {{ mode === 'login' ? 'Connexion securisee' : 'Creation rapide' }}
+            {{ mode === 'login' ? 'Connexion sécurisée' : 'Création rapide' }}
           </div>
         </div>
 
@@ -110,16 +110,62 @@
                   class="text-xs text-slate-400 transition hover:text-slate-200"
                   :to="{ name: 'forgot-password' }"
                 >
-                  Mot de passe oublie ?
+                  Mot de passe oublié ?
                 </router-link>
               </div>
-              <div class="mt-2">
+              <div class="mt-2 grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   @click="loginWithGoogle"
-                  class="w-full inline-flex justify-center items-center gap-2 rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-2 text-sm font-medium text-slate-100 transition hover:bg-slate-800/80 focus:outline-none focus:ring-2 focus:ring-violet-400"
+                  class="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-700 bg-white/90 px-3 py-2 text-xs font-semibold text-slate-900 shadow-sm transition hover:bg-white focus:outline-none focus:ring-2 focus:ring-violet-400"
                 >
-                  <span>Continuer avec Google</span>
+                  <svg
+                    class="h-4 w-4"
+                    viewBox="0 0 48 48"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M43.6 24.5c0-1.5-.1-3-.4-4.4H24v8.4h11.1c-.5 2.7-2 5-4.3 6.5v5.4h6.9c4.1-3.7 5.9-9.2 5.9-15.9Z"
+                      fill="#4285F4"
+                    />
+                    <path
+                      d="M24 44c5.9 0 10.8-1.9 14.4-5.1l-6.9-5.4c-1.9 1.3-4.4 2.1-7.5 2.1-5.7 0-10.4-3.8-12.1-9H4.8v5.6C8.3 39.7 15.5 44 24 44Z"
+                      fill="#34A853"
+                    />
+                    <path
+                      d="M11.9 26.6c-.4-1.3-.7-2.6-.7-4 0-1.4.3-2.7.7-4V13H4.8C3.3 16 2.5 19.4 2.5 23s.8 7 2.3 10l7.1-5.4Z"
+                      fill="#FBBC05"
+                    />
+                    <path
+                      d="M24 9.9c3.2 0 6.1 1.1 8.3 3.2l6.2-6.2C34.7 3.4 29.8 1.5 24 1.5 15.5 1.5 8.3 5.8 4.8 13l7.1 5.6C13.6 13.7 18.3 9.9 24 9.9Z"
+                      fill="#EA4335"
+                    />
+                    <path d="M2.5 2.5h43v43h-43v-43Z" fill="none" />
+                  </svg>
+                  <span>Google</span>
+                </button>
+                <button
+                  type="button"
+                  @click="loginWithDiscord"
+                  class="inline-flex items-center justify-center gap-2 rounded-lg bg-[#5865F2] px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#4752C4] focus:outline-none focus:ring-2 focus:ring-[#5865F2]/60"
+                >
+                  <svg
+                    class="h-4 w-4"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M20 0H4C1.8 0 0 1.8 0 4v16c0 2.2 1.8 4 4 4h14l-.7-2.3 1.7 1.6L21 24l3-3V4c0-2.2-1.8-4-4-4Zm-3.9 16.3s-.4-.5-.7-.9c1.3-.4 1.8-1.3 1.8-1.3-.4.3-.8.5-1.2.6-.5.2-1 .3-1.4.4-.9.2-1.7.1-2.5 0-.6-.1-1.1-.3-1.5-.4-.2-.1-.5-.2-.7-.3-.1-.1-.2-.1-.3-.2-.1-.1-.1-.1-.2-.1 0 0-.1-.1-.1-.1 0 0-.1 0 0 0-.2-.1-.3-.2-.3-.2-.2-.1-.3-.2-.3-.2-.3-.2-.5-.4-.5-.4 0 0 .5.9 1.7 1.3-.3.4-.7.9-.7.9-2.3-.1-3.1-1.6-3.1-1.6 0-3.4 1.5-6.1 1.5-6.1 1.5-1.2 3-1.1 3-1.1l.1.1c-1.9.6-2.8 1.5-2.8 1.5s.2-.1.6-.3c1.1-.4 2-.5 2.4-.6.1 0 .2 0 .3-.1.6-.1 1.3-.1 2-.1.9 0 1.8.1 2.8.4.5.2 1.1.4 1.7.8 0 0-.8-.7-2.5-1.4l.2-.2s1.6-.1 3 1.1c0 0 1.5 2.7 1.5 6.1 0 0-.9 1.5-3.2 1.6Z"
+                    />
+                    <path
+                      d="M9.5 11.1c-.6 0-1.1.5-1.1 1.1 0 .6.5 1.1 1.1 1.1.6 0 1.1-.5 1.1-1.1.1-.6-.4-1.1-1.1-1.1Zm4.9 0c-.6 0-1.1.5-1.1 1.1 0 .6.5 1.1 1.1 1.1.6 0 1.1-.5 1.1-1.1 0-.6-.5-1.1-1.1-1.1Z"
+                    />
+                  </svg>
+                  <span>Discord</span>
                 </button>
               </div>
             </div>
@@ -248,7 +294,7 @@
               :disabled="loading"
               class="w-full inline-flex justify-center items-center gap-2 rounded-xl bg-violet-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-400 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {{ loading ? 'Creation du compte...' : 'Creer mon compte' }}
+              {{ loading ? 'Création du compte...' : 'Créer mon compte' }}
             </button>
           </form>
         </div>
@@ -348,6 +394,26 @@ const resetMessages = () => {
   success.value = ''
 }
 
+// Gestion des erreurs SSO (callback /auth/callback#error=...)
+const ssoErrorMessages = {
+  discord_not_allowed: 'Accès réservé aux membres du Discord autorisé.',
+  oauth_error: 'La connexion OAuth a échoué. Merci de réessayer.',
+}
+
+const applySsoErrorFromRoute = () => {
+  const code = route.query.ssoError
+  if (code && ssoErrorMessages[code]) {
+    error.value = ssoErrorMessages[code]
+  }
+}
+
+applySsoErrorFromRoute()
+
+watch(
+  () => route.query.ssoError,
+  () => applySsoErrorFromRoute(),
+)
+
 const submitLogin = async () => {
   resetMessages()
   loading.value = true
@@ -403,5 +469,12 @@ const googleAuthUrl =
 
 const loginWithGoogle = () => {
   window.location.href = googleAuthUrl
+}
+
+const discordAuthUrl =
+  import.meta.env.VITE_DISCORD_OAUTH_URL || 'http://localhost:8080/oauth2/authorization/discord'
+
+const loginWithDiscord = () => {
+  window.location.href = discordAuthUrl
 }
 </script>

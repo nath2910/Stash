@@ -152,6 +152,18 @@ onBeforeUnmount(() => {
   gap: 16px;
 }
 
+@media (max-width: 768px) {
+  .dock {
+    top: auto;
+    bottom: 88px;
+    right: 12px;
+    gap: 12px;
+  }
+  .dock-panel {
+    width: min(320px, 90vw);
+  }
+}
+
 .fab {
   width: 44px;
   height: 44px;

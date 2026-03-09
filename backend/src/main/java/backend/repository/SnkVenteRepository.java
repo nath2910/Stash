@@ -11,6 +11,9 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 
 
@@ -64,6 +67,15 @@ List<SnkVente> findByUser_IdOrderByCreatedAtDesc(Long userId, Pageable pageable)
 
   // Delete sÃ©curisÃ© : un user ne peut supprimer que ses ventes
     void deleteByIdAndUser_Id(Integer id, Long userId);
+
+  @Modifying
+  @Query("delete from SnkVente v where v.user.id = :userId and v.id in :ids")
+  int deleteByUserAndIds(@Param("userId") Long userId, @Param("ids") List<Integer> ids);
+
+  // Alias pour compatibilité (anciennes classes déjà chargées par devtools)
+  @Modifying
+  @Query("delete from SnkVente v where v.user.id = :userId and v.id in :ids")
+  int deleteByUser_IdAndIdIn(@Param("userId") Long userId, @Param("ids") List<Integer> ids);
 
   // Delete toutes les ventes d'un user (suppression compte)
     void deleteByUser_Id(Long userId);

@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen overflow-hidden bg-slate-950 px-4 py-8 sm:py-12">
+  <div class="min-h-scréen overflow-hidden bg-slate-950 px-4 py-8 sm:py-12">
     <div class="mx-auto flex w-full max-w-xl flex-col items-center">
       <div class="mb-7 flex w-full items-start justify-between text-slate-300">
         <div>

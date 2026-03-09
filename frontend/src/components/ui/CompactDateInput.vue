@@ -106,21 +106,21 @@ const maxDateValue = computed(() => parseYmdLocal(props.maxDate))
   gap: 4px;
 }
 .cd-label {
-  font-size: 0.62rem;
-  letter-spacing: 0.18em;
+  font-size: 0.55rem;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: rgba(148, 163, 184, 0.85);
+  color: rgba(148, 163, 184, 0.78);
 }
 .cd-input {
-  height: 30px;
+  height: 26px;
   width: 100%;
-  padding: 0 10px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.92);
-  font-size: 0.75rem;
-  font-weight: 500;
+  padding: 0 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.72rem;
+  font-weight: 600;
   letter-spacing: 0.01em;
   transition:
     border-color 160ms ease,
@@ -150,8 +150,8 @@ const maxDateValue = computed(() => parseYmdLocal(props.maxDate))
   box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.18);
 }
 .cd-root[data-size='md'] .cd-input {
-  height: 36px;
-  font-size: 0.8rem;
+  height: 30px;
+  font-size: 0.76rem;
 }
 
 :global(.dp__menu) {

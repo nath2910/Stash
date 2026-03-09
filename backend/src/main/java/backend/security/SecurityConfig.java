@@ -59,6 +59,7 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
               "/auth/resend-verification",
               "/oauth2/**",
               "/login/**",
+              "/billing/webhook",
               "/error"
           ).permitAll()
           .anyRequest().authenticated()

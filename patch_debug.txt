@@ -1,0 +1,111 @@
+*** Begin Patch
+*** Update File: frontend/src/pages/aboPage.vue
+@@
+-  <div class="min-h-screen bg-slate-950 text-slate-100">
+-    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+-      <header class="space-y-2">
+-        <p class="text-xs uppercase tracking-[0.32em] text-emerald-200/80">Abonnement</p>
+-        <h1 class="text-3xl font-semibold text-white sm:text-4xl">Passe en Premium</h1>
+-        <p class="text-base text-slate-400 max-w-2xl">
+-          Active l'acces complet (stats avancees, sauvegarde cloud, integrations Discord).
+-          Paiement gere par Stripe Checkout. Les codes promo sont acceptes.
+-        </p>
+-      </header>
+-
+-      <div class="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+-        <section class="rounded-3xl border border-slate-800/80 bg-slate-900/70 p-6 shadow-2xl space-y-5">
++  <div class="min-h-screen bg-slate-950 text-slate-100">
++    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
++      <header
++        class="rounded-3xl border border-slate-800/80 bg-gradient-to-br from-slate-900/95 via-slate-900/85 to-slate-950/80 p-6 shadow-[0_30px_90px_rgba(0,0,0,0.45)] backdrop-blur space-y-5"
++      >
++        <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
++          <div class="space-y-3">
++            <p class="text-xs uppercase tracking-[0.32em] text-emerald-200/80">Abonnement</p>
++            <h1 class="text-3xl font-semibold text-white sm:text-4xl">Espace Premium</h1>
++            <p class="text-base text-slate-400 max-w-2xl">
++              Active l'acces complet (stats avancees, sauvegarde cloud, integrations Discord) et gere ton
++              abonnement en quelques clics. Paiement Stripe Checkout, codes promo acceptes.
++            </p>
++            <div class="flex flex-wrap items-center gap-2 text-xs">
++              <span
++                class="inline-flex items-center gap-2 rounded-full border px-3 py-1"
++                :class="statusMeta.badge"
++              >
++                <span class="h-2 w-2 rounded-full" :class="statusMeta.dot"></span>
++                {{ statusMeta.label }}
++              </span>
++              <span
++                class="inline-flex items-center rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1 text-slate-200"
++              >
++                9,90 EUR / mois
++              </span>
++              <span
++                v-if="status === 'active'"
++                class="inline-flex items-center rounded-full border border-emerald-300/30 bg-emerald-300/10 px-3 py-1 text-emerald-100"
++              >
++                Acces total debloque
++              </span>
++            </div>
++          </div>
++
++          <div
++            class="w-full max-w-sm rounded-2xl border border-slate-800/80 bg-slate-900/70 p-4 shadow-2xl"
++          >
++            <div class="flex items-center gap-3">
++              <div
++                class="h-11 w-11 rounded-2xl border border-emerald-300/30 bg-emerald-300/10 grid place-items-center text-emerald-100 text-lg font-semibold"
++              >
++                {{ initials }}
++              </div>
++              <div class="min-w-0">
++                <p class="text-sm text-slate-400">Connecte</p>
++                <p class="truncate text-base font-semibold text-white">{{ displayName }}</p>
++                <p class="truncate text-xs text-slate-400">{{ currentUser.email || '-' }}</p>
++              </div>
++            </div>
++
++            <div class="mt-4 flex flex-wrap gap-2">
++              <button
++                v-if="portalUrl"
++                type="button"
++                class="flex-1 min-w-[150px] inline-flex items-center justify-center rounded-xl border border-slate-700 bg-slate-900/70 px-3 py-2 text-xs font-semibold text-slate-100 hover:border-emerald-300/40 transition"
++                @click="openPortal"
++              >
++                Ouvrir le portail Stripe
++              </button>
++              <button
++                v-else
++                type="button"
++                class="flex-1 min-w-[150px] inline-flex items-center justify-center rounded-xl bg-emerald-500 px-3 py-2 text-xs font-semibold text-slate-950 shadow-lg shadow-emerald-500/25 transition hover:bg-emerald-400 disabled:opacity-60"
++                :disabled="loading || status === 'active'"
++                @click="startCheckout"
++              >
++                {{ status === 'active' ? 'Abonnement actif' : 'Passer Premium' }}
++              </button>
++            </div>
++          </div>
++        </div>
++      </header>
++
++      <div class="grid gap-4 sm:grid-cols-3">
++        <div class="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-4 space-y-2">
++          <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Etat</p>
++          <p class="text-lg font-semibold text-white">{{ statusMeta.label }}</p>
++          <p class="text-sm text-slate-400">{{ statusMeta.note }}</p>
++        </div>
++        <div class="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-4 space-y-2">
++          <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Plan</p>
++          <p class="text-lg font-semibold text-white">Premium mensuel</p>
++          <p class="text-sm text-slate-400">9,90 EUR, annulation a tout moment depuis le portail.</p>
++        </div>
++        <div class="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-4 space-y-2">
++          <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Support</p>
++          <p class="text-lg font-semibold text-white">Discord + email</p>
++          <p class="text-sm text-slate-400">Role Premium applique automatiquement une fois le compte lie.</p>
++        </div>
++      </div>
++
++      <div class="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
++        <section class="rounded-3xl border border-slate-800/80 bg-slate-900/70 p-6 shadow-2xl space-y-5">
+*** End Patch

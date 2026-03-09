@@ -20,6 +20,20 @@ function getToken() {
   return localStorage.getItem('snk_token') || sessionStorage.getItem('snk_token') || ''
 }
 
+function clearAuthStorage() {
+  localStorage.removeItem('snk_token')
+  localStorage.removeItem('snk_user')
+  sessionStorage.removeItem('snk_token')
+  sessionStorage.removeItem('snk_user')
+}
+
+function redirectToLogin(reason = 'auth') {
+  if (redirectingOnAuth || window.location.pathname === '/auth') return
+  redirectingOnAuth = true
+  const params = new URLSearchParams({ mode: 'login', reason })
+  window.location.assign(`/auth?${params.toString()}`)
+}
+
 api.interceptors.request.use((config) => {
   const token = getToken()
   if (token) {
@@ -43,17 +57,22 @@ api.interceptors.response.use(
   (error) => {
     const status = error?.response?.status
     const url = error?.config?.url || ''
+    const isNetworkError =
+      !error?.response &&
+      (error?.code === 'ECONNABORTED' ||
+        error?.message?.toLowerCase?.().includes('network') ||
+        error?.message?.toLowerCase?.().includes('timeout'))
 
+    if (isNetworkError || status === 0) {
+      clearAuthStorage()
+      redirectToLogin('offline')
+      return Promise.reject(error)
+    }
+
+    // Token expirÃ© ou non autorisÃ©
     if ((status === 401 || status === 403) && !url.startsWith('/auth')) {
-      localStorage.removeItem('snk_token')
-      localStorage.removeItem('snk_user')
-      sessionStorage.removeItem('snk_token')
-      sessionStorage.removeItem('snk_user')
-
-      if (!redirectingOnAuth && window.location.pathname !== '/auth') {
-        redirectingOnAuth = true
-        window.location.assign('/auth?mode=login')
-      }
+      clearAuthStorage()
+      redirectToLogin('unauthorized')
     }
 
     return Promise.reject(error)

@@ -1,5 +1,5 @@
 <template>
-  <div class="relative min-h-screen bg-slate-950 px-4 py-10 sm:py-14">
+  <div class="relative min-h-scréen bg-slate-950 px-4 py-10 sm:py-14">
     <div class="mx-auto w-full max-w-2xl">
       <div
         class="rounded-2xl border border-slate-800 bg-gradient-to-b from-slate-900/90 to-slate-900/60 p-6 shadow-2xl sm:rounded-3xl sm:p-8"
@@ -33,7 +33,7 @@
           <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
             <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Etape 2</p>
             <p class="mt-2 font-medium text-slate-200">Clique sur le lien de validation</p>
-            <p class="mt-1 text-xs text-slate-400">Pense a verifier les spams.</p>
+            <p class="mt-1 text-xs text-slate-400">Pense a vérifiér les spams.</p>
           </div>
         </div>
 
@@ -111,7 +111,7 @@ const description = computed(() => {
     return "Ce lien n'est plus valide. Recommence l'inscription ou demande un nouvel email."
   }
   if (token.value) {
-    return "On verifie ton lien de confirmation. Cela prend quelques secondes."
+    return "On vérifié ton lien de confirmation. Cela prend quelques secondes."
   }
   return "On t'a envoye un email avec un lien de confirmation. Clique dessus pour activer ton compte."
 })
@@ -136,7 +136,7 @@ const verify = async () => {
     console.error(err)
     status.value = 'error'
     errorMessage.value =
-      err.response?.data?.message || err.message || "Impossible de verifier l'email."
+      err.response?.data?.message || err.message || "Impossible de vérifiér l'email."
   }
 }
 

@@ -45,9 +45,18 @@
               ? 'gap-3 px-4 py-2 rounded-full bg-slate-900/70 border border-white/10 shadow-[0_12px_30px_rgba(0,0,0,0.35)] backdrop-blur-md'
               : 'gap-8 px-8 py-3 rounded-full bg-transparent text-white'"
           >
-            <RouterLink to="/" :class="compactLink('/')">Accueil</RouterLink>
-            <RouterLink to="/stats" :class="compactLink('/stats')">Stats</RouterLink>
-            <RouterLink to="/gestion" :class="compactLink('/gestion')">Gestion</RouterLink>
+            <RouterLink to="/" :class="compactLink('/')">
+              <Home class="h-4 w-4" aria-hidden="true" />
+              <span>Accueil</span>
+            </RouterLink>
+            <RouterLink to="/stats" :class="compactLink('/stats')">
+              <BarChart3 class="h-4 w-4" aria-hidden="true" />
+              <span>Stats</span>
+            </RouterLink>
+            <RouterLink to="/gestion" :class="compactLink('/gestion')">
+              <Boxes class="h-4 w-4" aria-hidden="true" />
+              <span>Gestion</span>
+            </RouterLink>
           </nav>
 
           <!-- Right user menu -->
@@ -141,7 +150,11 @@
 
     <!-- Body -->
     <main class="bg-slate-950/30 flex-1 min-h-0">
-      <div v-if="route.meta.fullBleed" class="relative h-full w-full overflow-hidden">
+      <div
+        v-if="route.meta.fullBleed"
+        class="relative h-full w-full"
+        :class="route.meta.allowScroll ? 'overflow-auto' : 'overflow-hidden'"
+      >
         <slot />
       </div>
 
@@ -171,6 +184,7 @@
         <a href="mailto:nathantalvasson@gmail.com" class="hover:underline">contact</a>
       </div>
     </footer>
+
   </div>
 </template>
 
@@ -178,6 +192,7 @@
 import { computed, ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/store/authStore'
+import { Home, BarChart3, Boxes } from 'lucide-vue-next'
 
 const route = useRoute()
 const router = useRouter()
@@ -191,6 +206,8 @@ const isAuthRoute = computed(() =>
     'authCallback',
     'verify-email',
     'account',
+    'abo',
+    'abo-view',
   ].includes(route.name),
 )
 
@@ -221,22 +238,10 @@ const footerVisible = ref(false)
 const pageScroll = ref(null)
 const scrollTarget = ref(null)
 
-const normalLink = (path, accent = false) => {
-  const active = route.path === path
-  return [
-    'nav-link px-3 py-2 rounded-full text-sm font-medium transition-colors duration-200',
-    active
-      ? accent
-        ? 'text-emerald-200 bg-white/5 border border-emerald-300/30'
-        : 'text-white'
-      : 'text-gray-300 hover:text-white hover:bg-white/5',
-  ]
-}
-
 const compactLink = (path) => {
   const active = route.path === path
   return [
-    'nav-link px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200',
+    'nav-link px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 inline-flex items-center gap-2',
     active ? 'bg-white/10 text-emerald-200' : 'text-white/80 hover:text-white hover:bg-white/5',
   ]
 }
@@ -245,6 +250,9 @@ const menuOpen = ref(false)
 const mobileMenuOpen = ref(false)
 
 const auth = useAuthStore()
+const idleTimeoutMs = 10 * 60 * 1000
+const lastActivity = ref(Date.now())
+let idleTimer = null
 
 const currentUser = computed(() => {
   const u = auth.user
@@ -258,6 +266,40 @@ const initials = computed(() => {
   const l = u.lastName?.[0] || ''
   return (f + l || '🙂').toUpperCase()
 })
+
+const shouldTrackIdle = computed(() => !!auth.token?.value && !isAuthRoute.value)
+
+function markActivity() {
+  lastActivity.value = Date.now()
+}
+
+function handleIdleCheck() {
+  if (!shouldTrackIdle.value) return
+  const now = Date.now()
+  if (now - lastActivity.value >= idleTimeoutMs) {
+    stopIdleWatch()
+    auth.logout()
+    router.replace({ name: 'auth', query: { mode: 'login', reason: 'idle' } })
+  }
+}
+
+function startIdleWatch() {
+  stopIdleWatch()
+  if (!shouldTrackIdle.value) return
+  markActivity()
+  const events = ['pointerdown', 'keydown', 'visibilitychange']
+  events.forEach((evt) => window.addEventListener(evt, markActivity, { passive: true }))
+  idleTimer = window.setInterval(handleIdleCheck, 30_000)
+}
+
+function stopIdleWatch() {
+  const events = ['pointerdown', 'keydown', 'visibilitychange']
+  events.forEach((evt) => window.removeEventListener(evt, markActivity))
+  if (idleTimer) {
+    clearInterval(idleTimer)
+    idleTimer = null
+  }
+}
 
 const isActiveMobile = (path) =>
   route.path === path
@@ -315,12 +357,14 @@ onMounted(() => {
   window.addEventListener('click', onWindowClick)
   window.addEventListener('keydown', onKeyDown)
   attachScroll()
+  startIdleWatch()
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('click', onWindowClick)
   window.removeEventListener('keydown', onKeyDown)
   detachScroll()
+  stopIdleWatch()
 })
 
 watch(
@@ -338,6 +382,14 @@ watch(
     detachScroll()
     await nextTick()
     attachScroll()
+    markActivity()
+  },
+)
+
+watch(
+  () => shouldTrackIdle.value,
+  () => {
+    startIdleWatch()
   },
 )
 
@@ -359,6 +411,12 @@ const logout = () => {
 </script>
 
 <style>
+.widget-fullscréen-open header {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
 .toolbar {
   animation: toolbarIn 280ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
   top: 76px;

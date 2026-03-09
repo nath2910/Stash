@@ -1,5 +1,6 @@
 // src/store/authStore.js
 import { ref } from 'vue'
+import { useBillingStore } from './billingStore'
 
 const user = ref(null)
 const token = ref('')
@@ -43,6 +44,7 @@ loadFromStorage()
  * { user?: object|null, token?: string|null }
  */
 function setAuth(payload) {
+  const previousToken = token.value
   user.value = payload?.user ?? null
 
   // IMPORTANT: token = string, jamais null
@@ -53,6 +55,15 @@ function setAuth(payload) {
 
   if (token.value) safeSet('snk_token', token.value)
   else safeRemove('snk_token')
+
+  // Reset billing cache when token changes (login/logout/switch account)
+  if (token.value !== previousToken) {
+    try {
+      useBillingStore().reset()
+    } catch (e) {
+      console.warn('billingStore reset failed', e)
+    }
+  }
 }
 
 function setToken(newToken) {

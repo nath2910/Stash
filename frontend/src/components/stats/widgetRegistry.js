@@ -61,7 +61,8 @@ export const WIDGET_DEFS = [
     forms: [],
     defaultSize: { w: 520, h: 120 },
     minSize: { w: 320, h: 120 },
-    defaultProps: { content: 'Titre', align: 'left', tight: true, autoHeight: true },
+    defaultProps: { content: 'Titre', align: 'left', size: 'md', tight: true, autoHeight: true },
+    hideGlobalRange: true,
     settings: [
       { key: 'content', label: 'Texte', type: 'text' },
       {
@@ -72,6 +73,16 @@ export const WIDGET_DEFS = [
           { label: 'Gauche', value: 'left' },
           { label: 'Centre', value: 'center' },
           { label: 'Droite', value: 'right' },
+        ],
+      },
+      {
+        key: 'size',
+        label: 'Taille',
+        type: 'select',
+        options: [
+          { label: 'Petit', value: 'sm' },
+          { label: 'Normal', value: 'md' },
+          { label: 'Grand', value: 'lg' },
         ],
       },
     ],
@@ -86,7 +97,8 @@ export const WIDGET_DEFS = [
     formPicker: false,
     forms: [],
     defaultSize: { w: 520, h: 220 },
-    defaultProps: { content: 'Ton texte ici...', align: 'left', autoHeight: true },
+    defaultProps: { content: 'Ton texte ici...', align: 'left', size: 'md', autoHeight: true },
+    hideGlobalRange: true,
     settings: [
       { key: 'content', label: 'Texte', type: 'textarea' },
       {
@@ -97,6 +109,17 @@ export const WIDGET_DEFS = [
           { label: 'Gauche', value: 'left' },
           { label: 'Centre', value: 'center' },
           { label: 'Droite', value: 'right' },
+        ],
+      },
+      {
+        key: 'size',
+        label: 'Taille',
+        type: 'select',
+        options: [
+          { label: 'Petit', value: 'sm' },
+          { label: 'Normal', value: 'md' },
+          { label: 'Grand', value: 'lg' },
+          { label: 'Très grand', value: 'xl' },
         ],
       },
     ],

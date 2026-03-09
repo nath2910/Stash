@@ -1,0 +1,5 @@
+ALTER TABLE users
+ADD COLUMN IF NOT EXISTS stripe_customer_id VARCHAR(255),
+ADD COLUMN IF NOT EXISTS subscription_status VARCHAR(32) DEFAULT 'inactive',
+ADD COLUMN IF NOT EXISTS subscription_current_period_end TIMESTAMPTZ,
+ADD COLUMN IF NOT EXISTS discord_id VARCHAR(255);

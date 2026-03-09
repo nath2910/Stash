@@ -146,10 +146,14 @@
           <div class="[&_button:hover]:bg-red-800">
             <button
               type="button"
-              class="px-4 py-1.5 text-sm rounded bg-red-600 text-white"
+              class="px-4 py-1.5 text-sm rounded bg-red-600 text-white inline-flex items-center gap-2"
               :disabled="loading || !selectedIds.length"
               @click="deleteBulk"
             >
+              <span
+                v-if="loading"
+                class="h-4 w-4 border-2 border-white/60 border-t-transparent rounded-full animate-spin"
+              ></span>
               {{ loading ? 'Suppression...' : 'Supprimer la selection' }}
             </button>
           </div>
@@ -248,26 +252,18 @@ const deleteBulk = async () => {
   error.value = ''
 
   try {
-    // plus robuste que Promise.all (gere les erreurs item par item)
-    const results = await Promise.allSettled(
-      props.selectedIds.map((id) => SnkVenteServices.supprimer(id)),
-    )
-    const ok = results
-      .map((r, idx) => (r.status === 'fulfilled' ? props.selectedIds[idx] : null))
-      .filter(Boolean)
+    const res = await SnkVenteServices.supprimerEnMasse(props.selectedIds)
+    const deleted = res?.data?.deleted ?? 0
 
-    const failedCount = results.filter((r) => r.status === 'rejected').length
-
-    if (!ok.length) {
+    if (!deleted) {
       error.value = "Aucune suppression n'a reussi."
       return
     }
 
-    emit('deleted', ok)
+    emit('deleted', props.selectedIds.slice(0, deleted))
     success.value = true
-
-    if (failedCount) {
-      error.value = `${failedCount} suppression(s) ont echoue, mais le reste a ete supprime.`
+    if (deleted < props.selectedIds.length) {
+      error.value = `${props.selectedIds.length - deleted} suppression(s) ont echoue.`
     } else {
       setTimeout(() => close(), 400)
     }

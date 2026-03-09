@@ -5,6 +5,7 @@
     @pointerdown="onCanvasPointerDown"
   >
     <CanvasDock
+      v-show="!fullscreenActive"
       :edit-mode="editMode"
       :scale="scale"
       :palette-open="paletteOpen"
@@ -19,7 +20,21 @@
 
     <!-- Canvas -->
     <div ref="viewportEl" class="viewport">
-      <div class="date-panel" v-show="!paletteOpen">
+      <button
+        v-if="isCompact && !paletteOpen && !fullscreenActive"
+        type="button"
+        class="date-toggle"
+        :class="{ 'date-toggle--compact': isCompact }"
+        :aria-pressed="datePanelOpen"
+        @click.stop="datePanelOpen = !datePanelOpen"
+      >
+        <CalendarRange class="h-4 w-4" />
+      </button>
+      <div
+        class="date-panel"
+        :class="{ 'date-panel--compact': isCompact }"
+        v-show="!paletteOpen && !fullscreenActive && (!isCompact || datePanelOpen)"
+      >
         <div class="date-title">Periode</div>
         <div class="date-row">
           <CompactDateInput
@@ -69,6 +84,8 @@
           :style="widgetStyle(w)"
           :ref="(c: any) => setWidgetRef(w.id, c)"
           @dragStart="startDrag(w.id, $event)"
+          @resizeStart="startResize(w.id, $event.dir, $event.event)"
+          @fullscreen-change="onWidgetFullscreenChange"
           @autoResize="autoResize(w.id, $event)"
           @settings="openSettings(w)"
           @remove="removeWidget(w.id)"
@@ -100,7 +117,7 @@
       <div v-if="showSaveToast" class="save-toast" role="status">Layout enregistre</div>
     </Transition>
 
-    <div v-show="!paletteOpen" class="profile-switcher" role="group" aria-label="Profils">
+    <div v-show="!paletteOpen && !fullscreenActive" class="profile-switcher" role="group" aria-label="Profils">
       <button
         v-for="p in PROFILES"
         :key="p.id"
@@ -200,7 +217,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, toRefs, watch } fr
 import CanvasDock from './canvas/CanvasDock.vue'
 import WidgetFrame from './canvas/WidgetFrame.vue'
 import { useCanvasCamera } from './canvas/useCanvaCamera'
-import { Paintbrush } from 'lucide-vue-next'
+import { Paintbrush, CalendarRange } from 'lucide-vue-next'
 
 import CompactDateInput from '@/components/ui/CompactDateInput.vue'
 import WidgetPalette from './WidgetPalette.vue'
@@ -220,6 +237,8 @@ type Widget = {
   props?: Record<string, unknown>
   z?: number
 }
+
+type ResizeDir = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw'
 
 type LayoutBundle = {
   version: number
@@ -943,6 +962,42 @@ const camera = useCanvasCamera(viewportEl, boardEl, {
 })
 
 const scale = computed(() => camera.scale.value)
+const isCompact = ref(false)
+const datePanelOpen = ref(true)
+
+function fitToWidgets(padding = 120, animate = true) {
+  const vp = viewportEl.value
+  if (!vp || widgets.value.length === 0) return camera.fitToViewport?.()
+
+  let minX = Infinity,
+    minY = Infinity,
+    maxX = -Infinity,
+    maxY = -Infinity
+
+  widgets.value.forEach((w) => {
+    minX = Math.min(minX, w.x)
+    minY = Math.min(minY, w.y)
+    maxX = Math.max(maxX, w.x + w.w)
+    maxY = Math.max(maxY, w.y + w.h)
+  })
+
+  if (!Number.isFinite(minX) || !Number.isFinite(maxX)) return camera.fitToViewport?.()
+
+  const bboxW = Math.max(maxX - minX, 10)
+  const bboxH = Math.max(maxY - minY, 10)
+  const targetW = bboxW + padding * 2
+  const targetH = bboxH + padding * 2
+
+  const scaleW = vp.clientWidth / targetW
+  const scaleH = vp.clientHeight / targetH
+  const targetScale = clamp(Math.min(scaleW, scaleH), 0.25, 2.5)
+
+  const cx = (minX + maxX) / 2
+  const cy = (minY + maxY) / 2
+
+  camera.zoomTo?.(targetScale, { animate })
+  camera.centerOn(cx, cy)
+}
 
 function widgetsBounds() {
   const list = widgets.value
@@ -976,6 +1031,9 @@ function zoomOut() {
 function resetZoom() {
   camera.resetZoom()
 }
+function zoomToFitContent() {
+  fitToWidgets(80, true)
+}
 
 /* ===== Drag ===== */
 const widgetEls = new Map<string, HTMLElement>()
@@ -993,15 +1051,32 @@ let zTop = 10
 const snapGuides = ref<{ x: number | null; y: number | null }>({ x: null, y: null })
 const SNAP_DIST = 8
 
+type ResizeState = {
+  x: number
+  y: number
+  w: number
+  h: number
+  scale: number
+  dir: ResizeDir
+  lastX: number
+  lastY: number
+  raf: number | null
+}
+const resizeStates = new Map<string, ResizeState>()
+let activeResizeId: string | null = null
+
 function setWidgetRef(id: string, c: any) {
-  const el = (c?.root?.value ?? c?.$el ?? null) as HTMLElement | null
-  if (el) {
-    widgetEls.set(id, el)
-  } else {
-    const dragEl = widgetEls.get(id)
-    if (dragEl) dragEl.classList.remove('is-dragging')
+  // c est le composant; on garde la derniere ref DOM valide, et on ne purge
+  // que lorsqu'on recoit null (démontage). Cela évite de perdre la ref pendant
+  // les phases de montage/teleport et de casser le drag.
+  if (c == null) {
     widgetEls.delete(id)
     clearDragState(id)
+    return
+  }
+  const el = (c?.root?.value ?? c?.$el ?? null) as any
+  if (el && el.nodeType === 1 && el.classList) {
+    widgetEls.set(id, el as HTMLElement)
   }
 }
 
@@ -1090,10 +1165,34 @@ function scheduleDragApply(el: HTMLElement, w: Widget, state: DragState) {
   })
 }
 
+function clearResizeState(id: string) {
+  const state = resizeStates.get(id)
+  if (!state) return
+  if (state.raf) cancelAnimationFrame(state.raf)
+  resizeStates.delete(id)
+}
+
+function scheduleResizeApply(el: HTMLElement, w: Widget, state: ResizeState) {
+  if (state.raf) return
+  state.raf = requestAnimationFrame(() => {
+    state.raf = null
+    const view = { ...w, w: state.w, h: state.h } as Widget
+    applyWidgetDOMAt(el, view, state.x, state.y)
+  })
+}
+
 function startDrag(id: string, event: PointerEvent) {
   if (!editMode.value) return
   const w = widgets.value.find((x) => x.id === id)
-  const el = widgetEls.get(id)
+  let el = widgetEls.get(id)
+  // Fallback: récupère l'élément DOM depuis l'event si la ref n'est pas encore disposée.
+  if (!el) {
+    const target = (event.target as HTMLElement | null)?.closest('.widget') as HTMLElement | null
+    if (target) {
+      widgetEls.set(id, target)
+      el = target
+    }
+  }
   if (!w || !el) return
 
   event.preventDefault()
@@ -1125,7 +1224,11 @@ function onGlobalPointerMove(event: PointerEvent) {
   if (!activeDragId) return
   const state = dragStates.get(activeDragId)
   const w = widgets.value.find((x) => x.id === activeDragId)
-  const el = widgetEls.get(activeDragId)
+  let el = widgetEls.get(activeDragId)
+  if (!el) {
+    el = document.querySelector(`[data-id="${activeDragId}"]`) as HTMLElement | null
+    if (el) widgetEls.set(activeDragId, el)
+  }
   if (!state || !w || !el) return
 
   const dx = event.clientX - state.lastX
@@ -1213,11 +1316,161 @@ function syncPanzoomExclude(enabled: boolean) {
   pz?.setOptions?.({ excludeClass: enabled ? 'panzoom-exclude' : null })
 }
 
+function startResize(id: string, dir: ResizeDir, event: PointerEvent) {
+  if (!editMode.value) return
+  if (fullscreenActive.value) return
+  const w = widgets.value.find((x) => x.id === id)
+  let el = widgetEls.get(id)
+  if (!el) {
+    const target = (event.target as HTMLElement | null)?.closest('.widget') as HTMLElement | null
+    if (target) {
+      widgetEls.set(id, target)
+      el = target
+    }
+  }
+  if (!w || !el) return
+
+  event.preventDefault()
+  event.stopPropagation()
+
+  dragArmedId.value = null
+  w.z = ++zTop
+  activeResizeId = id
+
+  const s = Number(camera.scale.value || 1)
+  resizeStates.set(id, {
+    x: w.x,
+    y: w.y,
+    w: w.w,
+    h: w.h,
+    dir,
+    scale: s > 0 ? s : 1,
+    lastX: event.clientX,
+    lastY: event.clientY,
+    raf: null,
+  })
+
+  el.classList.add('is-resizing')
+  setCanvasPanEnabled(false)
+
+  window.addEventListener('pointermove', onResizePointerMove)
+  window.addEventListener('pointerup', onResizePointerUp, { once: true })
+  window.addEventListener('pointercancel', onResizePointerUp, { once: true })
+}
+
+function onResizePointerMove(event: PointerEvent) {
+  if (!activeResizeId) return
+  const state = resizeStates.get(activeResizeId)
+  const w = widgets.value.find((x) => x.id === activeResizeId)
+  let el = widgetEls.get(activeResizeId)
+  if (!el) {
+    el = document.querySelector(`[data-id=\"${activeResizeId}\"]`) as HTMLElement | null
+    if (el) widgetEls.set(activeResizeId, el)
+  }
+  if (!state || !w || !el) return
+
+  const dx = (event.clientX - state.lastX) / state.scale
+  const dy = (event.clientY - state.lastY) / state.scale
+  state.lastX = event.clientX
+  state.lastY = event.clientY
+
+  const minSize = minSizeFor(w)
+  let left = state.x
+  let top = state.y
+  let right = state.x + state.w
+  let bottom = state.y + state.h
+
+  if (state.dir.includes('e')) right += dx
+  if (state.dir.includes('w')) left += dx
+  if (state.dir.includes('s')) bottom += dy
+  if (state.dir.includes('n')) top += dy
+
+  left = clamp(left, 0, BOARD_W - minSize.w)
+  right = clamp(right, minSize.w, BOARD_W)
+  top = clamp(top, 0, BOARD_H - minSize.h)
+  bottom = clamp(bottom, minSize.h, BOARD_H)
+
+  if (right - left < minSize.w) {
+    if (state.dir.includes('w') && !state.dir.includes('e')) {
+      left = right - minSize.w
+    } else {
+      right = left + minSize.w
+    }
+  }
+  if (bottom - top < minSize.h) {
+    if (state.dir.includes('n') && !state.dir.includes('s')) {
+      top = bottom - minSize.h
+    } else {
+      bottom = top + minSize.h
+    }
+  }
+
+  state.x = clamp(left, 0, BOARD_W - minSize.w)
+  state.y = clamp(top, 0, BOARD_H - minSize.h)
+  state.w = clamp(right - left, minSize.w, BOARD_W)
+  state.h = clamp(bottom - top, minSize.h, BOARD_H)
+
+  state.x = clamp(state.x, 0, BOARD_W - state.w)
+  state.y = clamp(state.y, 0, BOARD_H - state.h)
+
+  scheduleResizeApply(el, w, state)
+}
+
+function finishResize(id: string) {
+  const state = resizeStates.get(id)
+  const w = widgets.value.find((x) => x.id === id)
+  const el = widgetEls.get(id)
+  if (el) el.classList.remove('is-resizing')
+
+  if (!state || !w) {
+    clearResizeState(id)
+    setCanvasPanEnabled(true)
+    activeResizeId = null
+    return
+  }
+
+  const minSize = minSizeFor(w)
+  const snappedW = clamp(snap(state.w), minSize.w, BOARD_W)
+  const snappedH = clamp(snap(state.h), minSize.h, BOARD_H)
+  const snappedX = clamp(snap(state.x), 0, BOARD_W - snappedW)
+  const snappedY = clamp(snap(state.y), 0, BOARD_H - snappedH)
+
+  w.w = snappedW
+  w.h = snappedH
+  w.x = snappedX
+  w.y = snappedY
+  clampWidget(w)
+  if (el) applyWidgetDOM(el, w)
+
+  clearResizeState(id)
+  setCanvasPanEnabled(true)
+  scheduleSave()
+  activeResizeId = null
+}
+
+function onResizePointerUp() {
+  window.removeEventListener('pointermove', onResizePointerMove)
+  if (!activeResizeId) return
+  if (!resizeStates.has(activeResizeId)) {
+    activeResizeId = null
+    setCanvasPanEnabled(true)
+    return
+  }
+  finishResize(activeResizeId)
+}
+
 function detachAllInteract() {
   window.removeEventListener('pointermove', onGlobalPointerMove)
-  widgetEls.forEach((el) => el.classList.remove('is-dragging'))
+  window.removeEventListener('pointermove', onResizePointerMove)
+  widgetEls.forEach((el) => {
+    if (!el || !el.classList) return
+    el.classList.remove('is-dragging')
+    el.classList.remove('is-resizing')
+  })
   dragStates.clear()
   activeDragId = null
+  resizeStates.clear()
+  activeResizeId = null
   setCanvasPanEnabled(true)
 }
 
@@ -1362,6 +1615,16 @@ function addWidget(payload: string | { type: string; view?: string }) {
   })
 }
 
+const fullscreenActive = ref(false)
+function onWidgetFullscreenChange(active: boolean) {
+  fullscreenActive.value = active
+  if (active) {
+    document.body.classList.add('widget-fullscréen-open')
+  } else {
+    document.body.classList.remove('widget-fullscréen-open')
+  }
+}
+
 function autoResize(id: string, height: number) {
   const w = widgets.value.find((x) => x.id === id)
   if (!w) return
@@ -1380,6 +1643,7 @@ onMounted(async () => {
   camera.init(() => {
     centerView()
     syncPanzoomExclude(editMode.value)
+    if (window.innerWidth < 1024) zoomToFitContent()
   })
 
   await nextTick()
@@ -1393,6 +1657,18 @@ onMounted(async () => {
   await loadDateBounds()
   await loadCategories(from.value, to.value)
   applyStoredRangeForActiveProfile()
+
+  const resizeHandler = () => {
+    const compact = window.innerWidth < 1024
+    if (compact !== isCompact.value) {
+      isCompact.value = compact
+      datePanelOpen.value = !compact // ouvert par défaut en large, fermé en compact
+    }
+    if (compact) zoomToFitContent()
+  }
+  resizeHandler()
+  window.addEventListener('resize', resizeHandler, { passive: true })
+  onBeforeUnmount(() => window.removeEventListener('resize', resizeHandler))
 })
 
 onBeforeUnmount(() => {
@@ -1465,10 +1741,12 @@ function saveProfileEditor() {
   position: absolute;
   inset: 0;
   overflow: hidden;
+  overscroll-behavior: contain;
+  touch-action: pan-x pan-y pinch-zoom;
 }
 .viewport,
 .board {
-  touch-action: none;
+  touch-action: pan-x pan-y pinch-zoom;
 }
 
 .board {
@@ -1493,13 +1771,14 @@ function saveProfileEditor() {
   background:
     linear-gradient(transparent 23px, rgba(148, 163, 184, 0.08) 24px) 0 0 / 24px 24px,
     linear-gradient(90deg, transparent 23px, rgba(148, 163, 184, 0.08) 24px) 0 0 / 24px 24px;
-  mix-blend-mode: screen;
+  mix-blend-mode: scréen;
 }
 
 .date-panel {
   position: fixed;
-  top: 12px;
-  left: 12px;
+  top: 16px;
+  left: 16px;
+  max-width: 260px;
   z-index: 60;
   display: flex;
   flex-direction: column;
@@ -1512,12 +1791,43 @@ function saveProfileEditor() {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
   touch-action: manipulation;
 }
+.date-toggle {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 61;
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(7, 11, 20, 0.7);
+  color: rgba(226, 232, 240, 0.9);
+  display: grid;
+  place-items: center;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+}
+.date-panel--compact {
+  top: auto;
+  left: 14px;
+  right: 14px;
+  bottom: 120px;
+  max-width: 82vw;
+}
+.date-toggle--compact {
+  top: auto;
+  left: 12px;
+  bottom: 92px;
+}
+.date-toggle:hover {
+  border-color: rgba(148, 163, 184, 0.35);
+  background: rgba(255, 255, 255, 0.06);
+}
 
 .date-title {
-  font-size: 0.6rem;
+  font-size: 0.58rem;
   text-transform: uppercase;
-  letter-spacing: 0.25em;
-  color: rgba(148, 163, 184, 0.85);
+  letter-spacing: 0.22em;
+  color: rgba(148, 163, 184, 0.8);
 }
 
 .date-row {
@@ -1538,13 +1848,13 @@ function saveProfileEditor() {
 }
 
 .date-chip {
-  height: 22px;
-  padding: 0 8px;
+  height: 24px;
+  padding: 0 10px;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(255, 255, 255, 0.06);
   color: rgba(255, 255, 255, 0.85);
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   transition:
     border-color 160ms ease,
     background 160ms ease,
@@ -1685,6 +1995,31 @@ function saveProfileEditor() {
 }
 .profile-label {
   letter-spacing: 0.02em;
+}
+
+@media (max-width: 768px) {
+  .profile-switcher {
+    left: 8px;
+    right: 8px;
+    bottom: 12px;
+    gap: 6px;
+    padding: 6px 8px;
+    border-radius: 14px;
+    flex-wrap: wrap;
+  }
+  .profile-pill {
+    height: 28px;
+    padding: 0 8px;
+    gap: 6px;
+    font-size: 11px;
+  }
+  .profile-label {
+    display: none;
+  }
+  .profile-edit {
+    width: 30px;
+    height: 30px;
+  }
 }
 
 .profile-modal {
