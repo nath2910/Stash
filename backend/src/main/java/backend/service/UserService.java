@@ -59,11 +59,13 @@ public class UserService {
                 });
 
         String hashedPassword = passwordEncoder.encode(request.getPassword());
+        String firstName = request.getFirstName() != null ? request.getFirstName().trim() : "";
+        String lastName = request.getLastName() != null ? request.getLastName().trim() : "";
 
         User user = new User();
         user.setEmail(email);
-        user.setFirstName(request.getFirstName());
-        user.setLastName(request.getLastName());
+        user.setFirstName(firstName);
+        user.setLastName(lastName);
         user.setPassword(hashedPassword);
 
         try {

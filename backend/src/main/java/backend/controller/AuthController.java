@@ -44,7 +44,7 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
+    public ResponseEntity<?> register(@RequestBody @jakarta.validation.Valid RegisterRequest request) {
         try {
             User user = userService.register(request);
             return ResponseEntity.status(HttpStatus.CREATED).body(UserMapper.toMe(user));
@@ -61,7 +61,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public LoginResponse login(@RequestBody LoginRequest request) {
+    public LoginResponse login(@RequestBody @jakarta.validation.Valid LoginRequest request) {
         User user = userService.login(request);
         String token = jwtService.generateToken(user.getId());
         return new LoginResponse(UserMapper.toMe(user), token);
@@ -70,20 +70,20 @@ public class AuthController {
     @PostMapping("/change-password")
     public String changePassword(
             @AuthenticationPrincipal User currentUser,
-            @RequestBody ChangePasswordRequest request
+            @RequestBody @jakarta.validation.Valid ChangePasswordRequest request
     ) {
         userService.changePassword(currentUser.getId(), request);
         return "Mot de passe modifie";
     }
 
     @PostMapping("/forgot-password")
-    public String forgotPassword(@RequestBody ForgotPasswordRequest request) {
+    public String forgotPassword(@RequestBody @jakarta.validation.Valid ForgotPasswordRequest request) {
         passwordResetService.requestReset(request != null ? request.getEmail() : null);
         return "Si un compte existe, un email a ete envoye";
     }
 
     @PostMapping("/reset-password")
-    public String resetPassword(@RequestBody ResetPasswordRequest request) {
+    public String resetPassword(@RequestBody @jakarta.validation.Valid ResetPasswordRequest request) {
         passwordResetService.resetPassword(request);
         return "Mot de passe modifie";
     }
@@ -96,7 +96,7 @@ public class AuthController {
     }
 
     @PostMapping("/resend-verification")
-    public String resendVerification(@RequestBody EmailVerificationRequest request) {
+    public String resendVerification(@RequestBody @jakarta.validation.Valid EmailVerificationRequest request) {
         emailVerificationService.requestVerification(request != null ? request.getEmail() : null);
         return "Si un compte existe, un email a ete envoye";
     }

@@ -71,8 +71,13 @@ stripe:
 
 logging:
   level:
-    org.springframework.security: DEBUG
-    backend.security: DEBUG
+    root: INFO
+
+server:
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/octet-stream
+    min-response-size: 1024
 
 ---
 # Profil dev

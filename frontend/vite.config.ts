@@ -9,4 +9,16 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  build: {
+    sourcemap: false,
+    chunkSizeWarningLimit: 900,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vue: ['vue', 'vue-router'],
+          charts: ['apexcharts', 'echarts', 'vue-echarts'],
+        },
+      },
+    },
+  },
 })

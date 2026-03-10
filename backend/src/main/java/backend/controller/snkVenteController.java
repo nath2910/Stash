@@ -51,7 +51,7 @@ public class snkVenteController {
   @PostMapping(consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
   public SnkVente creer(
       @AuthenticationPrincipal User currentUser,
-      @RequestBody SnkVenteCreateDto dto
+      @RequestBody @jakarta.validation.Valid SnkVenteCreateDto dto
   ) {
     return snkVenteService.creer(userId(currentUser), dto);
   }
@@ -81,7 +81,7 @@ public class snkVenteController {
   @ResponseStatus(HttpStatus.CREATED)
   public void ajouterPaire(
       @AuthenticationPrincipal User currentUser,
-      @RequestBody SnkVenteCreateDto dto
+      @RequestBody @jakarta.validation.Valid SnkVenteCreateDto dto
   ) {
     snkVenteService.creer(userId(currentUser), dto);
   }
@@ -136,7 +136,7 @@ public class snkVenteController {
   public SnkVente update(
       @AuthenticationPrincipal User currentUser,
       @PathVariable Integer id,
-      @RequestBody SnkVente payload
+      @RequestBody @jakarta.validation.Valid SnkVente payload
   ) {
     return snkVenteService.updateVente(userId(currentUser), id, payload);
   }
@@ -144,7 +144,7 @@ public class snkVenteController {
   @PostMapping(path = "/import", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
   public ResponseEntity<Map<String, Integer>> importCsv(
       @AuthenticationPrincipal User currentUser,
-      @RequestBody List<SnkVenteImportDto> items
+      @RequestBody @jakarta.validation.Valid List<SnkVenteImportDto> items
   ) {
     if (currentUser == null) {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("created", 0));

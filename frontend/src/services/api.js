@@ -1,7 +1,8 @@
 import axios from 'axios'
 
-const baseURL =
+const rawBaseURL =
   import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+const baseURL = rawBaseURL.replace(/\/+$/, '') // évite les doubles slash dans les appels
 
 if (import.meta.env.DEV) {
   console.log('API baseURL =', baseURL)

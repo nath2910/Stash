@@ -22,11 +22,11 @@ public class GlobalExceptionHandler {
 
   @ExceptionHandler(Exception.class)
   public ResponseEntity<?> handle(Exception ex) {
-    ex.printStackTrace(); // âœ… affiche la vraie cause dans la console
+    ex.printStackTrace(); // log full stacktrace server-side
     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
         .body(Map.of(
             "error", ex.getClass().getSimpleName(),
-            "message", ex.getMessage() == null ? "No message" : ex.getMessage()
+            "message", "Une erreur interne est survenue. Merci de reessayer plus tard."
         ));
   }
 }
