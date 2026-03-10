@@ -56,6 +56,7 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
           .requestMatchers(
               "/auth/register",
               "/auth/login",
+              "/health",
               "/auth/forgot-password",
               "/auth/reset-password",
               "/auth/verify-email",

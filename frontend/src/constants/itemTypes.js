@@ -1,7 +1,7 @@
 export const ITEM_TYPES = [
   { value: 'SNEAKER', label: 'Sneaker' },
-  { value: 'POKEMON_CARD', label: 'Carte Pokémon' },
-  { value: 'TICKET', label: 'Ticket / Billet' },
+  { value: 'POKEMON_CARD', label: 'Pokemon' },
+  { value: 'TICKET', label: 'Ticket' },
   { value: 'OTHER', label: 'Autre' },
 ]
 
@@ -10,8 +10,8 @@ export const METADATA_FIELDS = {
     { key: 'size', label: 'Pointure', placeholder: '42 EU' },
     { key: 'sku', label: 'SKU', placeholder: 'DZ5485-612' },
     { key: 'colorway', label: 'Coloris', placeholder: 'University Red/White' },
-    { key: 'condition', label: 'État', placeholder: 'DS / VNDS / Used' },
-    { key: 'boxCondition', label: 'État boîte', placeholder: 'OG all / Damagée' },
+    { key: 'condition', label: 'Etat', placeholder: 'DS / VNDS / Used' },
+    { key: 'boxCondition', label: 'Etat boite', placeholder: 'OG all / Damagee' },
   ],
   POKEMON_CARD: [
     { key: 'set', label: 'Set', placeholder: '151 / Base Set' },
@@ -21,15 +21,14 @@ export const METADATA_FIELDS = {
     { key: 'grade', label: 'Grade', placeholder: 'PSA 9 / BGS 9.5' },
   ],
   TICKET: [
-    { key: 'eventDate', label: "Date de l'évènement", placeholder: '2026-05-01' },
+    { key: 'eventDate', label: "Date de l'evenement", placeholder: '2026-05-01' },
     { key: 'venue', label: 'Salle / Lieu', placeholder: 'Accor Arena' },
     { key: 'section', label: 'Section', placeholder: 'Bloc K' },
     { key: 'row', label: 'Rang', placeholder: 'Rang 8' },
-    { key: 'seat', label: 'Siège', placeholder: 'Siège 12' },
-    { key: 'status', label: 'Statut', placeholder: 'valide / transféré / utilisé' },
+    { key: 'seat', label: 'Siege', placeholder: 'Siege 12' },
+    { key: 'status', label: 'Statut', placeholder: 'valide / transfere / utilise' },
   ],
-  OTHER: [
-  ],
+  OTHER: [],
 }
 
 export const typeLabel = (type) =>

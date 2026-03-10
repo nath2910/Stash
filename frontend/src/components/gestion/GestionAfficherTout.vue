@@ -40,11 +40,6 @@
             type
           </th>
           <th
-            class="px-4 py-3 text-left font-semibold text-xs uppercase tracking-wide text-gray-400"
-          >
-            categorie
-          </th>
-          <th
             class="px-4 py-3 text-right font-semibold text-xs uppercase tracking-wide text-gray-400"
           >
             prix_retail
@@ -109,15 +104,6 @@
             </span>
           </td>
 
-          <td class="px-4 py-3">
-            <span
-              class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-medium"
-              :class="badgeClass(vente.categorie)"
-            >
-              {{ vente.categorie || '-' }}
-            </span>
-          </td>
-
           <td class="px-4 py-3 text-right">
             {{ formatCurrency(vente.prixRetail ?? vente.prix_retail) }}
           </td>
@@ -166,7 +152,7 @@
         </tr>
 
         <tr v-if="!snkVentes.length">
-          <td :colspan="selectable ? 10 : 9" class="px-4 py-8 text-center text-sm text-gray-400">
+          <td :colspan="selectable ? 9 : 8" class="px-4 py-8 text-center text-sm text-gray-400">
             Aucun item a afficher pour le moment.
           </td>
         </tr>
@@ -231,17 +217,6 @@ const formatCurrency = (val) => {
 const formatDate = (val) => formatDateFR(val, { fallback: '--' })
 
 const profit = (vente) => profitOf(vente)
-const badgeClass = (cat) => {
-  if (!cat) return 'bg-gray-700 text-gray-100 border border-gray-500/60'
-  const c = cat.toLowerCase()
-  if (c.includes('jordan') || c.includes('sneakers') || c.includes('basket')) {
-    return 'bg-purple-500/10 text-purple-200 border border-purple-400/60'
-  }
-  if (c.includes('running')) {
-    return 'bg-emerald-500/10 text-emerald-200 border border-emerald-400/60'
-  }
-  return 'bg-gray-700 text-gray-100 border border-gray-500/60'
-}
 const typeBadgeClass = (type) => {
   switch (type) {
     case 'TICKET':
