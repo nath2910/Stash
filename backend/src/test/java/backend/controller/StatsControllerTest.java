@@ -1,66 +1,89 @@
-﻿package backend.controller;
+package backend.controller;
 
 import backend.dto.StatsSummaryResponse;
 import backend.entity.User;
 import backend.service.StatsLayoutService;
 import backend.service.StatsService;
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
-import org.springframework.http.MediaType;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 class StatsControllerTest {
 
-  private MockMvc mvc;
+  @Mock
+  private StatsService statsService;
 
   @Mock
-  StatsService statsService;
+  private StatsLayoutService statsLayoutService;
 
-  @Mock
-  StatsLayoutService statsLayoutService;
-
-  private User mockUser;
+  private StatsController controller;
+  private User user;
 
   @BeforeEach
   void setup() {
     MockitoAnnotations.openMocks(this);
-    StatsController controller = new StatsController(statsService, statsLayoutService);
-    mvc = MockMvcBuilders.standaloneSetup(controller).build();
-    mockUser = Mockito.mock(User.class);
-    Mockito.when(mockUser.getId()).thenReturn(1L);
-  }
-
-  private UsernamePasswordAuthenticationToken authPrincipal() {
-    return new UsernamePasswordAuthenticationToken(mockUser, null);
+    controller = new StatsController(statsService, statsLayoutService);
+    user = Mockito.mock(User.class);
+    Mockito.when(user.getId()).thenReturn(1L);
   }
 
   @Test
-  void summaryEndpointReturns200() throws Exception {
-    Mockito.when(statsService.summary(Mockito.eq(1L), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
-        .thenReturn(new StatsSummaryResponse(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, 0, 0, BigDecimal.ZERO));
+  void summaryUsesStartEndWhenProvided() {
+    LocalDate start = LocalDate.of(2026, 1, 1);
+    LocalDate end = LocalDate.of(2026, 1, 31);
+    StatsSummaryResponse response = new StatsSummaryResponse(
+        BigDecimal.TEN,
+        BigDecimal.ONE,
+        BigDecimal.ZERO,
+        2L,
+        3L,
+        BigDecimal.valueOf(50)
+    );
+    Mockito.when(statsService.summary(1L, start, end, null, List.of("Sneakers"))).thenReturn(response);
 
-    mvc.perform(get("/stats/summary")
-            .accept(MediaType.APPLICATION_JSON)
-            .principal(authPrincipal()))
-        .andExpect(status().isOk());
+    StatsSummaryResponse result = controller.summary(
+        user,
+        start,
+        end,
+        null,
+        null,
+        null,
+        List.of("Sneakers")
+    );
+
+    Assertions.assertSame(response, result);
   }
 
   @Test
-  void layoutEndpointReturns200() throws Exception {
-    Mockito.when(statsLayoutService.getLayout(1L)).thenReturn(null);
+  void summaryFallsBackToFromTo() {
+    LocalDate from = LocalDate.of(2026, 2, 1);
+    LocalDate to = LocalDate.of(2026, 2, 28);
+    StatsSummaryResponse response = new StatsSummaryResponse(
+        BigDecimal.ZERO,
+        BigDecimal.ZERO,
+        BigDecimal.ZERO,
+        0L,
+        0L,
+        BigDecimal.ZERO
+    );
+    Mockito.when(statsService.summary(1L, from, to, null, null)).thenReturn(response);
 
-    mvc.perform(get("/stats/layout")
-            .accept(MediaType.APPLICATION_JSON)
-            .principal(authPrincipal()))
-        .andExpect(status().isOk());
+    StatsSummaryResponse result = controller.summary(
+        user,
+        null,
+        null,
+        from,
+        to,
+        null,
+        null
+    );
+
+    Assertions.assertSame(response, result);
   }
 }

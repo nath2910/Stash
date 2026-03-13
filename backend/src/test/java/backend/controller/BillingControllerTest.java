@@ -1,27 +1,22 @@
-﻿package backend.controller;
+package backend.controller;
 
+import backend.dto.BillingStatusResponse;
+import backend.dto.CheckoutRequest;
 import backend.dto.CheckoutResponse;
 import backend.entity.User;
 import backend.repository.UserRepository;
 import backend.service.BillingService;
 import com.stripe.model.billingportal.Session;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
-import org.springframework.http.MediaType;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 class BillingControllerTest {
-
-  private MockMvc mvc;
 
   @Mock
   private BillingService billingService;
@@ -29,43 +24,64 @@ class BillingControllerTest {
   @Mock
   private UserRepository userRepository;
 
-  private User mockUser;
+  private BillingController controller;
+  private User user;
 
   @BeforeEach
   void setup() {
     MockitoAnnotations.openMocks(this);
-    BillingController controller = new BillingController(billingService, userRepository);
-    mvc = MockMvcBuilders.standaloneSetup(controller).build();
-    mockUser = Mockito.mock(User.class);
-    Mockito.when(mockUser.getId()).thenReturn(1L);
-    Mockito.when(mockUser.getEmail()).thenReturn("test@example.com");
-  }
-
-  private UsernamePasswordAuthenticationToken authPrincipal() {
-    return new UsernamePasswordAuthenticationToken(mockUser, null);
+    controller = new BillingController(billingService, userRepository);
+    user = Mockito.mock(User.class);
+    Mockito.when(user.getSubscriptionStatus()).thenReturn("inactive");
   }
 
   @Test
-  void statusEndpointOk() throws Exception {
+  void statusReturns503WhenStripeIsNotConfigured() {
+    Mockito.when(billingService.isConfigured()).thenReturn(false);
+
+    ResponseStatusException ex = Assertions.assertThrows(
+        ResponseStatusException.class,
+        () -> controller.status(user)
+    );
+
+    Assertions.assertEquals(HttpStatus.SERVICE_UNAVAILABLE, ex.getStatusCode());
+  }
+
+  @Test
+  void statusReturnsBillingSnapshotWhenConfigured() throws Exception {
+    Mockito.when(billingService.isConfigured()).thenReturn(true);
     Session portal = Mockito.mock(Session.class);
-    Mockito.when(billingService.isConfigured()).thenReturn(true);
-    Mockito.when(billingService.refreshStatus(Mockito.any())).thenReturn("active");
-    Mockito.when(billingService.createPortal(Mockito.any())).thenReturn(portal);
-    Mockito.when(portal.getUrl()).thenReturn("http://example.com");
+    Mockito.when(portal.getUrl()).thenReturn("https://stripe.test/portal");
+    Mockito.when(billingService.createPortal(user)).thenReturn(portal);
 
-    mvc.perform(get("/billing/status").principal(authPrincipal()))
-        .andExpect(status().isOk());
+    BillingStatusResponse response = controller.status(user);
+
+    Mockito.verify(billingService).refreshStatus(user);
+    Assertions.assertEquals("inactive", response.status());
+    Assertions.assertEquals("https://stripe.test/portal", response.portalUrl());
   }
 
   @Test
-  void checkoutEndpointOk() throws Exception {
-    Mockito.when(billingService.isConfigured()).thenReturn(true);
-    Mockito.when(billingService.createCheckout(Mockito.any(), Mockito.any(), Mockito.any())).thenReturn(Mockito.mock(com.stripe.model.checkout.Session.class));
+  void checkoutReturns503WhenStripeIsNotConfigured() {
+    Mockito.when(billingService.isConfigured()).thenReturn(false);
 
-    mvc.perform(post("/billing/checkout")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content("{}")
-            .principal(authPrincipal()))
-        .andExpect(status().isOk());
+    ResponseStatusException ex = Assertions.assertThrows(
+        ResponseStatusException.class,
+        () -> controller.checkout(user, new CheckoutRequest(null, null))
+    );
+
+    Assertions.assertEquals(HttpStatus.SERVICE_UNAVAILABLE, ex.getStatusCode());
+  }
+
+  @Test
+  void checkoutReturnsSessionUrlWhenConfigured() throws Exception {
+    Mockito.when(billingService.isConfigured()).thenReturn(true);
+    com.stripe.model.checkout.Session session = Mockito.mock(com.stripe.model.checkout.Session.class);
+    Mockito.when(session.getUrl()).thenReturn("https://stripe.test/checkout");
+    Mockito.when(billingService.createCheckout(user, "PROMO", "123")).thenReturn(session);
+
+    CheckoutResponse response = controller.checkout(user, new CheckoutRequest("PROMO", "123"));
+
+    Assertions.assertEquals("https://stripe.test/checkout", response.url());
   }
 }

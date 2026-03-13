@@ -1,4 +1,4 @@
-﻿package backend.service;
+package backend.service;
 
 import backend.dto.SnkVenteImportDto;
 import backend.entity.SnkVente;
@@ -36,7 +36,10 @@ class SnkVenteServiceImportTest {
 
   @Test
   void refuseTooManyRows() {
-    List<SnkVenteImportDto> big = java.util.Collections.nCopies(600, new SnkVenteImportDto("A", null, null, null, null, null, null, null, null));
+    List<SnkVenteImportDto> big = java.util.Collections.nCopies(
+        600,
+        new SnkVenteImportDto("A", null, null, null, null, null, null, null, null)
+    );
     Assertions.assertThrows(ResponseStatusException.class, () -> service.importBulk(1L, big));
   }
 
@@ -47,7 +50,17 @@ class SnkVenteServiceImportTest {
 
   @Test
   void importsTrimmedNames() {
-    SnkVenteImportDto dto = new SnkVenteImportDto("  Test  ", null, null, null, null, null, " cat ", null, null);
+    SnkVenteImportDto dto = new SnkVenteImportDto(
+        "  Test  ",
+        null,
+        null,
+        null,
+        null,
+        null,
+        " cat ",
+        null,
+        null
+    );
     int created = service.importBulk(1L, List.of(dto));
     Assertions.assertEquals(1, created);
 
