@@ -47,7 +47,9 @@ class SnkVenteServices {
   }
 
   importBulk(items) {
-    return api.post('/snkVente/import', items)
+    return api.post('/snkVente/import', items, {
+      timeout: 120000,
+    })
   }
 
   // Attachments

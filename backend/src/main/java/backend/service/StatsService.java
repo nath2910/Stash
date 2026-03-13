@@ -7,12 +7,14 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import backend.dto.*;
 import backend.dto.TopVenteProjection;
 import backend.repository.SnkVenteRepository;
 
 @Service
+@Transactional(readOnly = true)
 public class StatsService {
 
   private final SnkVenteRepository repo;

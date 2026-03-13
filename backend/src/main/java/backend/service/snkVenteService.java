@@ -6,10 +6,13 @@ import java.time.Year;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import backend.dto.SnkVenteCreateDto;
@@ -21,10 +24,11 @@ import backend.entity.User;
 import backend.repository.SnkVenteRepository;
 import backend.repository.SnkVenteRepository.BrandCount;
 import backend.repository.UserRepository;
-import jakarta.transaction.Transactional;
 
 @Service
 public class snkVenteService {
+
+  private static final int MAX_IMPORT_ITEMS = 500;
 
   private final SnkVenteRepository snkVenteRepository;
   private final UserRepository userRepository;
@@ -49,33 +53,49 @@ public class snkVenteService {
     return snkVenteRepository.save(v);
   }
 
+  @Transactional(readOnly = true)
   public List<SnkVente> rechercherParUser(Long userId) {
+    return rechercherParUser(userId, null);
+  }
+
+  @Transactional(readOnly = true)
+  public List<SnkVente> rechercherParUser(Long userId, Integer limit) {
+    if (limit != null && limit > 0) {
+      int safe = Math.min(Math.max(limit, 1), 2000);
+      return snkVenteRepository.findByUser_IdOrderByDateAchatDesc(userId, PageRequest.of(0, safe));
+    }
     return snkVenteRepository.findByUser_IdOrderByDateAchatDesc(userId);
   }
 
+  @Transactional(readOnly = true)
   public SnkVente lire(Long userId, Integer id) {
     return snkVenteRepository.findById(id)
         .filter(v -> v.getUser() != null && userId.equals(v.getUser().getId()))
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Vente introuvable"));
   }
 
+  @Transactional(readOnly = true)
   public List<SnkVente> getDernieresVentesParUser(Long userId, int limit) {
     int safeLimit = Math.min(Math.max(limit, 1), 50);
     return snkVenteRepository.findByUser_IdOrderByCreatedAtDesc(userId, PageRequest.of(0, safeLimit));
   }
 
+  @Transactional(readOnly = true)
   public BigDecimal totalBenef(Long userId) {
     return snkVenteRepository.totalBenef(userId);
   }
 
+  @Transactional(readOnly = true)
   public BigDecimal totalBenefYear(Long userId, int year) {
     return snkVenteRepository.totalBenefYear(userId, year);
   }
 
+  @Transactional(readOnly = true)
   public BigDecimal sumPrixResell(Long userId) {
     return snkVenteRepository.sumPrixResell(userId);
   }
 
+  @Transactional(readOnly = true)
   public List<BrandCount> graphMarque(Long userId) {
     return snkVenteRepository.graphMarque(userId);
   }
@@ -116,10 +136,12 @@ public class snkVenteService {
     return snkVenteRepository.save(existing);
   }
 
+  @Transactional(readOnly = true)
   public List<SnkVenteRepository.LabelCount> topCategories(Long userId) {
     return snkVenteRepository.topCategories(userId, PageRequest.of(0, 10));
   }
 
+  @Transactional(readOnly = true)
   public List<SnkVenteRepository.LabelCount> topItemsByCategorie(Long userId, String categorie) {
     return snkVenteRepository.topItemsByCategorie(userId, categorie, PageRequest.of(0, 10));
   }
@@ -130,21 +152,43 @@ public class snkVenteService {
 
   public int importBulk(Long userId, List<SnkVenteImportDto> items) {
     User user = getUserOrThrow(userId);
-    if (items == null || items.isEmpty()) return 0;
+    if (items == null || items.isEmpty()) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Aucun item fourni");
+    }
+
+    if (items.size() > MAX_IMPORT_ITEMS) {
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST,
+          "Import trop volumineux (max " + MAX_IMPORT_ITEMS + " lignes)"
+      );
+    }
 
     List<SnkVente> entities = items.stream()
-      .filter(dto -> dto != null && dto.getNomItem() != null && !dto.getNomItem().trim().isEmpty())
-      .map(dto -> {
-        SnkVente v = new SnkVente();
-        v.setUser(user);
-        applyFields(v, dto);
-        v.setNomItem(dto.getNomItem().trim());
-        return v;
-      })
-      .toList();
+        .filter(Objects::nonNull)
+        .map(this::trimDto)
+        .filter(dto -> dto.getNomItem() != null && !dto.getNomItem().isEmpty())
+        .map(dto -> {
+          SnkVente v = new SnkVente();
+          v.setUser(user);
+          applyFields(v, dto);
+          v.setNomItem(dto.getNomItem());
+          return v;
+        })
+        .collect(Collectors.toList());
+
+    if (entities.isEmpty()) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Aucune ligne valide dans le fichier");
+    }
 
     snkVenteRepository.saveAll(entities);
     return entities.size();
+  }
+
+  private SnkVenteImportDto trimDto(SnkVenteImportDto dto) {
+    dto.setNomItem(dto.getNomItem() != null ? dto.getNomItem().trim() : null);
+    dto.setCategorie(dto.getCategorie() != null ? dto.getCategorie().trim() : null);
+    dto.setDescription(dto.getDescription() != null ? dto.getDescription().trim() : null);
+    return dto;
   }
 
   private void applyFields(

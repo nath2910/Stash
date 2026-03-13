@@ -1,5 +1,5 @@
 // src/services/StatsServices.js
-import api from './api'
+import api from './api.js'
 
 /**
  * Controller accepts: start/end OR from/to.

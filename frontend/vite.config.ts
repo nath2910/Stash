@@ -16,7 +16,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           vue: ['vue', 'vue-router'],
-          charts: ['apexcharts', 'echarts', 'vue-echarts'],
+          charts: ['echarts', 'vue-echarts'],
         },
       },
     },

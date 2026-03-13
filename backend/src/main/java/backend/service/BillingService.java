@@ -15,6 +15,8 @@ import com.stripe.net.Webhook;
 import com.stripe.param.checkout.SessionCreateParams;
 import com.stripe.param.CustomerCreateParams;
 import com.stripe.param.SubscriptionListParams;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -26,6 +28,8 @@ import java.util.Optional;
 
 @Service
 public class BillingService {
+
+  private static final Logger log = LoggerFactory.getLogger(BillingService.class);
 
   private final StripeProperties props;
   private final UserRepository userRepository;
@@ -63,6 +67,11 @@ public class BillingService {
     if (!isConfigured()) {
       throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Stripe non configuré");
     }
+    log.info("Billing: create checkout for user={} promo={} discord={}",
+        user.getId(),
+        promoCode != null && !promoCode.isBlank() ? "***" : "(none)",
+        discordId != null && !discordId.isBlank() ? "***" : "(none)");
+
     String customerId = ensureCustomer(user);
     if (discordId != null && !discordId.isBlank()) {
       user.setDiscordId(discordId.trim());
@@ -93,6 +102,7 @@ public class BillingService {
     if (!isConfigured()) {
       throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Stripe non configuré");
     }
+    log.info("Billing: create portal for user={}", user.getId());
     String customerId = ensureCustomer(user);
     com.stripe.param.billingportal.SessionCreateParams params = com.stripe.param.billingportal.SessionCreateParams.builder()
         .setCustomer(customerId)
@@ -110,6 +120,7 @@ public class BillingService {
     try {
       event = Webhook.constructEvent(payload, sigHeader, props.getWebhookSecret());
     } catch (SignatureVerificationException e) {
+      log.warn("Billing: webhook signature invalid");
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Signature webhook invalide");
     }
 
@@ -117,6 +128,7 @@ public class BillingService {
     EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
     if (!deserializer.getObject().isPresent()) return;
 
+    log.info("Billing: webhook type={}", type);
     switch (type) {
       case "customer.subscription.created":
       case "customer.subscription.updated":
@@ -131,10 +143,13 @@ public class BillingService {
           try {
             Subscription s = Subscription.retrieve(session.getSubscription());
             syncSubscription(s);
-          } catch (Exception ignore) {}
+          } catch (Exception ignore) {
+            log.warn("Billing: unable to retrieve subscription from checkout session {}", session.getId());
+          }
         }
         break;
       default:
+        log.debug("Billing: webhook ignored type={}", type);
         break;
     }
   }
@@ -195,5 +210,6 @@ public class BillingService {
       user.setSubscriptionCurrentPeriodEnd(end);
     }
     userRepository.save(user);
+    log.info("Billing: synced subscription customer={} status={}", customerId, user.getSubscriptionStatus());
   }
 }

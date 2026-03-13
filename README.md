@@ -1,3 +1,8 @@
+Lancer stack : docker compose up -d db backend frontend
+Front tests : cd frontend && npm test
+Build front : cd frontend && npm run build
+Tests backend : cd backend && ./mvnw test -q
+
 # Stash
 
 Application web destinée à l’assistance dans la gestion du **stock de sneakers** et de la **comptabilité** dans un contexte de projet entrepreneurial.
@@ -18,7 +23,7 @@ L’application est découpée en plusieurs pages :
 - Recherche / filtres (marque, taille, prix).
 - Système de création / connexion de compte.
 - Espace personnel pour gérer son stock.
-- export CSV
+- Export CSV.
 
 ---
 
@@ -35,8 +40,8 @@ L’application est découpée en plusieurs pages :
 
 ## Structure du projet
 
-SNK V5/
-├─ frontend/ # Vue/Vite
+SNK V5/  
+├─ frontend/ # Vue/Vite  
 └─ backend/ # Spring Boot (Maven)
 
 ## Prérequis

@@ -65,8 +65,11 @@ public class snkVenteController {
   }
 
   @GetMapping(produces = APPLICATION_JSON_VALUE)
-  public List<SnkVente> rechercher(@AuthenticationPrincipal User currentUser) {
-    return snkVenteService.rechercherParUser(userId(currentUser));
+  public List<SnkVente> rechercher(
+      @AuthenticationPrincipal User currentUser,
+      @RequestParam(required = false) Integer limit
+  ) {
+    return snkVenteService.rechercherParUser(userId(currentUser), limit);
   }
 
   @GetMapping("/recent")

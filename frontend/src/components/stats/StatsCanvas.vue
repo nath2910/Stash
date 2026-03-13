@@ -1619,9 +1619,9 @@ const fullscreenActive = ref(false)
 function onWidgetFullscreenChange(active: boolean) {
   fullscreenActive.value = active
   if (active) {
-    document.body.classList.add('widget-fullscréen-open')
+    document.body.classList.add('widget-fullscreen-open')
   } else {
-    document.body.classList.remove('widget-fullscréen-open')
+    document.body.classList.remove('widget-fullscreen-open')
   }
 }
 

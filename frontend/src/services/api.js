@@ -1,10 +1,15 @@
 import axios from 'axios'
 
+const metaEnv = typeof import.meta !== 'undefined' ? import.meta.env : {}
 const rawBaseURL =
-  import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+  metaEnv?.VITE_API_URL ||
+  metaEnv?.VITE_API_BASE_URL ||
+  process.env.VITE_API_URL ||
+  process.env.VITE_API_BASE_URL ||
+  'http://localhost:8080'
 const baseURL = rawBaseURL.replace(/\/+$/, '') // évite les doubles slash dans les appels
 
-if (import.meta.env.DEV) {
+if (metaEnv?.DEV) {
   console.log('API baseURL =', baseURL)
 }
 
@@ -65,8 +70,6 @@ api.interceptors.response.use(
         error?.message?.toLowerCase?.().includes('timeout'))
 
     if (isNetworkError || status === 0) {
-      clearAuthStorage()
-      redirectToLogin('offline')
       return Promise.reject(error)
     }
 
