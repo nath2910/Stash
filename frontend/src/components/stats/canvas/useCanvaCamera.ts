@@ -31,7 +31,13 @@ export function useCanvasCamera(
     { clientX: number; clientY: number; target: EventTarget | null }
   >()
   let touchPanState: { lastX: number; lastY: number } | null = null
-  let touchPinchState: { lastDistance: number } | null = null
+  let touchPinchState:
+    | {
+        lastDistance: number
+        anchorX: number
+        anchorY: number
+      }
+    | null = null
 
   const BOARD_W = opts.boardWidth
   const BOARD_H = opts.boardHeight
@@ -246,23 +252,27 @@ export function useCanvasCamera(
       const center = midpointBetween(a, b)
       const distance = distanceBetween(a, b)
       if (!Number.isFinite(distance) || distance <= 0) return
+      const vp = viewportEl.value
+      if (!vp) return
+      const rect = vp.getBoundingClientRect()
       if (!touchPinchState) {
-        touchPinchState = { lastDistance: distance }
+        touchPinchState = {
+          lastDistance: distance,
+          anchorX: center.x - rect.left,
+          anchorY: center.y - rect.top,
+        }
         return
       }
 
       const distanceDelta = distance - touchPinchState.lastDistance
       if (Math.abs(distanceDelta) < 2) return
 
-      const vp = viewportEl.value
-      if (!vp) return
-      const rect = vp.getBoundingClientRect()
       const currentScale = Number(panzoom.getScale?.() ?? scale.value ?? 1)
       const rawRatio = distance / touchPinchState.lastDistance
       const dampedRatio = 1 + (rawRatio - 1) * 0.42
       const nextScale = currentScale * dampedRatio
       touchPinchState.lastDistance = distance
-      zoomToPoint(nextScale, center.x - rect.left, center.y - rect.top, { animate: false })
+      zoomToPoint(nextScale, touchPinchState.anchorX, touchPinchState.anchorY, { animate: false })
       return
     }
 
