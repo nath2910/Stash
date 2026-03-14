@@ -45,7 +45,7 @@ class StatsControllerTest {
         3L,
         BigDecimal.valueOf(50)
     );
-    Mockito.when(statsService.summary(1L, start, end, null, List.of("Sneakers"))).thenReturn(response);
+    Mockito.when(statsService.summary(1L, start, end, null, List.of("Sneakers"), null)).thenReturn(response);
 
     StatsSummaryResponse result = controller.summary(
         user,
@@ -54,7 +54,8 @@ class StatsControllerTest {
         null,
         null,
         null,
-        List.of("Sneakers")
+        List.of("Sneakers"),
+        null
     );
 
     Assertions.assertSame(response, result);
@@ -72,7 +73,7 @@ class StatsControllerTest {
         0L,
         BigDecimal.ZERO
     );
-    Mockito.when(statsService.summary(1L, from, to, null, null)).thenReturn(response);
+    Mockito.when(statsService.summary(1L, from, to, null, null, null)).thenReturn(response);
 
     StatsSummaryResponse result = controller.summary(
         user,
@@ -80,6 +81,7 @@ class StatsControllerTest {
         null,
         from,
         to,
+        null,
         null,
         null
     );
