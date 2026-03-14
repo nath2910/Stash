@@ -31,16 +31,11 @@ export function useCanvasCamera(
     { clientX: number; clientY: number; target: EventTarget | null }
   >()
   let touchPanState: { lastX: number; lastY: number } | null = null
-  let touchPinchState: { startScale: number; startDistance: number } | null = null
+  let touchPinchState: { lastDistance: number } | null = null
 
   const BOARD_W = opts.boardWidth
   const BOARD_H = opts.boardHeight
   const EXCLUDE_CLASS = opts.excludeClass ?? 'panzoom-exclude'
-
-  function isCoarsePointerDevice() {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false
-    return window.matchMedia('(pointer: coarse)').matches
-  }
 
   function getRects() {
     const vp = viewportEl.value
@@ -245,10 +240,6 @@ export function useCanvasCamera(
     if (!panzoom) return
     if (activeTouchPointers.size >= 2) {
       touchPanState = null
-      if (isCoarsePointerDevice()) {
-        touchPinchState = null
-        return
-      }
       const pair = getTouchPair()
       if (!pair) return
       const [a, b] = pair
@@ -256,17 +247,21 @@ export function useCanvasCamera(
       const distance = distanceBetween(a, b)
       if (!Number.isFinite(distance) || distance <= 0) return
       if (!touchPinchState) {
-        touchPinchState = {
-          startScale: Number(panzoom.getScale?.() ?? scale.value ?? 1),
-          startDistance: distance,
-        }
+        touchPinchState = { lastDistance: distance }
         return
       }
+
+      const distanceDelta = distance - touchPinchState.lastDistance
+      if (Math.abs(distanceDelta) < 2) return
 
       const vp = viewportEl.value
       if (!vp) return
       const rect = vp.getBoundingClientRect()
-      const nextScale = touchPinchState.startScale * (distance / touchPinchState.startDistance)
+      const currentScale = Number(panzoom.getScale?.() ?? scale.value ?? 1)
+      const rawRatio = distance / touchPinchState.lastDistance
+      const dampedRatio = 1 + (rawRatio - 1) * 0.42
+      const nextScale = currentScale * dampedRatio
+      touchPinchState.lastDistance = distance
       zoomToPoint(nextScale, center.x - rect.left, center.y - rect.top, { animate: false })
       return
     }
