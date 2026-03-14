@@ -124,6 +124,7 @@ import { computed, ref } from 'vue'
 import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
 import SnkVenteServices from '@/services/SnkVenteServices.js'
+import { METADATA_FIELDS, typeLabel } from '@/constants/itemTypes'
 
 /**
  * Exporte par defaut ce que tu passes dans filteredRows.
@@ -135,6 +136,38 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'imported'): void
 }>()
+
+const EXPORT_METADATA_COLUMNS = [
+  { key: 'size', header: 'pointure' },
+  { key: 'sku', header: 'sku' },
+  { key: 'colorway', header: 'coloris' },
+  { key: 'condition', header: 'etat' },
+  { key: 'boxCondition', header: 'etat boite' },
+  { key: 'set', header: 'set' },
+  { key: 'language', header: 'langue' },
+  { key: 'rarity', header: 'rarete' },
+  { key: 'grade', header: 'grade' },
+  { key: 'eventDate', header: 'date evenement' },
+  { key: 'venue', header: 'lieu' },
+  { key: 'section', header: 'section' },
+  { key: 'row', header: 'rang' },
+  { key: 'seat', header: 'siege' },
+  { key: 'status', header: 'statut' },
+]
+
+const EXPORT_HEADERS = [
+  'nom item',
+  'type',
+  'type label',
+  'categorie',
+  'prix retail',
+  'prix resell',
+  'profit',
+  'date achat',
+  'date vente',
+  'description',
+  ...EXPORT_METADATA_COLUMNS.map((column) => column.header),
+]
 
 /* ------------------ EXPORT ------------------ */
 const rowsToExport = computed(() => (Array.isArray(props.filteredRows) ? props.filteredRows : []))
@@ -155,38 +188,46 @@ function exportCsv() {
     return date.toISOString().slice(0, 10)
   }
 
-  const headers = [
-    'nomItem',
-    'categorie',
-    'prixRetail',
-    'prixResell',
-    'dateAchat',
-    'dateVente',
-    'type',
-    'metadata',
-    'description',
-  ]
+  const toCsvNumber = (value: any) => {
+    if (value === null || value === undefined || value === '') return ''
+    const num = Number(value)
+    if (!Number.isFinite(num)) return ''
+    return String(num).replace('.', ',')
+  }
 
   const lines = [
-    headers.join(';'),
+    EXPORT_HEADERS.join(';'),
     ...rows.map((v: any) => {
+      const metadata = v.metadata && typeof v.metadata === 'object' ? v.metadata : {}
+      const prixRetail = v.prixRetail ?? v.prix_retail
+      const prixResell = v.prixResell ?? v.prix_resell
+      const type = v.type ?? 'SNEAKER'
+      const profit =
+        Number.isFinite(Number(prixRetail)) && Number.isFinite(Number(prixResell))
+          ? Number(prixResell) - Number(prixRetail)
+          : ''
+
       const row = {
-        nomItem: v.nomItem ?? v.nom_item ?? '',
+        'nom item': v.nomItem ?? v.nom_item ?? '',
+        type,
+        'type label': typeLabel(type),
         categorie: v.categorie ?? '',
-        prixRetail: v.prixRetail ?? v.prix_retail ?? '',
-        prixResell: v.prixResell ?? v.prix_resell ?? '',
-        dateAchat: toIsoDate(v.dateAchat ?? v.date_achat),
-        dateVente: toIsoDate(v.dateVente ?? v.date_vente),
-        type: v.type ?? 'SNEAKER',
-        metadata: JSON.stringify(v.metadata || {}),
+        'prix retail': toCsvNumber(prixRetail),
+        'prix resell': toCsvNumber(prixResell),
+        profit: toCsvNumber(profit),
+        'date achat': toIsoDate(v.dateAchat ?? v.date_achat),
+        'date vente': toIsoDate(v.dateVente ?? v.date_vente),
         description: v.description ?? '',
+        ...Object.fromEntries(
+          EXPORT_METADATA_COLUMNS.map((column) => [column.header, metadata?.[column.key] ?? '']),
+        ),
       }
 
-      return headers.map((h) => safe((row as any)[h])).join(';')
+      return EXPORT_HEADERS.map((h) => safe((row as any)[h])).join(';')
     }),
   ]
 
-  const csvContent = '\uFEFF' + lines.join('\n') // BOM Excel FR
+  const csvContent = '\uFEFF' + lines.join('\r\n') // BOM + sauts de ligne Excel
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
 
@@ -367,6 +408,34 @@ function parseMetadata(v: unknown) {
     // ignore parse error
   }
   return null
+}
+
+function buildMetadataFromColumns(row: CsvRow, headers: string[], typeValue: string | null) {
+  const metadata: Record<string, string> = {}
+  const normalizedType = String(typeValue || '').trim().toUpperCase()
+  const metadataFields = [
+    ...EXPORT_METADATA_COLUMNS,
+    ...Object.values(METADATA_FIELDS).flat().map((field) => ({
+      key: field.key,
+      header: field.label,
+    })),
+  ]
+
+  const allowedKeys =
+    normalizedType && METADATA_FIELDS[normalizedType as keyof typeof METADATA_FIELDS]
+      ? new Set(METADATA_FIELDS[normalizedType as keyof typeof METADATA_FIELDS].map((field) => field.key))
+      : null
+
+  for (const field of metadataFields) {
+    if (allowedKeys && !allowedKeys.has(field.key)) continue
+    const header = findHeader(headers, [field.header, field.key])
+    if (!header) continue
+    const value = String(row[header] ?? '').trim()
+    if (!value) continue
+    metadata[field.key] = value
+  }
+
+  return Object.keys(metadata).length ? metadata : null
 }
 
 type ParsedTable = { headers: string[]; rows: CsvRow[] }
@@ -558,6 +627,11 @@ function buildPayload(rows: CsvRow[], headers: string[]) {
       const nomItem = String(r[colNomItem] ?? '').trim()
       if (looksBadName(nomItem)) return null
 
+      const typeValue = colType ? String(r[colType] ?? '').trim().toUpperCase() || null : null
+      const metadataValue =
+        (colMetadata ? parseMetadata(r[colMetadata]) : null) ||
+        buildMetadataFromColumns(r, headers, typeValue)
+
       return {
         nomItem,
         prixRetail: colPrixRetail ? toNumberSmart(r[colPrixRetail]) : null,
@@ -566,8 +640,8 @@ function buildPayload(rows: CsvRow[], headers: string[]) {
         dateVente: dateVenteCol ? parseDateSmart(r[dateVenteCol]) : null,
         categorie: colCategorie ? String(r[colCategorie] ?? '').trim() : null,
         description: colDescription ? String(r[colDescription] ?? '').trim() : null,
-        type: colType ? String(r[colType] ?? '').trim().toUpperCase() || null : null,
-        metadata: colMetadata ? parseMetadata(r[colMetadata]) : null,
+        type: typeValue,
+        metadata: metadataValue,
       }
     })
     .filter(Boolean)
