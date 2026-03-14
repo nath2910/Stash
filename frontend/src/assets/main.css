@@ -55,6 +55,15 @@
     overflow: hidden; /* ✅ uniquement quand on veut lock */
   }
 
+  /* Evite l'auto-zoom navigateur sur focus des champs en mobile/tablette. */
+  @media (hover: none) and (pointer: coarse) {
+    input,
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
+  }
+
   /* Hover doux pour tous les boutons par défaut */
   button {
     transition:

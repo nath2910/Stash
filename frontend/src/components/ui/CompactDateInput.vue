@@ -154,6 +154,33 @@ const maxDateValue = computed(() => parseYmdLocal(props.maxDate))
   font-size: 0.76rem;
 }
 
+@media (hover: none) and (pointer: coarse) {
+  .cd-label {
+    font-size: 0.68rem;
+  }
+  .cd-input {
+    height: 34px;
+    padding: 0 10px;
+    font-size: 16px;
+  }
+  .cd-root[data-size='md'] .cd-input {
+    height: 38px;
+    font-size: 16px;
+  }
+  :global(.dp__menu) {
+    width: min(320px, calc(100vw - 20px));
+    min-width: min(320px, calc(100vw - 20px));
+  }
+  :global(.dp__calendar_header_item),
+  :global(.dp__cell_inner) {
+    font-size: 0.85rem;
+  }
+  :global(.dp__cell_inner) {
+    width: 32px;
+    height: 32px;
+  }
+}
+
 :global(.dp__menu) {
   border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.14);

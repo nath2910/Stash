@@ -37,6 +37,11 @@ export function useCanvasCamera(
   const BOARD_H = opts.boardHeight
   const EXCLUDE_CLASS = opts.excludeClass ?? 'panzoom-exclude'
 
+  function isCoarsePointerDevice() {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false
+    return window.matchMedia('(pointer: coarse)').matches
+  }
+
   function getRects() {
     const vp = viewportEl.value
     const board = boardEl.value
@@ -240,6 +245,10 @@ export function useCanvasCamera(
     if (!panzoom) return
     if (activeTouchPointers.size >= 2) {
       touchPanState = null
+      if (isCoarsePointerDevice()) {
+        touchPinchState = null
+        return
+      }
       const pair = getTouchPair()
       if (!pair) return
       const [a, b] = pair
