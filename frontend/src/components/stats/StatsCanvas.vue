@@ -5,7 +5,7 @@
     @pointerdown="onCanvasPointerDown"
   >
     <CanvasDock
-      v-show="!fullscreenActive"
+      v-show="!fullscreenActive && !isCompact"
       :edit-mode="editMode"
       :scale="scale"
       :palette-open="paletteOpen"
@@ -20,16 +20,6 @@
 
     <!-- Canvas -->
     <div ref="viewportEl" class="viewport">
-      <button
-        v-if="isCompact && !paletteOpen && !fullscreenActive"
-        type="button"
-        class="date-toggle"
-        :class="{ 'date-toggle--compact': isCompact }"
-        :aria-pressed="datePanelOpen"
-        @click.stop="datePanelOpen = !datePanelOpen"
-      >
-        <CalendarRange class="h-4 w-4" />
-      </button>
       <div
         class="date-panel"
         :class="{ 'date-panel--compact': isCompact }"
@@ -91,6 +81,53 @@
           @remove="removeWidget(w.id)"
         />
       </div>
+    </div>
+
+    <div
+      v-if="isCompact && !paletteOpen && !fullscreenActive"
+      class="mobile-toolbar"
+      role="toolbar"
+      aria-label="Outils mobile"
+    >
+      <button
+        type="button"
+        class="mobile-toolbtn"
+        :class="{ 'is-active': datePanelOpen }"
+        @click.stop="datePanelOpen = !datePanelOpen"
+        aria-label="Afficher la periode"
+      >
+        <CalendarRange class="h-4 w-4" />
+      </button>
+      <button type="button" class="mobile-toolbtn" @click.stop="zoomOut" aria-label="Dezoomer">
+        <Minus class="h-4 w-4" />
+      </button>
+      <button type="button" class="mobile-toolbtn mobile-toolbtn--scale" @click.stop="resetZoom">
+        {{ Math.round(scale * 100) }}%
+      </button>
+      <button type="button" class="mobile-toolbtn" @click.stop="zoomIn" aria-label="Zoomer">
+        <Plus class="h-4 w-4" />
+      </button>
+      <button type="button" class="mobile-toolbtn" @click.stop="centerView" aria-label="Centrer">
+        <LocateFixed class="h-4 w-4" />
+      </button>
+      <button
+        type="button"
+        class="mobile-toolbtn"
+        :class="{ 'is-active': editMode }"
+        @click.stop="toggleEditMode"
+        :aria-label="editMode ? 'Desactiver edition' : 'Activer edition'"
+      >
+        <component :is="editMode ? LockOpen : Lock" class="h-4 w-4" />
+      </button>
+      <button
+        type="button"
+        class="mobile-toolbtn mobile-toolbtn--accent"
+        :disabled="!editMode"
+        @click.stop="paletteOpen = true"
+        aria-label="Ajouter un widget"
+      >
+        <PlusSquare class="h-4 w-4" />
+      </button>
     </div>
 
     <!-- Palette -->
@@ -217,7 +254,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, toRefs, watch } fr
 import CanvasDock from './canvas/CanvasDock.vue'
 import WidgetFrame from './canvas/WidgetFrame.vue'
 import { useCanvasCamera } from './canvas/useCanvaCamera'
-import { Paintbrush, CalendarRange } from 'lucide-vue-next'
+import { Paintbrush, CalendarRange, Minus, Plus, LocateFixed, Lock, LockOpen, PlusSquare } from 'lucide-vue-next'
 
 import CompactDateInput from '@/components/ui/CompactDateInput.vue'
 import WidgetPalette from './WidgetPalette.vue'
@@ -298,7 +335,8 @@ const editMode = ref(true)
 
 function loadEditMode() {
   const raw = localStorage.getItem(editKey.value)
-  editMode.value = raw ? raw === 'true' : true
+  const compactDefault = typeof window !== 'undefined' && window.innerWidth < 1024
+  editMode.value = raw ? raw === 'true' : !compactDefault
 }
 loadEditMode()
 
@@ -2060,8 +2098,56 @@ function saveProfileEditor() {
 
 @media (max-width: 768px) {
   .canvas-root {
-    --stats-toolbar-clearance: 72px;
+    --stats-toolbar-clearance: 132px;
     --stats-profile-clearance: 64px;
+  }
+  .mobile-toolbar {
+    position: fixed;
+    left: var(--stats-side-gap);
+    right: var(--stats-side-gap);
+    bottom: calc(var(--stats-bottom-gap) + var(--stats-profile-clearance) + 12px);
+    z-index: 72;
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 6px;
+    padding: 6px;
+    border-radius: 18px;
+    background: rgba(10, 12, 18, 0.78);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    backdrop-filter: blur(14px);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.38);
+  }
+  .mobile-toolbtn {
+    min-width: 0;
+    height: 42px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(226, 232, 240, 0.92);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 0.83rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    touch-action: manipulation;
+  }
+  .mobile-toolbtn.is-active {
+    border-color: rgba(167, 243, 208, 0.35);
+    background: rgba(16, 185, 129, 0.14);
+    color: rgba(209, 250, 229, 0.98);
+  }
+  .mobile-toolbtn--accent {
+    border-color: rgba(129, 140, 248, 0.35);
+    background: rgba(99, 102, 241, 0.18);
+  }
+  .mobile-toolbtn:disabled {
+    opacity: 0.45;
+    pointer-events: none;
+  }
+  .mobile-toolbtn--scale {
+    font-variant-numeric: tabular-nums;
   }
   .profile-switcher {
     left: var(--stats-side-gap);
@@ -2103,7 +2189,7 @@ function saveProfileEditor() {
 @media (max-width: 640px) {
   .canvas-root {
     --stats-side-gap: 12px;
-    --stats-toolbar-clearance: 68px;
+    --stats-toolbar-clearance: 126px;
     --stats-profile-clearance: 60px;
   }
   .date-panel {
@@ -2113,15 +2199,15 @@ function saveProfileEditor() {
     max-width: calc(100vw - (var(--stats-side-gap) * 2) - 68px);
   }
   .date-panel--compact {
-    bottom: calc(var(--stats-bottom-gap) + var(--stats-profile-clearance) + 14px);
+    bottom: calc(var(--stats-bottom-gap) + var(--stats-profile-clearance) + 74px);
   }
   .date-toggle--compact {
-    bottom: calc(var(--stats-bottom-gap) + var(--stats-profile-clearance) + 6px);
+    bottom: calc(var(--stats-bottom-gap) + var(--stats-profile-clearance) + 74px);
   }
   .save-toast {
     left: var(--stats-side-gap);
     right: var(--stats-side-gap);
-    bottom: calc(var(--stats-bottom-gap) + var(--stats-profile-clearance) + 14px);
+    bottom: calc(var(--stats-bottom-gap) + var(--stats-profile-clearance) + 74px);
     text-align: center;
   }
   .profile-panel {
@@ -2141,6 +2227,11 @@ function saveProfileEditor() {
     --stats-side-gap: 10px;
     --stats-profile-clearance: 56px;
   }
+  .mobile-toolbar {
+    gap: 5px;
+    padding: 5px;
+    border-radius: 16px;
+  }
   .date-toggle {
     width: 36px;
     height: 36px;
@@ -2156,6 +2247,11 @@ function saveProfileEditor() {
   .profile-pill {
     min-width: 28px;
     padding: 0 7px;
+  }
+  .mobile-toolbtn {
+    height: 40px;
+    border-radius: 12px;
+    font-size: 0.76rem;
   }
 }
 
