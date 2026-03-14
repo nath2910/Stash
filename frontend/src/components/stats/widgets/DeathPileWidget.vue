@@ -52,6 +52,7 @@ const props = defineProps({
   from: String,
   to: String,
   categories: { type: Array, default: () => [] },
+  types: { type: Array, default: () => [] },
 })
 const accent = '#EF4444'
 
@@ -70,6 +71,7 @@ async function load() {
       props.from,
       props.to,
       props.categories,
+      props.types,
     )
     if (id !== req) return
     buckets.value = normalizeBreakdown(data)
@@ -82,7 +84,7 @@ async function load() {
 }
 
 onMounted(load)
-watch(() => [props.from, props.to, props.categories], load)
+watch(() => [props.from, props.to, props.categories, props.types], load)
 
 function formatLabel(raw) {
   const s = String(raw ?? '').trim()

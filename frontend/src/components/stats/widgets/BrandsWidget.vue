@@ -23,6 +23,7 @@ const props = defineProps({
   top: { type: Number, default: 8 },
   view: { type: String, default: 'bars' },
   categories: { type: Array, default: () => [] },
+  types: { type: Array, default: () => [] },
 })
 const accent = '#8B5CF6'
 
@@ -36,7 +37,7 @@ async function load() {
   loading.value = true
   error.value = ''
   try {
-    const { data } = await StatsServices.brands(props.from, props.to, props.categories)
+    const { data } = await StatsServices.brands(props.from, props.to, props.categories, props.types)
     if (id !== req) return
     brands.value = normalizeBrands(data)
   } catch (e) {
@@ -48,7 +49,7 @@ async function load() {
 }
 
 onMounted(load)
-watch(() => [props.from, props.to, props.top, props.categories], load)
+watch(() => [props.from, props.to, props.top, props.categories, props.types], load)
 
 const PALETTE = [
   '#22C55E',

@@ -5,15 +5,17 @@ import api from './api.js'
  * Controller accepts: start/end OR from/to.
  * We send both to be robust.
  */
-function dateParams(from, to, asOf, categories) {
-  return {
+function dateParams(from, to, asOf, categories, types) {
+  const params = {
     from,
     to,
     start: from,
     end: to,
-    asOf,
-    categories,
   }
+  if (asOf !== undefined) params.asOf = asOf
+  if (categories !== undefined) params.categories = categories
+  if (types !== undefined) params.types = types
+  return params
 }
 
 /**
@@ -21,21 +23,28 @@ function dateParams(from, to, asOf, categories) {
  *  - summary(from, to)
  *  - summary({ from, to })
  */
-function resolveRange(a, b, categories) {
+function resolveRange(a, b, categories, types) {
   if (a && typeof a === 'object') {
-    return { from: a.from, to: a.to, asOf: a.asOf, categories: a.categories }
+    return {
+      from: a.from,
+      to: a.to,
+      asOf: a.asOf,
+      categories: a.categories,
+      types: a.types,
+    }
   }
-  return { from: a, to: b, asOf: undefined, categories }
+  return { from: a, to: b, asOf: undefined, categories, types }
 }
 
-function summary(a, b, categories) {
-  const { from, to, asOf, categories: cats } = resolveRange(a, b, categories)
+function summary(a, b, categories, types) {
+  const { from, to, asOf, categories: cats, types: itemTypes } = resolveRange(a, b, categories, types)
   const safeCats = Array.isArray(cats) && cats.length ? cats : undefined
-  return api.get('/stats/summary', { params: dateParams(from, to, asOf, safeCats) })
+  const safeTypes = Array.isArray(itemTypes) && itemTypes.length ? itemTypes : undefined
+  return api.get('/stats/summary', { params: dateParams(from, to, asOf, safeCats, safeTypes) })
 }
 
-function timeseries(a, b, granularityOrOpts = 'day', categories) {
-  const { from, to, categories: cats } = resolveRange(a, b, categories)
+function timeseries(a, b, granularityOrOpts = 'day', categories, types) {
+  const { from, to, categories: cats, types: itemTypes } = resolveRange(a, b, categories, types)
 
   let granularity = 'day'
   if (typeof granularityOrOpts === 'string') {
@@ -45,33 +54,63 @@ function timeseries(a, b, granularityOrOpts = 'day', categories) {
   }
 
   return api.get('/stats/timeseries', {
-    params: { ...dateParams(from, to, undefined, Array.isArray(cats) && cats.length ? cats : undefined), granularity },
+    params: {
+      ...dateParams(
+        from,
+        to,
+        undefined,
+        Array.isArray(cats) && cats.length ? cats : undefined,
+        Array.isArray(itemTypes) && itemTypes.length ? itemTypes : undefined,
+      ),
+      granularity,
+    },
   })
 }
 
-function brands(a, b, categories) {
-  const { from, to, categories: cats } = resolveRange(a, b, categories)
+function brands(a, b, categories, types) {
+  const { from, to, categories: cats, types: itemTypes } = resolveRange(a, b, categories, types)
   return api.get('/stats/brands', {
-    params: dateParams(from, to, undefined, Array.isArray(cats) && cats.length ? cats : undefined),
+    params: dateParams(
+      from,
+      to,
+      undefined,
+      Array.isArray(cats) && cats.length ? cats : undefined,
+      Array.isArray(itemTypes) && itemTypes.length ? itemTypes : undefined,
+    ),
   })
 }
 
-function topSales(a, b, limit = 3, categories) {
-  const { from, to, categories: cats } = resolveRange(a, b, categories)
+function topSales(a, b, limit = 3, categories, types) {
+  const { from, to, categories: cats, types: itemTypes } = resolveRange(a, b, categories, types)
   return api.get('/stats/top-sales', {
-    params: { ...dateParams(from, to, undefined, Array.isArray(cats) && cats.length ? cats : undefined), limit },
+    params: {
+      ...dateParams(
+        from,
+        to,
+        undefined,
+        Array.isArray(cats) && cats.length ? cats : undefined,
+        Array.isArray(itemTypes) && itemTypes.length ? itemTypes : undefined,
+      ),
+      limit,
+    },
   })
 }
 
-function kpi(metric, a, b, categories) {
-  const { from, to, categories: cats } = resolveRange(a, b, categories)
+function kpi(metric, a, b, categories, types) {
+  const { from, to, categories: cats, types: itemTypes } = resolveRange(a, b, categories, types)
   return api.get(`/stats/kpi/${metric}`, {
-    params: dateParams(from, to, undefined, Array.isArray(cats) && cats.length ? cats : undefined),
+    params: dateParams(
+      from,
+      to,
+      undefined,
+      Array.isArray(cats) && cats.length ? cats : undefined,
+      Array.isArray(itemTypes) && itemTypes.length ? itemTypes : undefined,
+    ),
   })
 }
 
-function series(metric, a, b, granularityOrOpts = 'day', categories) {
-  const { from, to, categories: cats } = resolveRange(a, b, categories)
+function series(metric, a, b, granularityOrOpts = 'day', categories, types) {
+  const { from, to, categories: cats, types: itemTypes } = resolveRange(a, b, categories, types)
 
   let granularity = 'day'
   if (typeof granularityOrOpts === 'string') {
@@ -81,21 +120,45 @@ function series(metric, a, b, granularityOrOpts = 'day', categories) {
   }
 
   return api.get(`/stats/series/${metric}`, {
-    params: { ...dateParams(from, to, undefined, Array.isArray(cats) && cats.length ? cats : undefined), granularity },
+    params: {
+      ...dateParams(
+        from,
+        to,
+        undefined,
+        Array.isArray(cats) && cats.length ? cats : undefined,
+        Array.isArray(itemTypes) && itemTypes.length ? itemTypes : undefined,
+      ),
+      granularity,
+    },
   })
 }
 
-function breakdown(metric, a, b, categories) {
-  const { from, to, categories: cats } = resolveRange(a, b, categories)
+function breakdown(metric, a, b, categories, types) {
+  const { from, to, categories: cats, types: itemTypes } = resolveRange(a, b, categories, types)
   return api.get(`/stats/breakdown/${metric}`, {
-    params: dateParams(from, to, undefined, Array.isArray(cats) && cats.length ? cats : undefined),
+    params: dateParams(
+      from,
+      to,
+      undefined,
+      Array.isArray(cats) && cats.length ? cats : undefined,
+      Array.isArray(itemTypes) && itemTypes.length ? itemTypes : undefined,
+    ),
   })
 }
 
-function rank(metric, a, b, limit = 10, categories) {
-  const { from, to, categories: cats } = resolveRange(a, b, categories)
+function rank(metric, a, b, limit = 10, categories, types) {
+  const { from, to, categories: cats, types: itemTypes } = resolveRange(a, b, categories, types)
   return api.get(`/stats/rank/${metric}`, {
-    params: { ...dateParams(from, to, undefined, Array.isArray(cats) && cats.length ? cats : undefined), limit },
+    params: {
+      ...dateParams(
+        from,
+        to,
+        undefined,
+        Array.isArray(cats) && cats.length ? cats : undefined,
+        Array.isArray(itemTypes) && itemTypes.length ? itemTypes : undefined,
+      ),
+      limit,
+    },
   })
 }
 

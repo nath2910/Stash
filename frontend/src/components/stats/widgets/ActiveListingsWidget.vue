@@ -25,6 +25,7 @@ const props = defineProps({
   to: String,
   bucket: { type: String, default: 'week' },
   categories: { type: Array, default: () => [] },
+  types: { type: Array, default: () => [] },
 })
 const accent = '#34D399'
 
@@ -40,8 +41,8 @@ async function load() {
   error.value = ''
   try {
     const [k, s] = await Promise.all([
-      StatsServices.kpi('activeListings', props.from, props.to, props.categories),
-      StatsServices.series('activeListings', props.from, props.to, props.bucket, props.categories),
+      StatsServices.kpi('activeListings', props.from, props.to, props.categories, props.types),
+      StatsServices.series('activeListings', props.from, props.to, props.bucket, props.categories, props.types),
     ])
     if (id !== req) return
     kpi.value = normalizeKpi(k.data)
@@ -55,7 +56,7 @@ async function load() {
 }
 
 onMounted(load)
-watch(() => [props.from, props.to, props.bucket, props.categories], load)
+watch(() => [props.from, props.to, props.bucket, props.categories, props.types], load)
 
 const valueText = computed(() => formatNumber(kpi.value.value, { compact: true }))
 const deltaText = computed(() => (kpi.value.deltaPct == null ? '' : signFmt(kpi.value.deltaPct)))

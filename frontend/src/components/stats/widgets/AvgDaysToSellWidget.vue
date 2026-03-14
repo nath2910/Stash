@@ -40,6 +40,7 @@ const props = defineProps({
   to: String,
   bucket: { type: String, default: 'week' },
   categories: { type: Array, default: () => [] },
+  types: { type: Array, default: () => [] },
 })
 const accent = '#60A5FA'
 
@@ -57,9 +58,9 @@ async function load() {
   try {
     const { from: prevFrom, to: prevTo } = prevPeriod(props.from, props.to)
     const [k, s, kPrev] = await Promise.all([
-      StatsServices.kpi('avgDaysToSell', props.from, props.to, props.categories),
-      StatsServices.series('avgDaysToSell', props.from, props.to, props.bucket, props.categories),
-      StatsServices.kpi('avgDaysToSell', prevFrom, prevTo, props.categories),
+      StatsServices.kpi('avgDaysToSell', props.from, props.to, props.categories, props.types),
+      StatsServices.series('avgDaysToSell', props.from, props.to, props.bucket, props.categories, props.types),
+      StatsServices.kpi('avgDaysToSell', prevFrom, prevTo, props.categories, props.types),
     ])
     if (id !== req) return
     kpi.value = normalizeKpi(k.data)
@@ -74,7 +75,7 @@ async function load() {
 }
 
 onMounted(load)
-watch(() => [props.from, props.to, props.bucket, props.categories], load)
+watch(() => [props.from, props.to, props.bucket, props.categories, props.types], load)
 
 const valueText = computed(() => `${Number(kpi.value.value ?? 0).toFixed(0)} j`)
 const deltaDays = computed(() => {

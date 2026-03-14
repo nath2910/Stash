@@ -52,6 +52,7 @@ const props = defineProps({
   to: String,
   bucket: { type: String, default: 'week' },
   categories: { type: Array, default: () => [] },
+  types: { type: Array, default: () => [] },
 })
 const accent = '#F59E0B'
 
@@ -75,9 +76,9 @@ async function load() {
   error.value = ''
   try {
     const [k, s, t] = await Promise.all([
-      StatsServices.kpi('avgMargin', props.from, props.to, props.categories),
-      StatsServices.series('avgMargin', props.from, props.to, props.bucket, props.categories),
-      StatsServices.topSales(props.from, props.to, 3, props.categories),
+      StatsServices.kpi('avgMargin', props.from, props.to, props.categories, props.types),
+      StatsServices.series('avgMargin', props.from, props.to, props.bucket, props.categories, props.types),
+      StatsServices.topSales(props.from, props.to, 3, props.categories, props.types),
     ])
     if (id !== req) return
     kpi.value = normalizeKpi(k.data)
@@ -92,7 +93,7 @@ async function load() {
 }
 
 onMounted(load)
-watch(() => [props.from, props.to, props.bucket, props.categories], load)
+watch(() => [props.from, props.to, props.bucket, props.categories, props.types], load)
 
 const valueText = computed(() => formatEUR(kpi.value.value, { compact: true }))
 const deltaText = computed(() => (kpi.value.deltaPct == null ? '' : signFmt(kpi.value.deltaPct)))

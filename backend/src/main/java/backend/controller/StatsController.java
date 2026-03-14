@@ -39,11 +39,12 @@ public class StatsController {
       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate asOf,
-      @RequestParam(required = false) List<String> categories
+      @RequestParam(required = false) List<String> categories,
+      @RequestParam(required = false) List<String> types
   ) {
     LocalDate f = pickDate(start, from);
     LocalDate t = pickDate(end, to);
-    return statsService.summary(currentUser.getId(), f, t, asOf, categories);
+    return statsService.summary(currentUser.getId(), f, t, asOf, categories, types);
   }
 
   @GetMapping({"/timeseries"})
@@ -54,11 +55,12 @@ public class StatsController {
       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
       @RequestParam(defaultValue = "day") String granularity,
-      @RequestParam(required = false) List<String> categories
+      @RequestParam(required = false) List<String> categories,
+      @RequestParam(required = false) List<String> types
   ) {
     LocalDate f = pickDate(start, from);
     LocalDate t = pickDate(end, to);
-    return statsService.timeseries(currentUser.getId(), f, t, granularity, categories);
+    return statsService.timeseries(currentUser.getId(), f, t, granularity, categories, types);
   }
 
   @GetMapping({"/brands"})
@@ -68,11 +70,12 @@ public class StatsController {
       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end,
       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
-      @RequestParam(required = false) List<String> categories
+      @RequestParam(required = false) List<String> categories,
+      @RequestParam(required = false) List<String> types
   ) {
     LocalDate f = pickDate(start, from);
     LocalDate t = pickDate(end, to);
-    return statsService.brandBreakdown(currentUser.getId(), f, t, categories);
+    return statsService.brandBreakdown(currentUser.getId(), f, t, categories, types);
   }
 
   @GetMapping({"/top-sales", "/topVentes"})
@@ -83,11 +86,12 @@ public class StatsController {
       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
       @RequestParam(defaultValue = "3") int limit,
-      @RequestParam(required = false) List<String> categories
+      @RequestParam(required = false) List<String> categories,
+      @RequestParam(required = false) List<String> types
   ) {
     LocalDate f = pickDate(start, from);
     LocalDate t = pickDate(end, to);
-    return statsService.topSales(currentUser.getId(), f, t, limit, categories);
+    return statsService.topSales(currentUser.getId(), f, t, limit, categories, types);
   }
 
   @GetMapping({"/kpi/{metric}"})
@@ -98,11 +102,12 @@ public class StatsController {
       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end,
       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
-      @RequestParam(required = false) List<String> categories
+      @RequestParam(required = false) List<String> categories,
+      @RequestParam(required = false) List<String> types
   ) {
     LocalDate f = pickDate(start, from);
     LocalDate t = pickDate(end, to);
-    return statsService.kpi(currentUser.getId(), f, t, metric, categories);
+    return statsService.kpi(currentUser.getId(), f, t, metric, categories, types);
   }
 
   @GetMapping({"/series/{metric}"})
@@ -114,11 +119,12 @@ public class StatsController {
       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
       @RequestParam(defaultValue = "day") String granularity,
-      @RequestParam(required = false) List<String> categories
+      @RequestParam(required = false) List<String> categories,
+      @RequestParam(required = false) List<String> types
   ) {
     LocalDate f = pickDate(start, from);
     LocalDate t = pickDate(end, to);
-    return statsService.series(currentUser.getId(), f, t, metric, granularity, categories);
+    return statsService.series(currentUser.getId(), f, t, metric, granularity, categories, types);
   }
 
   @GetMapping({"/breakdown/{metric}"})
@@ -129,11 +135,12 @@ public class StatsController {
       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end,
       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
-      @RequestParam(required = false) List<String> categories
+      @RequestParam(required = false) List<String> categories,
+      @RequestParam(required = false) List<String> types
   ) {
     LocalDate f = pickDate(start, from);
     LocalDate t = pickDate(end, to);
-    return statsService.breakdown(currentUser.getId(), metric, f, t, categories);
+    return statsService.breakdown(currentUser.getId(), metric, f, t, categories, types);
   }
 
   @GetMapping({"/rank/{metric}"})
@@ -145,11 +152,12 @@ public class StatsController {
       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
       @RequestParam(defaultValue = "10") int limit,
-      @RequestParam(required = false) List<String> categories
+      @RequestParam(required = false) List<String> categories,
+      @RequestParam(required = false) List<String> types
   ) {
     LocalDate f = pickDate(start, from);
     LocalDate t = pickDate(end, to);
-    return statsService.rank(currentUser.getId(), f, t, metric, limit, categories);
+    return statsService.rank(currentUser.getId(), f, t, metric, limit, categories, types);
   }
 
   @GetMapping({"/categories"})

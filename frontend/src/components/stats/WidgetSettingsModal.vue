@@ -63,12 +63,19 @@
                             :key="tag"
                             class="multi-pill"
                           >
-                            {{ tag }}
+                            {{ resolveMultiLabel(f.options, tag) }}
                           </span>
                         </template>
-                        <span v-else class="multi-placeholder">Toutes categories</span>
+                        <span v-else class="multi-placeholder">{{ f.placeholder || 'Tout' }}</span>
                       </div>
                       <div class="multi-actions">
+                        <button
+                          type="button"
+                          class="multi-btn"
+                          @click="clearMulti(f.key)"
+                        >
+                          Retirer filtre
+                        </button>
                         <button
                           type="button"
                           class="multi-btn"
@@ -252,11 +259,22 @@ function selectAllMulti(key, options) {
   list.splice(0, list.length, ...Array.from(new Set(values)))
 }
 
+function clearMulti(key) {
+  const list = ensureMultiList(key)
+  list.splice(0, list.length)
+}
+
 function ensureMultiList(key) {
   if (!Array.isArray(draft[key])) {
     draft[key] = []
   }
   return draft[key]
+}
+
+function resolveMultiLabel(options, value) {
+  if (!Array.isArray(options)) return value
+  const match = options.find((option) => option?.value === value)
+  return match?.label ?? value
 }
 
 watch(
@@ -426,6 +444,7 @@ watch(
 }
 .multi-actions {
   display: flex;
+  gap: 8px;
   justify-content: flex-end;
 }
 .multi-btn {

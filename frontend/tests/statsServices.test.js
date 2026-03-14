@@ -19,8 +19,6 @@ test('summary envoie from/to + start/end', async () => {
       to: '2026-02-01',
       start: '2026-01-01',
       end: '2026-02-01',
-      asOf: undefined,
-      categories: undefined,
     },
   })
 })

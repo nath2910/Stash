@@ -48,6 +48,7 @@ const props = defineProps({
   to: String,
   limit: { type: Number, default: 5 },
   categories: { type: Array, default: () => [] },
+  types: { type: Array, default: () => [] },
 })
 const accent = '#22C55E'
 
@@ -70,6 +71,7 @@ async function load() {
       props.to,
       activeLimit.value,
       props.categories,
+      props.types,
     )
     if (id !== req) return
     topSales.value = normalizeTopSales(data)
@@ -82,5 +84,5 @@ async function load() {
 }
 
 onMounted(load)
-watch(() => [props.from, props.to, props.limit, expanded.value, props.categories], load)
+watch(() => [props.from, props.to, props.limit, expanded.value, props.categories, props.types], load)
 </script>

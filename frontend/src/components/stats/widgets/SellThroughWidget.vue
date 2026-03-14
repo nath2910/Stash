@@ -57,6 +57,7 @@ const props = defineProps({
   to: String,
   bucket: { type: String, default: 'week' },
   categories: { type: Array, default: () => [] },
+  types: { type: Array, default: () => [] },
 })
 const accent = '#38BDF8'
 const target = 50
@@ -73,8 +74,8 @@ async function load() {
   error.value = ''
   try {
     const [k, s] = await Promise.all([
-      StatsServices.kpi('sellThrough', props.from, props.to, props.categories),
-      StatsServices.series('sellThrough', props.from, props.to, props.bucket, props.categories),
+      StatsServices.kpi('sellThrough', props.from, props.to, props.categories, props.types),
+      StatsServices.series('sellThrough', props.from, props.to, props.bucket, props.categories, props.types),
     ])
     if (id !== req) return
     kpi.value = normalizeKpi(k.data)
@@ -88,7 +89,7 @@ async function load() {
 }
 
 onMounted(load)
-watch(() => [props.from, props.to, props.bucket, props.categories], load)
+watch(() => [props.from, props.to, props.bucket, props.categories, props.types], load)
 
 const valueText = computed(() => formatPct(kpi.value.value, { digits: 1 }))
 const spark = computed(() => series.value.slice(-18).map((p) => p.value))

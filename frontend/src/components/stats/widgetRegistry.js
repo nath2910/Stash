@@ -32,6 +32,7 @@ import CashFlowWidget from './widgets/CashFlowWidget.vue'
 
 import BrandsWidget from './widgets/BrandsWidget.vue'
 import TopSalesWidget from './widgets/TopSalesWidget.vue'
+import TypeMixWidget from './widgets/TypeMixWidget.vue'
 import TextTitleWidget from './widgets/TextTitleWidget.vue'
 import TextBlockWidget from './widgets/TextBlockWidget.vue'
 
@@ -134,7 +135,7 @@ export const WIDGET_DEFS = [
     component: NetProfitWidget,
     forms: ['number'],
     defaultSize: { w: 520, h: 240 },
-    defaultProps: { bucket: 'week', autoHeight: false, categories: [] },
+    defaultProps: { bucket: 'week', autoHeight: false, categories: [], types: [] },
     settings: [],
     categoryFilter: true,
   },
@@ -147,7 +148,7 @@ export const WIDGET_DEFS = [
     component: RoiWidget,
     forms: ['number'],
     defaultSize: { w: 520, h: 260 },
-    defaultProps: { autoHeight: true, categories: [] },
+    defaultProps: { autoHeight: true, categories: [], types: [] },
     settings: [],
     categoryFilter: true,
   },
@@ -160,7 +161,7 @@ export const WIDGET_DEFS = [
     component: GrossRevenueWidget,
     forms: ['line'],
     defaultSize: { w: 820, h: 520 },
-    defaultProps: { bucket: 'day', autoHeight: true, categories: [] },
+    defaultProps: { bucket: 'day', autoHeight: true, categories: [], types: [] },
     settings: [],
     categoryFilter: true,
   },
@@ -174,7 +175,7 @@ export const WIDGET_DEFS = [
     forms: ['number'],
     defaultSize: { w: 520, h: 200 },
     minSize: { w: 320, h: 180 },
-    defaultProps: { bucket: 'week', autoHeight: true, categories: [] },
+    defaultProps: { bucket: 'week', autoHeight: true, categories: [], types: [] },
     settings: [],
     categoryFilter: true,
   },
@@ -188,7 +189,7 @@ export const WIDGET_DEFS = [
     component: InventoryValueWidget,
     forms: ['number'],
     defaultSize: { w: 520, h: 240 },
-    defaultProps: { autoHeight: false, useGlobalRange: false, asOf: '', categories: [] },
+    defaultProps: { autoHeight: false, useGlobalRange: false, asOf: '', categories: [], types: [] },
     settings: [{ key: 'asOf', label: 'Date', type: 'date' }],
     dateMode: 'asOf',
     categoryFilter: true,
@@ -202,7 +203,7 @@ export const WIDGET_DEFS = [
     component: SellThroughWidget,
     forms: ['bars'],
     defaultSize: { w: 520, h: 260 },
-    defaultProps: { bucket: 'week', autoHeight: true, categories: [] },
+    defaultProps: { bucket: 'week', autoHeight: true, categories: [], types: [] },
     settings: [],
     categoryFilter: true,
   },
@@ -215,7 +216,7 @@ export const WIDGET_DEFS = [
     component: AvgDaysToSellWidget,
     forms: ['number'],
     defaultSize: { w: 520, h: 240 },
-    defaultProps: { bucket: 'week', autoHeight: false, categories: [] },
+    defaultProps: { bucket: 'week', autoHeight: false, categories: [], types: [] },
     settings: [],
     categoryFilter: true,
   },
@@ -229,7 +230,7 @@ export const WIDGET_DEFS = [
     forms: ['bars'],
     defaultSize: { w: 620, h: 470 },
     minSize: { w: 520, h: 470 },
-    defaultProps: { autoHeight: false, categories: [] },
+    defaultProps: { autoHeight: false, categories: [], types: [] },
     settings: [],
     categoryFilter: true,
   },
@@ -242,7 +243,7 @@ export const WIDGET_DEFS = [
     component: ActiveListingsWidget,
     forms: ['number'],
     defaultSize: { w: 520, h: 240 },
-    defaultProps: { bucket: 'week', autoHeight: false, categories: [] },
+    defaultProps: { bucket: 'week', autoHeight: false, categories: [], types: [] },
     settings: [],
     categoryFilter: true,
   },
@@ -257,7 +258,7 @@ export const WIDGET_DEFS = [
     component: TopProfitDriversWidget,
     forms: ['bars', 'pie', 'treemap', 'heatmap'],
     defaultSize: { w: 720, h: 360 },
-    defaultProps: { top: 8, autoHeight: true, view: 'bars', categories: [] },
+    defaultProps: { top: 8, autoHeight: true, view: 'bars', categories: [], types: [] },
     settings: [
       {
         key: 'top',
@@ -280,7 +281,7 @@ export const WIDGET_DEFS = [
     component: AspWidget,
     forms: ['number'],
     defaultSize: { w: 520, h: 240 },
-    defaultProps: { bucket: 'week', autoHeight: false, categories: [] },
+    defaultProps: { bucket: 'week', autoHeight: false, categories: [], types: [] },
     settings: [],
     categoryFilter: true,
   },
@@ -293,7 +294,7 @@ export const WIDGET_DEFS = [
     component: CashFlowWidget,
     forms: ['number'],
     defaultSize: { w: 520, h: 240 },
-    defaultProps: { bucket: 'week', autoHeight: false, categories: [] },
+    defaultProps: { bucket: 'week', autoHeight: false, categories: [], types: [] },
     settings: [],
     categoryFilter: true,
   },
@@ -308,7 +309,7 @@ export const WIDGET_DEFS = [
     component: BrandsWidget,
     forms: ['bars', 'treemap', 'heatmap'],
     defaultSize: { w: 720, h: 420 },
-    defaultProps: { top: 8, autoHeight: false, view: 'bars', categories: [] },
+    defaultProps: { top: 8, autoHeight: false, view: 'bars', categories: [], types: [] },
     settings: [
       {
         key: 'top',
@@ -323,6 +324,30 @@ export const WIDGET_DEFS = [
     categoryFilter: true,
   },
   {
+    type: 'typeMix',
+    title: 'Mix par type',
+    category: 'Performance',
+    help: 'Repartition ventes / stock / profit par type d item',
+    icon: BarChart3,
+    component: TypeMixWidget,
+    forms: ['pie', 'bars', 'treemap'],
+    defaultSize: { w: 720, h: 420 },
+    defaultProps: { metric: 'profit', view: 'pie', autoHeight: false, categories: [], types: [] },
+    settings: [
+      {
+        key: 'metric',
+        label: 'Mesure',
+        type: 'select',
+        options: [
+          { label: 'Profit', value: 'profit' },
+          { label: 'Ventes', value: 'sold' },
+          { label: 'Stock', value: 'stock' },
+        ],
+      },
+    ],
+    categoryFilter: true,
+  },
+  {
     type: 'topSales',
     title: 'Top ventes',
     category: 'Bonus',
@@ -331,7 +356,7 @@ export const WIDGET_DEFS = [
     component: TopSalesWidget,
     forms: ['bars'],
     defaultSize: { w: 620, h: 420 },
-    defaultProps: { limit: 5, autoHeight: true, categories: [] },
+    defaultProps: { limit: 5, autoHeight: true, categories: [], types: [] },
     settings: [
       {
         key: 'limit',

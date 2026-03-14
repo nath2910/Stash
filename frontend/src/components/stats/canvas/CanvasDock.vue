@@ -143,8 +143,8 @@ onBeforeUnmount(() => {
 <style scoped>
 .dock {
   position: fixed;
-  top: 78px;
-  right: 18px;
+  top: max(78px, env(safe-area-inset-top, 0px) + 68px);
+  right: clamp(10px, 2.8vw, 18px);
   z-index: 60;
   display: flex;
   flex-direction: column;
@@ -152,15 +152,66 @@ onBeforeUnmount(() => {
   gap: 16px;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .dock {
     top: auto;
-    bottom: 88px;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 86px);
+    right: 12px;
+    gap: 10px;
+  }
+  .dock-panel {
+    width: min(340px, calc(100vw - 24px));
+    max-height: min(62dvh, 520px);
+    overflow: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .dock {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 82px);
     right: 12px;
     gap: 12px;
   }
   .dock-panel {
-    width: min(320px, 90vw);
+    width: min(320px, calc(100vw - 20px));
+    padding: 10px;
+    border-radius: 16px;
+  }
+  .dock-btn {
+    height: 38px;
+    padding: 0 10px;
+  }
+  .dock-btn span {
+    font-size: 0.88rem;
+  }
+  .btn {
+    height: 36px;
+  }
+  .btn-pill {
+    width: 78px;
+  }
+}
+
+@media (max-width: 480px) {
+  .dock {
+    right: 10px;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 74px);
+  }
+  .fab {
+    width: 42px;
+    height: 42px;
+    border-radius: 13px;
+  }
+  .dock-panel {
+    width: calc(100vw - 20px);
+    max-height: min(58dvh, 460px);
+  }
+  .dock-panel__header {
+    margin-bottom: 8px;
+  }
+  .dock-section {
+    gap: 8px;
+    margin-top: 8px;
   }
 }
 

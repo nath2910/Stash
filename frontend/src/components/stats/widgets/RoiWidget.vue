@@ -67,6 +67,7 @@ const props = defineProps({
   from: String,
   to: String,
   categories: { type: Array, default: () => [] },
+  types: { type: Array, default: () => [] },
 })
 const accent = '#8B5CF6'
 const loading = ref(false)
@@ -83,9 +84,9 @@ async function load() {
   try {
     const { from: prevFrom, to: prevTo } = prevPeriod(props.from, props.to)
     const [k, kPrev, c] = await Promise.all([
-      StatsServices.kpi('roi', props.from, props.to, props.categories),
-      StatsServices.kpi('roi', prevFrom, prevTo, props.categories),
-      StatsServices.rank('topCategoriesProfit', props.from, props.to, 4, props.categories),
+      StatsServices.kpi('roi', props.from, props.to, props.categories, props.types),
+      StatsServices.kpi('roi', prevFrom, prevTo, props.categories, props.types),
+      StatsServices.rank('topCategoriesProfit', props.from, props.to, 4, props.categories, props.types),
     ])
     if (id !== req) return
     kpi.value = normalizeKpi(k.data)
@@ -100,7 +101,7 @@ async function load() {
 }
 
 onMounted(load)
-watch(() => [props.from, props.to, props.categories], load)
+watch(() => [props.from, props.to, props.categories, props.types], load)
 
 const roiText = computed(() => formatPct(kpi.value.value, { digits: 1 }))
 const deltaPts = computed(() => {

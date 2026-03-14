@@ -29,6 +29,7 @@ const props = defineProps({
   asOf: String,
   useGlobalRange: { type: Boolean, default: true },
   categories: { type: Array, default: () => [] },
+  types: { type: Array, default: () => [] },
 })
 const accent = '#06B6D4'
 
@@ -50,6 +51,7 @@ async function load() {
       to: baseDate,
       asOf: baseDate,
       categories: props.categories,
+      types: props.types,
     })
     if (id !== req) return
     const curr = normalizeSummary(currRes.data)
@@ -63,7 +65,7 @@ async function load() {
 }
 
 onMounted(load)
-watch(() => [props.from, props.to, props.asOf, props.useGlobalRange, props.categories], load)
+watch(() => [props.from, props.to, props.asOf, props.useGlobalRange, props.categories, props.types], load)
 
 const valueText = computed(() => formatEUR(summary.value.valeurStock, { compact: true }))
 const asOfLabel = computed(() => {

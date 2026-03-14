@@ -278,10 +278,17 @@ const minDate = ref('')
 const maxDate = ref('')
 const settingsCategories = ref<string[]>([])
 const categoriesCache = new Map<string, string[]>()
+const ITEM_TYPE_OPTIONS = [
+  { label: 'Sneakers', value: 'SNEAKER' },
+  { label: 'Cartes', value: 'POKEMON_CARD' },
+  { label: 'Tickets', value: 'TICKET' },
+  { label: 'Autres', value: 'OTHER' },
+]
 
 const categoryOptions = computed(() =>
   settingsCategories.value.map((c) => ({ label: c, value: c })),
 )
+const typeOptions = computed(() => ITEM_TYPE_OPTIONS)
 
 /* ===== Mode édition/figé ===== */
 // Le mode edition est stocke par utilisateur pour eviter les fuites d'etat UI.
@@ -576,6 +583,11 @@ function normalizeLayout(raw: unknown): Widget[] | null {
       if (legacy) (w.props as any).categories = [legacy]
       delete (w.props as any).category
     }
+    if (typeof (w.props as any)?.type === 'string' && !(w.props as any)?.types) {
+      const legacyType = String((w.props as any).type || '').trim()
+      if (legacyType) (w.props as any).types = [legacyType]
+      delete (w.props as any).type
+    }
 
     if (
       def.type === 'roi' ||
@@ -868,8 +880,23 @@ const settingsFields = computed(() => {
     return f
   })
 
-  const categoryField = def?.categoryFilter
-    ? [{ key: 'categories', label: 'Categories', type: 'multiselect', options: categoryOptions.value }]
+  const filterFields = def?.categoryFilter
+    ? [
+        {
+          key: 'categories',
+          label: 'Categories',
+          type: 'multiselect',
+          options: categoryOptions.value,
+          placeholder: 'Toutes categories',
+        },
+        {
+          key: 'types',
+          label: "Types d'items",
+          type: 'multiselect',
+          options: typeOptions.value,
+          placeholder: 'Tous types',
+        },
+      ]
     : []
 
   return [
@@ -880,7 +907,7 @@ const settingsFields = computed(() => {
       hint: 'Active par defaut',
     },
     ...rangeFields,
-    ...categoryField,
+    ...filterFields,
     ...mappedBase,
   ]
 })
@@ -896,6 +923,12 @@ const settingsModel = computed(() => {
         ? base.categories
         : typeof base.category === 'string' && base.category
           ? [base.category]
+          : [],
+    types:
+      Array.isArray(base.types) && base.types.length
+        ? base.types
+        : typeof base.type === 'string' && base.type
+          ? [base.type]
           : [],
     ...base,
   }
@@ -930,7 +963,16 @@ function applySettings(newModel: Record<string, unknown>) {
     const v = String((next as any).categories || '').trim()
     ;(next as any).categories = v ? [v] : []
   }
+  if (Array.isArray((next as any).types)) {
+    ;(next as any).types = (next as any).types
+      .map((v: unknown) => String(v ?? '').trim())
+      .filter((v: string) => v.length > 0)
+  } else if (typeof (next as any).types === 'string') {
+    const v = String((next as any).types || '').trim()
+    ;(next as any).types = v ? [v] : []
+  }
   delete (next as any).category
+  delete (next as any).type
   const fromVal = typeof next.from === 'string' ? next.from : ''
   const toVal = typeof next.to === 'string' ? next.to : ''
   if (fromVal) next.from = clampDate(fromVal)
@@ -996,7 +1038,11 @@ function fitToWidgets(padding = 120, animate = true) {
   const cy = (minY + maxY) / 2
 
   camera.zoomTo?.(targetScale, { animate })
-  camera.centerOn(cx, cy)
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      camera.centerOn(cx, cy)
+    })
+  })
 }
 
 function widgetsBounds() {
@@ -1018,8 +1064,7 @@ function widgetsBounds() {
 }
 
 function centerView() {
-  const { cx, cy } = widgetsBounds()
-  camera.centerOn(cx, cy)
+  fitToWidgets(80, true)
 }
 
 function zoomIn() {
@@ -1029,7 +1074,7 @@ function zoomOut() {
   camera.zoomOut()
 }
 function resetZoom() {
-  camera.resetZoom()
+  fitToWidgets(120, true)
 }
 function zoomToFitContent() {
   fitToWidgets(80, true)
@@ -1307,8 +1352,7 @@ function onGlobalPointerUp() {
 }
 /** active/désactive le pan du board */
 function setCanvasPanEnabled(enabled: boolean) {
-  const pz = camera.getPanzoom()
-  pz?.setOptions?.({ disablePan: !enabled })
+  camera.setPanEnabled(enabled)
 }
 
 function syncPanzoomExclude(enabled: boolean) {
@@ -1660,11 +1704,12 @@ onMounted(async () => {
 
   const resizeHandler = () => {
     const compact = window.innerWidth < 1024
+    const wasCompact = isCompact.value
     if (compact !== isCompact.value) {
       isCompact.value = compact
       datePanelOpen.value = !compact // ouvert par défaut en large, fermé en compact
     }
-    if (compact) zoomToFitContent()
+    if (!wasCompact && compact) zoomToFitContent()
   }
   resizeHandler()
   window.addEventListener('resize', resizeHandler, { passive: true })
@@ -1730,9 +1775,16 @@ function saveProfileEditor() {
 <style scoped>
 .canvas-root {
   --bg: #060a12;
+  --stats-top-gap: max(16px, env(safe-area-inset-top, 0px) + 10px);
+  --stats-side-gap: clamp(10px, 2.8vw, 18px);
+  --stats-bottom-gap: max(16px, env(safe-area-inset-bottom, 0px) + 10px);
+  --stats-toolbar-clearance: 84px;
+  --stats-profile-clearance: 76px;
   position: relative;
   width: 100%;
   height: 100%;
+  min-height: 100svh;
+  min-height: 100dvh;
   overflow: hidden;
   background: var(--bg);
 }
@@ -1742,11 +1794,11 @@ function saveProfileEditor() {
   inset: 0;
   overflow: hidden;
   overscroll-behavior: contain;
-  touch-action: pan-x pan-y pinch-zoom;
+  touch-action: none;
 }
 .viewport,
 .board {
-  touch-action: pan-x pan-y pinch-zoom;
+  touch-action: none;
 }
 
 .board {
@@ -1776,9 +1828,10 @@ function saveProfileEditor() {
 
 .date-panel {
   position: fixed;
-  top: 16px;
-  left: 16px;
-  max-width: 260px;
+  top: var(--stats-top-gap);
+  left: var(--stats-side-gap);
+  width: min(280px, calc(100vw - (var(--stats-side-gap) * 2) - 84px));
+  max-width: calc(100vw - (var(--stats-side-gap) * 2) - 84px);
   z-index: 60;
   display: flex;
   flex-direction: column;
@@ -1793,8 +1846,8 @@ function saveProfileEditor() {
 }
 .date-toggle {
   position: fixed;
-  top: 16px;
-  left: 16px;
+  top: var(--stats-top-gap);
+  left: var(--stats-side-gap);
   z-index: 61;
   width: 34px;
   height: 34px;
@@ -1808,15 +1861,16 @@ function saveProfileEditor() {
 }
 .date-panel--compact {
   top: auto;
-  left: 14px;
-  right: 14px;
-  bottom: 120px;
-  max-width: 82vw;
+  left: var(--stats-side-gap);
+  right: var(--stats-side-gap);
+  bottom: calc(var(--stats-bottom-gap) + var(--stats-profile-clearance) + 18px);
+  width: auto;
+  max-width: none;
 }
 .date-toggle--compact {
   top: auto;
-  left: 12px;
-  bottom: 92px;
+  left: var(--stats-side-gap);
+  bottom: calc(var(--stats-bottom-gap) + var(--stats-profile-clearance) + 8px);
 }
 .date-toggle:hover {
   border-color: rgba(148, 163, 184, 0.35);
@@ -1903,8 +1957,8 @@ function saveProfileEditor() {
 
 .save-toast {
   position: fixed;
-  right: 24px;
-  bottom: 24px;
+  right: var(--stats-side-gap);
+  bottom: calc(var(--stats-bottom-gap) + var(--stats-profile-clearance) + 10px);
   z-index: 80;
   padding: 10px 14px;
   border-radius: 12px;
@@ -1932,10 +1986,12 @@ function saveProfileEditor() {
 /* Profil selector */
 .profile-switcher {
   position: fixed;
-  left: 16px;
-  bottom: 16px;
+  left: var(--stats-side-gap);
+  right: auto;
+  bottom: var(--stats-bottom-gap);
   z-index: 70;
   display: inline-flex;
+  max-width: min(calc(100vw - (var(--stats-side-gap) * 2) - 72px), 560px);
   gap: 6px;
   padding: 6px;
   border-radius: 999px;
@@ -1943,6 +1999,11 @@ function saveProfileEditor() {
   border: 1px solid rgba(255, 255, 255, 0.16);
   backdrop-filter: blur(12px);
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.profile-switcher::-webkit-scrollbar {
+  display: none;
 }
 .profile-pill {
   height: 30px;
@@ -1998,20 +2059,26 @@ function saveProfileEditor() {
 }
 
 @media (max-width: 768px) {
+  .canvas-root {
+    --stats-toolbar-clearance: 72px;
+    --stats-profile-clearance: 64px;
+  }
   .profile-switcher {
-    left: 8px;
-    right: 8px;
-    bottom: 12px;
-    gap: 6px;
-    padding: 6px 8px;
-    border-radius: 14px;
-    flex-wrap: wrap;
+    left: var(--stats-side-gap);
+    right: var(--stats-side-gap);
+    bottom: var(--stats-bottom-gap);
+    max-width: none;
+    gap: 5px;
+    padding: 6px;
+    border-radius: 16px;
+    flex-wrap: nowrap;
   }
   .profile-pill {
     height: 28px;
     padding: 0 8px;
     gap: 6px;
     font-size: 11px;
+    flex: 0 0 auto;
   }
   .profile-label {
     display: none;
@@ -2019,6 +2086,76 @@ function saveProfileEditor() {
   .profile-edit {
     width: 30px;
     height: 30px;
+    flex: 0 0 auto;
+  }
+}
+
+@media (max-width: 1024px) {
+  .canvas-root {
+    --stats-profile-clearance: 70px;
+  }
+  .date-panel {
+    width: min(300px, calc(100vw - (var(--stats-side-gap) * 2) - 72px));
+    max-width: calc(100vw - (var(--stats-side-gap) * 2) - 72px);
+  }
+}
+
+@media (max-width: 640px) {
+  .canvas-root {
+    --stats-side-gap: 12px;
+    --stats-toolbar-clearance: 68px;
+    --stats-profile-clearance: 60px;
+  }
+  .date-panel {
+    padding: 9px 10px;
+    border-radius: 14px;
+    width: min(260px, calc(100vw - (var(--stats-side-gap) * 2) - 68px));
+    max-width: calc(100vw - (var(--stats-side-gap) * 2) - 68px);
+  }
+  .date-panel--compact {
+    bottom: calc(var(--stats-bottom-gap) + var(--stats-profile-clearance) + 14px);
+  }
+  .date-toggle--compact {
+    bottom: calc(var(--stats-bottom-gap) + var(--stats-profile-clearance) + 6px);
+  }
+  .save-toast {
+    left: var(--stats-side-gap);
+    right: var(--stats-side-gap);
+    bottom: calc(var(--stats-bottom-gap) + var(--stats-profile-clearance) + 14px);
+    text-align: center;
+  }
+  .profile-panel {
+    top: auto;
+    left: 12px;
+    right: 12px;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+    transform: none;
+    width: auto;
+    max-height: min(78dvh, 720px);
+    overflow: auto;
+  }
+}
+
+@media (max-width: 420px) {
+  .canvas-root {
+    --stats-side-gap: 10px;
+    --stats-profile-clearance: 56px;
+  }
+  .date-toggle {
+    width: 36px;
+    height: 36px;
+  }
+  .date-panel {
+    width: min(232px, calc(100vw - (var(--stats-side-gap) * 2) - 62px));
+    max-width: calc(100vw - (var(--stats-side-gap) * 2) - 62px);
+  }
+  .profile-switcher {
+    padding: 5px;
+    gap: 4px;
+  }
+  .profile-pill {
+    min-width: 28px;
+    padding: 0 7px;
   }
 }
 

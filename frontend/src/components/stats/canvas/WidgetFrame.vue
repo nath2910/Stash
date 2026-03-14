@@ -126,6 +126,7 @@ function onPointerDown(e: PointerEvent) {
   const target = e.target as HTMLElement | null
   if (target?.closest('button, a, input, select, textarea, .iconbtn')) return
   if (target?.closest('.resize-handle')) return
+  if (e.pointerType === 'touch' && !target?.closest('.drag-handle')) return
   emit('dragStart', e)
 }
 
