@@ -3,6 +3,7 @@
     title="Taux d'ecoulement"
     subtitle="Part du stock vendu"
     :accent="accent"
+    surface="kpi"
     :loading="loading"
     :error="error"
     :valueText="valueText"

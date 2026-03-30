@@ -1,5 +1,5 @@
 <template>
-  <div class="h-screen flex flex-col font-poppins text-slate-100 bg-slate-950">
+  <div class="h-screen flex flex-col font-poppins bg-slate-950" :class="isStatsLight ? 'text-black' : 'text-slate-100'">
     <!-- Header -->
     <template v-if="!isAuthRoute">
       <!-- Header for stats: simple bar -->
@@ -41,9 +41,13 @@
             :animate="navBubble ? 'compact' : 'normal'"
             :transition="navSpring"
             class="hidden md:flex items-center justify-center pointer-events-auto mx-auto"
-            :class="navBubble
-              ? 'gap-3 px-4 py-2 rounded-full bg-slate-900/70 border border-white/10 shadow-[0_12px_30px_rgba(0,0,0,0.35)] backdrop-blur-md'
-              : 'gap-8 px-8 py-3 rounded-full bg-transparent text-white'"
+            :class="
+              navBubble || isStatsLight
+                ? isStatsLight
+                  ? 'gap-3 px-4 py-2 rounded-full bg-white/82 border border-slate-200/90 shadow-[0_12px_28px_rgba(15,23,42,0.15)] backdrop-blur-md'
+                  : 'gap-3 px-4 py-2 rounded-full bg-slate-900/70 border border-white/10 shadow-[0_12px_30px_rgba(0,0,0,0.35)] backdrop-blur-md'
+                : 'gap-8 px-8 py-3 rounded-full bg-transparent text-white'
+            "
           >
             <RouterLink to="/" :class="compactLink('/')">
               <Home class="h-4 w-4" aria-hidden="true" />
@@ -65,39 +69,42 @@
               <button
                 type="button"
                 @click.stop="toggleUserMenu"
-                class="h-9 w-9 rounded-full flex items-center justify-center border transition focus:outline-none bg-slate-900/70 border-white/10 hover:border-emerald-300/50 backdrop-blur-md"
+                class="h-9 w-9 rounded-full flex items-center justify-center border transition focus:outline-none backdrop-blur-md"
+                :class="
+                  isStatsLight
+                    ? 'bg-white/85 border-slate-300 hover:border-emerald-500/45'
+                    : 'bg-slate-900/70 border-white/10 hover:border-emerald-300/50'
+                "
                 aria-label="Menu utilisateur"
                 :aria-expanded="menuOpen"
               >
-                <span class="text-sm font-semibold text-white">{{ initials }}</span>
+                <span class="text-sm font-semibold" :class="isStatsLight ? 'text-black' : 'text-white'">{{ initials }}</span>
               </button>
 
               <div
                 v-if="menuOpen"
-                class="absolute right-0 mt-2 w-56 rounded-lg bg-white text-slate-900 shadow-lg border border-purple-900 z-50"
+                class="absolute right-0 mt-2 w-64 rounded-lg shadow-lg border z-50 bg-slate-900 text-slate-100 border-slate-700"
               >
-                <div class="px-4 py-3 border-b border-slate-100">
-                  <p class="text-sm text-purple-900">
-                    {{ currentUser ? 'Connecté' : 'Non connecté' }}
+                <div class="px-4 py-3 border-b border-slate-700">
+                  <p class="text-sm text-slate-300">
+                    {{ currentUser ? 'Connecte' : 'Non Connecte' }}
                   </p>
-                  <p v-if="currentUser" class="text-sm font-medium text-slate-900 truncate">
+                  <p v-if="currentUser" class="text-sm font-medium truncate text-slate-100">
                     Bienvenue {{ currentUser.firstName }}
                   </p>
                 </div>
 
-                <div
-                  class="py-2 [&_button]:w-full [&_button]:text-left [&_button]:px-4 [&_button]:py-2 [&_button]:text-sm [&_button]:transition-colors [&_button:hover]:bg-slate-200 [&_button:active]:bg-slate-200"
-                >
+                <div class="py-2 layout-menu-actions is-dark">
                   <button v-if="!currentUser" type="button" @click="goToAuth('login')">
                     Se connecter
                   </button>
 
                   <button v-if="!currentUser" type="button" @click="goToAuth('signup')">
-                    Créer un compte
+                    Creer un compte
                   </button>
 
                   <button v-if="currentUser" type="button" @click="goToAccount">
-                    Gérer mon compte
+                    Gerer mon compte
                   </button>
 
                   <button
@@ -106,7 +113,7 @@
                     @click="logout"
                     class="text-red-600 [&:hover]:bg-red-50 [&:active]:bg-red-100"
                   >
-                    Se déconnecter
+                    Se deconnecter
                   </button>
                 </div>
               </div>
@@ -116,7 +123,7 @@
 
         <!-- Mobile menu -->
         <div v-if="mobileMenuOpen" class="md:hidden px-4 pb-3 pointer-events-auto" @click.stop>
-          <div class="mt-2 rounded-2xl bg-gray-900/70 border border-white/10 backdrop-blur p-2">
+          <div class="mt-2 rounded-2xl border backdrop-blur p-2 bg-gray-900/70 border-white/10">
             <RouterLink
               to="/"
               class="block px-3 py-2 rounded-md text-base font-medium"
@@ -149,7 +156,7 @@
     </template>
 
     <!-- Body -->
-    <main class="bg-slate-950/30 flex-1 min-h-0">
+    <main class="flex-1 min-h-0 bg-slate-950/30">
       <div
         v-if="route.meta.fullBleed"
         class="relative h-full w-full"
@@ -161,8 +168,8 @@
       <div v-else ref="pageScroll" class="h-full overflow-auto">
         <div class="relative min-h-full">
           <div class="pointer-events-none absolute inset-0 -z-10 overflow-hidden" aria-hidden="true">
-            <div class="absolute -top-40 right-[-10%] h-96 w-96 rounded-full bg-emerald-400/4 blur-3xl"></div>
-            <div class="absolute bottom-[-30%] left-[-10%] h-[30rem] w-[30rem] rounded-full bg-amber-400/4 blur-3xl"></div>
+            <div class="absolute -top-40 right-[-10%] h-96 w-96 rounded-full blur-3xl bg-emerald-400/4"></div>
+            <div class="absolute bottom-[-30%] left-[-10%] h-[30rem] w-[30rem] rounded-full blur-3xl bg-amber-400/4"></div>
             <div class="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.25),_transparent_60%)]"></div>
           </div>
           <div class="min-h-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12 pb-16">
@@ -178,9 +185,11 @@
       class="fixed left-0 right-0 bottom-4 flex justify-center transition-opacity duration-500 ease-out pointer-events-none"
       :class="footerVisible ? 'opacity-100' : 'opacity-0'"
     >
-      <div class="pointer-events-auto inline-flex items-center gap-6 px-7 py-3 rounded-full border border-white/10 bg-slate-900/85 backdrop-blur-md text-sm shadow-[0_14px_32px_rgba(0,0,0,0.38)]">
-        <span class="font-jetbrains-mono">&copy; {{ new Date().getFullYear() }} — Stash</span>
-        <a href="#" class="hover:underline">À propos</a>
+      <div
+        class="pointer-events-auto inline-flex items-center gap-6 px-7 py-3 rounded-full border backdrop-blur-md text-sm shadow-[0_14px_32px_rgba(0,0,0,0.38)] border-white/10 bg-slate-900/85"
+      >
+        <span class="font-jetbrains-mono">&copy; {{ new Date().getFullYear() }} - Stash</span>
+        <a href="#" class="hover:underline">A propos</a>
         <a href="mailto:nathantalvasson@gmail.com" class="hover:underline">contact</a>
       </div>
     </footer>
@@ -192,12 +201,15 @@
 import { computed, ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/store/authStore'
+import { useTheme } from '@/composables/useTheme'
 import { Home, BarChart3, Boxes } from 'lucide-vue-next'
 
 const route = useRoute()
 const router = useRouter()
+const { theme } = useTheme()
 
 const isStats = computed(() => route.path === '/stats')
+const isStatsLight = computed(() => isStats.value && theme.value === 'light')
 const isAuthRoute = computed(() =>
   [
     'auth',
@@ -240,9 +252,15 @@ const scrollTarget = ref(null)
 
 const compactLink = (path) => {
   const active = route.path === path
+  const idleClass = isStatsLight.value
+    ? 'text-black hover:text-black hover:bg-slate-900/8'
+    : 'text-white/80 hover:text-white hover:bg-white/5'
+  const activeClass = isStatsLight.value
+    ? 'bg-emerald-500/14 text-black'
+    : 'bg-white/10 text-emerald-200'
   return [
     'nav-link px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 inline-flex items-center gap-2',
-    active ? 'bg-white/10 text-emerald-200' : 'text-white/80 hover:text-white hover:bg-white/5',
+    active ? activeClass : idleClass,
   ]
 }
 
@@ -261,10 +279,10 @@ const currentUser = computed(() => {
 
 const initials = computed(() => {
   const u = currentUser.value
-  if (!u) return '🙂'
+  if (!u) return 'NN'
   const f = u.firstName?.[0] || ''
   const l = u.lastName?.[0] || ''
-  return (f + l || '🙂').toUpperCase()
+  return (f + l || 'NN').toUpperCase()
 })
 
 const shouldTrackIdle = computed(() => !!auth.token?.value && !isAuthRoute.value)
@@ -411,7 +429,7 @@ const logout = () => {
 </script>
 
 <style>
-.widget-fullscréen-open header {
+.widget-fullscreen-open header {
   opacity: 0;
   pointer-events: none;
   transition: opacity 120ms ease;
@@ -438,4 +456,33 @@ body,
 #app {
   height: 100%;
 }
+
+.layout-menu-actions {
+  display: grid;
+  gap: 2px;
+}
+
+.layout-menu-actions > button {
+  width: 100%;
+  text-align: left;
+  padding: 8px 16px;
+  font-size: 0.875rem;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.layout-menu-actions:not(.is-dark) > button:hover,
+.layout-menu-actions:not(.is-dark) > button:active {
+  background: #e2e8f0;
+}
+
+.layout-menu-actions.is-dark > button {
+  color: #e2e8f0;
+}
+
+.layout-menu-actions.is-dark > button:hover,
+.layout-menu-actions.is-dark > button:active {
+  background: rgba(148, 163, 184, 0.18);
+}
+
 </style>
+

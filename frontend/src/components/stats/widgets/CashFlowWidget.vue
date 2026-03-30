@@ -3,6 +3,7 @@
     title="Cash flow disponible"
     subtitle="Liquide pour racheter du stock"
     :accent="accent"
+    surface="kpi"
     :loading="loading"
     :error="error"
     :valueText="valueText"

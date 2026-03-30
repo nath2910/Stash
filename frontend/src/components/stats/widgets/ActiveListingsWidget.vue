@@ -3,6 +3,7 @@
     title="Articles actifs"
     subtitle="Annonces en ligne"
     :accent="accent"
+    surface="kpi"
     :loading="loading"
     :error="error"
     :valueText="valueText"

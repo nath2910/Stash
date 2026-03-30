@@ -3,6 +3,7 @@
     title="Dépenses opérationnelles"
     subtitle="Hors achat de stock"
     :accent="accent"
+    surface="distribution"
     :loading="loading"
     :error="error"
     :option="option"

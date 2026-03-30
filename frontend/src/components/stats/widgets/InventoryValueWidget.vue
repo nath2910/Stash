@@ -3,6 +3,7 @@
     title="Valeur du stock"
     subtitle="Capital immobilise"
     :accent="accent"
+    surface="kpi"
     :loading="loading"
     :error="error"
     :valueText="valueText"

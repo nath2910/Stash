@@ -1,15 +1,19 @@
 <template>
   <div
     class="canvas-root"
+    :class="{ 'is-space-pan': spacePanActive, 'theme-light': themeMode === 'light' }"
     :data-edit="editMode ? 'true' : 'false'"
     @pointerdown="onCanvasPointerDown"
+    @contextmenu="onCanvasContextMenu"
   >
     <CanvasDock
-      v-show="!fullscreenActive && !isCompact"
+      v-show="!fullscreenActive && !isCompact && !paletteOpen"
       :edit-mode="editMode"
       :scale="scale"
       :palette-open="paletteOpen"
+      :theme-mode="themeMode"
       @toggleEdit="toggleEditMode"
+      @toggleTheme="toggleThemeMode"
       @openPalette="paletteOpen = true"
       @zoomIn="zoomIn"
       @zoomOut="zoomOut"
@@ -32,6 +36,7 @@
             :model-value="localFrom"
             :min-date="minDate"
             :max-date="maxDate"
+            :light="themeMode === 'light'"
             @update:modelValue="setFrom"
           />
           <CompactDateInput
@@ -39,6 +44,7 @@
             :model-value="localTo"
             :min-date="minDate"
             :max-date="maxDate"
+            :light="themeMode === 'light'"
             @update:modelValue="setTo"
           />
         </div>
@@ -62,24 +68,56 @@
         aria-hidden="true"
       ></div>
       <div ref="boardEl" class="board">
+        <div
+          v-if="marqueeSelectionStyle"
+          class="marquee-selection"
+          :style="marqueeSelectionStyle"
+          aria-hidden="true"
+        ></div>
         <WidgetFrame
-          v-for="w in widgets"
+          v-for="w in visibleWidgets"
           :key="w.id"
           :widget="w"
           :edit-mode="editMode"
+          :selected="isWidgetSelected(w.id) && !isGroupSelectionActive"
+          :group-selected="isGroupSelectionActive && isWidgetSelected(w.id)"
           :drag-armed="dragArmedId === w.id"
+          :text-active="activeTextWidgetId === w.id"
           :comp="getComp(w.type)"
           :from="widgetFrom(w)"
           :to="widgetTo(w)"
           :style="widgetStyle(w)"
           :ref="(c: any) => setWidgetRef(w.id, c)"
+          @activate="setActiveTextWidget(w.id)"
           @dragStart="startDrag(w.id, $event)"
           @resizeStart="startResize(w.id, $event.dir, $event.event)"
+          @textPropsChange="updateTextWidgetProps(w.id, $event)"
+          @textScaleStart="startTextScale(w.id, $event)"
           @fullscreen-change="onWidgetFullscreenChange"
           @autoResize="autoResize(w.id, $event)"
+          @duplicate="duplicateWidget(w.id)"
           @settings="openSettings(w)"
-          @remove="removeWidget(w.id)"
+          @remove="onWidgetRemove(w.id)"
         />
+        <div
+          v-if="groupSelectionFrameStyle"
+          class="group-selection-frame"
+          :style="groupSelectionFrameStyle"
+          aria-hidden="true"
+        >
+          <button
+            v-for="h in GROUP_RESIZE_HANDLES"
+            :key="`group-resize-${h.dir}`"
+            type="button"
+            class="group-selection-handle"
+            :class="`group-selection-handle--${h.dir}`"
+            :title="h.title"
+            :aria-label="h.title"
+            @pointerdown.stop.prevent="onGroupResizeHandleDown(h.dir, $event)"
+          >
+            <span class="group-selection-handle__dot"></span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -172,22 +210,50 @@
     </div>
 
     <teleport to="body">
-      <div v-if="profileEditorOpen" class="profile-modal" role="dialog" aria-modal="true">
-        <div class="profile-backdrop" @click="closeProfileEditor"></div>
-        <div class="profile-panel glass-panel rounded-[22px]" @click.stop>
-          <div class="glass-header h-11 px-4 flex items-center">
-            <div class="text-white/90 font-semibold text-[15px]">Renommer les profils</div>
-            <button
-              class="glass-iconbtn ml-auto h-8 w-8 grid place-items-center rounded-xl"
-              @click="closeProfileEditor"
-            >
+      <div v-if="shortcutHelpOpen" class="shortcut-modal" :class="{ 'theme-light': themeMode === 'light' }" role="dialog" aria-modal="true">
+        <div class="shortcut-backdrop" @click="shortcutHelpOpen = false"></div>
+        <div class="shortcut-panel" @click.stop>
+          <div class="shortcut-head">
+            <div>
+              <div class="shortcut-kicker">Navigation</div>
+              <h3 class="shortcut-title">Raccourcis canvas</h3>
+            </div>
+            <button type="button" class="shortcut-close" aria-label="Fermer" @click="shortcutHelpOpen = false">
               <span class="close-x" aria-hidden="true"></span>
             </button>
           </div>
-          <div class="p-4 profile-grid">
-            <div class="profile-help">
-              Renomme tes profils et choisis une couleur visible dans le sélecteur.
+
+          <ul class="shortcut-list">
+            <li><span>Espace (maintenir)</span><kbd>Pan temporaire</kbd></li>
+            <li><span>+</span><kbd>Zoom avant</kbd></li>
+            <li><span>-</span><kbd>Zoom arriere</kbd></li>
+            <li><span>0</span><kbd>Reset zoom</kbd></li>
+            <li><span>F</span><kbd>Centrer le contenu</kbd></li>
+            <li><span>P</span><kbd>Ouvrir la palette</kbd></li>
+            <li><span>E</span><kbd>Basculer edition</kbd></li>
+            <li><span>?</span><kbd>Afficher cette aide</kbd></li>
+            <li><span>Shift + resize</span><kbd>Conserver les proportions</kbd></li>
+            <li><span>Alt + resize</span><kbd>Redimensionner depuis le centre</kbd></li>
+            <li><span>Esc</span><kbd>Fermer les panneaux ouverts</kbd></li>
+          </ul>
+        </div>
+      </div>
+    </teleport>
+
+    <teleport to="body">
+      <div v-if="profileEditorOpen" class="profile-modal" :class="{ 'theme-light': themeMode === 'light' }" role="dialog" aria-modal="true">
+        <div class="profile-backdrop" @click="closeProfileEditor"></div>
+        <div class="profile-panel" @click.stop>
+          <div class="profile-header">
+            <div class="profile-header__copy">
+              <div class="profile-header__title">Renommer les profils</div>
+              <p class="profile-header__subtitle">Definis des noms clairs et une couleur facile a reconnaitre.</p>
             </div>
+            <button class="profile-header__close" type="button" aria-label="Fermer" @click="closeProfileEditor">x</button>
+          </div>
+
+          <div class="profile-grid">
+            <div class="profile-help">Ces noms apparaissent dans le selecteur en bas du canvas.</div>
 
             <section class="profile-card">
               <div class="profile-head">
@@ -198,7 +264,7 @@
                 </div>
               </div>
               <div class="profile-row">
-                <input v-model="profileDraft.p1" class="glass-field h-11 rounded-xl px-3" />
+                <input v-model="profileDraft.p1" class="profile-input" placeholder="Nom du profil" />
                 <input v-model="profileDraft.p1Color" type="color" class="color-swatch is-round" />
               </div>
             </section>
@@ -212,7 +278,7 @@
                 </div>
               </div>
               <div class="profile-row">
-                <input v-model="profileDraft.p2" class="glass-field h-11 rounded-xl px-3" />
+                <input v-model="profileDraft.p2" class="profile-input" placeholder="Nom du profil" />
                 <input v-model="profileDraft.p2Color" type="color" class="color-swatch is-round" />
               </div>
             </section>
@@ -226,22 +292,15 @@
                 </div>
               </div>
               <div class="profile-row">
-                <input v-model="profileDraft.p3" class="glass-field h-11 rounded-xl px-3" />
+                <input v-model="profileDraft.p3" class="profile-input" placeholder="Nom du profil" />
                 <input v-model="profileDraft.p3Color" type="color" class="color-swatch is-round" />
               </div>
             </section>
           </div>
-          <div class="glass-footer px-4 py-3 flex justify-end gap-2">
-            <button type="button" class="glass-btn px-4 h-10 rounded-xl" @click.stop="closeProfileEditor">
-              Annuler
-            </button>
-            <button
-              type="button"
-              class="glass-btn glass-btn-primary px-4 h-10 rounded-xl"
-              @click.stop="saveProfileEditor"
-            >
-              Sauver
-            </button>
+
+          <div class="profile-footer">
+            <button type="button" class="profile-btn" @click.stop="closeProfileEditor">Annuler</button>
+            <button type="button" class="profile-btn profile-btn--primary" @click.stop="saveProfileEditor">Enregistrer</button>
           </div>
         </div>
       </div>
@@ -254,12 +313,15 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, toRefs, watch } fr
 import CanvasDock from './canvas/CanvasDock.vue'
 import WidgetFrame from './canvas/WidgetFrame.vue'
 import { useCanvasCamera } from './canvas/useCanvaCamera'
+import { useCanvasShortcuts } from './canvas/useCanvasShortcuts'
 import { Paintbrush, CalendarRange, Minus, Plus, LocateFixed, Lock, LockOpen, PlusSquare } from 'lucide-vue-next'
 
 import CompactDateInput from '@/components/ui/CompactDateInput.vue'
 import WidgetPalette from './WidgetPalette.vue'
 import WidgetSettingsModal from './WidgetSettingsModal.vue'
 import { WIDGET_DEFS, getCategoryColor, getWidgetDef, newWidget } from './widgetRegistry'
+import { getWidgetPaletteMeta } from './palette/widgetPaletteMeta'
+import { useTheme } from '@/composables/useTheme'
 import { useAuthStore } from '@/store/authStore'
 import StatsServices from '@/services/StatsServices'
 
@@ -277,12 +339,15 @@ type Widget = {
 
 type ResizeDir = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw'
 
+type ProfileRange = { from: string; to: string }
+
 type LayoutBundle = {
   version: number
   activeProfile?: string
   profiles: Record<string, Array<Record<string, unknown>>>
   profileNames?: Record<string, string>
   profileColors?: Record<string, string>
+  ranges?: Record<string, ProfileRange>
 }
 
 /* props/emit */
@@ -294,6 +359,8 @@ const emit = defineEmits(['update:from', 'update:to'])
 const { from, to } = toRefs(props)
 
 const { user } = useAuthStore()
+const { theme, toggleTheme } = useTheme()
+const themeMode = computed(() => (theme.value === 'light' ? 'light' : 'dark'))
 // Chaque utilisateur a une cle de layout isolee; guest reste en stockage local.
 const userId = computed(() => user.value?.id ?? 'guest')
 
@@ -305,7 +372,7 @@ const PROFILES = [
   { id: 'p3', label: DEFAULT_PROFILE_NAMES.p3, color: PROFILE_COLORS.p3 },
 ]
 const activeProfile = ref('p1')
-const layoutBundle = ref<LayoutBundle>({ version: 1, activeProfile: 'p1', profiles: {} })
+const layoutBundle = ref<LayoutBundle>({ version: 1, activeProfile: 'p1', profiles: {}, ranges: {} })
 const profileNames = ref({ ...DEFAULT_PROFILE_NAMES })
 const profileColors = ref({ ...PROFILE_COLORS })
 const profileEditorOpen = ref(false)
@@ -346,6 +413,10 @@ function persistEditMode() {
 function toggleEditMode() {
   editMode.value = !editMode.value
   persistEditMode()
+}
+
+function toggleThemeMode() {
+  toggleTheme()
 }
 
 /* ===== Dates (local + safe sync) ===== */
@@ -393,24 +464,48 @@ function clampDate(v: string) {
 const RANGE_KEY_PREFIX = 'snk_stats_range_v1'
 const rangeKey = (profileId: string) => `${RANGE_KEY_PREFIX}_${userId.value}_${profileId}`
 
+function normalizeProfileRange(raw: unknown): ProfileRange | null {
+  if (!raw || typeof raw !== 'object') return null
+  const fromVal = typeof (raw as { from?: unknown }).from === 'string' ? String((raw as { from?: string }).from) : ''
+  const toVal = typeof (raw as { to?: unknown }).to === 'string' ? String((raw as { to?: string }).to) : ''
+  if (!fromVal || !toVal) return null
+  return fromVal <= toVal ? { from: fromVal, to: toVal } : { from: toVal, to: fromVal }
+}
+
 function loadRangeForProfile(profileId: string) {
+  const fromBundle = normalizeProfileRange(layoutBundle.value?.ranges?.[profileId])
+  if (fromBundle) return fromBundle
+
   try {
     const raw = localStorage.getItem(rangeKey(profileId))
     if (!raw) return null
-    const parsed = JSON.parse(raw)
-    const f = typeof parsed?.from === 'string' ? parsed.from : ''
-    const t = typeof parsed?.to === 'string' ? parsed.to : ''
-    if (!f || !t) return null
-    return f <= t ? { from: f, to: t } : { from: t, to: f }
+    const fromStorage = normalizeProfileRange(JSON.parse(raw))
+    if (fromStorage) {
+      layoutBundle.value.ranges = layoutBundle.value.ranges ?? {}
+      layoutBundle.value.ranges[profileId] = fromStorage
+    }
+    return fromStorage
   } catch {
     return null
   }
 }
 
-function saveRangeForProfile(profileId: string, f: string, t: string) {
-  if (!f || !t) return
+function saveRangeForProfile(
+  profileId: string,
+  f: string,
+  t: string,
+  options: { persistLocal?: boolean } = {},
+) {
+  const normalized = normalizeProfileRange({ from: f, to: t })
+  if (!normalized) return
+  const persistLocal = options.persistLocal !== false
+
+  layoutBundle.value.ranges = layoutBundle.value.ranges ?? {}
+  layoutBundle.value.ranges[profileId] = normalized
+
+  if (!persistLocal) return
   try {
-    localStorage.setItem(rangeKey(profileId), JSON.stringify({ from: f, to: t }))
+    localStorage.setItem(rangeKey(profileId), JSON.stringify(normalized))
   } catch {
     // ignore
   }
@@ -507,7 +602,7 @@ function preset(kind: 'month' | 'ytd' | 'year') {
 }
 
 watch(
-  () => [from.value, to.value, activeProfile.value],
+  () => [from.value, to.value],
   () => {
     saveRangeForProfile(activeProfile.value, from.value, to.value)
   },
@@ -519,6 +614,8 @@ const MIN_W = 320
 const MIN_H = 220
 const BOARD_W = 9000
 const BOARD_H = 6000
+const SNAP_DIST = 8
+const GRID_SNAP_DIST = 6
 
 const clamp = (n: number, a: number, b: number) => Math.max(a, Math.min(b, n))
 const snap = (n: number) => Math.round(n / GRID) * GRID
@@ -537,6 +634,319 @@ function clampWidget(w: Widget) {
   w.h = clamp(w.h, minSize.h, BOARD_H)
   w.x = clamp(w.x, 0, BOARD_W - w.w)
   w.y = clamp(w.y, 0, BOARD_H - w.h)
+}
+
+function isTextWidget(widget: Pick<Widget, 'type'> | null | undefined) {
+  return widget?.type === 'textTitle' || widget?.type === 'textBlock'
+}
+
+function shouldPreserveTextWidth(
+  widget: Widget,
+  mode: 'content' | 'resize' | 'scale' | 'duplicate' = 'content',
+) {
+  if (!isTextWidget(widget)) return false
+  if (mode === 'resize') return true
+  if (mode === 'scale') return true
+  return true
+}
+
+const TEXT_FONT_STACKS: Record<string, string> = {
+  'open-sans': '"Open Sans", Arial, sans-serif',
+  'pt-sans': '"PT Sans", Arial, sans-serif',
+  'pt-serif': '"PT Serif", Georgia, serif',
+  roboto: 'Roboto, Arial, sans-serif',
+  'roboto-slab': '"Roboto Slab", Georgia, serif',
+  'ibm-plex-sans': '"IBM Plex Sans", Arial, sans-serif',
+  'ibm-plex-mono': '"IBM Plex Mono", monospace',
+  georgia: 'Georgia, serif',
+  arial: 'Arial, sans-serif',
+  'permanent-marker': '"Permanent Marker", "Comic Sans MS", cursive',
+  caveat: 'Caveat, "Comic Sans MS", cursive',
+}
+
+function textWidgetFontFamily(widget: Widget) {
+  return TEXT_FONT_STACKS[String(widget.props?.fontFamily ?? 'open-sans')] ?? TEXT_FONT_STACKS['open-sans']
+}
+
+function textWidgetFontBounds(widget: Widget) {
+  if (widget.type === 'textTitle') return { min: 16, max: 620, fallback: 52 }
+  return { min: 12, max: 620, fallback: 17 }
+}
+
+function textWidgetResolvedFontSize(widget: Widget) {
+  const bounds = textWidgetFontBounds(widget)
+  const raw =
+    Number(widget.props?.fontSize) ||
+    (widget.type === 'textTitle'
+      ? widget.props?.size === 'sm'
+        ? 28
+        : widget.props?.size === 'md'
+          ? 38
+          : widget.props?.size === 'xl'
+            ? 68
+            : bounds.fallback
+      : widget.props?.size === 'sm'
+        ? 14
+        : widget.props?.size === 'lg'
+          ? 20
+          : widget.props?.size === 'xl'
+            ? 26
+            : bounds.fallback)
+  return clamp(Math.round(raw), bounds.min, bounds.max)
+}
+
+function textWidgetPaddingPx(widget: Widget) {
+  const rawPadding = String(widget.props?.padding ?? '').trim()
+  const paddingMap: Record<string, number> = {
+    none: 0,
+    sm: 10,
+    md: 16,
+    lg: 24,
+    xl: 32,
+  }
+  if (rawPadding && rawPadding in paddingMap) return paddingMap[rawPadding]
+  return widget.props?.tight ? 8 : 12
+}
+
+function titleLineHeightFactor(widget: Widget) {
+  const sizeKey = String(widget.props?.size ?? 'lg')
+  const map: Record<string, number> = { sm: 0.98, md: 0.96, lg: 0.94, xl: 0.9 }
+  return map[sizeKey] ?? 0.94
+}
+
+function estimateTextWidgetSize(
+  widget: Widget,
+  options: { targetWidth?: number; targetHeight?: number; lockWidth?: boolean } = {},
+) {
+  const normalized = String(widget.props?.content ?? widget.title ?? '').replace(/\r\n?/g, '\n')
+  const content = normalized.length ? normalized : widget.title || 'Texte'
+  const lines = content.split('\n')
+  const longestLine = lines.reduce((longest, line) => (line.length > longest.length ? line : longest), lines[0] ?? content)
+  const measureCanvas = typeof document !== 'undefined' ? document.createElement('canvas') : null
+  const ctx = measureCanvas?.getContext?.('2d') ?? null
+  const widthHint = Math.max(options.targetWidth ?? widget.w ?? 0, 0)
+  const heightHint = Math.max(options.targetHeight ?? widget.h ?? 0, 0)
+  const lockWidth = options.lockWidth === true
+  const pad = textWidgetPaddingPx(widget)
+  const padX = pad * 2
+  const padY = pad * 2
+
+  if (widget.type === 'textTitle') {
+    const baseSize = textWidgetResolvedFontSize(widget)
+    const fontWeight =
+      widget.props?.weight === 'heavy'
+        ? 800
+        : widget.props?.weight === 'bold'
+          ? 700
+          : widget.props?.weight === 'semibold'
+            ? 600
+            : widget.props?.weight === 'medium'
+              ? 500
+              : widget.props?.weight === 'regular'
+                ? 400
+                : 700
+    const fontPx = clamp(Math.round(baseSize), 16, 620)
+    if (ctx) {
+      ctx.font = `${widget.props?.italic ? 'italic ' : ''}${fontWeight} ${fontPx}px ${textWidgetFontFamily(widget)}`
+    }
+    const measuredLine = (line: string) => (ctx ? ctx.measureText(line || ' ').width : Math.max(line.length, 1) * fontPx * 0.62)
+    const measured = measuredLine(longestLine)
+    const width = lockWidth
+      ? clamp(Math.ceil(widthHint || measured + padX + 2), 140, 2600)
+      : clamp(Math.ceil(measured + padX + 2), 140, Math.max(widthHint || 0, 2600))
+    const usableWidth = Math.max(width - padX, 1)
+    const visualLines = lines.reduce((count, line) => count + Math.max(1, Math.ceil(measuredLine(line) / usableWidth)), 0)
+    const lineHeightPx = fontPx * titleLineHeightFactor(widget)
+    const height = clamp(
+      Math.ceil(visualLines * lineHeightPx + padY + 2),
+      84,
+      Math.max(heightHint || 0, 1200),
+    )
+    return { w: width, h: height }
+  }
+
+  const fontBase = textWidgetResolvedFontSize(widget)
+  const fontWeight =
+    widget.props?.weight === 'bold'
+      ? 700
+      : widget.props?.weight === 'semibold'
+        ? 600
+        : widget.props?.weight === 'medium'
+          ? 500
+          : 400
+  const fontPx = clamp(Math.round(fontBase), 12, 180)
+  const sizeKey = String(widget.props?.size ?? 'md')
+  const lineHeightMap: Record<string, number> = { sm: 1.6, md: 1.58, lg: 1.5, xl: 1.42 }
+  const lineHeightFactor = lineHeightMap[sizeKey] ?? 1.58
+  if (ctx) {
+    ctx.font = `${widget.props?.italic ? 'italic ' : ''}${fontWeight} ${fontPx}px ${textWidgetFontFamily(widget)}`
+  }
+  const measuredLine = (line: string) =>
+    ctx ? ctx.measureText(line || ' ').width : Math.max(line.length, 1) * fontPx * 0.56
+  const measured = measuredLine(longestLine)
+  const width = lockWidth
+    ? clamp(Math.ceil(widthHint || Math.max(measured + padX + 2, 320)), 220, 1800)
+    : clamp(Math.ceil(Math.max(measured + padX + 2, 320)), 220, Math.max(widthHint || 0, 1800))
+  const usableWidth = Math.max(width - padX, 1)
+  const spaceWidth = measuredLine(' ')
+  const wrappedLineCount = (line: string) => {
+    const trimmed = line.trim()
+    if (!trimmed.length) return 1
+    const words = trimmed.split(/\s+/).filter(Boolean)
+    const placeWord = (wordWidth: number) => {
+      if (wordWidth <= usableWidth) {
+        return { extraLines: 0, lineWidth: wordWidth }
+      }
+      const linesNeeded = Math.ceil(wordWidth / usableWidth)
+      const remainder = wordWidth % usableWidth
+      return {
+        extraLines: Math.max(0, linesNeeded - 1),
+        lineWidth: remainder > 0 ? remainder : usableWidth,
+      }
+    }
+    let count = 1
+    let currentWidth = 0
+    for (const word of words) {
+      const wordWidth = measuredLine(word)
+      if (currentWidth <= 0) {
+        const placed = placeWord(wordWidth)
+        count += placed.extraLines
+        currentWidth = placed.lineWidth
+        continue
+      }
+      const nextWidth = currentWidth + spaceWidth + wordWidth
+      if (nextWidth <= usableWidth) {
+        currentWidth = nextWidth
+      } else {
+        count += 1
+        const placed = placeWord(wordWidth)
+        count += placed.extraLines
+        currentWidth = placed.lineWidth
+      }
+    }
+    return count
+  }
+  const visualLines = lines.reduce((count, line) => count + wrappedLineCount(line), 0)
+  const height = clamp(
+    Math.ceil(visualLines * fontPx * lineHeightFactor + padY + 2),
+    120,
+    Math.max(heightHint || 0, 1800),
+  )
+  return { w: width, h: height }
+}
+
+function fitWidgetToContent(
+  widget: Widget,
+  options: { targetWidth?: number; targetHeight?: number; lockWidth?: boolean } = {},
+) {
+  if (!isTextWidget(widget)) return
+  const next = estimateTextWidgetSize(widget, options)
+  widget.w = next.w
+  widget.h = next.h
+  clampWidget(widget)
+}
+
+function fitTextWidgetToRenderedContent(
+  widget: Widget,
+  el: HTMLElement | null | undefined,
+  options: { preserveWidth?: boolean } = {},
+) {
+  if (!isTextWidget(widget) || !el) return
+  const body = el.querySelector('.widget__body') as HTMLElement | null
+  const header = el.querySelector('.widget__header') as HTMLElement | null
+  const headerTitle = el.querySelector('.widget__title') as HTMLElement | null
+  const headerActions = el.querySelector('.widget__actions') as HTMLElement | null
+  const textNode = el.querySelector('.text-title-copy, .text-block-copy') as HTMLElement | null
+  if (!body || !textNode) {
+    fitWidgetToContent(widget, {
+      targetWidth: widget.w,
+      targetHeight: widget.h,
+      lockWidth: options.preserveWidth === true,
+    })
+    return
+  }
+
+  const bodyStyles = window.getComputedStyle(body)
+  const padLeft = parseFloat(bodyStyles.paddingLeft || '0') || 0
+  const padRight = parseFloat(bodyStyles.paddingRight || '0') || 0
+  const padTop = parseFloat(bodyStyles.paddingTop || '0') || 0
+  const padBottom = parseFloat(bodyStyles.paddingBottom || '0') || 0
+  let textWidth = 0
+  let textHeight = 0
+  try {
+    const range = document.createRange()
+    range.selectNodeContents(textNode)
+    const lineRects = Array.from(range.getClientRects()).filter((rect) => rect.width > 0 || rect.height > 0)
+    if (lineRects.length) {
+      const top = Math.min(...lineRects.map((rect) => rect.top))
+      const bottom = Math.max(...lineRects.map((rect) => rect.bottom))
+      textWidth = Math.ceil(lineRects.reduce((max, rect) => Math.max(max, rect.width), 0))
+      textHeight = Math.ceil(bottom - top)
+    } else {
+      const rangeRect = range.getBoundingClientRect()
+      textWidth = Math.ceil(rangeRect.width || 0)
+      textHeight = Math.ceil(rangeRect.height || 0)
+    }
+    if (textWidth <= 0 || textHeight <= 0) {
+      const nodeRect = textNode.getBoundingClientRect()
+      textWidth = Math.ceil(Math.max(textWidth, textNode.scrollWidth || 0, nodeRect.width || 0))
+      textHeight = Math.ceil(Math.max(textHeight, textNode.scrollHeight || 0, nodeRect.height || 0))
+    }
+  } catch {
+    const nodeRect = textNode.getBoundingClientRect()
+    textWidth = Math.ceil(Math.max(textNode.scrollWidth || 0, nodeRect.width || 0))
+    textHeight = Math.ceil(Math.max(textNode.scrollHeight || 0, nodeRect.height || 0))
+  }
+  let headerWidth = 0
+  let headerHeight = 0
+  if (header) {
+    const headerStyles = window.getComputedStyle(header)
+    const headerPadLeft = parseFloat(headerStyles.paddingLeft || '0') || 0
+    const headerPadRight = parseFloat(headerStyles.paddingRight || '0') || 0
+    const headerGap = parseFloat(headerStyles.columnGap || headerStyles.gap || '0') || 0
+    const titleWidth = Math.ceil(headerTitle?.getBoundingClientRect().width ?? 0)
+    const actionsWidth = Math.ceil(headerActions?.getBoundingClientRect().width ?? 0)
+    headerWidth = Math.ceil(
+      headerPadLeft + titleWidth + (actionsWidth > 0 ? headerGap + actionsWidth : 0) + headerPadRight + 2,
+    )
+    headerHeight = Math.ceil(header.getBoundingClientRect().height)
+  }
+  const minSize = minSizeFor(widget)
+
+  const nextWidth = options.preserveWidth
+    ? clamp(widget.w, minSize.w, BOARD_W)
+    : clamp(Math.max(textWidth + padLeft + padRight + 2, headerWidth), minSize.w, BOARD_W)
+
+  widget.w = nextWidth
+  widget.h = clamp(
+    Math.max(Math.ceil(headerHeight + textHeight + padTop + padBottom + 2), minSize.h),
+    minSize.h,
+    BOARD_H,
+  )
+  clampWidget(widget)
+}
+
+function fitTextWidgetAfterRender(
+  widget: Widget,
+  el: HTMLElement | null | undefined,
+  options: { preserveWidth?: boolean } = {},
+) {
+  nextTick(() => {
+    const run = () => {
+      requestAnimationFrame(() => {
+        const boardWidgetEl = boardEl.value?.querySelector<HTMLElement>(`.widget[data-id="${widget.id}"]`) ?? null
+        const liveEl = widgetEls.get(widget.id) ?? el ?? boardWidgetEl
+        fitTextWidgetToRenderedContent(widget, liveEl, options)
+      })
+    }
+
+    const fonts = (document as Document & { fonts?: { ready?: Promise<unknown> } }).fonts
+    if (fonts?.ready) {
+      fonts.ready.then(run).catch(run)
+      return
+    }
+    run()
+  })
 }
 
 // Layout persiste par utilisateur; fallback sur l'ancienne cle globale si presente.
@@ -575,6 +985,7 @@ const defaultLayout = (): Widget[] => {
     },
   }
 
+  fitWidgetToContent(w)
   clampWidget(w)
   return [w]
 }
@@ -640,6 +1051,10 @@ function normalizeLayout(raw: unknown): Widget[] | null {
       w.props = { ...(w.props ?? {}), autoHeight: true }
     }
 
+    if (isTextWidget(w)) {
+      fitWidgetToContent(w)
+    }
+
     clampWidget(w)
     list.push(w)
   }
@@ -655,6 +1070,17 @@ function normalizeLayout(raw: unknown): Widget[] | null {
 }
 
 function normalizeBundle(raw: unknown): LayoutBundle {
+  const normalizeRanges = (ranges: unknown): Record<string, ProfileRange> => {
+    if (!ranges || typeof ranges !== 'object' || Array.isArray(ranges)) return {}
+    const map: Record<string, ProfileRange> = {}
+    for (const [profileId, value] of Object.entries(ranges as Record<string, unknown>)) {
+      const normalized = normalizeProfileRange(value)
+      if (!normalized) continue
+      map[pickProfileId(profileId)] = normalized
+    }
+    return map
+  }
+
   if (raw && typeof raw === 'object' && !Array.isArray(raw) && (raw as any).profiles) {
     const obj = raw as LayoutBundle
     return {
@@ -663,6 +1089,7 @@ function normalizeBundle(raw: unknown): LayoutBundle {
       profiles: obj.profiles ?? {},
       profileNames: obj.profileNames ?? {},
       profileColors: obj.profileColors ?? {},
+      ranges: normalizeRanges((obj as any).ranges),
     }
   }
 
@@ -673,10 +1100,11 @@ function normalizeBundle(raw: unknown): LayoutBundle {
       profiles: { p1: raw },
       profileNames: {},
       profileColors: {},
+      ranges: {},
     }
   }
 
-  return { version: 1, activeProfile: 'p1', profiles: {}, profileNames: {}, profileColors: {} }
+  return { version: 1, activeProfile: 'p1', profiles: {}, profileNames: {}, profileColors: {}, ranges: {} }
 }
 
 function pickProfileId(id?: string) {
@@ -723,7 +1151,21 @@ function applyStoredRangeForActiveProfile() {
 let saveTimer: number | null = null
 let toastTimer: number | null = null
 let remoteSaveTimer: number | null = null
+let layoutLoadSeq = 0
 const showSaveToast = ref(false)
+const LOCAL_SAVE_DEBOUNCE_MS = 520
+const REMOTE_SAVE_DEBOUNCE_MS = 1500
+
+function clearPendingSaves() {
+  if (saveTimer) {
+    window.clearTimeout(saveTimer)
+    saveTimer = null
+  }
+  if (remoteSaveTimer) {
+    window.clearTimeout(remoteSaveTimer)
+    remoteSaveTimer = null
+  }
+}
 
 function showSavedToast() {
   showSaveToast.value = true
@@ -735,9 +1177,12 @@ function showSavedToast() {
 }
 
 // Chargement du layout serveur pour plus de robustesse (prive / multi-appareil).
-async function loadLayoutFromServer() {
+async function loadLayoutFromServer(expectedUserId = String(userId.value)) {
+  if (expectedUserId === 'guest') return
+  const seq = ++layoutLoadSeq
   try {
     const res = await StatsServices.getLayout()
+    if (seq !== layoutLoadSeq || String(userId.value) !== expectedUserId) return
     const payload = res?.data?.layout
     if (payload === null || typeof payload === 'undefined') {
       return
@@ -745,6 +1190,7 @@ async function loadLayoutFromServer() {
     const bundle = normalizeBundle(payload)
     layoutBundle.value = bundle
     applyProfileLayout(bundle, bundle.activeProfile)
+    applyStoredRangeForActiveProfile()
     localStorage.setItem(layoutKey.value, JSON.stringify(bundle))
   } catch (err) {
     console.warn('[stats] remote load failed', err)
@@ -764,36 +1210,43 @@ function serializeWidgets() {
   }))
 }
 
-function saveBundleNow(showToast = true) {
+function saveBundleNow(showToast = false) {
   const bundle = layoutBundle.value
   bundle.activeProfile = activeProfile.value
   bundle.profiles = bundle.profiles ?? {}
+  saveRangeForProfile(activeProfile.value, from.value, to.value, { persistLocal: false })
   bundle.profiles[activeProfile.value] = serializeWidgets()
   bundle.profileNames = { ...profileNames.value }
   bundle.profileColors = { ...profileColors.value }
+  bundle.ranges = { ...(bundle.ranges ?? {}) }
 
   const storageKey = userId.value === 'guest' ? STORAGE_KEY_PREFIX : layoutKey.value
   localStorage.setItem(storageKey, JSON.stringify(bundle))
   if (showToast) showSavedToast()
-  scheduleRemoteSave(bundle)
+  scheduleRemoteSave()
 }
 
-function saveLayoutNow() {
-  saveBundleNow(true)
+function saveLayoutNow(showToast = false) {
+  saveBundleNow(showToast)
 }
 function scheduleSave() {
   if (saveTimer) window.clearTimeout(saveTimer)
   saveTimer = window.setTimeout(() => {
-    saveLayoutNow()
+    saveLayoutNow(false)
     saveTimer = null
-  }, 250)
+  }, LOCAL_SAVE_DEBOUNCE_MS)
 }
 
 // Sauvegarde distante debounce pour eviter de spammer l'API.
-function scheduleRemoteSave(payload: unknown) {
-  if (userId.value === 'guest') return
+function scheduleRemoteSave(payload: unknown = layoutBundle.value) {
+  const expectedUserId = String(userId.value)
+  if (expectedUserId === 'guest') return
   if (remoteSaveTimer) window.clearTimeout(remoteSaveTimer)
   remoteSaveTimer = window.setTimeout(async () => {
+    if (String(userId.value) !== expectedUserId) {
+      remoteSaveTimer = null
+      return
+    }
     try {
       await StatsServices.saveLayout(payload)
     } catch (err) {
@@ -801,26 +1254,29 @@ function scheduleRemoteSave(payload: unknown) {
     } finally {
       remoteSaveTimer = null
     }
-  }, 800)
+  }, REMOTE_SAVE_DEBOUNCE_MS)
 }
 
 function widgetStyle(w: Widget) {
+  const rect = liveWidgetRect(w)
   return {
-    width: `${w.w}px`,
-    height: `${w.h}px`,
-    transform: `translate3d(${w.x}px, ${w.y}px, 0)`,
+    width: `${rect.w}px`,
+    height: `${rect.h}px`,
+    transform: `translate3d(${rect.x}px, ${rect.y}px, 0)`,
     zIndex: w.z ?? 1,
   }
 }
 
 /* ===== Widget registry ===== */
 const paletteOpen = ref(false)
+const fullscreenActive = ref(false)
 const PALETTE_ORDER = ['Texte', 'Finance', 'Stock', 'Performance', 'Bonus']
 const paletteGroups = computed(() => {
   const grouped = new Map<string, Array<Record<string, unknown>>>()
   for (const w of WIDGET_DEFS) {
     const key = w.category ?? 'Autres'
     const list = grouped.get(key) ?? []
+    const meta = getWidgetPaletteMeta(w.type)
     list.push({
       type: w.type,
       title: w.title,
@@ -828,6 +1284,9 @@ const paletteGroups = computed(() => {
       help: w.help ?? 'Ajoute ce widget au canvas',
       forms: w.forms ?? [],
       formPicker: w.formPicker !== false,
+      tags: meta.tags,
+      dataType: meta.dataType,
+      preview: meta.preview,
     })
     grouped.set(key, list)
   }
@@ -852,9 +1311,273 @@ const paletteGroups = computed(() => {
   return [...ordered, ...leftovers]
 })
 const dragArmedId = ref<string | null>(null)
+const activeTextWidgetId = ref<string | null>(null)
+const selectedWidgetIds = ref<string[]>([])
+const marqueeSelection = ref<{
+  startX: number
+  startY: number
+  x: number
+  y: number
+  additive: boolean
+} | null>(null)
+const isGroupSelectionActive = computed(() => editMode.value && selectedWidgetIds.value.length > 1)
+
+const GROUP_RESIZE_HANDLES: Array<{ dir: ResizeDir; title: string }> = [
+  { dir: 'ne', title: 'Redimensionner le groupe (coin haut droit)' },
+  { dir: 'nw', title: 'Redimensionner le groupe (coin haut gauche)' },
+  { dir: 'se', title: 'Redimensionner le groupe (coin bas droit)' },
+  { dir: 'sw', title: 'Redimensionner le groupe (coin bas gauche)' },
+]
 
 function disarmWidget() {
   dragArmedId.value = null
+}
+
+function isWidgetSelected(id: string) {
+  return selectedWidgetIds.value.includes(id)
+}
+
+function setSelectedWidgets(ids: string[]) {
+  const existing = new Set(widgets.value.map((item) => item.id))
+  const unique = Array.from(new Set(ids)).filter((id) => existing.has(id))
+  selectedWidgetIds.value = unique
+}
+
+function clearSelection() {
+  selectedWidgetIds.value = []
+}
+
+function selectSingleWidget(id: string) {
+  setSelectedWidgets([id])
+}
+
+function toggleWidgetSelection(id: string) {
+  if (isWidgetSelected(id)) {
+    setSelectedWidgets(selectedWidgetIds.value.filter((item) => item !== id))
+    return
+  }
+  setSelectedWidgets([...selectedWidgetIds.value, id])
+}
+
+function setActiveTextWidget(id: string | null) {
+  if (!id) {
+    activeTextWidgetId.value = null
+    return
+  }
+  const widget = widgets.value.find((item) => item.id === id)
+  if (!widget || !isTextWidget(widget)) {
+    activeTextWidgetId.value = null
+    return
+  }
+  widget.z = ++zTop
+  activeTextWidgetId.value = id
+}
+
+function eventToBoardPoint(event: PointerEvent) {
+  const vp = viewportEl.value
+  if (!vp) return null
+  const rect = vp.getBoundingClientRect()
+  return camera.boardPointFromViewport(event.clientX - rect.left, event.clientY - rect.top)
+}
+
+function normalizeMarqueeRect(state: { startX: number; startY: number; x: number; y: number }) {
+  const left = Math.min(state.startX, state.x)
+  const right = Math.max(state.startX, state.x)
+  const top = Math.min(state.startY, state.y)
+  const bottom = Math.max(state.startY, state.y)
+  return {
+    left: clamp(left, 0, BOARD_W),
+    right: clamp(right, 0, BOARD_W),
+    top: clamp(top, 0, BOARD_H),
+    bottom: clamp(bottom, 0, BOARD_H),
+  }
+}
+
+const marqueeSelectionStyle = computed(() => {
+  const state = marqueeSelection.value
+  if (!state) return null
+  const rect = normalizeMarqueeRect(state)
+  const width = Math.max(0, rect.right - rect.left)
+  const height = Math.max(0, rect.bottom - rect.top)
+  if (width < 1 && height < 1) return null
+  return {
+    left: `${rect.left}px`,
+    top: `${rect.top}px`,
+    width: `${width}px`,
+    height: `${height}px`,
+  }
+})
+
+function liveWidgetRect(widget: Widget) {
+  const groupMember = activeGroupResizeState?.members.find((member) => member.id === widget.id)
+  if (groupMember) {
+    return {
+      x: groupMember.x,
+      y: groupMember.y,
+      w: groupMember.w,
+      h: groupMember.h,
+    }
+  }
+  const resizeState = resizeStates.get(widget.id)
+  if (resizeState) {
+    return {
+      x: resizeState.x,
+      y: resizeState.y,
+      w: resizeState.w,
+      h: resizeState.h,
+    }
+  }
+  const dragState = dragStates.get(widget.id)
+  if (dragState) {
+    return {
+      x: dragState.x,
+      y: dragState.y,
+      w: widget.w,
+      h: widget.h,
+    }
+  }
+  return {
+    x: widget.x,
+    y: widget.y,
+    w: widget.w,
+    h: widget.h,
+  }
+}
+
+function selectedGroupBounds() {
+  const ids =
+    activeGroupResizeState?.members.length && activeGroupResizeState.members.length > 1
+      ? activeGroupResizeState.members.map((member) => member.id)
+      : activeDragIds.length > 1
+        ? [...activeDragIds]
+        : selectedWidgetIds.value.length > 1
+          ? [...selectedWidgetIds.value]
+          : []
+  if (ids.length < 2) return null
+
+  const members = ids
+    .map((id) => widgets.value.find((widget) => widget.id === id))
+    .filter((widget): widget is Widget => Boolean(widget))
+  if (members.length < 2) return null
+
+  let minX = Infinity
+  let minY = Infinity
+  let maxX = -Infinity
+  let maxY = -Infinity
+  let maxZ = 1
+  for (const widget of members) {
+    const rect = liveWidgetRect(widget)
+    minX = Math.min(minX, rect.x)
+    minY = Math.min(minY, rect.y)
+    maxX = Math.max(maxX, rect.x + rect.w)
+    maxY = Math.max(maxY, rect.y + rect.h)
+    maxZ = Math.max(maxZ, Number(widget.z ?? 1))
+  }
+
+  const width = Math.max(0, maxX - minX)
+  const height = Math.max(0, maxY - minY)
+  if (width < 1 || height < 1) return null
+  return { left: minX, top: minY, right: maxX, bottom: maxY, width, height, maxZ }
+}
+
+const groupSelectionFrameStyle = computed(() => {
+  interactionTick.value
+  if (!editMode.value) return null
+  const bounds = selectedGroupBounds()
+  if (!bounds) return null
+
+  return {
+    left: `${bounds.left}px`,
+    top: `${bounds.top}px`,
+    width: `${bounds.width}px`,
+    height: `${bounds.height}px`,
+    zIndex: String(bounds.maxZ + 24),
+  }
+})
+
+function onGroupResizeHandleDown(dir: ResizeDir, event: PointerEvent) {
+  if (!isGroupSelectionActive.value) return
+  const anchorId = selectedWidgetIds.value[0]
+  if (!anchorId) return
+  startResize(anchorId, dir, event)
+}
+
+function widgetIntersectsMarquee(
+  widget: Widget,
+  rect: { left: number; right: number; top: number; bottom: number },
+) {
+  return !(
+    widget.x > rect.right ||
+    widget.x + widget.w < rect.left ||
+    widget.y > rect.bottom ||
+    widget.y + widget.h < rect.top
+  )
+}
+
+function finishMarqueeSelection() {
+  const state = marqueeSelection.value
+  marqueeSelection.value = null
+  setCanvasPanEnabled(true)
+  if (!state) return
+  const rect = normalizeMarqueeRect(state)
+  const width = rect.right - rect.left
+  const height = rect.bottom - rect.top
+  if (width < 3 && height < 3) return
+
+  const hitIds = widgets.value
+    .filter((widget) => widgetIntersectsMarquee(widget, rect))
+    .map((widget) => widget.id)
+  if (state.additive) {
+    setSelectedWidgets([...selectedWidgetIds.value, ...hitIds])
+  } else {
+    setSelectedWidgets(hitIds)
+  }
+
+  if (selectedWidgetIds.value.length === 1) {
+    const onlyId = selectedWidgetIds.value[0]
+    const onlyWidget = widgets.value.find((item) => item.id === onlyId)
+    setActiveTextWidget(onlyWidget && isTextWidget(onlyWidget) ? onlyId : null)
+  } else {
+    setActiveTextWidget(null)
+  }
+}
+
+function onMarqueePointerMove(event: PointerEvent) {
+  const state = marqueeSelection.value
+  if (!state) return
+  const point = eventToBoardPoint(event)
+  if (!point) return
+  state.x = point.x
+  state.y = point.y
+}
+
+function onMarqueePointerUp() {
+  window.removeEventListener('pointermove', onMarqueePointerMove)
+  finishMarqueeSelection()
+}
+
+function startMarqueeSelection(event: PointerEvent, additive = false) {
+  if (event.button !== 0 && event.button !== 2) return
+  const point = eventToBoardPoint(event)
+  if (!point) return
+  marqueeSelection.value = {
+    startX: point.x,
+    startY: point.y,
+    x: point.x,
+    y: point.y,
+    additive,
+  }
+  setCanvasPanEnabled(false)
+  window.addEventListener('pointermove', onMarqueePointerMove)
+  window.addEventListener('pointerup', onMarqueePointerUp, { once: true })
+  window.addEventListener('pointercancel', onMarqueePointerUp, { once: true })
+}
+
+function isBlankTextWidgetContent(widget: Widget | null | undefined) {
+  if (!widget || !isTextWidget(widget)) return false
+  const raw = String(widget.props?.content ?? '')
+  const normalized = raw.replace(/\u00a0/g, ' ').trim()
+  return normalized.length === 0
 }
 
 function getComp(type: string) {
@@ -884,6 +1607,11 @@ function widgetCategoryRange(w: Widget) {
   return { from: widgetFrom(w), to: widgetTo(w) }
 }
 
+function widgetNeedsCategoryFilter(w: Widget | null | undefined) {
+  if (!w) return false
+  return getWidgetDef(w.type)?.categoryFilter === true
+}
+
 /* ===== Settings ===== */
 const settingsOpen = ref(false)
 const settingsWidgetId = ref<string | null>(null)
@@ -896,15 +1624,30 @@ const settingsDef = computed(() =>
 )
 
 const settingsTitle = computed(() => settingsWidget.value?.title ?? 'Réglages')
+const SIMPLE_TEXT_SETTINGS = new Set(['content', 'fontSize', 'align', 'color'])
+const SIMPLE_COMMON_HIDDEN_SETTINGS = new Set(['useGlobalRange', 'from', 'to', 'types'])
+
+function simplifySettingsFields(
+  widget: Widget | null,
+  fields: Array<Record<string, unknown>>,
+) {
+  if (!widget) return fields
+  if (isTextWidget(widget)) {
+    return fields.filter((field) => SIMPLE_TEXT_SETTINGS.has(String(field?.key ?? '')))
+  }
+  return fields.filter(
+    (field) => !SIMPLE_COMMON_HIDDEN_SETTINGS.has(String(field?.key ?? '')),
+  )
+}
+
 const settingsFields = computed(() => {
   const def = settingsDef.value
   const base = def?.settings ?? []
   const hideRange = def?.hideGlobalRange === true
-  if (hideRange) return [...base]
 
   const dateMode = def?.dateMode ?? 'range'
   const rangeFields =
-    dateMode === 'range'
+    !hideRange && dateMode === 'range'
       ? [
           { key: 'from', label: 'Du', type: 'date', hideWhenGlobalRange: true },
           { key: 'to', label: 'Au', type: 'date', hideWhenGlobalRange: true },
@@ -913,7 +1656,7 @@ const settingsFields = computed(() => {
 
   const mappedBase = base.map((f) => {
     if (f?.type === 'date' && dateMode === 'asOf') {
-      return { ...f, hideWhenGlobalRange: true }
+      return { ...f, hideWhenGlobalRange: false }
     }
     return f
   })
@@ -937,7 +1680,7 @@ const settingsFields = computed(() => {
       ]
     : []
 
-  return [
+  const rawFields: Array<Record<string, unknown>> = [
     {
       key: 'useGlobalRange',
       label: 'Utiliser periode globale',
@@ -948,6 +1691,8 @@ const settingsFields = computed(() => {
     ...filterFields,
     ...mappedBase,
   ]
+
+  return simplifySettingsFields(settingsWidget.value, rawFields)
 })
 const settingsModel = computed(() => {
   const base = settingsWidget.value?.props ?? {}
@@ -975,23 +1720,181 @@ const settingsModel = computed(() => {
 function openSettings(w: Widget) {
   settingsWidgetId.value = w.id
   settingsOpen.value = true
-  const range = widgetCategoryRange(w)
-  loadCategories(range.from, range.to)
+  if (widgetNeedsCategoryFilter(w)) {
+    const range = widgetCategoryRange(w)
+    void loadCategories(range.from, range.to)
+  }
 }
 function closeSettings() {
   settingsOpen.value = false
   settingsWidgetId.value = null
 }
 
+const {
+  shortcutHelpOpen,
+  spacePanActive,
+  shouldUsePanzoomExclude,
+  setSpacePanState,
+  onCanvasKeyDown,
+  onCanvasKeyUp,
+  onWindowBlur,
+  onVisibilityChange,
+} = useCanvasShortcuts({
+  editMode,
+  fullscreenActive,
+  paletteOpen,
+  settingsOpen,
+  profileEditorOpen,
+  dragArmedId,
+  closeSettings,
+  toggleEditMode,
+  centerView,
+  resetZoom,
+  zoomOut,
+  zoomIn,
+  syncPanzoomExclude,
+  setCanvasPanEnabled,
+})
+
 function onCanvasPointerDown(e: PointerEvent) {
   if (!editMode.value) return
+  if (spacePanActive.value) return
+  const isPrimary = e.button === 0
+  const isSecondary = e.button === 2
+  if (!isPrimary && !isSecondary) return
   const target = e.target as HTMLElement | null
-  if (target?.closest('.widget')) return
+  const insideBoard = Boolean(target?.closest('.board'))
+  if (!insideBoard) return
+  const additive = e.shiftKey || e.ctrlKey || e.metaKey
+
+  if (isSecondary) {
+    e.preventDefault()
+    e.stopPropagation()
+    dragArmedId.value = null
+    activeTextWidgetId.value = null
+    if (!additive) {
+      clearSelection()
+    }
+    startMarqueeSelection(e, additive)
+    return
+  }
+
+  const widgetEl = target?.closest('.widget') as HTMLElement | null
+  if (widgetEl) {
+    const clickedId = String(widgetEl.dataset.id ?? '')
+    if (!clickedId) return
+    const dragAlreadyStarted =
+      activeDragId === clickedId || activeDragIds.includes(clickedId) || dragStates.has(clickedId)
+    if (additive) {
+      toggleWidgetSelection(clickedId)
+      if (!isWidgetSelected(clickedId) && activeTextWidgetId.value === clickedId) {
+        activeTextWidgetId.value = null
+      }
+      return
+    }
+    if (dragAlreadyStarted) return
+
+    if (!isWidgetSelected(clickedId)) {
+      selectSingleWidget(clickedId)
+    }
+
+    if (selectedWidgetIds.value.length !== 1) {
+      activeTextWidgetId.value = null
+      return
+    }
+
+    const onlyId = selectedWidgetIds.value[0]
+    const onlyWidget = widgets.value.find((item) => item.id === onlyId)
+    if (!onlyWidget || !isTextWidget(onlyWidget)) {
+      activeTextWidgetId.value = null
+      return
+    }
+    if (activeTextWidgetId.value && activeTextWidgetId.value !== onlyId) {
+      activeTextWidgetId.value = null
+    }
+    return
+  }
+
+  if (isGroupSelectionActive.value && !additive) {
+    const point = eventToBoardPoint(e)
+    const bounds = selectedGroupBounds()
+    if (
+      point &&
+      bounds &&
+      point.x >= bounds.left &&
+      point.x <= bounds.right &&
+      point.y >= bounds.top &&
+      point.y <= bounds.bottom
+    ) {
+      const anchorId =
+        selectedWidgetIds.value.find((id) => widgetEls.has(id)) ??
+        selectedWidgetIds.value.find((id) => widgets.value.some((w) => w.id === id)) ??
+        null
+      if (anchorId) {
+        startDrag(anchorId, e)
+        return
+      }
+    }
+  }
+
   dragArmedId.value = null
+  activeTextWidgetId.value = null
+  if (additive) {
+    startMarqueeSelection(e, true)
+    return
+  }
+  clearSelection()
+  // Fond du board: on laisse panzoom gerer le drag pour deplacer la page.
+  // La selection rectangle reste disponible en mode additif (Shift/Ctrl/Cmd + drag).
 }
+
+function onCanvasContextMenu(event: MouseEvent) {
+  if (!editMode.value) return
+  const target = event.target as HTMLElement | null
+  if (!target?.closest('.board')) return
+  event.preventDefault()
+}
+
+watch(
+  () => activeTextWidgetId.value,
+  (nextId, prevId) => {
+    if (!prevId || prevId === nextId) return
+    const previous = widgets.value.find((item) => item.id === prevId)
+    if (!isBlankTextWidgetContent(previous)) return
+    removeWidget(prevId)
+  },
+)
+
+const TEXT_LAYOUT_KEYS = new Set([
+  'content',
+  'fontFamily',
+  'fontSize',
+  'size',
+  'weight',
+  'italic',
+  'underline',
+  'padding',
+])
+
+function patchTouchesTextLayout(patch: Record<string, unknown>) {
+  return Object.keys(patch).some((key) => TEXT_LAYOUT_KEYS.has(key))
+}
+
+function textLayoutChanged(
+  prev: Record<string, unknown>,
+  next: Record<string, unknown>,
+) {
+  for (const key of TEXT_LAYOUT_KEYS) {
+    if (prev[key] !== next[key]) return true
+  }
+  return false
+}
+
 function applySettings(newModel: Record<string, unknown>) {
   const w = settingsWidget.value
   if (!w) return
+  const def = settingsDef.value
+  const prevProps = { ...(w.props ?? {}) }
   const next = { ...(w.props ?? {}), ...newModel }
   if (Array.isArray((next as any).categories)) {
     ;(next as any).categories = (next as any).categories
@@ -1023,9 +1926,40 @@ function applySettings(newModel: Record<string, unknown>) {
   if (typeof next.asOf === 'string' && next.asOf) {
     next.asOf = clampDate(next.asOf)
   }
+  if (!isTextWidget(w)) {
+    next.types = []
+    if (def?.dateMode === 'asOf') {
+      next.useGlobalRange = false
+    } else if (def?.hideGlobalRange !== true) {
+      next.useGlobalRange = true
+      delete next.from
+      delete next.to
+    }
+  }
   w.props = next
-  scheduleSave()
+  const shouldFitText = isTextWidget(w) && textLayoutChanged(prevProps, next)
   closeSettings()
+  if (shouldFitText) {
+    fitTextWidgetAfterRender(w, widgetEls.get(w.id) ?? null, {
+      preserveWidth: shouldPreserveTextWidth(w, 'content'),
+    })
+  }
+  scheduleSave()
+}
+function updateTextWidgetProps(id: string, patch: Record<string, unknown>) {
+  const w = widgets.value.find((item) => item.id === id)
+  if (!w || !isTextWidget(w)) return
+  const shouldFitText = patchTouchesTextLayout(patch)
+  w.props = {
+    ...(w.props ?? {}),
+    ...patch,
+  }
+  if (shouldFitText) {
+    fitTextWidgetAfterRender(w, widgetEls.get(w.id) ?? null, {
+      preserveWidth: shouldPreserveTextWidth(w, 'content'),
+    })
+  }
+  scheduleSave()
 }
 
 /* ===== Camera (Panzoom) ===== */
@@ -1044,6 +1978,47 @@ const camera = useCanvasCamera(viewportEl, boardEl, {
 const scale = computed(() => camera.scale.value)
 const isCompact = ref(false)
 const datePanelOpen = ref(true)
+const visibleRect = ref<{ left: number; top: number; right: number; bottom: number } | null>(null)
+let visibleRectRaf: number | null = null
+
+function clearVisibleRectRaf() {
+  if (visibleRectRaf != null) {
+    cancelAnimationFrame(visibleRectRaf)
+    visibleRectRaf = null
+  }
+}
+
+function updateVisibleRectNow() {
+  const vp = viewportEl.value
+  if (!vp) {
+    visibleRect.value = null
+    return
+  }
+
+  const p1 = camera.boardPointFromViewport(0, 0)
+  const p2 = camera.boardPointFromViewport(vp.clientWidth, vp.clientHeight)
+  const left = Math.min(p1.x, p2.x)
+  const right = Math.max(p1.x, p2.x)
+  const top = Math.min(p1.y, p2.y)
+  const bottom = Math.max(p1.y, p2.y)
+  const safeScale = Math.max(Number(scale.value) || 1, 0.15)
+  const pad = clamp(420 / safeScale, 220, 860)
+
+  visibleRect.value = {
+    left: clamp(left - pad, 0, BOARD_W),
+    top: clamp(top - pad, 0, BOARD_H),
+    right: clamp(right + pad, 0, BOARD_W),
+    bottom: clamp(bottom + pad, 0, BOARD_H),
+  }
+}
+
+function scheduleVisibleRectUpdate() {
+  if (visibleRectRaf != null) return
+  visibleRectRaf = requestAnimationFrame(() => {
+    visibleRectRaf = null
+    updateVisibleRectNow()
+  })
+}
 
 function fitToWidgets(padding = 120, animate = true) {
   const vp = viewportEl.value
@@ -1079,6 +2054,7 @@ function fitToWidgets(padding = 120, animate = true) {
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       camera.centerOn(cx, cy)
+      scheduleVisibleRectUpdate()
     })
   })
 }
@@ -1103,19 +2079,24 @@ function widgetsBounds() {
 
 function centerView() {
   fitToWidgets(80, true)
+  scheduleVisibleRectUpdate()
 }
 
 function zoomIn() {
   camera.zoomIn()
+  scheduleVisibleRectUpdate()
 }
 function zoomOut() {
   camera.zoomOut()
+  scheduleVisibleRectUpdate()
 }
 function resetZoom() {
   fitToWidgets(120, true)
+  scheduleVisibleRectUpdate()
 }
 function zoomToFitContent() {
   fitToWidgets(80, true)
+  scheduleVisibleRectUpdate()
 }
 
 /* ===== Drag ===== */
@@ -1127,12 +2108,18 @@ type DragState = {
   lastX: number
   lastY: number
   raf: number | null
+  widget: Widget
+  el: HTMLElement | null
+  xTargets: SnapTarget[]
+  yTargets: SnapTarget[]
+  isText: boolean
 }
 const dragStates = new Map<string, DragState>()
 let activeDragId: string | null = null
+let activeDragIds: string[] = []
 let zTop = 10
 const snapGuides = ref<{ x: number | null; y: number | null }>({ x: null, y: null })
-const SNAP_DIST = 8
+const interactionTick = ref(0)
 
 type ResizeState = {
   x: number
@@ -1141,12 +2128,105 @@ type ResizeState = {
   h: number
   scale: number
   dir: ResizeDir
-  lastX: number
-  lastY: number
+  pointerStartX: number
+  pointerStartY: number
+  originX: number
+  originY: number
+  originW: number
+  originH: number
+  originCenterX: number
+  originCenterY: number
+  aspect: number
+  originFontSize: number
   raf: number | null
+  widget: Widget
+  el: HTMLElement
+  xTargets: SnapTarget[]
+  yTargets: SnapTarget[]
+  minW: number
+  minH: number
+  isText: boolean
 }
 const resizeStates = new Map<string, ResizeState>()
 let activeResizeId: string | null = null
+
+type GroupResizeMember = {
+  id: string
+  widget: Widget
+  el: HTMLElement | null
+  originX: number
+  originY: number
+  originW: number
+  originH: number
+  originFontSize: number
+  minW: number
+  minH: number
+  isText: boolean
+  x: number
+  y: number
+  w: number
+  h: number
+}
+
+type GroupResizeState = {
+  dir: ResizeDir
+  scale: number
+  pointerStartX: number
+  pointerStartY: number
+  originLeft: number
+  originTop: number
+  originRight: number
+  originBottom: number
+  originW: number
+  originH: number
+  originCenterX: number
+  originCenterY: number
+  aspect: number
+  minScaleX: number
+  minScaleY: number
+  members: GroupResizeMember[]
+  raf: number | null
+}
+let activeGroupResizeState: GroupResizeState | null = null
+
+type TextScaleState = {
+  widgetId: string
+  lastX: number
+  lastY: number
+  pendingDelta: number
+  raf: number | null
+  appliedScale: number
+}
+let activeTextScaleState: TextScaleState | null = null
+
+function widgetIntersectsVisibleRect(
+  w: Widget,
+  rect: { left: number; top: number; right: number; bottom: number },
+) {
+  return !(
+    w.x > rect.right ||
+    w.x + w.w < rect.left ||
+    w.y > rect.bottom ||
+    w.y + w.h < rect.top
+  )
+}
+
+const visibleWidgets = computed(() => {
+  const rect = visibleRect.value
+  if (!rect) return widgets.value
+
+  const pinned = new Set<string>()
+  if (activeDragId) pinned.add(activeDragId)
+  for (const id of activeDragIds) pinned.add(id)
+  if (activeResizeId) pinned.add(activeResizeId)
+  if (activeGroupResizeState) {
+    for (const member of activeGroupResizeState.members) pinned.add(member.id)
+  }
+  if (activeTextScaleState?.widgetId) pinned.add(activeTextScaleState.widgetId)
+  if (dragArmedId.value) pinned.add(dragArmedId.value)
+
+  return widgets.value.filter((w) => pinned.has(w.id) || widgetIntersectsVisibleRect(w, rect))
+})
 
 function setWidgetRef(id: string, c: any) {
   // c est le composant; on garde la derniere ref DOM valide, et on ne purge
@@ -1154,12 +2234,33 @@ function setWidgetRef(id: string, c: any) {
   // les phases de montage/teleport et de casser le drag.
   if (c == null) {
     widgetEls.delete(id)
-    clearDragState(id)
     return
   }
   const el = (c?.root?.value ?? c?.$el ?? null) as any
   if (el && el.nodeType === 1 && el.classList) {
-    widgetEls.set(id, el as HTMLElement)
+    const nextEl = el as HTMLElement
+    widgetEls.set(id, nextEl)
+
+    const dragState = dragStates.get(id)
+    if (dragState) {
+      dragState.el = nextEl
+      nextEl.classList.add('is-dragging')
+      applyWidgetTransform(nextEl, dragState.x, dragState.y)
+    }
+
+    const resizeState = resizeStates.get(id)
+    if (resizeState) {
+      resizeState.el = nextEl
+      nextEl.classList.add('is-resizing')
+      applyWidgetDOMRect(nextEl, resizeState.x, resizeState.y, resizeState.w, resizeState.h)
+    }
+
+    const groupMember = activeGroupResizeState?.members.find((member) => member.id === id)
+    if (groupMember) {
+      groupMember.el = nextEl
+      nextEl.classList.add('is-resizing')
+      applyWidgetDOMRect(nextEl, groupMember.x, groupMember.y, groupMember.w, groupMember.h)
+    }
   }
 }
 
@@ -1169,9 +2270,13 @@ function applyWidgetDOM(el: HTMLElement, w: Widget) {
   el.style.transform = `translate3d(${w.x}px, ${w.y}px, 0)`
 }
 
-function applyWidgetDOMAt(el: HTMLElement, w: Widget, x: number, y: number) {
-  el.style.width = `${w.w}px`
-  el.style.height = `${w.h}px`
+function applyWidgetTransform(el: HTMLElement, x: number, y: number) {
+  el.style.transform = `translate3d(${x}px, ${y}px, 0)`
+}
+
+function applyWidgetDOMRect(el: HTMLElement, x: number, y: number, w: number, h: number) {
+  el.style.width = `${w}px`
+  el.style.height = `${h}px`
   el.style.transform = `translate3d(${x}px, ${y}px, 0)`
 }
 
@@ -1182,17 +2287,104 @@ function clampWidgetPosition(x: number, y: number, w: Widget) {
   }
 }
 
-function snapValue(value: number, targets: number[]) {
-  let best = value
+function setSnapGuides(x: number | null, y: number | null) {
+  if (snapGuides.value.x === x && snapGuides.value.y === y) return
+  snapGuides.value = { x, y }
+}
+
+type SnapTarget = {
+  value: number
+  guide: number
+}
+
+function shouldUseSmartSnap(event: PointerEvent) {
+  return !(event.ctrlKey || event.metaKey)
+}
+
+function axisSign(dir: ResizeDir, positive: 'e' | 's', negative: 'w' | 'n') {
+  if (dir.includes(positive)) return 1
+  if (dir.includes(negative)) return -1
+  return 0
+}
+
+function collectAxisTargets(activeId: string, axis: 'x' | 'y'): SnapTarget[] {
+  const limit = axis === 'x' ? BOARD_W : BOARD_H
+  const targets: SnapTarget[] = [
+    { value: 0, guide: 0 },
+    { value: limit / 2, guide: limit / 2 },
+    { value: limit, guide: limit },
+  ]
+
+  for (const other of widgets.value) {
+    if (other.id === activeId) continue
+    const start = axis === 'x' ? other.x : other.y
+    const size = axis === 'x' ? other.w : other.h
+    targets.push(
+      { value: start, guide: start },
+      { value: start + size / 2, guide: start + size / 2 },
+      { value: start + size, guide: start + size },
+    )
+  }
+
+  return targets
+}
+
+function snapOriginToTargets(origin: number, size: number, targets: SnapTarget[], enabled: boolean) {
+  if (!enabled) return { value: origin, guide: null as number | null }
+
+  const anchors = [0, size / 2, size]
+  let bestValue = origin
+  let bestGuide: number | null = null
   let bestDiff = SNAP_DIST + 1
-  for (const t of targets) {
-    const diff = Math.abs(value - t)
-    if (diff < bestDiff) {
-      bestDiff = diff
-      best = t
+
+  for (const anchor of anchors) {
+    for (const target of targets) {
+      const diff = Math.abs(origin + anchor - target.value)
+      if (diff < bestDiff) {
+        bestDiff = diff
+        bestValue = target.value - anchor
+        bestGuide = target.guide
+      }
     }
   }
-  return best
+
+  if (bestDiff <= SNAP_DIST) {
+    return { value: bestValue, guide: bestGuide }
+  }
+
+  const gridValue = snap(origin)
+  if (Math.abs(gridValue - origin) <= GRID_SNAP_DIST) {
+    return { value: gridValue, guide: gridValue }
+  }
+
+  return { value: origin, guide: null as number | null }
+}
+
+function snapEdgeToTargets(edge: number, targets: SnapTarget[], enabled: boolean) {
+  if (!enabled) return { value: edge, guide: null as number | null }
+
+  let bestValue = edge
+  let bestGuide: number | null = null
+  let bestDiff = SNAP_DIST + 1
+  for (const target of targets) {
+    const diff = Math.abs(edge - target.value)
+    if (diff < bestDiff) {
+      bestDiff = diff
+      bestValue = target.value
+      bestGuide = target.guide
+    }
+  }
+
+  if (bestDiff <= SNAP_DIST) {
+    return { value: bestValue, guide: bestGuide }
+  }
+
+  const gridValue = snap(edge)
+  if (Math.abs(gridValue - edge) <= GRID_SNAP_DIST) {
+    return { value: gridValue, guide: gridValue }
+  }
+
+  return { value: edge, guide: null as number | null }
 }
 
 function rectsOverlap(
@@ -1240,11 +2432,20 @@ function clearDragState(id: string) {
   dragStates.delete(id)
 }
 
-function scheduleDragApply(el: HTMLElement, w: Widget, state: DragState) {
+function bumpInteractionTick() {
+  interactionTick.value = (interactionTick.value + 1) % 1_000_000_000
+}
+
+function scheduleDragApply(state: DragState) {
   if (state.raf) return
   state.raf = requestAnimationFrame(() => {
     state.raf = null
-    applyWidgetDOMAt(el, w, state.x, state.y)
+    if (state.el) {
+      applyWidgetTransform(state.el, state.x, state.y)
+    }
+    if (activeDragIds.length > 1) {
+      bumpInteractionTick()
+    }
   })
 }
 
@@ -1255,17 +2456,52 @@ function clearResizeState(id: string) {
   resizeStates.delete(id)
 }
 
-function scheduleResizeApply(el: HTMLElement, w: Widget, state: ResizeState) {
+function clearGroupResizeState() {
+  const state = activeGroupResizeState
+  if (!state) return
+  if (state.raf) cancelAnimationFrame(state.raf)
+  for (const member of state.members) {
+    member.el?.classList.remove('is-resizing')
+  }
+  activeGroupResizeState = null
+  bumpInteractionTick()
+}
+
+function scheduleGroupResizeApply(state: GroupResizeState) {
   if (state.raf) return
   state.raf = requestAnimationFrame(() => {
     state.raf = null
-    const view = { ...w, w: state.w, h: state.h } as Widget
-    applyWidgetDOMAt(el, view, state.x, state.y)
+    for (const member of state.members) {
+      if (!member.el) continue
+      applyWidgetDOMRect(member.el, member.x, member.y, member.w, member.h)
+    }
+    bumpInteractionTick()
+  })
+}
+
+function clearTextScaleState() {
+  if (activeTextScaleState?.raf) {
+    cancelAnimationFrame(activeTextScaleState.raf)
+  }
+  activeTextScaleState = null
+}
+
+function scheduleResizeApply(state: ResizeState) {
+  if (state.raf) return
+  state.raf = requestAnimationFrame(() => {
+    state.raf = null
+    applyWidgetDOMRect(state.el, state.x, state.y, state.w, state.h)
   })
 }
 
 function startDrag(id: string, event: PointerEvent) {
   if (!editMode.value) return
+  if (spacePanActive.value) return
+  if (marqueeSelection.value) return
+  const additive = event.shiftKey || event.ctrlKey || event.metaKey
+  if (additive) {
+    return
+  }
   const w = widgets.value.find((x) => x.id === id)
   let el = widgetEls.get(id)
   // Fallback: récupère l'élément DOM depuis l'event si la ref n'est pas encore disposée.
@@ -1277,25 +2513,52 @@ function startDrag(id: string, event: PointerEvent) {
     }
   }
   if (!w || !el) return
+  if (!isWidgetSelected(id)) {
+    selectSingleWidget(id)
+  }
+  const dragIds = selectedWidgetIds.value.includes(id) ? [...selectedWidgetIds.value] : [id]
+  if (!dragIds.length) {
+    selectSingleWidget(id)
+    dragIds.push(id)
+  }
+  const shouldActivateText = dragIds.length === 1 && isTextWidget(w) && event.detail >= 2
+  setActiveTextWidget(shouldActivateText ? id : null)
 
   event.preventDefault()
   event.stopPropagation()
 
   dragArmedId.value = id
-  w.z = ++zTop
+  for (const dragId of dragIds) {
+    const widget = widgets.value.find((item) => item.id === dragId)
+    if (!widget) continue
+    widget.z = ++zTop
+  }
   activeDragId = id
+  activeDragIds = dragIds
+  bumpInteractionTick()
 
   const s = Number(camera.scale.value || 1)
-  dragStates.set(id, {
-    x: w.x,
-    y: w.y,
-    scale: s > 0 ? s : 1,
-    lastX: event.clientX,
-    lastY: event.clientY,
-    raf: null,
-  })
-
-  el.classList.add('is-dragging')
+  for (const dragId of dragIds) {
+    const dragWidget = widgets.value.find((item) => item.id === dragId)
+    if (!dragWidget) continue
+    let dragEl = widgetEls.get(dragId)
+    if (!dragEl && dragId === id) dragEl = el
+    const isText = isTextWidget(dragWidget)
+    dragStates.set(dragId, {
+      x: dragWidget.x,
+      y: dragWidget.y,
+      scale: s > 0 ? s : 1,
+      lastX: event.clientX,
+      lastY: event.clientY,
+      raf: null,
+      widget: dragWidget,
+      el: dragEl ?? null,
+      xTargets: collectAxisTargets(dragId, 'x'),
+      yTargets: collectAxisTargets(dragId, 'y'),
+      isText,
+    })
+    dragEl?.classList.add('is-dragging')
+  }
   setCanvasPanEnabled(false)
 
   window.addEventListener('pointermove', onGlobalPointerMove)
@@ -1306,54 +2569,81 @@ function startDrag(id: string, event: PointerEvent) {
 function onGlobalPointerMove(event: PointerEvent) {
   if (!activeDragId) return
   const state = dragStates.get(activeDragId)
-  const w = widgets.value.find((x) => x.id === activeDragId)
-  let el = widgetEls.get(activeDragId)
-  if (!el) {
-    el = document.querySelector(`[data-id="${activeDragId}"]`) as HTMLElement | null
-    if (el) widgetEls.set(activeDragId, el)
-  }
-  if (!state || !w || !el) return
+  if (!state) return
+  const w = state.widget
 
   const dx = event.clientX - state.lastX
   const dy = event.clientY - state.lastY
-  state.lastX = event.clientX
-  state.lastY = event.clientY
+  for (const dragId of activeDragIds) {
+    const dragState = dragStates.get(dragId)
+    if (!dragState) continue
+    dragState.lastX = event.clientX
+    dragState.lastY = event.clientY
+  }
+
+  if (activeDragIds.length > 1) {
+    const states = activeDragIds
+      .map((dragId) => dragStates.get(dragId))
+      .filter((dragState): dragState is DragState => Boolean(dragState))
+    if (!states.length) return
+
+    const moveX = dx / state.scale
+    const moveY = dy / state.scale
+    let minDx = -Infinity
+    let maxDx = Infinity
+    let minDy = -Infinity
+    let maxDy = Infinity
+
+    for (const dragState of states) {
+      minDx = Math.max(minDx, -dragState.x)
+      maxDx = Math.min(maxDx, BOARD_W - dragState.widget.w - dragState.x)
+      minDy = Math.max(minDy, -dragState.y)
+      maxDy = Math.min(maxDy, BOARD_H - dragState.widget.h - dragState.y)
+    }
+
+    const clampedDx = clamp(moveX, minDx, maxDx)
+    const clampedDy = clamp(moveY, minDy, maxDy)
+    for (const dragState of states) {
+      dragState.x += clampedDx
+      dragState.y += clampedDy
+      scheduleDragApply(dragState)
+    }
+    setSnapGuides(null, null)
+    return
+  }
 
   state.x += dx / state.scale
   state.y += dy / state.scale
 
-  // snap vs other widgets (center + edges)
-  const targetsX: number[] = []
-  const targetsY: number[] = []
-  for (const other of widgets.value) {
-    if (other.id === activeDragId) continue
-    targetsX.push(other.x, other.x + other.w / 2, other.x + other.w)
-    targetsY.push(other.y, other.y + other.h / 2, other.y + other.h)
-  }
-
-  const snappedX = snapValue(state.x, targetsX)
-  const snappedY = snapValue(state.y, targetsY)
-  const showX = Math.abs(snappedX - state.x) <= SNAP_DIST
-  const showY = Math.abs(snappedY - state.y) <= SNAP_DIST
-  state.x = showX ? snappedX : state.x
-  state.y = showY ? snappedY : state.y
+  const smartSnap = state.isText ? false : shouldUseSmartSnap(event)
+  const nextX = snapOriginToTargets(
+    state.x,
+    w.w,
+    state.xTargets,
+    smartSnap,
+  )
+  const nextY = snapOriginToTargets(
+    state.y,
+    w.h,
+    state.yTargets,
+    smartSnap,
+  )
+  state.x = nextX.value
+  state.y = nextY.value
 
   const clamped = clampWidgetPosition(state.x, state.y, w)
   state.x = clamped.x
   state.y = clamped.y
 
-  snapGuides.value = {
-    x: showX ? state.x : null,
-    y: showY ? state.y : null,
-  }
+  setSnapGuides(smartSnap ? nextX.guide : null, smartSnap ? nextY.guide : null)
 
-  scheduleDragApply(el, w, state)
+  scheduleDragApply(state)
 }
 
 function finishDrag(id: string) {
   const state = dragStates.get(id)
-  const w = widgets.value.find((x) => x.id === id)
-  const el = widgetEls.get(id)
+  const w = state?.widget ?? widgets.value.find((x) => x.id === id)
+  const el = state?.el ?? widgetEls.get(id)
   if (el) el.classList.remove('is-dragging')
 
   if (!state || !w) {
@@ -1363,30 +2653,78 @@ function finishDrag(id: string) {
     return
   }
 
-  const snapped = clampWidgetPosition(snap(state.x), snap(state.y), w)
+  const snapped = clampWidgetPosition(
+    isTextWidget(w) ? Math.round(state.x) : snap(state.x),
+    isTextWidget(w) ? Math.round(state.y) : snap(state.y),
+    w,
+  )
   w.x = snapped.x
   w.y = snapped.y
   clampWidget(w)
   if (el) applyWidgetDOM(el, w)
 
-  snapGuides.value = { x: null, y: null }
+  setSnapGuides(null, null)
 
   clearDragState(id)
   setCanvasPanEnabled(true)
   scheduleSave()
   activeDragId = null
+  activeDragIds = []
   if (dragArmedId.value === id) dragArmedId.value = null
+  bumpInteractionTick()
+}
+
+function finishDragGroup(ids: string[]) {
+  const uniqueIds = Array.from(new Set(ids))
+  if (uniqueIds.length <= 1) {
+    if (uniqueIds[0]) finishDrag(uniqueIds[0])
+    return
+  }
+
+  for (const id of uniqueIds) {
+    const state = dragStates.get(id)
+    const w = state?.widget ?? widgets.value.find((item) => item.id === id)
+    const el = state?.el ?? widgetEls.get(id)
+    if (el) el.classList.remove('is-dragging')
+    if (!state || !w) {
+      clearDragState(id)
+      continue
+    }
+    const snapped = clampWidgetPosition(
+      isTextWidget(w) ? Math.round(state.x) : snap(state.x),
+      isTextWidget(w) ? Math.round(state.y) : snap(state.y),
+      w,
+    )
+    w.x = snapped.x
+    w.y = snapped.y
+    clampWidget(w)
+    if (el) applyWidgetDOM(el, w)
+    clearDragState(id)
+  }
+
+  setSnapGuides(null, null)
+  setCanvasPanEnabled(true)
+  scheduleSave()
+  activeDragId = null
+  activeDragIds = []
+  if (dragArmedId.value && uniqueIds.includes(dragArmedId.value)) {
+    dragArmedId.value = null
+  }
+  bumpInteractionTick()
 }
 
 function onGlobalPointerUp() {
   window.removeEventListener('pointermove', onGlobalPointerMove)
-  if (!activeDragId) return
-  if (!dragStates.has(activeDragId)) {
+  const ids = activeDragIds.length ? [...activeDragIds] : activeDragId ? [activeDragId] : []
+  if (!ids.length) return
+  if (!ids.some((id) => dragStates.has(id))) {
+    setSnapGuides(null, null)
     activeDragId = null
+    activeDragIds = []
     setCanvasPanEnabled(true)
     return
   }
-  finishDrag(activeDragId)
+  finishDragGroup(ids)
 }
 /** active/désactive le pan du board */
 function setCanvasPanEnabled(enabled: boolean) {
@@ -1398,10 +2736,287 @@ function syncPanzoomExclude(enabled: boolean) {
   pz?.setOptions?.({ excludeClass: enabled ? 'panzoom-exclude' : null })
 }
 
+function startGroupResize(ids: string[], dir: ResizeDir, event: PointerEvent) {
+  const members: GroupResizeMember[] = []
+  let minX = Infinity
+  let minY = Infinity
+  let maxX = -Infinity
+  let maxY = -Infinity
+
+  for (const memberId of ids) {
+    const widget = widgets.value.find((x) => x.id === memberId)
+    if (!widget) continue
+    const minSize = minSizeFor(widget)
+    const isText = isTextWidget(widget)
+    if (!isText && widget.props?.autoHeight === true) {
+      widget.props = { ...(widget.props ?? {}), autoHeight: false }
+    }
+    const el = widgetEls.get(memberId) ?? null
+    const member: GroupResizeMember = {
+      id: memberId,
+      widget,
+      el,
+      originX: widget.x,
+      originY: widget.y,
+      originW: widget.w,
+      originH: widget.h,
+      originFontSize: isText ? textWidgetResolvedFontSize(widget) : 0,
+      minW: minSize.w,
+      minH: minSize.h,
+      isText,
+      x: widget.x,
+      y: widget.y,
+      w: widget.w,
+      h: widget.h,
+    }
+    members.push(member)
+    minX = Math.min(minX, member.originX)
+    minY = Math.min(minY, member.originY)
+    maxX = Math.max(maxX, member.originX + member.originW)
+    maxY = Math.max(maxY, member.originY + member.originH)
+  }
+
+  if (members.length < 2) return false
+
+  const originW = Math.max(maxX - minX, 1)
+  const originH = Math.max(maxY - minY, 1)
+  const minScaleX = members.reduce((maxScale, member) => {
+    if (member.originW <= 0) return maxScale
+    return Math.max(maxScale, member.minW / member.originW)
+  }, 0.01)
+  const minScaleY = members.reduce((maxScale, member) => {
+    if (member.originH <= 0) return maxScale
+    return Math.max(maxScale, member.minH / member.originH)
+  }, 0.01)
+
+  activeGroupResizeState = {
+    dir,
+    scale: Math.max(Number(camera.scale.value || 1), 0.01),
+    pointerStartX: event.clientX,
+    pointerStartY: event.clientY,
+    originLeft: minX,
+    originTop: minY,
+    originRight: maxX,
+    originBottom: maxY,
+    originW,
+    originH,
+    originCenterX: minX + originW / 2,
+    originCenterY: minY + originH / 2,
+    aspect: originW / originH,
+    minScaleX,
+    minScaleY,
+    members,
+    raf: null,
+  }
+
+  for (const member of members) {
+    member.widget.z = ++zTop
+    member.el?.classList.add('is-resizing')
+  }
+
+  return true
+}
+
+function applyGroupResizeStep(event: PointerEvent) {
+  const state = activeGroupResizeState
+  if (!state) return
+
+  const dx = (event.clientX - state.pointerStartX) / state.scale
+  const dy = (event.clientY - state.pointerStartY) / state.scale
+  const xSign = axisSign(state.dir, 'e', 'w')
+  const ySign = axisSign(state.dir, 's', 'n')
+  const fromCenter = event.altKey
+  const cornerResize = xSign !== 0 && ySign !== 0
+  const keepRatio = state.aspect > 0 && (event.shiftKey || cornerResize)
+
+  let scaleX = 1
+  let scaleY = 1
+  if (cornerResize) {
+    const outwardX = xSign * dx
+    const outwardY = ySign * dy
+    const dominant = Math.abs(outwardX) >= Math.abs(outwardY) ? outwardX : outwardY
+    const delta = dominant * (fromCenter ? 2 : 1)
+    const minUniformScale = Math.max(state.minScaleX, state.minScaleY, 0.01)
+    const rawScale = (state.originW + delta) / Math.max(state.originW, 1)
+    let uniformScale = Math.max(rawScale, minUniformScale)
+
+    let maxUniformScale = Infinity
+    if (fromCenter) {
+      const maxW = Math.max(2, 2 * Math.min(state.originCenterX, BOARD_W - state.originCenterX))
+      const maxH = Math.max(2, 2 * Math.min(state.originCenterY, BOARD_H - state.originCenterY))
+      maxUniformScale = Math.min(maxW / state.originW, maxH / state.originH)
+    } else {
+      if (xSign > 0) {
+        maxUniformScale = Math.min(maxUniformScale, (BOARD_W - state.originLeft) / state.originW)
+      } else if (xSign < 0) {
+        maxUniformScale = Math.min(maxUniformScale, state.originRight / state.originW)
+      }
+      if (ySign > 0) {
+        maxUniformScale = Math.min(maxUniformScale, (BOARD_H - state.originTop) / state.originH)
+      } else if (ySign < 0) {
+        maxUniformScale = Math.min(maxUniformScale, state.originBottom / state.originH)
+      }
+    }
+
+    if (Number.isFinite(maxUniformScale)) {
+      uniformScale = Math.min(uniformScale, Math.max(maxUniformScale, minUniformScale))
+    }
+
+    scaleX = uniformScale
+    scaleY = uniformScale
+  } else {
+    if (xSign !== 0) {
+      const rawW = state.originW + dx * xSign * (fromCenter ? 2 : 1)
+      scaleX = rawW / state.originW
+    }
+    if (ySign !== 0) {
+      const rawH = state.originH + dy * ySign * (fromCenter ? 2 : 1)
+      scaleY = rawH / state.originH
+    }
+
+    if (keepRatio) {
+      if (xSign !== 0 && ySign !== 0) {
+        if (Math.abs(scaleX - 1) >= Math.abs(scaleY - 1)) scaleY = scaleX
+        else scaleX = scaleY
+      } else if (xSign !== 0) {
+        scaleY = scaleX
+      } else if (ySign !== 0) {
+        scaleX = scaleY
+      }
+    }
+
+    if (xSign !== 0) {
+      scaleX = Math.max(scaleX, state.minScaleX)
+    } else {
+      scaleX = 1
+    }
+    if (ySign !== 0) {
+      scaleY = Math.max(scaleY, state.minScaleY)
+    } else {
+      scaleY = 1
+    }
+
+    if (fromCenter) {
+      if (xSign !== 0) {
+        const maxW = Math.max(2, 2 * Math.min(state.originCenterX, BOARD_W - state.originCenterX))
+        scaleX = Math.min(scaleX, maxW / state.originW)
+      }
+      if (ySign !== 0) {
+        const maxH = Math.max(2, 2 * Math.min(state.originCenterY, BOARD_H - state.originCenterY))
+        scaleY = Math.min(scaleY, maxH / state.originH)
+      }
+    } else {
+      if (xSign > 0) {
+        scaleX = Math.min(scaleX, Math.max(1, (BOARD_W - state.originLeft) / state.originW))
+      } else if (xSign < 0) {
+        scaleX = Math.min(scaleX, Math.max(1, state.originRight / state.originW))
+      }
+      if (ySign > 0) {
+        scaleY = Math.min(scaleY, Math.max(1, (BOARD_H - state.originTop) / state.originH))
+      } else if (ySign < 0) {
+        scaleY = Math.min(scaleY, Math.max(1, state.originBottom / state.originH))
+      }
+    }
+  }
+
+  const nextW = state.originW * scaleX
+  const nextH = state.originH * scaleY
+  let left = state.originLeft
+  let top = state.originTop
+
+  if (xSign !== 0) {
+    if (fromCenter) left = state.originCenterX - nextW / 2
+    else if (xSign < 0) left = state.originRight - nextW
+  }
+  if (ySign !== 0) {
+    if (fromCenter) top = state.originCenterY - nextH / 2
+    else if (ySign < 0) top = state.originBottom - nextH
+  }
+
+  left = clamp(left, 0, BOARD_W - nextW)
+  top = clamp(top, 0, BOARD_H - nextH)
+
+  let fontScale = 1
+  if (cornerResize) {
+    fontScale = Math.max(0.2, Math.abs(scaleX))
+  } else if (xSign !== 0 && ySign !== 0) {
+    fontScale = Math.max(0.2, (Math.abs(scaleX) + Math.abs(scaleY)) / 2)
+  } else if (xSign !== 0) {
+    fontScale = Math.max(0.2, Math.abs(scaleX))
+  } else if (ySign !== 0) {
+    fontScale = Math.max(0.2, Math.abs(scaleY))
+  }
+
+  for (const member of state.members) {
+    const relX = (member.originX - state.originLeft) / state.originW
+    const relY = (member.originY - state.originTop) / state.originH
+    const relW = member.originW / state.originW
+    const relH = member.originH / state.originH
+
+    member.x = left + relX * nextW
+    member.y = top + relY * nextH
+    member.w = Math.max(member.minW, relW * nextW)
+    member.h = Math.max(member.minH, relH * nextH)
+    member.widget.x = member.x
+    member.widget.y = member.y
+    member.widget.w = member.w
+    member.widget.h = member.h
+
+    if (member.isText) {
+      const bounds = textWidgetFontBounds(member.widget)
+      const nextFontSize = clamp(
+        Math.round(member.originFontSize * fontScale),
+        bounds.min,
+        bounds.max,
+      )
+      if (Number(member.widget.props?.fontSize) !== nextFontSize) {
+        member.widget.props = {
+          ...(member.widget.props ?? {}),
+          fontSize: nextFontSize,
+        }
+      }
+    }
+  }
+
+  setSnapGuides(null, null)
+  scheduleGroupResizeApply(state)
+}
+
+function finishGroupResize() {
+  const state = activeGroupResizeState
+  if (!state) return
+  const cornerResize = (state.dir.includes('e') || state.dir.includes('w')) && (state.dir.includes('n') || state.dir.includes('s'))
+
+  if (state.raf) {
+    cancelAnimationFrame(state.raf)
+    state.raf = null
+  }
+
+  for (const member of state.members) {
+    member.el?.classList.remove('is-resizing')
+    const fineSnap = member.isText || cornerResize
+    member.widget.x = clamp(fineSnap ? Math.round(member.x) : snap(member.x), 0, BOARD_W - member.w)
+    member.widget.y = clamp(fineSnap ? Math.round(member.y) : snap(member.y), 0, BOARD_H - member.h)
+    member.widget.w = clamp(fineSnap ? Math.round(member.w) : snap(member.w), member.minW, BOARD_W)
+    member.widget.h = clamp(fineSnap ? Math.round(member.h) : snap(member.h), member.minH, BOARD_H)
+    clampWidget(member.widget)
+    if (member.el) applyWidgetDOM(member.el, member.widget)
+  }
+
+  activeGroupResizeState = null
+  setSnapGuides(null, null)
+  setCanvasPanEnabled(true)
+  scheduleSave()
+  bumpInteractionTick()
+}
+
 function startResize(id: string, dir: ResizeDir, event: PointerEvent) {
   if (!editMode.value) return
+  if (spacePanActive.value) return
   if (fullscreenActive.value) return
   const w = widgets.value.find((x) => x.id === id)
+  const groupIds = selectedWidgetIds.value.includes(id) ? [...selectedWidgetIds.value] : [id]
+  const useGroupResize = groupIds.length > 1
   let el = widgetEls.get(id)
   if (!el) {
     const target = (event.target as HTMLElement | null)?.closest('.widget') as HTMLElement | null
@@ -1410,16 +3025,39 @@ function startResize(id: string, dir: ResizeDir, event: PointerEvent) {
       el = target
     }
   }
-  if (!w || !el) return
+  if (!w) return
+  if (!useGroupResize && !el) return
+  if (!useGroupResize) {
+    selectSingleWidget(id)
+    setActiveTextWidget(isTextWidget(w) ? id : null)
+  } else {
+    setActiveTextWidget(null)
+  }
 
   event.preventDefault()
   event.stopPropagation()
 
   dragArmedId.value = null
+  if (useGroupResize) {
+    clearResizeState(id)
+    activeResizeId = null
+    if (!startGroupResize(groupIds, dir, event)) return
+    setCanvasPanEnabled(false)
+    window.addEventListener('pointermove', onResizePointerMove)
+    window.addEventListener('pointerup', onResizePointerUp, { once: true })
+    window.addEventListener('pointercancel', onResizePointerUp, { once: true })
+    return
+  }
+
   w.z = ++zTop
   activeResizeId = id
 
   const s = Number(camera.scale.value || 1)
+  const minSize = minSizeFor(w)
+  const isText = isTextWidget(w)
+  if (!isText && w.props?.autoHeight === true) {
+    w.props = { ...(w.props ?? {}), autoHeight: false }
+  }
   resizeStates.set(id, {
     x: w.x,
     y: w.y,
@@ -1427,9 +3065,24 @@ function startResize(id: string, dir: ResizeDir, event: PointerEvent) {
     h: w.h,
     dir,
     scale: s > 0 ? s : 1,
-    lastX: event.clientX,
-    lastY: event.clientY,
+    pointerStartX: event.clientX,
+    pointerStartY: event.clientY,
+    originX: w.x,
+    originY: w.y,
+    originW: w.w,
+    originH: w.h,
+    originCenterX: w.x + w.w / 2,
+    originCenterY: w.y + w.h / 2,
+    aspect: w.w > 0 && w.h > 0 ? w.w / w.h : 1,
+    originFontSize: isText ? textWidgetResolvedFontSize(w) : 0,
     raf: null,
+    widget: w,
+    el,
+    xTargets: collectAxisTargets(id, 'x'),
+    yTargets: collectAxisTargets(id, 'y'),
+    minW: minSize.w,
+    minH: minSize.h,
+    isText,
   })
 
   el.classList.add('is-resizing')
@@ -1440,68 +3093,326 @@ function startResize(id: string, dir: ResizeDir, event: PointerEvent) {
   window.addEventListener('pointercancel', onResizePointerUp, { once: true })
 }
 
+function startTextScale(id: string, event: PointerEvent) {
+  if (!editMode.value) return
+  if (spacePanActive.value) return
+  if (fullscreenActive.value) return
+  const w = widgets.value.find((x) => x.id === id)
+  if (!w || !isTextWidget(w)) return
+  selectSingleWidget(id)
+  setActiveTextWidget(id)
+
+  const bounds = textWidgetFontBounds(w)
+  const baseScale = clamp(
+    Number(
+      w.props?.fontSize ??
+        bounds.fallback,
+    ) || bounds.fallback,
+    bounds.min,
+    bounds.max,
+  )
+  activeTextScaleState = {
+    widgetId: id,
+    lastX: event.clientX,
+    lastY: event.clientY,
+    pendingDelta: 0,
+    raf: null,
+    appliedScale: baseScale,
+  }
+
+  event.preventDefault()
+  event.stopPropagation()
+  dragArmedId.value = null
+  w.z = ++zTop
+  setCanvasPanEnabled(false)
+
+  window.addEventListener('pointermove', onTextScalePointerMove)
+  window.addEventListener('pointerup', onTextScalePointerUp, { once: true })
+  window.addEventListener('pointercancel', onTextScalePointerUp, { once: true })
+}
+
 function onResizePointerMove(event: PointerEvent) {
+  if (activeGroupResizeState) {
+    applyGroupResizeStep(event)
+    return
+  }
   if (!activeResizeId) return
   const state = resizeStates.get(activeResizeId)
-  const w = widgets.value.find((x) => x.id === activeResizeId)
-  let el = widgetEls.get(activeResizeId)
-  if (!el) {
-    el = document.querySelector(`[data-id=\"${activeResizeId}\"]`) as HTMLElement | null
-    if (el) widgetEls.set(activeResizeId, el)
+  if (!state) return
+  const w = state.widget
+
+  const dx = (event.clientX - state.pointerStartX) / state.scale
+  const dy = (event.clientY - state.pointerStartY) / state.scale
+  const minW = state.minW
+  const minH = state.minH
+  const xSign = axisSign(state.dir, 'e', 'w')
+  const ySign = axisSign(state.dir, 's', 'n')
+  const cornerResize = xSign !== 0 && ySign !== 0
+  const fromCenter = event.altKey
+  const keepRatio = state.aspect > 0 && (event.shiftKey || cornerResize)
+
+  if (state.isText) {
+    if (cornerResize) {
+      const outwardX = xSign * dx
+      const outwardY = ySign * dy
+      const dominant = Math.abs(outwardX) >= Math.abs(outwardY) ? outwardX : outwardY
+      const delta = dominant * (fromCenter ? 2 : 1)
+
+      const widthScale = clamp((state.originW + delta) / Math.max(state.originW, 1), 0.2, 4)
+      const bounds = textWidgetFontBounds(w)
+      const nextFontSize = clamp(
+        Math.round(state.originFontSize * widthScale),
+        bounds.min,
+        bounds.max,
+      )
+
+      if (Number(w.props?.fontSize) !== nextFontSize) {
+        w.props = {
+          ...(w.props ?? {}),
+          fontSize: nextFontSize,
+        }
+      }
+
+      const measured = estimateTextWidgetSize(w, {
+        targetWidth: state.originW,
+        targetHeight: state.originH,
+        lockWidth: true,
+      })
+      const nextW = clamp(state.originW, state.minW, BOARD_W)
+      const nextH = clamp(measured.h, state.minH, BOARD_H)
+
+      state.x = clamp(state.originX, 0, BOARD_W - nextW)
+      state.y = clamp(state.originY, 0, BOARD_H - nextH)
+      state.w = nextW
+      state.h = nextH
+
+      setSnapGuides(null, null)
+      scheduleResizeApply(state)
+      return
+    }
+
+    const horizontalSign = xSign === 0 ? 1 : xSign
+    const widthDelta = dx * horizontalSign * (fromCenter ? 2 : 1)
+    let nextW = clamp(state.originW + widthDelta, state.minW, BOARD_W)
+
+    let left = fromCenter ? state.originCenterX - nextW / 2 : state.originX
+    let right = fromCenter ? state.originCenterX + nextW / 2 : state.originX + state.originW
+
+    if (!fromCenter) {
+      if (horizontalSign > 0) {
+        left = state.originX
+        right = left + nextW
+      } else {
+        right = state.originX + state.originW
+        left = right - nextW
+      }
+    }
+
+    let guideX: number | null = null
+    if (!fromCenter) {
+      if (horizontalSign > 0) {
+        const snappedRight = snapEdgeToTargets(right, state.xTargets, false)
+        if (snappedRight.value - left >= state.minW) {
+          right = snappedRight.value
+          guideX = snappedRight.guide
+        }
+      } else {
+        const snappedLeft = snapEdgeToTargets(left, state.xTargets, false)
+        if (right - snappedLeft.value >= state.minW) {
+          left = snappedLeft.value
+          guideX = snappedLeft.guide
+        }
+      }
+    }
+
+    nextW = clamp(right - left, state.minW, BOARD_W)
+    const measured = estimateTextWidgetSize(w, {
+      targetWidth: nextW,
+      targetHeight: state.originH,
+      lockWidth: true,
+    })
+    const nextH = clamp(measured.h, state.minH, BOARD_H)
+
+    let nextX = fromCenter
+      ? clamp(state.originCenterX - nextW / 2, 0, BOARD_W - nextW)
+      : horizontalSign > 0
+        ? clamp(state.originX, 0, BOARD_W - nextW)
+        : clamp(state.originX + state.originW - nextW, 0, BOARD_W - nextW)
+
+    const nextY = clamp(state.originY, 0, BOARD_H - nextH)
+    if (!Number.isFinite(nextX)) nextX = clamp(state.originX, 0, BOARD_W - nextW)
+
+    state.x = nextX
+    state.y = nextY
+    state.w = nextW
+    state.h = nextH
+
+    setSnapGuides(fromCenter ? null : guideX, null)
+    scheduleResizeApply(state)
+    return
   }
-  if (!state || !w || !el) return
 
-  const dx = (event.clientX - state.lastX) / state.scale
-  const dy = (event.clientY - state.lastY) / state.scale
-  state.lastX = event.clientX
-  state.lastY = event.clientY
+  let nextW = state.originW
+  let nextH = state.originH
 
-  const minSize = minSizeFor(w)
-  let left = state.x
-  let top = state.y
-  let right = state.x + state.w
-  let bottom = state.y + state.h
+  if (xSign !== 0) {
+    nextW = state.originW + dx * xSign * (fromCenter ? 2 : 1)
+  }
+  if (ySign !== 0) {
+    nextH = state.originH + dy * ySign * (fromCenter ? 2 : 1)
+  }
 
-  if (state.dir.includes('e')) right += dx
-  if (state.dir.includes('w')) left += dx
-  if (state.dir.includes('s')) bottom += dy
-  if (state.dir.includes('n')) top += dy
+  nextW = clamp(nextW, minW, BOARD_W)
+  nextH = clamp(nextH, minH, BOARD_H)
 
-  left = clamp(left, 0, BOARD_W - minSize.w)
-  right = clamp(right, minSize.w, BOARD_W)
-  top = clamp(top, 0, BOARD_H - minSize.h)
-  bottom = clamp(bottom, minSize.h, BOARD_H)
+  if (keepRatio) {
+    const aspect = Math.max(state.aspect, 0.01)
+    if (xSign !== 0 && ySign !== 0) {
+      const relW = Math.abs((nextW - state.originW) / Math.max(state.originW, 1))
+      const relH = Math.abs((nextH - state.originH) / Math.max(state.originH, 1))
+      if (relW >= relH) {
+        nextH = nextW / aspect
+      } else {
+        nextW = nextH * aspect
+      }
+    } else if (xSign !== 0) {
+      nextH = nextW / aspect
+    } else if (ySign !== 0) {
+      nextW = nextH * aspect
+    }
 
-  if (right - left < minSize.w) {
-    if (state.dir.includes('w') && !state.dir.includes('e')) {
-      left = right - minSize.w
+    if (nextW < minW) {
+      nextW = minW
+      nextH = nextW / aspect
+    }
+    if (nextH < minH) {
+      nextH = minH
+      nextW = nextH * aspect
+    }
+    if (nextW > BOARD_W) {
+      nextW = BOARD_W
+      nextH = nextW / aspect
+    }
+    if (nextH > BOARD_H) {
+      nextH = BOARD_H
+      nextW = nextH * aspect
+    }
+
+    nextW = clamp(nextW, minW, BOARD_W)
+    nextH = clamp(nextH, minH, BOARD_H)
+  }
+
+  let left = state.originX
+  let top = state.originY
+  let right = state.originX + state.originW
+  let bottom = state.originY + state.originH
+
+  if (fromCenter) {
+    left = state.originCenterX - nextW / 2
+    right = state.originCenterX + nextW / 2
+    top = state.originCenterY - nextH / 2
+    bottom = state.originCenterY + nextH / 2
+  } else {
+    if (xSign > 0) {
+      left = state.originX
+      right = left + nextW
+    } else if (xSign < 0) {
+      right = state.originX + state.originW
+      left = right - nextW
     } else {
-      right = left + minSize.w
+      left = state.originCenterX - nextW / 2
+      right = state.originCenterX + nextW / 2
+    }
+
+    if (ySign > 0) {
+      top = state.originY
+      bottom = top + nextH
+    } else if (ySign < 0) {
+      bottom = state.originY + state.originH
+      top = bottom - nextH
+    } else {
+      top = state.originCenterY - nextH / 2
+      bottom = state.originCenterY + nextH / 2
     }
   }
-  if (bottom - top < minSize.h) {
-    if (state.dir.includes('n') && !state.dir.includes('s')) {
-      top = bottom - minSize.h
-    } else {
-      bottom = top + minSize.h
+
+  const smartSnap = shouldUseSmartSnap(event) && !fromCenter && !keepRatio
+  const xTargets = state.xTargets
+  const yTargets = state.yTargets
+  let guideX: number | null = null
+  let guideY: number | null = null
+
+  if (xSign > 0) {
+    const snappedRight = snapEdgeToTargets(right, xTargets, smartSnap)
+    if (snappedRight.value - left >= minW) {
+      right = snappedRight.value
+      guideX = snappedRight.guide
+    }
+  }
+  if (xSign < 0) {
+    const snappedLeft = snapEdgeToTargets(left, xTargets, smartSnap)
+    if (right - snappedLeft.value >= minW) {
+      left = snappedLeft.value
+      guideX = snappedLeft.guide
+    }
+  }
+  if (ySign > 0) {
+    const snappedBottom = snapEdgeToTargets(bottom, yTargets, smartSnap)
+    if (snappedBottom.value - top >= minH) {
+      bottom = snappedBottom.value
+      guideY = snappedBottom.guide
+    }
+  }
+  if (ySign < 0) {
+    const snappedTop = snapEdgeToTargets(top, yTargets, smartSnap)
+    if (bottom - snappedTop.value >= minH) {
+      top = snappedTop.value
+      guideY = snappedTop.guide
     }
   }
 
-  state.x = clamp(left, 0, BOARD_W - minSize.w)
-  state.y = clamp(top, 0, BOARD_H - minSize.h)
-  state.w = clamp(right - left, minSize.w, BOARD_W)
-  state.h = clamp(bottom - top, minSize.h, BOARD_H)
+  nextW = clamp(right - left, minW, BOARD_W)
+  nextH = clamp(bottom - top, minH, BOARD_H)
 
-  state.x = clamp(state.x, 0, BOARD_W - state.w)
-  state.y = clamp(state.y, 0, BOARD_H - state.h)
+  let nextX = left
+  let nextY = top
 
-  scheduleResizeApply(el, w, state)
+  if (fromCenter) {
+    nextX = clamp(state.originCenterX - nextW / 2, 0, BOARD_W - nextW)
+    nextY = clamp(state.originCenterY - nextH / 2, 0, BOARD_H - nextH)
+  } else {
+    if (xSign > 0) {
+      nextX = clamp(state.originX, 0, BOARD_W - nextW)
+    } else if (xSign < 0) {
+      const rightAnchor = state.originX + state.originW
+      nextX = clamp(rightAnchor - nextW, 0, BOARD_W - nextW)
+    } else {
+      nextX = clamp(state.originCenterX - nextW / 2, 0, BOARD_W - nextW)
+    }
+
+    if (ySign > 0) {
+      nextY = clamp(state.originY, 0, BOARD_H - nextH)
+    } else if (ySign < 0) {
+      const bottomAnchor = state.originY + state.originH
+      nextY = clamp(bottomAnchor - nextH, 0, BOARD_H - nextH)
+    } else {
+      nextY = clamp(state.originCenterY - nextH / 2, 0, BOARD_H - nextH)
+    }
+  }
+
+  state.x = nextX
+  state.y = nextY
+  state.w = nextW
+  state.h = nextH
+
+  setSnapGuides(smartSnap ? guideX : null, smartSnap ? guideY : null)
+  scheduleResizeApply(state)
 }
 
 function finishResize(id: string) {
   const state = resizeStates.get(id)
-  const w = widgets.value.find((x) => x.id === id)
-  const el = widgetEls.get(id)
+  const w = state?.widget ?? widgets.value.find((x) => x.id === id)
+  const el = state?.el ?? widgetEls.get(id)
   if (el) el.classList.remove('is-resizing')
 
   if (!state || !w) {
@@ -1511,29 +3422,146 @@ function finishResize(id: string) {
     return
   }
 
-  const minSize = minSizeFor(w)
-  const snappedW = clamp(snap(state.w), minSize.w, BOARD_W)
-  const snappedH = clamp(snap(state.h), minSize.h, BOARD_H)
-  const snappedX = clamp(snap(state.x), 0, BOARD_W - snappedW)
-  const snappedY = clamp(snap(state.y), 0, BOARD_H - snappedH)
+  const cornerResize = (state.dir.includes('e') || state.dir.includes('w')) && (state.dir.includes('n') || state.dir.includes('s'))
+  const fineSnap = state.isText || cornerResize
+  const snappedW = clamp(fineSnap ? Math.round(state.w) : snap(state.w), state.minW, BOARD_W)
+  const snappedH = clamp(fineSnap ? Math.round(state.h) : snap(state.h), state.minH, BOARD_H)
+  const snappedX = clamp(fineSnap ? Math.round(state.x) : snap(state.x), 0, BOARD_W - snappedW)
+  const snappedY = clamp(fineSnap ? Math.round(state.y) : snap(state.y), 0, BOARD_H - snappedH)
 
   w.w = snappedW
   w.h = snappedH
   w.x = snappedX
   w.y = snappedY
   clampWidget(w)
-  if (el) applyWidgetDOM(el, w)
+
+  setSnapGuides(null, null)
 
   clearResizeState(id)
   setCanvasPanEnabled(true)
-  scheduleSave()
   activeResizeId = null
+
+  if (state.isText) {
+    const preserveMode: 'resize' | 'scale' = cornerResize ? 'scale' : 'resize'
+    fitTextWidgetAfterRender(w, widgetEls.get(id) ?? el ?? null, {
+      preserveWidth: shouldPreserveTextWidth(w, preserveMode),
+    })
+    nextTick(() => {
+      const liveEl = widgetEls.get(id) ?? el ?? null
+      if (liveEl) applyWidgetDOM(liveEl, w)
+      scheduleSave()
+    })
+    return
+  }
+
+  if (el) applyWidgetDOM(el, w)
+  scheduleSave()
+}
+
+function applyTextScaleStep(state: TextScaleState) {
+  if (!Number.isFinite(state.pendingDelta) || Math.abs(state.pendingDelta) < 0.001) return
+  const w = widgets.value.find((x) => x.id === state.widgetId)
+  if (!w || !isTextWidget(w)) {
+    state.pendingDelta = 0
+    return
+  }
+
+  const bounds = textWidgetFontBounds(w)
+  const nextScale = clamp(
+    state.appliedScale + state.pendingDelta,
+    bounds.min,
+    bounds.max,
+  )
+  state.pendingDelta = 0
+  state.appliedScale = nextScale
+
+  const nextFontSize = Math.round(nextScale)
+  if (Number(w.props?.fontSize) !== nextFontSize) {
+    w.props = {
+      ...(w.props ?? {}),
+      fontSize: nextFontSize,
+    }
+  }
+
+  const minSize = minSizeFor(w)
+  const preserveWidthOnScale = shouldPreserveTextWidth(w, 'scale')
+  const measured = estimateTextWidgetSize(w, {
+    targetWidth: w.w,
+    targetHeight: w.h,
+    lockWidth: preserveWidthOnScale,
+  })
+  const nextWidth = preserveWidthOnScale
+    ? clamp(w.w, minSize.w, BOARD_W)
+    : clamp(measured.w, minSize.w, BOARD_W)
+  const nextHeight = clamp(measured.h, minSize.h, BOARD_H)
+  if (w.w !== nextWidth) {
+    w.w = nextWidth
+  }
+  if (w.h !== nextHeight) {
+    w.h = nextHeight
+  }
+}
+
+function scheduleTextScaleApply(state: TextScaleState) {
+  if (state.raf) return
+  state.raf = requestAnimationFrame(() => {
+    state.raf = null
+    applyTextScaleStep(state)
+    if (Math.abs(state.pendingDelta) >= 0.001) {
+      scheduleTextScaleApply(state)
+    }
+  })
+}
+
+function onTextScalePointerMove(event: PointerEvent) {
+  const state = activeTextScaleState
+  if (!state) return
+
+  const dx = event.clientX - state.lastX
+  const dy = event.clientY - state.lastY
+  state.lastX = event.clientX
+  state.lastY = event.clientY
+  state.pendingDelta += Math.max(dx, dy) / 2.2
+  scheduleTextScaleApply(state)
+}
+
+function finishTextScale() {
+  const state = activeTextScaleState
+  if (state?.raf) {
+    cancelAnimationFrame(state.raf)
+    state.raf = null
+  }
+  if (state) {
+    applyTextScaleStep(state)
+  }
+  clearTextScaleState()
+  setSnapGuides(null, null)
+  setCanvasPanEnabled(true)
+  if (!state) return
+
+  const w = widgets.value.find((x) => x.id === state.widgetId)
+  if (!w || !isTextWidget(w)) return
+
+  fitTextWidgetAfterRender(w, widgetEls.get(w.id) ?? null, {
+    preserveWidth: shouldPreserveTextWidth(w, 'scale'),
+  })
+  scheduleSave()
+}
+
+function onTextScalePointerUp() {
+  window.removeEventListener('pointermove', onTextScalePointerMove)
+  finishTextScale()
 }
 
 function onResizePointerUp() {
   window.removeEventListener('pointermove', onResizePointerMove)
+  if (activeGroupResizeState) {
+    finishGroupResize()
+    return
+  }
   if (!activeResizeId) return
   if (!resizeStates.has(activeResizeId)) {
+    setSnapGuides(null, null)
     activeResizeId = null
     setCanvasPanEnabled(true)
     return
@@ -1544,6 +3572,10 @@ function onResizePointerUp() {
 function detachAllInteract() {
   window.removeEventListener('pointermove', onGlobalPointerMove)
   window.removeEventListener('pointermove', onResizePointerMove)
+  window.removeEventListener('pointermove', onTextScalePointerMove)
+  window.removeEventListener('pointermove', onMarqueePointerMove)
+  window.removeEventListener('pointerup', onMarqueePointerUp)
+  window.removeEventListener('pointercancel', onMarqueePointerUp)
   widgetEls.forEach((el) => {
     if (!el || !el.classList) return
     el.classList.remove('is-dragging')
@@ -1551,17 +3583,26 @@ function detachAllInteract() {
   })
   dragStates.clear()
   activeDragId = null
+  activeDragIds = []
   resizeStates.clear()
   activeResizeId = null
+  clearGroupResizeState()
+  clearTextScaleState()
+  marqueeSelection.value = null
+  activeTextWidgetId.value = null
+  clearSelection()
+  setSnapGuides(null, null)
   setCanvasPanEnabled(true)
 }
 
 watch(
   editMode,
   async (enabled) => {
-    syncPanzoomExclude(enabled)
+    if (!enabled) setSpacePanState(false)
+    syncPanzoomExclude(shouldUsePanzoomExclude())
     if (!enabled) {
       dragArmedId.value = null
+      activeTextWidgetId.value = null
       detachAllInteract()
       return
     }
@@ -1569,21 +3610,50 @@ watch(
   { immediate: true },
 )
 
+watch(scale, () => {
+  scheduleVisibleRectUpdate()
+})
+
+watch(
+  () => widgets.value.length,
+  () => {
+    scheduleVisibleRectUpdate()
+  },
+)
+
+watch(
+  [paletteOpen, settingsOpen, profileEditorOpen, shortcutHelpOpen],
+  ([palette, settings, profileEditor, shortcutOpen]) => {
+    if (palette || settings || profileEditor || shortcutOpen) {
+      setSpacePanState(false)
+    }
+  },
+)
+
 watch(
   userId,
   async () => {
+    const expectedUserId = String(userId.value)
+    clearPendingSaves()
     loadEditMode()
     detachAllInteract()
     loadLayoutForUser()
     applyStoredRangeForActiveProfile()
     await nextTick()
+    if (String(userId.value) !== expectedUserId) return
     widgets.value.forEach((w) => clampWidget(w))
     centerView()
-    if (userId.value !== 'guest') {
-      await loadLayoutFromServer()
+    if (expectedUserId !== 'guest') {
+      await loadLayoutFromServer(expectedUserId)
     }
+    if (String(userId.value) !== expectedUserId) return
     await loadDateBounds()
-    await loadCategories(from.value, to.value)
+    if (String(userId.value) !== expectedUserId) return
+    if (widgets.value.some((w) => widgetNeedsCategoryFilter(w))) {
+      void loadCategories(from.value, to.value)
+    }
+    if (String(userId.value) !== expectedUserId) return
+    applyStoredRangeForActiveProfile()
   },
   { immediate: false },
 )
@@ -1640,7 +3710,79 @@ async function loadCategories(fromVal?: string, toVal?: string) {
 /* ===== Actions ===== */
 function removeWidget(id: string) {
   if (!editMode.value) return
-  widgets.value = widgets.value.filter((w) => w.id !== id)
+  const idx = widgets.value.findIndex((w) => w.id === id)
+  if (idx < 0) return
+  clearDragState(id)
+  clearResizeState(id)
+  if (activeDragId === id) activeDragId = null
+  if (activeResizeId === id) activeResizeId = null
+  if (activeTextScaleState?.widgetId === id) {
+    clearTextScaleState()
+    setCanvasPanEnabled(true)
+  }
+  if (dragArmedId.value === id) dragArmedId.value = null
+  if (activeTextWidgetId.value === id) activeTextWidgetId.value = null
+  if (selectedWidgetIds.value.length) {
+    selectedWidgetIds.value = selectedWidgetIds.value.filter((item) => item !== id)
+  }
+  widgets.value.splice(idx, 1)
+  setSnapGuides(null, null)
+  scheduleSave()
+}
+
+function removeSelectedWidgets() {
+  if (!editMode.value) return
+  if (!selectedWidgetIds.value.length) return
+  const ids = [...selectedWidgetIds.value]
+  for (const id of ids) {
+    removeWidget(id)
+  }
+  clearSelection()
+}
+
+function onWidgetRemove(id: string) {
+  if (selectedWidgetIds.value.length > 1 && selectedWidgetIds.value.includes(id)) {
+    removeSelectedWidgets()
+    return
+  }
+  removeWidget(id)
+}
+
+function createWidgetId(type: string) {
+  const uid =
+    globalThis.crypto?.randomUUID?.() ?? `${Date.now()}_${Math.random().toString(16).slice(2)}`
+  return `${type}_${uid}`
+}
+
+function duplicateWidget(id: string) {
+  if (!editMode.value) return
+  const source = widgets.value.find((w) => w.id === id)
+  if (!source) return
+
+  const offset = GRID * 6
+  const duplicate: Widget = {
+    ...source,
+    id: createWidgetId(source.type),
+    x: source.x + offset,
+    y: source.y + offset,
+    props: { ...(source.props ?? {}) },
+    z: ++zTop,
+  }
+
+  const placed = placeWidget(duplicate, duplicate.x + duplicate.w / 2, duplicate.y + duplicate.h / 2)
+  duplicate.x = placed.x
+  duplicate.y = placed.y
+  clampWidget(duplicate)
+
+  widgets.value.push(duplicate)
+  setSelectedWidgets([duplicate.id])
+  dragArmedId.value = duplicate.id
+  setActiveTextWidget(isTextWidget(duplicate) ? duplicate.id : null)
+  if (isTextWidget(duplicate)) {
+    fitTextWidgetAfterRender(duplicate, widgetEls.get(duplicate.id) ?? null, {
+      preserveWidth: shouldPreserveTextWidth(duplicate, 'duplicate'),
+    })
+  }
   scheduleSave()
 }
 
@@ -1660,6 +3802,7 @@ function resetLayout() {
     // recentre la caméra au milieu de la board (vu que plus de widgets)
     centerView()
     // save immédiat (pour être sûr que le layout vide est persisté)
+    scheduleVisibleRectUpdate()
     saveLayoutNow()
   })
 }
@@ -1690,14 +3833,25 @@ function addWidget(payload: string | { type: string; view?: string }) {
     w.props = { ...(w.props ?? {}), view }
   }
 
-  widgets.value.push(w)
+  if (isTextWidget(w)) {
+    const textDefaultColor = themeMode.value === 'light' ? '#000000' : '#f8fafc'
+    w.props = { ...(w.props ?? {}), color: textDefaultColor }
+    fitWidgetToContent(w)
+  }
 
-  nextTick(() => {
-    scheduleSave()
-  })
+  widgets.value.push(w)
+  setSelectedWidgets([w.id])
+  scheduleVisibleRectUpdate()
+
+  if (isTextWidget(w)) {
+    setActiveTextWidget(w.id)
+    fitTextWidgetAfterRender(w, widgetEls.get(w.id) ?? null, {
+      preserveWidth: shouldPreserveTextWidth(w, 'content'),
+    })
+  }
+  scheduleSave()
 }
 
-const fullscreenActive = ref(false)
 function onWidgetFullscreenChange(active: boolean) {
   fullscreenActive.value = active
   if (active) {
@@ -1707,10 +3861,18 @@ function onWidgetFullscreenChange(active: boolean) {
   }
 }
 
+watch(fullscreenActive, (active) => {
+  if (active) setSpacePanState(false)
+})
+
 function autoResize(id: string, height: number) {
   const w = widgets.value.find((x) => x.id === id)
   if (!w) return
   if (!Number.isFinite(height)) return
+  const isSingleResizeActive = activeResizeId === id && resizeStates.has(id)
+  const isGroupResizeActive = Boolean(activeGroupResizeState?.members.some((member) => member.id === id))
+  const isTextScaleActive = activeTextScaleState?.widgetId === id
+  if (isSingleResizeActive || isGroupResizeActive || isTextScaleActive) return
   const minSize = minSizeFor(w)
   const nextH = clamp(height, minSize.h, BOARD_H)
   if (Math.abs(nextH - w.h) < 2) return
@@ -1719,25 +3881,70 @@ function autoResize(id: string, height: number) {
   scheduleSave()
 }
 
+function onSelectionKeyDown(event: KeyboardEvent) {
+  if (!editMode.value) return
+  const target = event.target as HTMLElement | null
+  if (target?.closest('input, textarea, select, [contenteditable="true"]')) return
+  if (event.key === 'Delete' || event.key === 'Backspace') {
+    if (!selectedWidgetIds.value.length) return
+    event.preventDefault()
+    event.stopPropagation()
+    removeSelectedWidgets()
+    return
+  }
+  if (event.key !== 'Enter' && event.key !== 'F2') return
+  if (selectedWidgetIds.value.length !== 1) return
+  const selectedId = selectedWidgetIds.value[0]
+  const selectedWidget = widgets.value.find((item) => item.id === selectedId)
+  if (!selectedWidget) return
+  event.preventDefault()
+  event.stopPropagation()
+  if (isTextWidget(selectedWidget)) {
+    setActiveTextWidget(selectedId)
+    return
+  }
+  openSettings(selectedWidget)
+}
+
 /* ===== Lifecycle ===== */
 onMounted(async () => {
   // init camera + centre quand la vue est prête
   camera.init(() => {
     centerView()
-    syncPanzoomExclude(editMode.value)
+    syncPanzoomExclude(shouldUsePanzoomExclude())
     if (window.innerWidth < 1024) zoomToFitContent()
+    scheduleVisibleRectUpdate()
   })
 
+  window.addEventListener('keydown', onCanvasKeyDown, { capture: true })
+  window.addEventListener('keydown', onSelectionKeyDown, { capture: true })
+  window.addEventListener('keyup', onCanvasKeyUp, { capture: true })
+  window.addEventListener('blur', onWindowBlur)
+  document.addEventListener('visibilitychange', onVisibilityChange)
+
   await nextTick()
+  const board = boardEl.value
+  if (board) {
+    const onPanzoomChange = () => scheduleVisibleRectUpdate()
+    board.addEventListener('panzoomchange', onPanzoomChange as EventListener)
+    onBeforeUnmount(() => board.removeEventListener('panzoomchange', onPanzoomChange as EventListener))
+  }
+  scheduleVisibleRectUpdate()
 
   widgets.value.forEach((w) => clampWidget(w))
   if (editMode.value) disarmWidget()
 
-  if (userId.value !== 'guest') {
-    await loadLayoutFromServer()
+  const expectedUserId = String(userId.value)
+  if (expectedUserId !== 'guest') {
+    await loadLayoutFromServer(expectedUserId)
   }
+  if (String(userId.value) !== expectedUserId) return
   await loadDateBounds()
-  await loadCategories(from.value, to.value)
+  if (String(userId.value) !== expectedUserId) return
+  if (widgets.value.some((w) => widgetNeedsCategoryFilter(w))) {
+    void loadCategories(from.value, to.value)
+  }
+  if (String(userId.value) !== expectedUserId) return
   applyStoredRangeForActiveProfile()
 
   const resizeHandler = () => {
@@ -1748,6 +3955,7 @@ onMounted(async () => {
       datePanelOpen.value = !compact // ouvert par défaut en large, fermé en compact
     }
     if (!wasCompact && compact) zoomToFitContent()
+    scheduleVisibleRectUpdate()
   }
   resizeHandler()
   window.addEventListener('resize', resizeHandler, { passive: true })
@@ -1755,6 +3963,18 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  setSpacePanState(false)
+  clearVisibleRectRaf()
+  window.removeEventListener('keydown', onCanvasKeyDown, true)
+  window.removeEventListener('keydown', onSelectionKeyDown, true)
+  window.removeEventListener('keyup', onCanvasKeyUp, true)
+  window.removeEventListener('blur', onWindowBlur)
+  document.removeEventListener('visibilitychange', onVisibilityChange)
+  clearPendingSaves()
+  if (toastTimer) {
+    window.clearTimeout(toastTimer)
+    toastTimer = null
+  }
   detachAllInteract()
   camera.destroy()
 })
@@ -1776,6 +3996,7 @@ function switchProfile(profileId: string) {
   nextTick(() => {
     widgets.value.forEach((w) => clampWidget(w))
     centerView()
+    scheduleVisibleRectUpdate()
   })
 }
 
@@ -1810,574 +4031,7 @@ function saveProfileEditor() {
 
 </script>
 
-<style scoped>
-.canvas-root {
-  --bg: #060a12;
-  --stats-top-gap: max(16px, env(safe-area-inset-top, 0px) + 10px);
-  --stats-side-gap: clamp(10px, 2.8vw, 18px);
-  --stats-bottom-gap: max(16px, env(safe-area-inset-bottom, 0px) + 10px);
-  --stats-toolbar-clearance: 84px;
-  --stats-profile-clearance: 76px;
-  position: relative;
-  width: 100%;
-  height: 100%;
-  min-height: 100svh;
-  min-height: 100dvh;
-  overflow: hidden;
-  background: var(--bg);
-}
+<style scoped src="./StatsCanvas.css"></style>
 
-.viewport {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  overscroll-behavior: contain;
-  touch-action: none;
-}
-.viewport,
-.board {
-  touch-action: none;
-}
 
-.board {
-  width: 9000px;
-  height: 6000px;
-  position: relative;
-  z-index: 1;
-  background:
-    radial-gradient(circle at 1px 1px, rgba(170, 200, 255, 0.1) 1px, transparent 1.6px) 0 0 / 28px
-      28px,
-    radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.04) 1px, transparent 1.8px) 0 0 / 8px
-      8px,
-    linear-gradient(180deg, #050812 0%, #040611 100%);
-}
 
-.edit-grid {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.35;
-  z-index: 2;
-  background:
-    linear-gradient(transparent 23px, rgba(148, 163, 184, 0.08) 24px) 0 0 / 24px 24px,
-    linear-gradient(90deg, transparent 23px, rgba(148, 163, 184, 0.08) 24px) 0 0 / 24px 24px;
-  mix-blend-mode: scréen;
-}
-
-.date-panel {
-  position: fixed;
-  top: var(--stats-top-gap);
-  left: var(--stats-side-gap);
-  width: min(280px, calc(100vw - (var(--stats-side-gap) * 2) - 84px));
-  max-width: calc(100vw - (var(--stats-side-gap) * 2) - 84px);
-  z-index: 60;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 8px 10px;
-  border-radius: 12px;
-  background: rgba(2, 6, 23, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(12px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-  touch-action: manipulation;
-}
-.date-toggle {
-  position: fixed;
-  top: var(--stats-top-gap);
-  left: var(--stats-side-gap);
-  z-index: 61;
-  width: 34px;
-  height: 34px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(7, 11, 20, 0.7);
-  color: rgba(226, 232, 240, 0.9);
-  display: grid;
-  place-items: center;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
-}
-.date-panel--compact {
-  top: auto;
-  left: var(--stats-side-gap);
-  right: var(--stats-side-gap);
-  bottom: calc(var(--stats-bottom-gap) + var(--stats-profile-clearance) + 18px);
-  width: auto;
-  max-width: none;
-}
-.date-toggle--compact {
-  top: auto;
-  left: var(--stats-side-gap);
-  bottom: calc(var(--stats-bottom-gap) + var(--stats-profile-clearance) + 8px);
-}
-.date-toggle:hover {
-  border-color: rgba(148, 163, 184, 0.35);
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.date-title {
-  font-size: 0.58rem;
-  text-transform: uppercase;
-  letter-spacing: 0.22em;
-  color: rgba(148, 163, 184, 0.8);
-}
-
-.date-row {
-  display: grid;
-  gap: 8px;
-}
-
-@media (min-width: 640px) {
-  .date-row {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
-.date-actions {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.date-chip {
-  height: 24px;
-  padding: 0 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 0.7rem;
-  transition:
-    border-color 160ms ease,
-    background 160ms ease,
-    transform 140ms ease;
-  touch-action: manipulation;
-}
-.date-chip:hover {
-  border-color: rgba(148, 163, 184, 0.35);
-  background: rgba(255, 255, 255, 0.08);
-  transform: translateY(-1px);
-}
-
-@media (hover: none) and (pointer: coarse) {
-  .date-panel {
-    padding: 10px 12px;
-    gap: 8px;
-    border-radius: 14px;
-  }
-  .date-title {
-    font-size: 0.68rem;
-  }
-  .date-chip {
-    height: 30px;
-    padding: 0 12px;
-    font-size: 0.78rem;
-  }
-}
-
-.snap-guide {
-  position: absolute;
-  z-index: 3;
-  pointer-events: none;
-  background: rgba(139, 92, 246, 0.35);
-  box-shadow: 0 0 8px rgba(139, 92, 246, 0.2);
-}
-.snap-guide--x {
-  top: 0;
-  bottom: 0;
-  width: 1px;
-}
-.snap-guide--y {
-  left: 0;
-  right: 0;
-  height: 1px;
-}
-
-.save-toast {
-  position: fixed;
-  right: var(--stats-side-gap);
-  bottom: calc(var(--stats-bottom-gap) + var(--stats-profile-clearance) + 10px);
-  z-index: 80;
-  padding: 10px 14px;
-  border-radius: 12px;
-  background: rgba(15, 23, 42, 0.85);
-  border: 1px solid rgba(148, 163, 184, 0.25);
-  color: rgba(226, 232, 240, 0.95);
-  font-size: 0.85rem;
-  letter-spacing: 0.01em;
-  pointer-events: none;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
-}
-
-.save-toast-enter-active,
-.save-toast-leave-active {
-  transition:
-    opacity 160ms ease,
-    transform 160ms ease;
-}
-.save-toast-enter-from,
-.save-toast-leave-to {
-  opacity: 0;
-  transform: translateY(6px);
-}
-
-/* Profil selector */
-.profile-switcher {
-  position: fixed;
-  left: var(--stats-side-gap);
-  right: auto;
-  bottom: var(--stats-bottom-gap);
-  z-index: 70;
-  display: inline-flex;
-  max-width: min(calc(100vw - (var(--stats-side-gap) * 2) - 72px), 560px);
-  gap: 6px;
-  padding: 6px;
-  border-radius: 999px;
-  background: rgba(10, 12, 18, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  backdrop-filter: blur(12px);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-.profile-switcher::-webkit-scrollbar {
-  display: none;
-}
-.profile-pill {
-  height: 30px;
-  padding: 0 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(226, 232, 240, 0.9);
-  font-size: 12px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  transition:
-    border-color 160ms ease,
-    background 160ms ease,
-    transform 140ms ease;
-}
-.profile-edit {
-  width: 32px;
-  height: 32px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(226, 232, 240, 0.9);
-  display: grid;
-  place-items: center;
-  transition:
-    border-color 160ms ease,
-    background 160ms ease,
-    transform 140ms ease;
-}
-.profile-edit:hover {
-  border-color: rgba(148, 163, 184, 0.4);
-  background: rgba(255, 255, 255, 0.14);
-  transform: translateY(-1px);
-}
-.profile-pill:hover {
-  border-color: rgba(148, 163, 184, 0.4);
-  background: rgba(255, 255, 255, 0.1);
-  transform: translateY(-1px);
-}
-.profile-pill.is-active {
-  border-color: rgba(255, 255, 255, 0.35);
-  background: rgba(255, 255, 255, 0.14);
-}
-.profile-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-}
-.profile-label {
-  letter-spacing: 0.02em;
-}
-
-@media (max-width: 768px) {
-  .canvas-root {
-    --stats-toolbar-clearance: 132px;
-    --stats-profile-clearance: 64px;
-  }
-  .mobile-toolbar {
-    position: fixed;
-    left: var(--stats-side-gap);
-    right: var(--stats-side-gap);
-    bottom: calc(var(--stats-bottom-gap) + var(--stats-profile-clearance) + 12px);
-    z-index: 72;
-    display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-    gap: 6px;
-    padding: 6px;
-    border-radius: 18px;
-    background: rgba(10, 12, 18, 0.78);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    backdrop-filter: blur(14px);
-    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.38);
-  }
-  .mobile-toolbtn {
-    min-width: 0;
-    height: 42px;
-    border-radius: 14px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    background: rgba(255, 255, 255, 0.06);
-    color: rgba(226, 232, 240, 0.92);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    font-size: 0.83rem;
-    font-weight: 700;
-    letter-spacing: 0.01em;
-    touch-action: manipulation;
-  }
-  .mobile-toolbtn.is-active {
-    border-color: rgba(167, 243, 208, 0.35);
-    background: rgba(16, 185, 129, 0.14);
-    color: rgba(209, 250, 229, 0.98);
-  }
-  .mobile-toolbtn--accent {
-    border-color: rgba(129, 140, 248, 0.35);
-    background: rgba(99, 102, 241, 0.18);
-  }
-  .mobile-toolbtn:disabled {
-    opacity: 0.45;
-    pointer-events: none;
-  }
-  .mobile-toolbtn--scale {
-    font-variant-numeric: tabular-nums;
-  }
-  .profile-switcher {
-    left: var(--stats-side-gap);
-    right: var(--stats-side-gap);
-    bottom: var(--stats-bottom-gap);
-    max-width: none;
-    gap: 5px;
-    padding: 6px;
-    border-radius: 16px;
-    flex-wrap: nowrap;
-  }
-  .profile-pill {
-    height: 28px;
-    padding: 0 8px;
-    gap: 6px;
-    font-size: 11px;
-    flex: 0 0 auto;
-  }
-  .profile-label {
-    display: none;
-  }
-  .profile-edit {
-    width: 30px;
-    height: 30px;
-    flex: 0 0 auto;
-  }
-}
-
-@media (max-width: 1024px) {
-  .canvas-root {
-    --stats-profile-clearance: 70px;
-  }
-  .date-panel {
-    width: min(300px, calc(100vw - (var(--stats-side-gap) * 2) - 72px));
-    max-width: calc(100vw - (var(--stats-side-gap) * 2) - 72px);
-  }
-}
-
-@media (max-width: 640px) {
-  .canvas-root {
-    --stats-side-gap: 12px;
-    --stats-toolbar-clearance: 126px;
-    --stats-profile-clearance: 60px;
-  }
-  .date-panel {
-    padding: 9px 10px;
-    border-radius: 14px;
-    width: min(260px, calc(100vw - (var(--stats-side-gap) * 2) - 68px));
-    max-width: calc(100vw - (var(--stats-side-gap) * 2) - 68px);
-  }
-  .date-panel--compact {
-    bottom: calc(var(--stats-bottom-gap) + var(--stats-profile-clearance) + 74px);
-  }
-  .date-toggle--compact {
-    bottom: calc(var(--stats-bottom-gap) + var(--stats-profile-clearance) + 74px);
-  }
-  .save-toast {
-    left: var(--stats-side-gap);
-    right: var(--stats-side-gap);
-    bottom: calc(var(--stats-bottom-gap) + var(--stats-profile-clearance) + 74px);
-    text-align: center;
-  }
-  .profile-panel {
-    top: auto;
-    left: 12px;
-    right: 12px;
-    bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
-    transform: none;
-    width: auto;
-    max-height: min(78dvh, 720px);
-    overflow: auto;
-  }
-}
-
-@media (max-width: 420px) {
-  .canvas-root {
-    --stats-side-gap: 10px;
-    --stats-profile-clearance: 56px;
-  }
-  .mobile-toolbar {
-    gap: 5px;
-    padding: 5px;
-    border-radius: 16px;
-  }
-  .date-toggle {
-    width: 36px;
-    height: 36px;
-  }
-  .date-panel {
-    width: min(232px, calc(100vw - (var(--stats-side-gap) * 2) - 62px));
-    max-width: calc(100vw - (var(--stats-side-gap) * 2) - 62px);
-  }
-  .profile-switcher {
-    padding: 5px;
-    gap: 4px;
-  }
-  .profile-pill {
-    min-width: 28px;
-    padding: 0 7px;
-  }
-  .mobile-toolbtn {
-    height: 40px;
-    border-radius: 12px;
-    font-size: 0.76rem;
-  }
-}
-
-.profile-modal {
-  position: fixed;
-  inset: 0;
-  z-index: 80;
-}
-.profile-backdrop {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(6px);
-}
-.profile-panel {
-  position: fixed;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: min(520px, 92vw);
-  box-shadow:
-    0 30px 80px rgba(0, 0, 0, 0.55),
-    inset 0 1px 0 rgba(255, 255, 255, 0.12);
-}
-.glass-footer {
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(10, 12, 18, 0.6);
-  backdrop-filter: blur(12px);
-}
-.glass-btn {
-  position: relative;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.95);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 8px 18px rgba(0, 0, 0, 0.25);
-}
-.glass-btn:hover {
-  background: rgba(255, 255, 255, 0.18);
-}
-.glass-btn-primary {
-  background: rgba(99, 102, 241, 0.4);
-  border-color: rgba(99, 102, 241, 0.55);
-}
-.glass-btn-primary:hover {
-  background: rgba(99, 102, 241, 0.55);
-}
-.profile-grid {
-  display: grid;
-  gap: 10px;
-}
-.profile-help {
-  font-size: 12px;
-  color: rgba(226, 232, 240, 0.6);
-}
-.profile-card {
-  display: grid;
-  gap: 8px;
-  padding: 10px;
-  border-radius: 16px;
-  background: rgba(12, 16, 24, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 14px 30px rgba(0, 0, 0, 0.35);
-}
-.profile-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.profile-title {
-  font-size: 12px;
-  color: rgba(226, 232, 240, 0.85);
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-}
-.profile-preview {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  color: rgba(226, 232, 240, 0.8);
-}
-.profile-preview-name {
-  font-weight: 600;
-}
-.profile-row {
-  display: grid;
-  grid-template-columns: 1fr 42px;
-  gap: 6px;
-  align-items: center;
-}
-.color-swatch {
-  width: 42px;
-  height: 40px;
-  border-radius: 12px;
-  padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: transparent;
-}
-.color-swatch.is-round {
-  width: 30px;
-  height: 30px;
-  border-radius: 999px;
-  border: 2px solid rgba(255, 255, 255, 0.28);
-  background-color: transparent;
-  box-shadow:
-    0 0 0 3px rgba(0, 0, 0, 0.35),
-    inset 0 0 0 2px rgba(255, 255, 255, 0.08);
-  padding: 0;
-  overflow: hidden;
-}
-.color-swatch.is-round::-webkit-color-swatch-wrapper {
-  padding: 0;
-}
-.color-swatch.is-round::-webkit-color-swatch {
-  border: none;
-  border-radius: 999px;
-}
-.color-swatch.is-round::-moz-color-swatch {
-  border: none;
-  border-radius: 999px;
-}
-
-/* ✅ en mode édition, on peut drag “partout” (même sur les charts) */
-</style>

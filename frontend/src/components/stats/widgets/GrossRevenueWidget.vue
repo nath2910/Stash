@@ -3,14 +3,19 @@
     title="Chiffre d'affaires"
     subtitle="Synthese et evolution sur la periode"
     :accent="accent"
+    surface="trend"
     :loading="loading"
     :error="error"
+    :widget-width="props.widgetWidth"
+    :widget-height="props.widgetHeight"
+    :widget-base-width="props.widgetBaseWidth"
+    :widget-base-height="props.widgetBaseHeight"
   >
     <div class="flex flex-col gap-4">
       <div class="flex items-start justify-between gap-6">
         <div class="min-w-0">
-          <div class="text-[11px] uppercase tracking-[0.2em] text-white/45">Total periode</div>
-          <div class="mt-1 text-3xl font-bold text-white leading-none tracking-tight">
+          <div class="gr-kicker">Total periode</div>
+          <div class="gr-total mt-1">
             {{ totalText }}
           </div>
           <div class="mt-2 flex items-center gap-2">
@@ -64,7 +69,7 @@
         </div>
       </div>
 
-      <div class="h-[280px]">
+      <div class="gr-chart">
         <VChart class="w-full h-full" :option="option" autoresize />
       </div>
     </div>
@@ -84,6 +89,10 @@ const props = defineProps({
   bucket: { type: String, default: 'day' },
   categories: { type: Array, default: () => [] },
   types: { type: Array, default: () => [] },
+  widgetWidth: { type: Number, default: 820 },
+  widgetHeight: { type: Number, default: 520 },
+  widgetBaseWidth: { type: Number, default: 0 },
+  widgetBaseHeight: { type: Number, default: 0 },
 })
 const accent = '#3B82F6'
 
@@ -186,6 +195,15 @@ const fromLabel = computed(() =>
 const toLabel = computed(() =>
   formatDateFR(props.to, { day: '2-digit', month: 'short', year: 'numeric' }),
 )
+const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
+const totalSize = computed(() => {
+  const base = Math.min(props.widgetWidth * 0.045, props.widgetHeight * 0.14)
+  return `${clamp(Math.round(base), 28, 54)}px`
+})
+const chartHeight = computed(() => {
+  const h = clamp(Math.round(props.widgetHeight * 0.58), 240, 460)
+  return `${h}px`
+})
 
 const option = computed(() => {
   const x = series.value.map((p) => p.date)
@@ -301,6 +319,24 @@ function diffMonths(a, b) {
 </script>
 
 <style scoped>
+.gr-kicker {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.gr-total {
+  font-size: v-bind(totalSize);
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.98);
+  line-height: 0.96;
+  letter-spacing: -0.04em;
+}
+
+.gr-chart {
+  height: v-bind(chartHeight);
+}
 .period-chip {
   display: inline-flex;
   align-items: center;

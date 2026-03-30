@@ -3,6 +3,7 @@
     title="Taux retours / litiges"
     subtitle="À surveiller"
     :accent="accent"
+    surface="trend"
     :loading="loading"
     :error="error"
     :option="option"

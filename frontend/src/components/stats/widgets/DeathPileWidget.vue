@@ -3,8 +3,13 @@
     title="Stock dormant"
     subtitle="Age des paires en stock"
     :accent="accent"
+    surface="distribution"
     :loading="loading"
     :error="error"
+    :widget-width="props.widgetWidth"
+    :widget-height="props.widgetHeight"
+    :widget-base-width="props.widgetBaseWidth"
+    :widget-base-height="props.widgetBaseHeight"
   >
     <div class="dp-header">
       <div class="dp-tabs">
@@ -51,6 +56,10 @@ import WidgetCard from './_parts/WidgetCard.vue'
 const props = defineProps({
   from: String,
   to: String,
+  widgetWidth: { type: Number, default: 620 },
+  widgetHeight: { type: Number, default: 470 },
+  widgetBaseWidth: { type: Number, default: 0 },
+  widgetBaseHeight: { type: Number, default: 0 },
   categories: { type: Array, default: () => [] },
   types: { type: Array, default: () => [] },
 })

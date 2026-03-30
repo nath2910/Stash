@@ -3,8 +3,13 @@
     title="Top ventes"
     subtitle="Plus gros benefices"
     :accent="accent"
+    surface="ranking"
     :loading="loading"
     :error="error"
+    :widget-width="props.widgetWidth"
+    :widget-height="props.widgetHeight"
+    :widget-base-width="props.widgetBaseWidth"
+    :widget-base-height="props.widgetBaseHeight"
   >
     <div class="space-y-2">
       <div
@@ -25,6 +30,7 @@
       <button
         type="button"
         class="inline-flex items-center justify-center gap-2 rounded-full border border-emerald-400/40 bg-gradient-to-r from-emerald-500/15 via-emerald-500/5 to-transparent px-4 py-2 text-xs font-semibold uppercase tracking-wide text-emerald-200 shadow-[0_0_20px_rgba(16,185,129,0.15)] transition hover:border-emerald-300/70 hover:text-emerald-100"
+        :aria-label="expanded ? 'Reduire la liste des top ventes' : 'Afficher plus de ventes'"
         @click="expanded = !expanded"
       >
         <span>{{ expanded ? 'Reduire la liste' : 'Voir plus' }}</span>
@@ -47,6 +53,10 @@ const props = defineProps({
   from: String,
   to: String,
   limit: { type: Number, default: 5 },
+  widgetWidth: { type: Number, default: 620 },
+  widgetHeight: { type: Number, default: 420 },
+  widgetBaseWidth: { type: Number, default: 0 },
+  widgetBaseHeight: { type: Number, default: 0 },
   categories: { type: Array, default: () => [] },
   types: { type: Array, default: () => [] },
 })

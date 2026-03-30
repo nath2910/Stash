@@ -3,8 +3,13 @@
     title="Mix par type"
     :subtitle="subtitle"
     :accent="accent"
+    surface="distribution"
     :loading="loading"
     :error="error"
+    :widget-width="props.widgetWidth"
+    :widget-height="props.widgetHeight"
+    :widget-base-width="props.widgetBaseWidth"
+    :widget-base-height="props.widgetBaseHeight"
   >
     <div class="tm-head">
       <div class="tm-chip">
@@ -63,6 +68,10 @@ import WidgetCard from './_parts/WidgetCard.vue'
 const props = defineProps({
   from: String,
   to: String,
+  widgetWidth: { type: Number, default: 720 },
+  widgetHeight: { type: Number, default: 420 },
+  widgetBaseWidth: { type: Number, default: 0 },
+  widgetBaseHeight: { type: Number, default: 0 },
   categories: { type: Array, default: () => [] },
   types: { type: Array, default: () => [] },
   metric: { type: String, default: 'profit' },

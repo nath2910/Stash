@@ -3,8 +3,13 @@
     title="Top marques"
     subtitle="Volume des ventes"
     :accent="accent"
+    surface="distribution"
     :loading="loading"
     :error="error"
+    :widget-width="props.widgetWidth"
+    :widget-height="props.widgetHeight"
+    :widget-base-width="props.widgetBaseWidth"
+    :widget-base-height="props.widgetBaseHeight"
   >
     <VChart class="chart" :option="option" autoresize />
   </WidgetCard>
@@ -22,6 +27,10 @@ const props = defineProps({
   to: String,
   top: { type: Number, default: 8 },
   view: { type: String, default: 'bars' },
+  widgetWidth: { type: Number, default: 720 },
+  widgetHeight: { type: Number, default: 420 },
+  widgetBaseWidth: { type: Number, default: 0 },
+  widgetBaseHeight: { type: Number, default: 0 },
   categories: { type: Array, default: () => [] },
   types: { type: Array, default: () => [] },
 })

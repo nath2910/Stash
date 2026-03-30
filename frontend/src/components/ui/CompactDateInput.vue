@@ -1,11 +1,11 @@
 <template>
-  <label class="cd-root" :data-size="size">
+  <label class="cd-root" :class="{ 'is-light': light }" :data-size="size">
     <span v-if="label" class="cd-label">{{ label }}</span>
     <VueDatePicker
       v-model="localValue"
       :time-picker="false"
       :time-config="timeConfig"
-      :dark="true"
+      :dark="!light"
       :auto-apply="true"
       :teleport="true"
       :clearable="false"
@@ -24,7 +24,7 @@
     >
       <template #trigger="{ openMenu }">
         <button type="button" class="cd-input cd-input--btn" @click="openMenu()">
-          {{ displayValue || '—' }}
+          {{ displayValue || '--' }}
         </button>
       </template>
     </VueDatePicker>
@@ -43,8 +43,10 @@ const props = defineProps({
   size: { type: String, default: 'sm' },
   minDate: { type: String, default: '' },
   maxDate: { type: String, default: '' },
+  light: { type: Boolean, default: false },
 })
 const emit = defineEmits(['update:modelValue'])
+const light = computed(() => props.light)
 
 const localValue = computed({
   get() {
@@ -152,6 +154,21 @@ const maxDateValue = computed(() => parseYmdLocal(props.maxDate))
 .cd-root[data-size='md'] .cd-input {
   height: 30px;
   font-size: 0.76rem;
+}
+
+.cd-root.is-light .cd-label {
+  color: #000;
+}
+
+.cd-root.is-light .cd-input {
+  border-color: rgba(148, 163, 184, 0.48);
+  background: rgba(248, 250, 252, 0.96);
+  color: #000;
+}
+
+.cd-root.is-light .cd-input:hover {
+  border-color: rgba(100, 116, 139, 0.62);
+  background: rgba(255, 255, 255, 0.98);
 }
 
 @media (hover: none) and (pointer: coarse) {
@@ -286,3 +303,4 @@ const maxDateValue = computed(() => parseYmdLocal(props.maxDate))
   background: rgba(8, 10, 16, 0.95);
 }
 </style>
+

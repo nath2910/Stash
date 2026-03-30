@@ -3,6 +3,7 @@
     title="Prix de vente moyen"
     subtitle="ASP"
     :accent="accent"
+    surface="kpi"
     :loading="loading"
     :error="error"
     :valueText="valueText"

@@ -3,6 +3,7 @@
     title="Répartition par plateforme"
     subtitle="D’où vient l’argent"
     :accent="accent"
+    surface="distribution"
     :loading="loading"
     :error="error"
     :option="option"

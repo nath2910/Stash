@@ -3,6 +3,7 @@
     title="Delai moyen de vente"
     subtitle="Temps pour vendre"
     :accent="accent"
+    surface="kpi"
     :loading="loading"
     :error="error"
     :valueText="valueText"

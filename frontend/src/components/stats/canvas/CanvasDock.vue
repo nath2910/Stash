@@ -1,5 +1,5 @@
 <template>
-  <div ref="dockEl" class="dock">
+  <div ref="dockEl" class="dock" :class="{ 'is-light': themeMode === 'light' }">
     <button
       type="button"
       class="fab"
@@ -22,10 +22,10 @@
           type="button"
           class="dock-btn"
           @click="$emit('toggleEdit')"
-          title="Mode édition / figé"
+          title="Mode edition / fige"
         >
           <component :is="editMode ? LockOpen : Lock" class="w-5 h-5" />
-          <span>{{ editMode ? 'Mode édition' : 'Mode figé' }}</span>
+          <span>{{ editMode ? 'Mode edition' : 'Mode fige' }}</span>
         </button>
 
         <div class="dock-sep"></div>
@@ -42,11 +42,21 @@
           <span>Ajouter</span>
         </button>
 
+        <button
+          type="button"
+          class="dock-btn"
+          @click="$emit('toggleTheme')"
+          :title="themeMode === 'light' ? 'Activer le mode sombre' : 'Activer le mode clair'"
+        >
+          <component :is="themeMode === 'light' ? Moon : Sun" class="w-5 h-5" />
+          <span>{{ themeMode === 'light' ? 'Mode sombre' : 'Mode clair' }}</span>
+        </button>
+
         <div class="dock-section">
           <div class="dock-title">Vue</div>
 
           <div class="dock-row">
-            <button type="button" class="btn btn-icon" @click="$emit('zoomOut')" title="Dézoomer">
+            <button type="button" class="btn btn-icon" @click="$emit('zoomOut')" title="Dezoomer">
               <Minus class="w-5 h-5" />
             </button>
 
@@ -88,16 +98,18 @@
 
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { Plus, Minus, PlusSquare, LocateFixed, RotateCcw, X, Lock, LockOpen } from 'lucide-vue-next'
+import { Plus, Minus, PlusSquare, LocateFixed, RotateCcw, X, Lock, LockOpen, Sun, Moon } from 'lucide-vue-next'
 
 const props = defineProps<{
   editMode: boolean
   scale: number
   paletteOpen?: boolean
+  themeMode?: 'dark' | 'light'
 }>()
 
 defineEmits<{
   (e: 'toggleEdit'): void
+  (e: 'toggleTheme'): void
   (e: 'openPalette'): void
   (e: 'zoomIn'): void
   (e: 'zoomOut'): void
@@ -144,7 +156,7 @@ onBeforeUnmount(() => {
 .dock {
   position: fixed;
   top: max(78px, env(safe-area-inset-top, 0px) + 68px);
-  right: clamp(10px, 2.8vw, 18px);
+  right: calc(((100vw - min(100vw, 1536px)) / 2) + 12px);
   z-index: 60;
   display: flex;
   flex-direction: column;
@@ -152,7 +164,19 @@ onBeforeUnmount(() => {
   gap: 16px;
 }
 
-@media (max-width: 1024px) {
+@media (min-width: 640px) {
+  .dock {
+    right: calc(((100vw - min(100vw, 1536px)) / 2) + 20px);
+  }
+}
+
+@media (min-width: 1024px) {
+  .dock {
+    right: calc(((100vw - min(100vw, 1536px)) / 2) + 28px);
+  }
+}
+
+@media (max-width: 1023px) {
   .dock {
     top: auto;
     bottom: calc(env(safe-area-inset-bottom, 0px) + 86px);
@@ -305,6 +329,9 @@ onBeforeUnmount(() => {
   font-weight: 600;
   font-size: 0.92rem;
 }
+.dock-btn + .dock-btn {
+  margin-top: 8px;
+}
 .dock-btn.disabled,
 .dock-btn:disabled {
   opacity: 0.5;
@@ -405,4 +432,54 @@ onBeforeUnmount(() => {
   opacity: 0;
   transform: translateX(10px) scale(0.98);
 }
+
+.dock.is-light .fab {
+  border-color: rgba(148, 163, 184, 0.42);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(241, 245, 249, 0.94));
+  color: #1e293b;
+  box-shadow:
+    0 10px 24px rgba(15, 23, 42, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.62);
+}
+
+.dock.is-light .dock-panel {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(241, 245, 249, 0.94) 100%),
+    radial-gradient(120% 120% at 15% 0%, rgba(59, 130, 246, 0.14), transparent 60%);
+  border-color: rgba(148, 163, 184, 0.35);
+  box-shadow:
+    0 16px 36px rgba(15, 23, 42, 0.16),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.68);
+}
+
+.dock.is-light .dock-panel__title,
+.dock.is-light .dock-panel__hint,
+.dock.is-light .dock-title,
+.dock.is-light .dock-btn,
+.dock.is-light .btn {
+  color: #000;
+}
+
+.dock.is-light .dock-btn,
+.dock.is-light .btn {
+  border-color: rgba(100, 116, 139, 0.36);
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.dock.is-light .dock-btn:hover,
+.dock.is-light .btn:hover {
+  border-color: rgba(71, 85, 105, 0.52);
+  background: rgba(248, 250, 252, 0.99);
+}
+
+.dock.is-light .dock-btn--accent {
+  border-color: rgba(99, 102, 241, 0.45);
+  background: rgba(99, 102, 241, 0.14);
+}
+
+.dock.is-light .dock-btn--accent:hover {
+  border-color: rgba(99, 102, 241, 0.62);
+  background: rgba(99, 102, 241, 0.22);
+}
 </style>
+

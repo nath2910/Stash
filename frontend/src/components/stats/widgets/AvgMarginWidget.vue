@@ -3,6 +3,7 @@
     title="Marge moyenne"
     subtitle="Gain moyen par vente"
     :accent="accent"
+    surface="kpi"
     :loading="loading"
     :error="error"
     compact
