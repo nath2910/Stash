@@ -57,6 +57,7 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
               "/auth/register",
               "/auth/login",
               "/health",
+              "/ping",
               "/auth/forgot-password",
               "/auth/reset-password",
               "/auth/verify-email",
