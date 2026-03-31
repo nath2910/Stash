@@ -41,7 +41,7 @@ class BillingControllerTest {
 
     ResponseStatusException ex = Assertions.assertThrows(
         ResponseStatusException.class,
-        () -> controller.status(user)
+        () -> controller.status(user, false)
     );
 
     Assertions.assertEquals(HttpStatus.SERVICE_UNAVAILABLE, ex.getStatusCode());
@@ -50,14 +50,15 @@ class BillingControllerTest {
   @Test
   void statusReturnsBillingSnapshotWhenConfigured() throws Exception {
     Mockito.when(billingService.isConfigured()).thenReturn(true);
+    Mockito.when(user.getSubscriptionStatus()).thenReturn("active");
     Session portal = Mockito.mock(Session.class);
     Mockito.when(portal.getUrl()).thenReturn("https://stripe.test/portal");
     Mockito.when(billingService.createPortal(user)).thenReturn(portal);
 
-    BillingStatusResponse response = controller.status(user);
+    BillingStatusResponse response = controller.status(user, true);
 
     Mockito.verify(billingService).refreshStatus(user);
-    Assertions.assertEquals("inactive", response.status());
+    Assertions.assertEquals("active", response.status());
     Assertions.assertEquals("https://stripe.test/portal", response.portalUrl());
   }
 
