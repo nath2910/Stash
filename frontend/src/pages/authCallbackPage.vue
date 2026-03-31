@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/store/authStore.js'
@@ -41,18 +41,24 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-slate-950 text-slate-50 flex items-center justify-center px-4">
+  <div class="auth-callback-screen h-full w-full overflow-hidden bg-slate-950 text-slate-50 flex items-center justify-center px-4">
     <div
-      class="w-full max-w-md rounded-3xl border border-slate-800/80 bg-slate-900/70 shadow-[0_25px_80px_rgba(0,0,0,0.45)] backdrop-blur p-8 space-y-4 text-center"
+      class="w-full max-w-md rounded-3xl border border-slate-700/50 bg-slate-900/78 shadow-[0_16px_44px_rgba(2,6,23,0.42)] backdrop-blur p-8 space-y-4 text-center"
     >
-      <div class="mx-auto h-14 w-14 rounded-full border-4 border-slate-700 border-t-emerald-400 animate-spin" />
+      <div class="mx-auto h-12 w-12 rounded-full border-[3px] border-slate-700/90 border-t-emerald-300 animate-spin" />
       <div class="space-y-2">
-        <p class="text-sm uppercase tracking-[0.24em] text-emerald-200/80">Connexion</p>
+        <p class="text-xs uppercase tracking-[0.24em] text-emerald-200/80">Connexion</p>
         <p class="text-xl font-semibold text-white">Redirection en cours</p>
-        <p class="text-sm text-slate-400">
-          Nous sécurisons ta session et préparons ton espace. Merci de patienter quelques secondes.
+        <p class="text-sm text-slate-400 leading-relaxed">
+          Nous securisons ta session et preparons ton espace. Merci de patienter quelques secondes.
         </p>
       </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+.auth-callback-screen {
+  overscroll-behavior: none;
+}
+</style>

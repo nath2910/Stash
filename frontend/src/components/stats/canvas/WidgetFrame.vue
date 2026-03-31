@@ -1743,18 +1743,17 @@ function onRootKeydown(event: KeyboardEvent) {
   width: calc(34px * var(--action-ui-scale, 1));
   height: calc(34px * var(--action-ui-scale, 1));
   border-radius: calc(12px * var(--action-ui-scale, 1));
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.05);
+  border: none;
+  background: rgba(255, 255, 255, 0.06);
   color: rgba(255, 255, 255, 0.92);
   display: grid;
   place-items: center;
   transition:
     background 160ms ease,
-    border-color 160ms ease;
+    opacity 160ms ease;
 }
 .iconbtn:hover {
   background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.16);
 }
 .iconbtn :deep(svg) {
   width: calc(16px * var(--action-ui-scale, 1));
@@ -1773,7 +1772,7 @@ function onRootKeydown(event: KeyboardEvent) {
   min-width: 162px;
   padding: 6px;
   border-radius: 12px;
-  border: 1px solid rgba(148, 163, 184, 0.36);
+  border: none;
   background: linear-gradient(180deg, rgba(8, 14, 28, 0.98), rgba(6, 10, 20, 0.96));
   box-shadow:
     0 16px 28px rgba(2, 6, 23, 0.56),
@@ -1891,6 +1890,10 @@ function onRootKeydown(event: KeyboardEvent) {
 .widget__content-inner {
   width: 100%;
   height: 100%;
+}
+
+.widget__content-inner :deep([class*='border']) {
+  border-color: rgba(148, 163, 184, 0.12) !important;
 }
 
 .widget__body--auto .widget__content-scale {

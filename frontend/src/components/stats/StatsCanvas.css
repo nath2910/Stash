@@ -40,11 +40,11 @@
   position: relative;
   z-index: 1;
   background:
-    radial-gradient(circle at 1px 1px, rgba(170, 200, 255, 0.1) 1px, transparent 1.6px) 0 0 / 28px
-      28px,
-    radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.04) 1px, transparent 1.8px) 0 0 / 8px
-      8px,
-    linear-gradient(180deg, #050812 0%, #040611 100%);
+    linear-gradient(180deg, rgba(5, 10, 20, 0.98) 0%, rgba(4, 8, 16, 0.98) 100%),
+    radial-gradient(circle at 16% -12%, rgba(56, 189, 248, 0.08), transparent 38%),
+    radial-gradient(circle at 88% -20%, rgba(59, 130, 246, 0.08), transparent 34%),
+    linear-gradient(rgba(148, 163, 184, 0.045) 1px, transparent 1px) 0 0 / 32px 32px,
+    linear-gradient(90deg, rgba(148, 163, 184, 0.045) 1px, transparent 1px) 0 0 / 32px 32px;
 }
 
 .edit-grid {

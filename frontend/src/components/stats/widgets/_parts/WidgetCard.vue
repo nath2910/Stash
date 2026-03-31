@@ -90,44 +90,62 @@ const cardStyle = computed(() => {
 .widget-card {
   overflow: hidden;
   border-radius: var(--widget-card-radius);
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  background:
-    radial-gradient(circle at 82% -8%, color-mix(in srgb, var(--widget-card-accent) 18%, transparent), transparent 46%),
-    linear-gradient(180deg, rgba(8, 14, 30, 0.94), rgba(4, 8, 18, 0.96));
+  border: 1px solid rgba(148, 163, 184, 0.08);
+  background: linear-gradient(180deg, rgba(8, 12, 22, 0.95), rgba(6, 10, 18, 0.97));
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.07),
-    0 16px 28px rgba(2, 6, 23, 0.34);
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 8px 16px rgba(2, 6, 23, 0.18);
 }
 
 .widget-card--kpi {
   background:
-    radial-gradient(circle at 86% -10%, color-mix(in srgb, var(--widget-card-accent) 24%, transparent), transparent 52%),
-    linear-gradient(180deg, rgba(8, 15, 28, 0.95), rgba(5, 9, 18, 0.98));
+    linear-gradient(180deg, rgba(8, 12, 21, 0.96), rgba(6, 10, 17, 0.98)),
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--widget-card-accent) 12%, transparent),
+      transparent 52%
+    );
 }
 
 .widget-card--trend {
   background:
-    radial-gradient(circle at 90% -16%, color-mix(in srgb, var(--widget-card-accent) 20%, transparent), transparent 50%),
-    linear-gradient(180deg, rgba(7, 13, 26, 0.95), rgba(4, 8, 17, 0.98));
+    linear-gradient(180deg, rgba(7, 11, 20, 0.96), rgba(5, 9, 16, 0.98)),
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--widget-card-accent) 10%, transparent),
+      transparent 58%
+    );
 }
 
 .widget-card--distribution {
   background:
-    radial-gradient(circle at 84% -12%, color-mix(in srgb, var(--widget-card-accent) 26%, transparent), transparent 48%),
-    linear-gradient(180deg, rgba(9, 14, 24, 0.95), rgba(4, 7, 15, 0.98));
+    linear-gradient(180deg, rgba(9, 13, 21, 0.96), rgba(7, 10, 17, 0.98)),
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--widget-card-accent) 12%, transparent),
+      transparent 60%
+    );
 }
 
 .widget-card--ranking {
   background:
-    radial-gradient(circle at 82% -8%, color-mix(in srgb, var(--widget-card-accent) 22%, transparent), transparent 46%),
-    linear-gradient(180deg, rgba(9, 15, 26, 0.95), rgba(5, 8, 16, 0.98));
+    linear-gradient(180deg, rgba(8, 12, 21, 0.96), rgba(6, 10, 17, 0.98)),
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--widget-card-accent) 11%, transparent),
+      transparent 56%
+    );
 }
 
 .widget-card--utility,
 .widget-card--generic {
   background:
-    radial-gradient(circle at 80% -12%, color-mix(in srgb, var(--widget-card-accent) 16%, transparent), transparent 46%),
-    linear-gradient(180deg, rgba(8, 13, 24, 0.95), rgba(5, 8, 15, 0.98));
+    linear-gradient(180deg, rgba(8, 12, 21, 0.96), rgba(6, 10, 17, 0.98)),
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--widget-card-accent) 8%, transparent),
+      transparent 64%
+    );
 }
 
 .widget-card__zoom {
@@ -145,6 +163,8 @@ const cardStyle = computed(() => {
   justify-content: space-between;
   gap: 10px;
   margin-bottom: 10px;
+  padding-bottom: 0;
+  border-bottom: none;
 }
 
 .widget-card__titlewrap {
@@ -165,28 +185,27 @@ const cardStyle = computed(() => {
 
 .widget-card__subtitle {
   font-size: var(--widget-card-subtitle-size);
-  color: rgba(255, 255, 255, 0.56);
+  color: rgba(226, 232, 240, 0.56);
+  letter-spacing: 0.01em;
 }
 
 .widget-card__title {
   font-size: var(--widget-card-title-size);
-  line-height: 1.15;
-  font-weight: 650;
-  color: rgba(255, 255, 255, 0.98);
+  line-height: 1.12;
+  font-weight: 600;
+  color: rgba(248, 250, 252, 0.96);
 }
 
 .widget-card__dot {
   width: var(--widget-card-dot-size);
   height: var(--widget-card-dot-size);
   border-radius: 999px;
-  box-shadow:
-    0 0 0 4px color-mix(in srgb, var(--widget-card-accent) 22%, transparent),
-    0 0 14px color-mix(in srgb, var(--widget-card-accent) 34%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--widget-card-accent) 14%, transparent);
 }
 
 .widget-card__status {
   font-size: var(--widget-card-status-size);
-  color: rgba(255, 255, 255, 0.58);
+  color: rgba(226, 232, 240, 0.62);
 }
 
 .widget-card__status--error {
@@ -198,7 +217,8 @@ const cardStyle = computed(() => {
 }
 
 .widget-card.is-narrow .widget-card__head {
-  margin-bottom: 8px;
+  margin-bottom: 10px;
+  padding-bottom: 0;
 }
 
 .widget-card.is-tiny .widget-card__subtitle {

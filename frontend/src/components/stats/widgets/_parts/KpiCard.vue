@@ -98,22 +98,22 @@ const kpiStyle = computed(() => {
 <style scoped>
 .kpi-card__value {
   font-size: var(--kpi-value-size);
-  line-height: 0.96;
-  font-weight: 700;
-  letter-spacing: -0.04em;
-  color: rgba(255, 255, 255, 0.98);
+  line-height: 1;
+  font-weight: 620;
+  letter-spacing: -0.025em;
+  color: rgba(248, 250, 252, 0.96);
 }
 
 .kpi-card__badge {
   font-size: var(--kpi-meta-size);
-  padding: 0.28rem 0.58rem;
+  padding: 0.26rem 0.56rem;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  border: none;
 }
 
 .kpi-card__hint {
   font-size: var(--kpi-meta-size);
-  color: rgba(255, 255, 255, 0.45);
+  color: rgba(148, 163, 184, 0.84);
 }
 
 .kpi-card__spark {
