@@ -180,7 +180,7 @@ public class EmailVerificationService {
     }
   }
 
-  @Scheduled(fixedDelayString = "${app.email-verification.cleanup-interval-ms:3600000}")
+  @Scheduled(fixedDelayString = "${app.email-verification.cleanup-interval-ms:86400000}")
   public void cleanupTokens() {
     try {
       Instant now = Instant.now();

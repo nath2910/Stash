@@ -25,14 +25,21 @@ public class BillingController {
   }
 
   @GetMapping("/status")
-  public BillingStatusResponse status(@AuthenticationPrincipal User user) {
+  public BillingStatusResponse status(
+      @AuthenticationPrincipal User user,
+      @RequestParam(name = "includePortal", defaultValue = "false") boolean includePortal
+  ) {
     if (!billingService.isConfigured()) {
       throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Stripe non configuré");
     }
     try {
       billingService.refreshStatus(user);
-      var portal = billingService.createPortal(user);
-      return new BillingStatusResponse(user.getSubscriptionStatus(), portal.getUrl());
+      String portalUrl = "";
+      if (includePortal && "active".equalsIgnoreCase(user.getSubscriptionStatus())) {
+        var portal = billingService.createPortal(user);
+        portalUrl = portal.getUrl();
+      }
+      return new BillingStatusResponse(user.getSubscriptionStatus(), portalUrl);
     } catch (Exception e) {
       return new BillingStatusResponse(user.getSubscriptionStatus(), "");
     }

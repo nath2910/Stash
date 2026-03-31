@@ -70,7 +70,7 @@ app:
   email-verification:
     expiration-minutes: ${APP_EMAIL_VERIFICATION_EXP_MINUTES:60}
     mail-from: ${APP_MAIL_FROM:}
-    cleanup-interval-ms: ${APP_EMAIL_VERIFICATION_CLEANUP_MS:3600000}
+    cleanup-interval-ms: ${APP_EMAIL_VERIFICATION_CLEANUP_MS:86400000}
   discord:
     bot-token: ${APP_DISCORD_BOT_TOKEN:}
   storage:

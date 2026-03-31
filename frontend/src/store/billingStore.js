@@ -5,10 +5,10 @@ const status = ref('unknown') // unknown | active | past_due | canceled | inacti
 const portalUrl = ref('')
 let inflight = null
 
-async function fetchStatus(force = false) {
-  if (!force && status.value === 'active') return status.value
+async function fetchStatus(force = false, includePortal = false) {
+  if (!force && !includePortal && status.value === 'active') return status.value
   if (inflight) return inflight
-  inflight = BillingService.status()
+  inflight = BillingService.status(includePortal)
     .then((res) => {
       status.value = res?.data?.status || 'inactive'
       portalUrl.value = res?.data?.portalUrl || ''

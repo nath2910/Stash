@@ -45,7 +45,7 @@
             <button
               type="button"
               class="mt-3 w-full inline-flex items-center justify-center rounded-xl border border-slate-700 bg-slate-900/70 px-3 py-2 text-sm font-semibold text-slate-100 hover:border-emerald-300/40 transition disabled:opacity-60"
-              :disabled="!portalUrl"
+              :disabled="status !== 'active'"
               @click="openPortal"
             >
               Ouvrir le portail Stripe
@@ -145,7 +145,10 @@ const statusMeta = computed(() => {
   }
 })
 
-const openPortal = () => {
+const openPortal = async () => {
+  if (!portalUrl.value) {
+    await billing.fetchStatus(true, true)
+  }
   if (portalUrl.value) window.open(portalUrl.value, '_blank', 'noopener')
 }
 
@@ -155,6 +158,6 @@ const goBack = () => {
 }
 
 onMounted(() => {
-  billing.fetchStatus()
+  billing.fetchStatus(false, true)
 })
 </script>

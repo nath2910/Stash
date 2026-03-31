@@ -108,7 +108,7 @@
             </div>
 
             <div
-              v-if="status === 'active' && portalUrl"
+              v-if="status === 'active'"
               class="mt-4 flex items-center gap-2 rounded-xl border border-emerald-300/20 bg-slate-800/60 px-3 py-2"
             >
               <span class="text-sm text-slate-200">Deja abonne ?</span>
@@ -194,6 +194,9 @@ const onboardingFlag = 'snk_onboarding_pending'
 
 let poll: number | null = null
 let previousStatus: string | null = null
+const shouldPollAfterCheckout = computed(
+  () => route.query.success === '1' || typeof route.query.session_id === 'string',
+)
 
 const highlights = [
   {
@@ -296,9 +299,9 @@ const statusMeta = computed(() => {
   }
 })
 
-const fetchStatus = async () => {
+const fetchStatus = async (includePortal = false) => {
   try {
-    const res = await BillingService.status()
+    const res = await BillingService.status(includePortal)
     status.value = (res?.data?.status as typeof status.value.value) || 'inactive'
     portalUrl.value = res?.data?.portalUrl || ''
 
@@ -345,7 +348,10 @@ const startCheckout = async () => {
   }
 }
 
-const openPortal = () => {
+const openPortal = async () => {
+  if (!portalUrl.value) {
+    await fetchStatus(true)
+  }
   if (portalUrl.value) window.open(portalUrl.value, '_blank', 'noopener')
 }
 
@@ -356,13 +362,15 @@ const redirectIfActive = () => {
 }
 
 onMounted(async () => {
-  await fetchStatus()
+  await fetchStatus(true)
   redirectIfActive()
 
-  poll = window.setInterval(async () => {
-    await fetchStatus()
-    redirectIfActive()
-  }, 3000)
+  if (shouldPollAfterCheckout.value) {
+    poll = window.setInterval(async () => {
+      await fetchStatus(false)
+      redirectIfActive()
+    }, 15000)
+  }
 })
 
 onBeforeUnmount(() => {
