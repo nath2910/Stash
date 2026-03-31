@@ -1980,12 +1980,31 @@ const isCompact = ref(false)
 const datePanelOpen = ref(true)
 const visibleRect = ref<{ left: number; top: number; right: number; bottom: number } | null>(null)
 let visibleRectRaf: number | null = null
+const cameraInteracting = ref(false)
+const CAMERA_IDLE_DELAY_MS = 160
+let cameraInteractionTimer: number | null = null
 
 function clearVisibleRectRaf() {
   if (visibleRectRaf != null) {
     cancelAnimationFrame(visibleRectRaf)
     visibleRectRaf = null
   }
+}
+
+function clearCameraInteractionTimer() {
+  if (cameraInteractionTimer != null) {
+    window.clearTimeout(cameraInteractionTimer)
+    cameraInteractionTimer = null
+  }
+}
+
+function markCameraInteracting() {
+  cameraInteracting.value = true
+  clearCameraInteractionTimer()
+  cameraInteractionTimer = window.setTimeout(() => {
+    cameraInteracting.value = false
+    cameraInteractionTimer = null
+  }, CAMERA_IDLE_DELAY_MS)
 }
 
 function updateVisibleRectNow() {
@@ -2078,23 +2097,28 @@ function widgetsBounds() {
 }
 
 function centerView() {
+  markCameraInteracting()
   fitToWidgets(80, true)
   scheduleVisibleRectUpdate()
 }
 
 function zoomIn() {
+  markCameraInteracting()
   camera.zoomIn()
   scheduleVisibleRectUpdate()
 }
 function zoomOut() {
+  markCameraInteracting()
   camera.zoomOut()
   scheduleVisibleRectUpdate()
 }
 function resetZoom() {
+  markCameraInteracting()
   fitToWidgets(120, true)
   scheduleVisibleRectUpdate()
 }
 function zoomToFitContent() {
+  markCameraInteracting()
   fitToWidgets(80, true)
   scheduleVisibleRectUpdate()
 }
@@ -2212,6 +2236,7 @@ function widgetIntersectsVisibleRect(
 }
 
 const visibleWidgets = computed(() => {
+  if (cameraInteracting.value) return widgets.value
   const rect = visibleRect.value
   if (!rect) return widgets.value
 
@@ -3925,7 +3950,10 @@ onMounted(async () => {
   await nextTick()
   const board = boardEl.value
   if (board) {
-    const onPanzoomChange = () => scheduleVisibleRectUpdate()
+    const onPanzoomChange = () => {
+      markCameraInteracting()
+      scheduleVisibleRectUpdate()
+    }
     board.addEventListener('panzoomchange', onPanzoomChange as EventListener)
     onBeforeUnmount(() => board.removeEventListener('panzoomchange', onPanzoomChange as EventListener))
   }
@@ -3965,6 +3993,7 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   setSpacePanState(false)
   clearVisibleRectRaf()
+  clearCameraInteractionTimer()
   window.removeEventListener('keydown', onCanvasKeyDown, true)
   window.removeEventListener('keydown', onSelectionKeyDown, true)
   window.removeEventListener('keyup', onCanvasKeyUp, true)

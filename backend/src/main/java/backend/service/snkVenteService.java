@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -43,6 +44,7 @@ public class snkVenteService {
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Utilisateur introuvable"));
   }
 
+  @CacheEvict(cacheNames = "statsQueries", allEntries = true)
   public SnkVente creer(Long userId, SnkVenteCreateDto dto) {
     User user = getUserOrThrow(userId);
 
@@ -101,6 +103,7 @@ public class snkVenteService {
   }
 
   @Transactional
+  @CacheEvict(cacheNames = "statsQueries", allEntries = true)
   public void deleteVente(Long userId, Integer id) {
     SnkVente existing = snkVenteRepository.findById(id)
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Vente introuvable"));
@@ -113,6 +116,7 @@ public class snkVenteService {
   }
 
   @Transactional
+  @CacheEvict(cacheNames = "statsQueries", allEntries = true)
   public int deleteBulk(Long userId, List<Integer> ids) {
     if (ids == null || ids.isEmpty()) return 0;
     return snkVenteRepository.deleteByUserAndIds(userId, ids);
@@ -124,6 +128,7 @@ public class snkVenteService {
   }
 
   @Transactional
+  @CacheEvict(cacheNames = "statsQueries", allEntries = true)
   public SnkVente updateVente(Long userId, Integer id, SnkVente payload) {
     SnkVente existing = snkVenteRepository.findById(id)
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Vente introuvable"));
@@ -150,6 +155,7 @@ public class snkVenteService {
     return getDernieresVentesParUser(userId, 7);
   }
 
+  @CacheEvict(cacheNames = "statsQueries", allEntries = true)
   public int importBulk(Long userId, List<SnkVenteImportDto> items) {
     User user = getUserOrThrow(userId);
     if (items == null || items.isEmpty()) {

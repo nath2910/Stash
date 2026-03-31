@@ -19,6 +19,12 @@ spring:
         order_inserts: true
         order_updates: true
 
+  cache:
+    type: caffeine
+    cache-names: statsQueries
+    caffeine:
+      spec: maximumSize=${APP_STATS_CACHE_MAX_SIZE:10000},expireAfterWrite=${APP_STATS_CACHE_TTL:30s}
+
   mail:
     host: ${SPRING_MAIL_HOST:}
     port: ${SPRING_MAIL_PORT:587}

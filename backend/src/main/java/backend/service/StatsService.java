@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +32,10 @@ public class StatsService {
     return summary(userId, from, to, asOf, null, null);
   }
 
+  @Cacheable(
+      cacheNames = "statsQueries",
+      key = "T(backend.service.StatsCacheKeys).summary(#userId,#from,#to,#asOf,#categories,#types)"
+  )
   public StatsSummaryResponse summary(
       Long userId,
       LocalDate from,
@@ -80,6 +85,10 @@ public class StatsService {
     return timeseries(userId, from, to, granularity, null, null);
   }
 
+  @Cacheable(
+      cacheNames = "statsQueries",
+      key = "T(backend.service.StatsCacheKeys).timeseries(#userId,#from,#to,#granularity,#categories,#types)"
+  )
   public List<StatsPointResponse> timeseries(
       Long userId,
       LocalDate from,
@@ -110,6 +119,10 @@ public class StatsService {
     return brandBreakdown(userId, from, to, null, null);
   }
 
+  @Cacheable(
+      cacheNames = "statsQueries",
+      key = "T(backend.service.StatsCacheKeys).breakdown(#userId,'brands',#from,#to,#categories,#types)"
+  )
   public List<StatsBreakdownResponse> brandBreakdown(
       Long userId,
       LocalDate from,
@@ -133,6 +146,10 @@ public class StatsService {
     return topSales(userId, from, to, limit, null, null);
   }
 
+  @Cacheable(
+      cacheNames = "statsQueries",
+      key = "T(backend.service.StatsCacheKeys).topSales(#userId,#from,#to,#limit,#categories,#types)"
+  )
   public List<TopVenteProjection> topSales(
       Long userId,
       LocalDate from,
@@ -159,6 +176,10 @@ public class StatsService {
     return kpi(userId, from, to, metric, null, null);
   }
 
+  @Cacheable(
+      cacheNames = "statsQueries",
+      key = "T(backend.service.StatsCacheKeys).kpi(#userId,#from,#to,#metric,#categories,#types)"
+  )
   public StatsKpiResponse kpi(
       Long userId,
       LocalDate from,
@@ -181,6 +202,10 @@ public class StatsService {
     return new StatsKpiResponse(currentValue, delta);
   }
 
+  @Cacheable(
+      cacheNames = "statsQueries",
+      key = "T(backend.service.StatsCacheKeys).series(#userId,#from,#to,#metric,#granularity,#categories,#types)"
+  )
   public List<StatsSeriesPointResponse> series(
       Long userId,
       LocalDate from,
@@ -230,6 +255,10 @@ public class StatsService {
         .toList();
   }
 
+  @Cacheable(
+      cacheNames = "statsQueries",
+      key = "T(backend.service.StatsCacheKeys).breakdown(#userId,#metric,#from,#to,#categories,#types)"
+  )
   public List<StatsLabelValueResponse> breakdown(
       Long userId,
       String metric,
@@ -288,6 +317,10 @@ public class StatsService {
     return List.of();
   }
 
+  @Cacheable(
+      cacheNames = "statsQueries",
+      key = "T(backend.service.StatsCacheKeys).rank(#userId,#from,#to,#metric,#limit,#categories,#types)"
+  )
   public List<StatsLabelValueResponse> rank(
       Long userId,
       LocalDate from,
@@ -333,6 +366,10 @@ public class StatsService {
     return List.of();
   }
 
+  @Cacheable(
+      cacheNames = "statsQueries",
+      key = "T(backend.service.StatsCacheKeys).dateBounds(#userId)"
+  )
   public StatsDateBoundsResponse dateBounds(Long userId) {
     LocalDate minAchat = repo.minAchatDate(userId);
     LocalDate minVente = repo.minVenteDate(userId);
@@ -519,6 +556,10 @@ public class StatsService {
     return repo.timeseriesDayFull(userId, from, to, categories, categoriesAll, types, typesAll);
   }
 
+  @Cacheable(
+      cacheNames = "statsQueries",
+      key = "T(backend.service.StatsCacheKeys).categories(#userId,#from,#to)"
+  )
   public List<String> categories(Long userId, LocalDate from, LocalDate to) {
     List<String> scoped = null;
     if (from != null && to != null) {
