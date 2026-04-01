@@ -6,7 +6,7 @@
         v-if="!showAdd"
         type="button"
         @click="showAdd = true"
-        class="px-3 py-2 text-xs rounded bg-emerald-600 text-white border border-emerald-300/30 transition active:scale-95 focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
+        class="w-full rounded border border-emerald-300/30 bg-emerald-600 px-3 py-2 text-xs text-white transition active:scale-95 focus:outline-none focus:ring-2 focus:ring-emerald-400/40 sm:w-auto"
       >
         Ajouter un item
       </button>

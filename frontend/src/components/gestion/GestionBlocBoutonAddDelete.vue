@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full flex justify-end">
+  <div class="flex w-full justify-end sm:w-auto">
     <boutonOnAdd @vente-ajoutee="$emit('vente-ajoutee')" />
   </div>
 </template>

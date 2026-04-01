@@ -16,7 +16,7 @@
         <section
           class="rounded-3xl border border-slate-800/80 bg-gradient-to-b from-slate-900/95 via-slate-900/80 to-slate-950/70 p-6 shadow-2xl backdrop-blur sm:p-7"
         >
-          <div class="flex items-center gap-4">
+          <div class="flex flex-wrap items-center gap-4">
             <div
               class="flex h-14 w-14 items-center justify-center rounded-2xl border border-violet-400/30 bg-violet-400/10 text-lg font-semibold text-violet-200"
             >
@@ -26,10 +26,10 @@
               <h1 class="text-xl font-semibold text-white sm:text-2xl">Mon compte</h1>
               <p class="mt-1 text-sm text-slate-400">{{ currentUser.email || '-' }}</p>
             </div>
-            <div class="ml-auto">
+            <div class="w-full sm:ml-auto sm:w-auto">
               <button
                 type="button"
-                class="rounded-xl border border-emerald-300/40 bg-emerald-300/10 px-3 py-2 text-xs font-semibold text-emerald-100 hover:bg-emerald-300/15"
+                class="w-full rounded-xl border border-emerald-300/40 bg-emerald-300/10 px-3 py-2 text-xs font-semibold text-emerald-100 hover:bg-emerald-300/15 sm:w-auto"
                 @click="goAbo"
               >
                 Gérer l'abonnement

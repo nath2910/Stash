@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-screen text-slate-100">
-    <div class="relative w-full px-4 sm:px-6 lg:px-10 py-8 space-y-8">
+    <div class="relative w-full space-y-8 px-4 py-6 sm:px-6 sm:py-8 lg:px-10">
       <header
         class="rounded-[28px] border border-slate-800/80 bg-gradient-to-br from-slate-900/95 via-slate-900/85 to-slate-950/80 px-6 py-6 shadow-2xl backdrop-blur sm:px-8"
       >
@@ -61,7 +61,7 @@
           class="rounded-3xl border border-slate-800/80 bg-gradient-to-b from-slate-900/95 via-slate-900/80 to-slate-950/70 shadow-2xl backdrop-blur overflow-hidden"
         >
           <!-- Header tableau -->
-          <div class="px-6 py-4 flex flex-wrap items-center justify-between gap-4 border-b border-slate-800/80">
+          <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800/80 px-4 py-4 sm:px-6">
             <!-- Gauche : titre -->
             <div>
               <h2 class="text-lg font-semibold text-slate-100 leading-tight">Liste des items</h2>
@@ -74,12 +74,12 @@
             </div>
 
             <!-- Droite : actions -->
-            <div class="flex items-center gap-2">
+            <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
               <GestionActionsPanel @vente-ajoutee="handleVenteAjoutee" />
               <div class="[&_button:hover]:bg-red-900">
                 <button
                   type="button"
-                  class="px-4 py-2 text-xs rounded bg-red-600 text-white disabled:opacity-60 transition whitespace-nowrap"
+                  class="w-full whitespace-nowrap rounded bg-red-600 px-4 py-2 text-xs text-white transition disabled:opacity-60 sm:w-auto"
                   @click="openDeleteBulk"
                 >
                   Supprimer un item
@@ -90,7 +90,7 @@
 
           <!-- Liste -->
           <div class="p-4">
-            <div class="max-h-[480px] overflow-y-auto pr-2">
+            <div class="max-h-[68vh] overflow-y-auto pr-1 sm:max-h-[560px] sm:pr-2">
               <afficherTout
                 :snkVentes="filteredVentes"
                 selectable

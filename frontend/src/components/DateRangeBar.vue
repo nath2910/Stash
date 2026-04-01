@@ -14,13 +14,13 @@
       />
     </div>
 
-    <div class="flex items-center gap-2">
+    <div class="flex flex-wrap items-center gap-2">
       <button class="chip" @click="preset('month')">Mois</button>
       <button class="chip" @click="preset('ytd')">YTD</button>
       <button class="chip" @click="preset('year')">Année</button>
     </div>
 
-    <div class="ml-auto text-sm text-white/60">{{ from }} → {{ to }}</div>
+    <div class="w-full text-xs text-white/60 sm:ml-auto sm:w-auto sm:text-sm">{{ from }} → {{ to }}</div>
   </div>
 </template>
 
@@ -74,7 +74,7 @@ function preset(kind: 'month' | 'ytd' | 'year') {
   background: transparent !important;
   color: rgba(255, 255, 255, 0.92) !important;
   padding: 0 !important;
-  min-width: 260px;
+  min-width: clamp(170px, 44vw, 260px);
 }
 .chip {
   height: 40px;

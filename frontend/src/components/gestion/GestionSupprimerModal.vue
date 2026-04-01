@@ -1,9 +1,9 @@
 <template>
   <div
-    class="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-4"
+    class="fixed inset-0 z-40 flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-4"
     @click.self="close"
   >
-    <div class="w-full max-w-md rounded-lg bg-white p-5 shadow-lg">
+    <div class="w-full max-w-md max-h-[92dvh] overflow-y-auto rounded-t-2xl bg-white p-4 shadow-lg sm:rounded-lg sm:p-5">
       <div class="flex items-start justify-between gap-3 mb-3">
         <div>
           <h3 class="text-xl font-semibold text-gray-900">Supprimer</h3>
@@ -23,7 +23,7 @@
       </div>
 
       <!-- Switch mode -->
-      <div class="mb-4 flex gap-2">
+      <div class="mb-4 flex flex-wrap gap-2">
         <button
           type="button"
           class="px-3 py-1.5 text-xs rounded border"
@@ -102,11 +102,11 @@
           </p>
         </div>
 
-        <div class="flex justify-end gap-2 pt-1">
+        <div class="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
           <div class="[&_button:hover]:bg-gray-300">
             <button
               type="button"
-              class="px-4 py-1.5 text-sm rounded border border-gray-300 text-gray-700"
+              class="w-full rounded border border-gray-300 px-4 py-1.5 text-sm text-gray-700 sm:w-auto"
               @click="close"
               :disabled="loading"
             >
@@ -116,7 +116,7 @@
           <div class="[&_button:hover]:bg-red-800">
             <button
               type="button"
-              class="px-4 py-1.5 text-sm rounded bg-red-600 text-white disabled:opacity-60"
+              class="w-full rounded bg-red-600 px-4 py-1.5 text-sm text-white disabled:opacity-60 sm:w-auto"
               :disabled="loading || !selected"
               @click="deleteOne"
             >
@@ -132,11 +132,11 @@
           Tu vas supprimer <b>{{ selectedIds.length }}</b> item(s). Action definitive.
         </p>
 
-        <div class="flex justify-end gap-2 pt-1">
+        <div class="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
           <div class="[&_button:hover]:bg-gray-300">
             <button
               type="button"
-              class="px-4 py-1.5 text-sm rounded border border-gray-300 text-gray-700"
+              class="w-full rounded border border-gray-300 px-4 py-1.5 text-sm text-gray-700 sm:w-auto"
               @click="close"
               :disabled="loading"
             >
@@ -146,7 +146,7 @@
           <div class="[&_button:hover]:bg-red-800">
             <button
               type="button"
-              class="px-4 py-1.5 text-sm rounded bg-red-600 text-white inline-flex items-center gap-2"
+              class="inline-flex w-full items-center justify-center gap-2 rounded bg-red-600 px-4 py-1.5 text-sm text-white sm:w-auto"
               :disabled="loading || !selectedIds.length"
               @click="deleteBulk"
             >

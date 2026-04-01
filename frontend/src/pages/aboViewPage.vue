@@ -1,5 +1,5 @@
 <template>
-  <div class="h-screen overflow-y-auto bg-slate-950 text-slate-100 px-4 py-6 sm:py-10">
+  <div class="min-h-[100dvh] overflow-y-auto bg-slate-950 text-slate-100 px-4 py-6 sm:py-10">
     <div class="max-w-5xl mx-auto space-y-8 pb-8">
       <div class="flex items-center justify-between">
         <button
