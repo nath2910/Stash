@@ -1,12 +1,9 @@
 <template>
-  <div
-    class="min-h-screen min-h-[100dvh] flex flex-col font-poppins bg-slate-950"
-    :class="isStatsLight ? 'text-black' : 'text-slate-100'"
-  >
+  <div class="h-screen flex flex-col font-poppins bg-slate-950" :class="isStatsLight ? 'text-black' : 'text-slate-100'">
     <!-- Header -->
     <template v-if="!isAuthRoute">
       <!-- Header for stats: simple bar -->
-      <header class="fixed top-2 sm:top-4 left-0 right-0 z-50 pointer-events-none">
+      <header class="fixed top-4 left-0 right-0 z-50 pointer-events-none">
         <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between pointer-events-none">
           <!-- Left spacer / burger -->
           <div class="flex items-center pointer-events-auto">
@@ -163,7 +160,7 @@
       <div
         v-if="route.meta.fullBleed"
         class="relative h-full w-full"
-        :class="allowFullBleedScroll ? 'overflow-auto' : 'overflow-hidden'"
+        :class="route.meta.allowScroll ? 'overflow-auto' : 'overflow-hidden'"
       >
         <slot />
       </div>
@@ -175,7 +172,7 @@
             <div class="absolute bottom-[-30%] left-[-10%] h-[30rem] w-[30rem] rounded-full blur-3xl bg-amber-400/4"></div>
             <div class="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.25),_transparent_60%)]"></div>
           </div>
-          <div class="min-h-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10 pb-16">
+          <div class="min-h-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12 pb-16">
             <slot />
           </div>
         </div>
@@ -185,7 +182,7 @@
     <!-- Footer -->
     <footer
       v-if="!route.meta.fullBleed && !isAuthRoute"
-      class="fixed left-0 right-0 bottom-2 sm:bottom-4 flex justify-center transition-opacity duration-500 ease-out pointer-events-none"
+      class="fixed left-0 right-0 bottom-4 flex justify-center transition-opacity duration-500 ease-out pointer-events-none"
       :class="footerVisible ? 'opacity-100' : 'opacity-0'"
     >
       <div
@@ -225,7 +222,6 @@ const isAuthRoute = computed(() =>
     'abo-view',
   ].includes(route.name),
 )
-const allowFullBleedScroll = computed(() => route.meta.fullBleed && route.meta.allowScroll !== false)
 
 const navSpring = {
   type: 'spring',

@@ -101,79 +101,81 @@ const toLabel = computed(() =>
 
 <style scoped>
 .aux-row {
-  margin-top: 6px;
+  margin-top: 8px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
-  flex-wrap: wrap;
+  gap: 10px;
 }
 .objective-chip {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 0;
-  border-radius: 0;
-  font-size: 11px;
-  letter-spacing: 0.03em;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(203, 213, 225, 0.7);
-  border: none;
-  background: transparent;
-  box-shadow: none;
+  color: rgba(226, 232, 240, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(15, 23, 42, 0.6);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.02),
+    0 6px 14px rgba(0, 0, 0, 0.25);
 }
 .objective-label {
-  opacity: 0.72;
+  opacity: 0.7;
 }
 .objective-value {
-  font-size: 12px;
+  font-size: 11px;
   text-transform: none;
   letter-spacing: 0.02em;
-  color: rgba(241, 245, 249, 0.9);
+  color: rgba(226, 232, 240, 0.92);
 }
 .objective-value .le {
   display: inline-block;
-  margin-right: 4px;
-  font-size: 12px;
-  letter-spacing: 0;
-  text-transform: none;
-  color: rgba(191, 219, 254, 0.9);
+  padding: 0 6px;
+  margin-right: 6px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.16);
+  color: rgba(191, 219, 254, 0.95);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.18);
 }
 .objective-note {
-  font-size: 11px;
-  letter-spacing: 0.01em;
+  font-size: 10px;
+  letter-spacing: 0.04em;
   text-transform: none;
-  color: rgba(148, 163, 184, 0.82);
+  color: rgba(226, 232, 240, 0.55);
 }
 .period-chip {
   margin-left: auto;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  font-size: 11px;
-  letter-spacing: 0.03em;
+  gap: 6px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(203, 213, 225, 0.66);
+  color: rgba(226, 232, 240, 0.6);
   white-space: nowrap;
-  padding: 0;
-  border-radius: 0;
-  background: transparent;
-  border: none;
-  box-shadow: none;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.03),
+    0 6px 16px rgba(0, 0, 0, 0.25);
 }
 .period-label {
-  opacity: 0.72;
+  opacity: 0.7;
 }
 .period-value {
-  font-size: 12px;
+  font-size: 11px;
   letter-spacing: 0.02em;
   text-transform: none;
-  color: rgba(241, 245, 249, 0.9);
-}
-
-@media (max-width: 620px) {
-  .period-chip {
-    margin-left: 0;
-  }
+  color: rgba(226, 232, 240, 0.9);
 }
 </style>

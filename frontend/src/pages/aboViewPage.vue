@@ -1,6 +1,6 @@
 <template>
-  <div class="min-h-screen min-h-[100dvh] overflow-y-auto bg-slate-950 text-slate-100 px-4 py-6 sm:py-8 lg:py-10">
-    <div class="max-w-5xl mx-auto space-y-6 sm:space-y-8 pb-8">
+  <div class="h-screen overflow-y-auto bg-slate-950 text-slate-100 px-4 py-6 sm:py-10">
+    <div class="max-w-5xl mx-auto space-y-8 pb-8">
       <div class="flex items-center justify-between">
         <button
           type="button"
@@ -54,7 +54,7 @@
         </div>
       </header>
 
-      <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <section class="grid gap-4 sm:grid-cols-3">
         <div class="rounded-2xl border border-slate-800/80 bg-slate-900/70 p-4 space-y-1">
           <p class="text-xs uppercase tracking-[0.2em] text-slate-500">État</p>
           <p class="text-lg font-semibold text-white">{{ statusMeta.label }}</p>
@@ -73,7 +73,7 @@
       </section>
 
       <section class="rounded-3xl border border-slate-800/80 bg-slate-900/75 p-5 shadow-2xl space-y-4">
-        <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center justify-between">
           <h2 class="text-lg font-semibold text-white">Actions rapides</h2>
           <span class="text-xs text-slate-500">Portail Stripe requis</span>
         </div>

@@ -6,7 +6,7 @@
         <p class="mt-2 text-xs text-slate-400">Apercu rapide des performances du mois.</p>
       </div>
 
-      <div class="grid grid-cols-1 gap-3 text-center text-xs sm:grid-cols-2">
+      <div class="grid grid-cols-2 gap-3 text-center text-xs">
         <StatBadge label="Benefice du mois" :tone="beneficeTone" :value="formattedBenefice" />
         <StatBadge label="C.A. du mois" tone="default" :value="formattedCA" />
         <StatBadge label="Items vendus (mois)" tone="accent" :value="loading ? '...' : nbVendues" />

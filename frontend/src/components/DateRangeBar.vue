@@ -74,8 +74,7 @@ function preset(kind: 'month' | 'ytd' | 'year') {
   background: transparent !important;
   color: rgba(255, 255, 255, 0.92) !important;
   padding: 0 !important;
-  min-width: 0;
-  width: clamp(170px, 30vw, 260px);
+  min-width: 260px;
 }
 .chip {
   height: 40px;

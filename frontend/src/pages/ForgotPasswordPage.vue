@@ -1,14 +1,14 @@
 <template>
-  <div class="min-h-screen min-h-[100dvh] bg-slate-950 px-4 py-8 sm:py-12">
+  <div class="min-h-scréen overflow-hidden bg-slate-950 px-4 py-8 sm:py-12">
     <div class="mx-auto flex w-full max-w-xl flex-col items-center">
       <div class="mb-7 flex w-full items-start justify-between text-slate-300">
         <div>
-          <p class="text-xs uppercase tracking-[0.25em] text-amber-300/80">Securite</p>
+          <p class="text-xs uppercase tracking-[0.25em] text-amber-300/80">Sécurité</p>
           <h1 class="mt-2 text-2xl font-semibold text-slate-100 sm:text-3xl">
-            Mot de passe oublie
+            Mot de passe oublié
           </h1>
           <p class="mt-2 text-sm text-slate-400">
-            Renseigne ton email pour recevoir un lien de reinitialisation.
+            Renseigne ton email pour recevoir un lien de réinitialisation.
           </p>
         </div>
         <div class="hidden sm:flex h-12 w-12 items-center justify-center rounded-2xl border border-amber-400/30 bg-amber-400/10 text-amber-200">
@@ -92,4 +92,3 @@ const submitRequest = async () => {
   }
 }
 </script>
-

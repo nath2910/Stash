@@ -1,6 +1,6 @@
 <template>
-  <div class="app-page text-slate-100">
-    <section class="relative w-full app-stack">
+  <div class="min-h-screen text-slate-100">
+    <section class="relative w-full px-4 sm:px-6 lg:px-10 py-6 sm:py-10 space-y-8">
       <teleport to="body">
         <div v-if="showOnboarding" class="fixed inset-0 z-50">
           <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="closeOnboarding"></div>
@@ -93,7 +93,7 @@
         <!-- Colonne droite (Overview) : en haut sur mobile, à droite sur desktop -->
         <aside class="order-1 lg:order-2 lg:col-span-4 w-full">
           <div
-            class="lg:sticky lg:top-24 rounded-3xl border border-slate-800/80 bg-gradient-to-b from-slate-900/95 via-slate-900/80 to-slate-950/70 p-4 shadow-2xl backdrop-blur sm:p-5"
+            class="lg:sticky lg:top-6 rounded-3xl border border-slate-800/80 bg-gradient-to-b from-slate-900/95 via-slate-900/80 to-slate-950/70 p-4 shadow-2xl backdrop-blur sm:p-5"
           >
             <HomeOverview
               :total-benefice="monthlyTotalBenefice"

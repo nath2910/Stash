@@ -1,6 +1,6 @@
 <template>
-  <div class="min-h-screen min-h-[100dvh] bg-slate-950 text-slate-100 px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
-    <div class="mx-auto max-w-6xl space-y-6 sm:space-y-8">
+  <div class="min-h-screen bg-slate-950 text-slate-100">
+    <div class="mx-auto max-w-6xl space-y-8 px-4 py-10 sm:px-6 lg:px-8">
       <div class="flex items-center justify-between">
         <button
           type="button"
@@ -52,7 +52,7 @@
               </div>
             </div>
 
-            <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <div class="grid gap-3 sm:grid-cols-3">
               <div
                 v-for="highlight in highlights"
                 :key="highlight.title"

@@ -167,7 +167,7 @@ export const WIDGET_DEFS = [
   },
   {
     type: 'grossRevenue',
-    title: "Chiffre d'affaires récent",
+    title: 'Chiffre d’affaires',
     category: 'Finance',
     help: 'Courbe du CA',
     icon: LineChart,

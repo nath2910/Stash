@@ -41,7 +41,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="auth-callback-screen min-h-screen min-h-[100dvh] w-full overflow-hidden bg-slate-950 text-slate-50 flex items-center justify-center px-4 py-6">
+  <div class="auth-callback-screen h-full w-full overflow-hidden bg-slate-950 text-slate-50 flex items-center justify-center px-4">
     <div
       class="w-full max-w-md rounded-3xl border border-slate-700/50 bg-slate-900/78 shadow-[0_16px_44px_rgba(2,6,23,0.42)] backdrop-blur p-8 space-y-4 text-center"
     >

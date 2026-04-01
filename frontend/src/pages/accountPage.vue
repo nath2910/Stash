@@ -1,7 +1,7 @@
 <template>
-  <div class="min-h-screen min-h-[100dvh] bg-slate-950 px-4 py-6 sm:py-8 lg:py-10">
-    <div class="mx-auto w-full max-w-6xl space-y-6 sm:space-y-8">
-      <div class="flex items-center justify-between">
+  <div class="min-h-screen bg-slate-950 px-4 py-6 sm:py-10">
+    <div class="mx-auto w-full max-w-6xl">
+      <div class="mb-6 flex items-center justify-between">
         <button
           type="button"
           @click="goBack"
@@ -12,11 +12,11 @@
         </button>
       </div>
 
-      <div class="grid gap-6 lg:gap-8 xl:grid-cols-[0.9fr_1.1fr]">
+      <div class="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
         <section
           class="rounded-3xl border border-slate-800/80 bg-gradient-to-b from-slate-900/95 via-slate-900/80 to-slate-950/70 p-6 shadow-2xl backdrop-blur sm:p-7"
         >
-          <div class="flex flex-wrap items-start gap-4">
+          <div class="flex items-center gap-4">
             <div
               class="flex h-14 w-14 items-center justify-center rounded-2xl border border-violet-400/30 bg-violet-400/10 text-lg font-semibold text-violet-200"
             >
@@ -26,10 +26,10 @@
               <h1 class="text-xl font-semibold text-white sm:text-2xl">Mon compte</h1>
               <p class="mt-1 text-sm text-slate-400">{{ currentUser.email || '-' }}</p>
             </div>
-            <div class="w-full sm:w-auto sm:ml-auto">
+            <div class="ml-auto">
               <button
                 type="button"
-                class="w-full sm:w-auto rounded-xl border border-emerald-300/40 bg-emerald-300/10 px-3 py-2 text-xs font-semibold text-emerald-100 hover:bg-emerald-300/15"
+                class="rounded-xl border border-emerald-300/40 bg-emerald-300/10 px-3 py-2 text-xs font-semibold text-emerald-100 hover:bg-emerald-300/15"
                 @click="goAbo"
               >
                 Gérer l'abonnement
