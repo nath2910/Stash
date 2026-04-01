@@ -26,7 +26,8 @@ const routeKey = (r) => {
 </script>
 <style>
 .page-view {
-  height: 100%;
+  width: 100%;
+  min-height: 100%;
 }
 
 .page-enter-active {

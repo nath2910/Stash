@@ -66,13 +66,13 @@ const cardStyle = computed(() => {
   const titleSize = clamp(Math.round(headerBase), 14, 30)
   const subtitleSize = clamp(Math.round(titleSize * 0.78), 10, 20)
   const padding = clamp(
-    Math.round(Math.min(props.widgetWidth * 0.024, props.widgetHeight * 0.1)),
-    12,
-    34,
+    Math.round(Math.min(props.widgetWidth * 0.018, props.widgetHeight * 0.08)),
+    8,
+    20,
   )
   const dot = clamp(Math.round(titleSize * 0.62), 8, 16)
   const status = clamp(Math.round(titleSize * 0.82), 11, 20)
-  const radius = clamp(Math.round(Math.min(props.widgetWidth * 0.032, props.widgetHeight * 0.18)), 14, 24)
+  const radius = clamp(Math.round(Math.min(props.widgetWidth * 0.024, props.widgetHeight * 0.12)), 10, 16)
 
   return {
     '--widget-card-title-size': `${titleSize}px`,
@@ -90,61 +90,59 @@ const cardStyle = computed(() => {
 .widget-card {
   overflow: hidden;
   border-radius: var(--widget-card-radius);
-  border: 1px solid rgba(148, 163, 184, 0.08);
-  background: linear-gradient(180deg, rgba(8, 12, 22, 0.95), rgba(6, 10, 18, 0.97));
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.04),
-    0 8px 16px rgba(2, 6, 23, 0.18);
+  border: none;
+  background: linear-gradient(180deg, rgba(8, 12, 20, 0.62), rgba(7, 11, 18, 0.74));
+  box-shadow: none;
 }
 
 .widget-card--kpi {
   background:
-    linear-gradient(180deg, rgba(8, 12, 21, 0.96), rgba(6, 10, 17, 0.98)),
+    linear-gradient(180deg, rgba(8, 12, 20, 0.62), rgba(7, 11, 18, 0.74)),
     linear-gradient(
       90deg,
-      color-mix(in srgb, var(--widget-card-accent) 12%, transparent),
-      transparent 52%
+      color-mix(in srgb, var(--widget-card-accent) 7%, transparent),
+      transparent 58%
     );
 }
 
 .widget-card--trend {
   background:
-    linear-gradient(180deg, rgba(7, 11, 20, 0.96), rgba(5, 9, 16, 0.98)),
+    linear-gradient(180deg, rgba(8, 12, 20, 0.6), rgba(7, 11, 18, 0.72)),
     linear-gradient(
       90deg,
-      color-mix(in srgb, var(--widget-card-accent) 10%, transparent),
-      transparent 58%
+      color-mix(in srgb, var(--widget-card-accent) 6%, transparent),
+      transparent 62%
     );
 }
 
 .widget-card--distribution {
   background:
-    linear-gradient(180deg, rgba(9, 13, 21, 0.96), rgba(7, 10, 17, 0.98)),
+    linear-gradient(180deg, rgba(8, 12, 20, 0.62), rgba(7, 11, 18, 0.74)),
     linear-gradient(
       90deg,
-      color-mix(in srgb, var(--widget-card-accent) 12%, transparent),
-      transparent 60%
+      color-mix(in srgb, var(--widget-card-accent) 7%, transparent),
+      transparent 64%
     );
 }
 
 .widget-card--ranking {
   background:
-    linear-gradient(180deg, rgba(8, 12, 21, 0.96), rgba(6, 10, 17, 0.98)),
+    linear-gradient(180deg, rgba(8, 12, 20, 0.62), rgba(7, 11, 18, 0.74)),
     linear-gradient(
       90deg,
-      color-mix(in srgb, var(--widget-card-accent) 11%, transparent),
-      transparent 56%
+      color-mix(in srgb, var(--widget-card-accent) 7%, transparent),
+      transparent 60%
     );
 }
 
 .widget-card--utility,
 .widget-card--generic {
   background:
-    linear-gradient(180deg, rgba(8, 12, 21, 0.96), rgba(6, 10, 17, 0.98)),
+    linear-gradient(180deg, rgba(8, 12, 20, 0.6), rgba(7, 11, 18, 0.72)),
     linear-gradient(
       90deg,
-      color-mix(in srgb, var(--widget-card-accent) 8%, transparent),
-      transparent 64%
+      color-mix(in srgb, var(--widget-card-accent) 5%, transparent),
+      transparent 68%
     );
 }
 
@@ -162,7 +160,7 @@ const cardStyle = computed(() => {
   align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   padding-bottom: 0;
   border-bottom: none;
 }
@@ -185,22 +183,22 @@ const cardStyle = computed(() => {
 
 .widget-card__subtitle {
   font-size: var(--widget-card-subtitle-size);
-  color: rgba(226, 232, 240, 0.56);
+  color: rgba(203, 213, 225, 0.52);
   letter-spacing: 0.01em;
 }
 
 .widget-card__title {
   font-size: var(--widget-card-title-size);
   line-height: 1.12;
-  font-weight: 600;
-  color: rgba(248, 250, 252, 0.96);
+  font-weight: 580;
+  color: rgba(248, 250, 252, 0.94);
 }
 
 .widget-card__dot {
   width: var(--widget-card-dot-size);
   height: var(--widget-card-dot-size);
   border-radius: 999px;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--widget-card-accent) 14%, transparent);
+  box-shadow: none;
 }
 
 .widget-card__status {

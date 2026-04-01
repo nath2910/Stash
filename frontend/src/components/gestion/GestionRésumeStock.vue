@@ -1,5 +1,5 @@
 <template>
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
     <StatBadge label="Nombre total d'item achete" :value="totalPaires" />
     <StatBadge label="En stock" tone="success" :value="nbEnStock" />
     <StatBadge label="Vendues" tone="accent" :value="nbVendues" />

@@ -58,7 +58,7 @@
 
       <!-- IMPORT -->
       <div class="rounded-2xl border border-white/10 bg-slate-900/50 p-4 space-y-3">
-        <div class="flex items-center justify-between gap-3">
+        <div class="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div class="min-w-0">
             <div class="text-sm font-semibold text-white flex items-center gap-2">
               <span class="h-2 w-2 rounded-full bg-violet-400 shadow-[0_0_10px_#a78bfa]"></span>
@@ -70,7 +70,7 @@
             </div>
           </div>
 
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2 sm:shrink-0">
             <button
               type="button"
               class="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white text-sm transition"

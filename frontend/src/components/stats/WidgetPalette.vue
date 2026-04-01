@@ -504,9 +504,9 @@ onBeforeUnmount(() => {
 .palette-shell {
   display: grid;
   grid-template-rows: auto 1fr auto;
-  width: min(1200px, calc(100vw - 340px));
-  min-width: 760px;
-  height: calc(100dvh - 50px);
+  width: min(1200px, calc(100vw - clamp(20px, 4vw, 90px)));
+  min-width: min(680px, calc(100vw - 24px));
+  height: min(920px, calc(100dvh - 24px));
   overflow: hidden;
   border-radius: 18px;
   border: 1px solid rgba(100, 116, 139, 0.46);
@@ -522,16 +522,16 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 28px 40px;
+  padding: clamp(10px, 2.5vw, 28px);
 }
 
 .palette-cluster {
   display: grid;
-  grid-template-columns: 214px minmax(0, 1fr);
+  grid-template-columns: clamp(172px, 18vw, 214px) minmax(0, 1fr);
   align-items: start;
   gap: 16px;
-  width: fit-content;
-  max-width: calc(100vw - 120px);
+  width: min(1280px, 100%);
+  max-width: calc(100vw - 24px);
 }
 
 .palette-scroll {
@@ -885,11 +885,11 @@ onBeforeUnmount(() => {
   .palette-cluster {
     grid-template-columns: 184px minmax(0, 1fr);
     gap: 12px;
-    max-width: calc(100vw - 36px);
+    max-width: 100%;
   }
 
   .palette-shell {
-    width: min(980px, calc(100vw - 232px));
+    width: 100%;
     min-width: 0;
   }
 

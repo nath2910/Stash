@@ -5,12 +5,12 @@
       <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" @click.self="close"></div>
 
       <!-- modal -->
-      <div class="relative z-10 flex items-center justify-center min-h-full p-4">
+      <div class="relative z-10 flex min-h-full items-end justify-center p-3 sm:items-center sm:p-4">
         <div
-          class="modal-card w-full max-w-3xl max-h-[85vh] rounded-2xl bg-gray-800 border border-gray-700 shadow-2xl"
+          class="modal-card w-full max-w-3xl max-h-[calc(100dvh-1.5rem)] sm:max-h-[85vh] rounded-2xl bg-gray-800 border border-gray-700 shadow-2xl"
         >
           <!-- Header -->
-          <div class="flex items-start justify-between p-5 border-b border-gray-700">
+          <div class="flex items-start justify-between p-4 sm:p-5 border-b border-gray-700">
             <div>
               <h3 class="text-xl font-semibold text-gray-100">Modifier une vente</h3>
             </div>
@@ -36,7 +36,7 @@
           <!-- Erreur -->
           <div
             v-if="error"
-            class="mx-6 mt-4 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200"
+            class="mx-4 sm:mx-6 mt-4 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200"
           >
             {{ error }}
           </div>
@@ -44,13 +44,13 @@
           <!-- Succes -->
           <div
             v-if="success"
-            class="mx-6 mt-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm text-emerald-200"
+            class="mx-4 sm:mx-6 mt-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm text-emerald-200"
           >
             Modifications enregistrees.
           </div>
 
           <!-- Formulaire -->
-          <form class="p-6 space-y-6 overflow-hidden" @submit.prevent="save">
+          <form class="p-4 sm:p-6 space-y-5 sm:space-y-6 overflow-hidden" @submit.prevent="save">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <!-- Type -->
               <div class="sm:col-span-2">
@@ -233,11 +233,11 @@
             </div>
 
             <!-- Footer actions -->
-            <div class="pt-4 border-t border-gray-700 flex items-center justify-end gap-2">
+            <div class="pt-3 sm:pt-4 border-t border-gray-700 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2">
               <button
                 type="button"
                 @click="close"
-                class="px-4 py-2 text-sm rounded-lg border border-gray-600 text-gray-200 hover:bg-gray-700/50 transition"
+                class="w-full sm:w-auto px-4 py-2 text-sm rounded-lg border border-gray-600 text-gray-200 hover:bg-gray-700/50 transition"
                 :disabled="loading"
               >
                 Annuler
@@ -246,7 +246,7 @@
               <button
                 type="submit"
                 :disabled="loading"
-                class="px-5 py-2 text-sm rounded-lg text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500/40 disabled:opacity-60 disabled:cursor-not-allowed transition whitespace-nowrap"
+                class="w-full sm:w-auto px-5 py-2 text-sm rounded-lg text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500/40 disabled:opacity-60 disabled:cursor-not-allowed transition whitespace-nowrap"
               >
                 {{ loading ? 'Enregistrement...' : 'Enregistrer' }}
               </button>

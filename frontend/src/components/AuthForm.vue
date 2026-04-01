@@ -1,7 +1,7 @@
 <template>
-  <div class="min-h-screen overflow-hidden bg-slate-950 px-4 py-4 sm:py-6 flex items-center">
+  <div class="min-h-screen min-h-[100dvh] bg-slate-950 px-4 py-6 sm:py-8">
     <div class="mx-auto w-full max-w-5xl">
-      <div class="grid items-center gap-6 md:grid-cols-[0.9fr_1.1fr]">
+      <div class="grid items-start gap-6 lg:gap-8 md:grid-cols-[0.9fr_1.1fr]">
         <div class="text-slate-200">
           <p class="text-xs uppercase tracking-[0.3em] text-violet-300/80">Compte</p>
           <h1 class="mt-2 text-2xl font-semibold text-white sm:text-3xl">
@@ -113,7 +113,7 @@
                   Mot de passe oublié ?
                 </router-link>
               </div>
-              <div class="mt-2 grid grid-cols-2 gap-2">
+              <div class="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <button
                   type="button"
                   @click="loginWithGoogle"

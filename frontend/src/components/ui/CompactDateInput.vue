@@ -206,8 +206,9 @@ const maxDateValue = computed(() => parseYmdLocal(props.maxDate))
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
   margin-top: 8px;
   z-index: 9999;
-  width: 220px;
-  min-width: 220px;
+  width: min(280px, calc(100vw - 20px));
+  min-width: min(280px, calc(100vw - 20px));
+  max-width: min(340px, calc(100vw - 20px));
 }
 :global(.dp__arrow_top),
 :global(.dp__arrow_bottom) {

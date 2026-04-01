@@ -39,7 +39,12 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     // ✅ callback OAuth en premier (avant le catch-all)
-    { path: '/auth/callback', name: 'authCallback', component: AuthCallbackPage, meta: { fullBleed: true } },
+    {
+      path: '/auth/callback',
+      name: 'authCallback',
+      component: AuthCallbackPage,
+      meta: { fullBleed: true, allowScroll: false },
+    },
 
     // auth
     { path: '/auth', name: 'auth', component: AuthPage, meta: { fullBleed: true } },
@@ -82,6 +87,7 @@ const router = createRouter({
       component: StatsPage,
       meta: {
         fullBleed: true,
+        allowScroll: false,
         requiresAuth: true,
         transition: 'page-canvas',
         transitionMode: 'out-in',

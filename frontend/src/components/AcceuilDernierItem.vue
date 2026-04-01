@@ -20,15 +20,15 @@
           Aucun item pour l'instant.
         </div>
 
-        <div v-else class="overflow-x-auto custom-scrollbar">
-          <table class="min-w-full text-sm text-left text-slate-300">
+        <div v-else class="app-table-scroll custom-scrollbar">
+          <table class="min-w-[680px] w-full text-sm text-left text-slate-300">
             <thead>
               <tr class="bg-slate-950/70 text-[0.7rem] uppercase tracking-wide text-slate-400">
                 <th class="px-4 py-3 font-semibold">Nom de l'item</th>
                 <th class="px-4 py-3 font-semibold text-right">Prix retail</th>
-                <th class="px-4 py-3 font-semibold text-right">Prix resell</th>
+                <th class="px-4 py-3 font-semibold text-right hidden sm:table-cell">Prix resell</th>
                 <th class="px-4 py-3 font-semibold text-center">Date d'achat</th>
-                <th class="px-4 py-3 font-semibold text-center">Date de vente</th>
+                <th class="px-4 py-3 font-semibold text-center hidden md:table-cell">Date de vente</th>
                 <th class="px-4 py-3 font-semibold text-center">Statut</th>
               </tr>
             </thead>
@@ -47,7 +47,7 @@
                   <span class="font-medium">{{ prixRetailText(v) }}</span>
                 </td>
 
-                <td class="px-4 py-3 text-right">
+                <td class="px-4 py-3 text-right hidden sm:table-cell">
                   <span :class="['font-medium', hasResell(v) ? 'text-emerald-300' : 'text-slate-500']">
                     {{ hasResell(v) ? prixResellText(v) : '--' }}
                   </span>
@@ -57,7 +57,7 @@
                   <span class="text-xs text-slate-300">{{ dateFr(field(v, 'dateAchat')) }}</span>
                 </td>
 
-                <td class="px-4 py-3 text-center">
+                <td class="px-4 py-3 text-center hidden md:table-cell">
                   <span class="text-xs" :class="isVendue(v) ? 'text-slate-300' : 'text-slate-500'">
                     {{ isVendue(v) ? dateFr(field(v, 'dateVente')) : '--' }}
                   </span>

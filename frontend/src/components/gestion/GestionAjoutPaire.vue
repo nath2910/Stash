@@ -6,13 +6,13 @@
       <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" @click.self="handleClose"></div>
 
       <!-- modal -->
-      <div class="relative z-10 flex items-center justify-center min-h-full p-4">
+      <div class="relative z-10 flex min-h-full items-end justify-center p-3 sm:items-center sm:p-4">
         <div
-          class="modal-card w-full max-w-3xl max-h-[85vh] rounded-2xl bg-gray-800 border border-gray-700 shadow-2xl"
+          class="modal-card w-full max-w-3xl max-h-[calc(100dvh-1.5rem)] sm:max-h-[85vh] rounded-2xl bg-gray-800 border border-gray-700 shadow-2xl"
           @click.stop
         >
           <!-- Header -->
-          <div class="flex items-start justify-between p-5 border-b border-gray-700">
+          <div class="flex items-start justify-between p-4 sm:p-5 border-b border-gray-700">
             <div>
               <h3 class="text-xl font-semibold text-gray-100">Ajouter une vente</h3>
               <p class="text-sm text-gray-400 mt-1">
@@ -41,20 +41,20 @@
           <!-- Alerts -->
           <div
             v-if="error"
-            class="mx-6 mt-4 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200"
+            class="mx-4 sm:mx-6 mt-4 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200"
           >
             {{ error }}
           </div>
 
           <div
             v-if="success"
-            class="mx-6 mt-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm text-emerald-200"
+            class="mx-4 sm:mx-6 mt-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm text-emerald-200"
           >
             Vente{{ copies > 1 ? 's' : '' }} ajoutee{{ copies > 1 ? 's' : '' }} avec succes.
           </div>
 
           <!-- Form -->
-          <form class="p-6 space-y-6" @submit.prevent="createSales">
+          <form class="p-4 sm:p-6 space-y-5 sm:space-y-6" @submit.prevent="createSales">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <!-- Type -->
               <div class="sm:col-span-2">
@@ -217,11 +217,11 @@
             </div>
 
             <!-- Footer -->
-            <div class="pt-4 border-t border-gray-700 flex items-center justify-end gap-2">
+            <div class="pt-3 sm:pt-4 border-t border-gray-700 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2">
               <button
                 type="button"
                 @click="handleClose"
-                class="px-4 py-2 text-sm rounded-lg border border-gray-600 text-gray-200 hover:bg-gray-700/50 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                class="w-full sm:w-auto px-4 py-2 text-sm rounded-lg border border-gray-600 text-gray-200 hover:bg-gray-700/50 transition disabled:opacity-60 disabled:cursor-not-allowed"
                 :disabled="loading"
               >
                 Annuler
@@ -230,7 +230,7 @@
               <button
                 type="submit"
                 :disabled="loading"
-                class="px-5 py-2 text-sm rounded-lg text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 disabled:opacity-60 disabled:cursor-not-allowed transition whitespace-nowrap inline-flex items-center gap-2"
+                class="w-full sm:w-auto px-5 py-2 text-sm rounded-lg text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 disabled:opacity-60 disabled:cursor-not-allowed transition whitespace-nowrap inline-flex items-center justify-center gap-2"
               >
                 <span>
                   {{

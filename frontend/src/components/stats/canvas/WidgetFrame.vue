@@ -19,6 +19,7 @@
         'widget--text': widget.type === 'textTitle' || widget.type === 'textBlock',
         'widget--roi': widget.type === 'roi',
         'widget--net-profit': widget.type === 'netProfit',
+        'widget--gross-revenue': widget.type === 'grossRevenue',
         'widget--headerless': !showHeader,
         'is-text-active': textActive,
         'is-editing': isInlineTextEditing,
@@ -29,7 +30,7 @@
       @pointerdown.capture="onPointerDown"
       @keydown="onRootKeydown"
     >
-      <div class="widget__surface" :class="{ 'drag-handle': isNetProfitWidget && editMode && !isFullscreen }">
+      <div class="widget__surface" :class="{ 'drag-handle': (isNetProfitWidget || isGrossRevenueWidget) && editMode && !isFullscreen }">
       <div v-if="showHeader" class="widget__header drag-handle" :style="headerStyle">
         <div class="widget__title">
           <span class="dot" :style="dotStyle" />
@@ -479,8 +480,13 @@ const isTextWidget = computed(
 )
 const isRoiWidget = computed(() => props.widget?.type === 'roi')
 const isNetProfitWidget = computed(() => props.widget?.type === 'netProfit')
-const showHeader = computed(() => !isTextWidget.value && !isNetProfitWidget.value)
-const showFloatingActions = computed(() => isNetProfitWidget.value && !isInlineTextEditing.value)
+const isGrossRevenueWidget = computed(() => props.widget?.type === 'grossRevenue')
+const showHeader = computed(
+  () => !isTextWidget.value && !isNetProfitWidget.value && !isGrossRevenueWidget.value,
+)
+const showFloatingActions = computed(
+  () => (isNetProfitWidget.value || isGrossRevenueWidget.value) && !isInlineTextEditing.value,
+)
 const isTitleWidget = computed(() => props.widget?.type === 'textTitle')
 const textFonts = [
   { label: 'Open Sans', value: 'open-sans' },
@@ -648,7 +654,7 @@ const widgetState = computed(() => {
 const shouldAutoHeight = computed(
   () => isTextWidget.value && props.widget?.props?.autoHeight !== false,
 )
-const headerOffset = computed(() => (showHeader.value ? 44 : 0))
+const headerOffset = computed(() => (showHeader.value ? 34 : 0))
 const widgetDef = computed(() => getWidgetDef(props.widget?.type))
 
 const widgetRenderWidth = computed(() => {
@@ -696,6 +702,9 @@ const mergedProps = computed(() => {
 const bodyStyle = computed(() => {
   if (isNetProfitWidget.value) {
     return { padding: '0px' }
+  }
+  if (isGrossRevenueWidget.value) {
+    return { padding: '12px' }
   }
   const rawPadding = String(props.widget?.props?.padding ?? '').trim()
   const paddingMap: Record<string, string> = {
@@ -1177,20 +1186,19 @@ function onRootKeydown(event: KeyboardEvent) {
 <style scoped>
 .widget {
   position: absolute;
-  border-radius: 22px;
+  border-radius: 18px;
   overflow: visible;
-  background: rgba(17, 24, 39, 0.9);
+  background: transparent;
   border: none;
-  box-shadow: 0 2px 8px rgba(2, 6, 23, 0.16);
+  box-shadow: none;
   contain: layout paint;
   touch-action: none;
   outline: none;
 }
 .widget:focus-visible {
   box-shadow:
-    0 0 0 1px rgba(99, 102, 241, 0.92),
-    0 0 0 4px rgba(99, 102, 241, 0.2),
-    0 8px 18px rgba(2, 6, 23, 0.26);
+    0 0 0 1px rgba(148, 163, 184, 0.32),
+    0 8px 18px rgba(2, 6, 23, 0.24);
 }
 .widget__surface {
   width: 100%;
@@ -1577,6 +1585,23 @@ function onRootKeydown(event: KeyboardEvent) {
 .widget--net-profit .widget__surface {
   background: transparent;
 }
+.widget--gross-revenue {
+  border-radius: 30px;
+  contain: layout;
+}
+.widget--gross-revenue .widget__surface {
+  background: transparent;
+  overflow: visible;
+}
+.widget--gross-revenue .widget__body {
+  overflow: visible;
+}
+.widget--gross-revenue.is-selected {
+  box-shadow:
+    0 0 0 1px rgba(96, 165, 250, 0.64),
+    0 0 0 2px rgba(96, 165, 250, 0.14),
+    0 6px 18px rgba(2, 6, 23, 0.2);
+}
 .widget--net-profit:hover,
 .widget--net-profit.drag-armed,
 .widget--net-profit.is-selected,
@@ -1620,24 +1645,24 @@ function onRootKeydown(event: KeyboardEvent) {
 .widget.is-dragging {
   cursor: grabbing;
   transition: none;
-  box-shadow: 0 3px 10px rgba(2, 6, 23, 0.2);
+  box-shadow: 0 1px 4px rgba(2, 6, 23, 0.14);
   will-change: transform;
 }
 .widget.is-resizing {
-  box-shadow: 0 3px 10px rgba(2, 6, 23, 0.2);
+  box-shadow: 0 1px 4px rgba(2, 6, 23, 0.14);
   will-change: transform, width, height;
 }
 .widget:hover {
-  box-shadow: 0 3px 10px rgba(2, 6, 23, 0.2);
+  box-shadow: 0 1px 4px rgba(2, 6, 23, 0.1);
 }
 .widget.is-selected {
   box-shadow:
-    0 0 0 1px rgba(59, 130, 246, 0.88),
-    0 0 0 3px rgba(59, 130, 246, 0.16),
+    0 0 0 1px rgba(59, 130, 246, 0.9),
+    0 0 0 3px rgba(59, 130, 246, 0.2),
     0 3px 10px rgba(2, 6, 23, 0.24);
 }
 .widget.drag-armed {
-  box-shadow: 0 3px 10px rgba(2, 6, 23, 0.2);
+  box-shadow: 0 1px 4px rgba(2, 6, 23, 0.14);
   cursor: grab;
 }
 .widget--net-profit,
@@ -1651,12 +1676,12 @@ function onRootKeydown(event: KeyboardEvent) {
 }
 
 .widget__header {
-  height: 44px;
+  height: 34px;
   display: flex;
   align-items: center;
-  padding: 0 10px 0 12px;
+  padding: 0 6px 0 8px;
   border-bottom: none;
-  background: rgba(10, 15, 30, 0.9);
+  background: transparent;
   position: relative;
   z-index: 18;
 }
@@ -1664,18 +1689,18 @@ function onRootKeydown(event: KeyboardEvent) {
 .widget__title {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   user-select: none;
 }
 .dot {
-  width: 10px;
-  height: 10px;
+  width: 9px;
+  height: 9px;
   border-radius: 999px;
 }
 .title {
-  color: rgba(255, 255, 255, 0.92);
-  font-weight: 650;
-  font-size: 0.9rem;
+  color: rgba(241, 245, 249, 0.92);
+  font-weight: 580;
+  font-size: 0.8rem;
 }
 .drag-grip {
   width: 14px;
@@ -1689,7 +1714,7 @@ function onRootKeydown(event: KeyboardEvent) {
 .widget__actions {
   margin-left: auto;
   display: inline-flex;
-  gap: calc(8px * var(--action-ui-scale, 1));
+  gap: calc(6px * var(--action-ui-scale, 1));
   position: relative;
   z-index: 26;
   opacity: 0;
@@ -1715,8 +1740,8 @@ function onRootKeydown(event: KeyboardEvent) {
 }
 .widget__floating-actions {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: 8px;
+  right: 8px;
   z-index: 32;
   display: inline-flex;
   align-items: center;
@@ -1734,17 +1759,38 @@ function onRootKeydown(event: KeyboardEvent) {
     opacity 140ms ease,
     transform 140ms ease;
 }
-.widget--net-profit:hover .widget__floating-actions {
+.widget--net-profit:hover .widget__floating-actions,
+.widget--gross-revenue:hover .widget__floating-actions,
+.widget--gross-revenue.is-resizing .widget__floating-actions,
+.widget--gross-revenue.is-fullscreen .widget__floating-actions {
   opacity: 1;
   transform: translateY(0);
   pointer-events: auto;
 }
+.widget--gross-revenue .widget__floating-actions {
+  top: 12px;
+  right: 12px;
+  z-index: 72;
+}
+.widget--gross-revenue:focus-within .widget__floating-actions,
+.widget--gross-revenue .widget__floating-actions:hover,
+.widget--gross-revenue .widget__floating-actions:focus-within,
+.widget--gross-revenue .widget-action-menu:hover,
+.widget--gross-revenue .widget-action-menu:focus-within {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+.widget--gross-revenue.is-fullscreen .widget__floating-actions {
+  top: 12px;
+  right: 12px;
+}
 .iconbtn {
-  width: calc(34px * var(--action-ui-scale, 1));
-  height: calc(34px * var(--action-ui-scale, 1));
-  border-radius: calc(12px * var(--action-ui-scale, 1));
+  width: calc(30px * var(--action-ui-scale, 1));
+  height: calc(30px * var(--action-ui-scale, 1));
+  border-radius: calc(10px * var(--action-ui-scale, 1));
   border: none;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.04);
   color: rgba(255, 255, 255, 0.92);
   display: grid;
   place-items: center;
@@ -1753,11 +1799,11 @@ function onRootKeydown(event: KeyboardEvent) {
     opacity 160ms ease;
 }
 .iconbtn:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
 }
 .iconbtn :deep(svg) {
-  width: calc(16px * var(--action-ui-scale, 1));
-  height: calc(16px * var(--action-ui-scale, 1));
+  width: calc(15px * var(--action-ui-scale, 1));
+  height: calc(15px * var(--action-ui-scale, 1));
 }
 .iconbtn--menu {
   position: relative;
@@ -1809,24 +1855,37 @@ function onRootKeydown(event: KeyboardEvent) {
   outline: 2px solid rgba(129, 140, 248, 0.92);
   outline-offset: 2px;
 }
-.widget--net-profit .widget__floating-actions .iconbtn--glass {
+.widget--net-profit .widget__floating-actions .iconbtn--glass,
+.widget--gross-revenue .widget__floating-actions .iconbtn--glass {
   width: 32px;
   height: 32px;
   border-radius: 11px;
-  border: none;
-  background: linear-gradient(162deg, rgba(255, 255, 255, 0.24) 0%, rgba(226, 233, 242, 0.12) 48%, rgba(162, 171, 186, 0.16) 100%);
-  backdrop-filter: blur(16px) saturate(124%);
-  -webkit-backdrop-filter: blur(16px) saturate(124%);
+  border: 1px solid rgba(214, 224, 240, 0.18);
+  background: linear-gradient(162deg, rgba(31, 40, 56, 0.72) 0%, rgba(20, 28, 42, 0.66) 52%, rgba(16, 22, 34, 0.76) 100%);
+  backdrop-filter: blur(16px) saturate(108%);
+  -webkit-backdrop-filter: blur(16px) saturate(108%);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.54),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.16),
-    0 8px 16px rgba(6, 12, 24, 0.14);
-  color: rgba(248, 251, 255, 0.96);
+    inset 0 1px 0 rgba(239, 246, 255, 0.22),
+    inset 0 -1px 0 rgba(124, 145, 177, 0.16),
+    0 10px 16px rgba(4, 10, 22, 0.36);
+  color: rgba(240, 246, 255, 0.94);
 }
-.widget--net-profit .widget__floating-actions .iconbtn--glass:hover {
-  background: linear-gradient(162deg, rgba(255, 255, 255, 0.3) 0%, rgba(233, 238, 245, 0.16) 48%, rgba(171, 180, 193, 0.2) 100%);
+.widget--net-profit .widget__floating-actions .iconbtn--glass:hover,
+.widget--gross-revenue .widget__floating-actions .iconbtn--glass:hover {
+  background: linear-gradient(162deg, rgba(45, 58, 78, 0.74) 0%, rgba(28, 40, 58, 0.7) 52%, rgba(20, 30, 47, 0.8) 100%);
+  border-color: rgba(219, 231, 248, 0.24);
 }
-.widget--net-profit .widget-action-menu {
+.widget--gross-revenue .widget__floating-actions .iconbtn--glass {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+}
+.widget--gross-revenue .widget__floating-actions .iconbtn--glass :deep(svg) {
+  width: 16px;
+  height: 16px;
+}
+.widget--net-profit .widget-action-menu,
+.widget--gross-revenue .widget-action-menu {
   border: none;
   background: linear-gradient(160deg, rgba(53, 62, 76, 0.72), rgba(35, 43, 56, 0.68));
   backdrop-filter: blur(18px) saturate(126%);
@@ -1856,7 +1915,7 @@ function onRootKeydown(event: KeyboardEvent) {
 }
 
 .widget__body {
-  height: calc(100% - 44px);
+  height: calc(100% - 34px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1894,6 +1953,12 @@ function onRootKeydown(event: KeyboardEvent) {
 
 .widget__content-inner :deep([class*='border']) {
   border-color: rgba(148, 163, 184, 0.12) !important;
+}
+
+.widget__content-inner :deep(.border),
+.widget__content-inner :deep([class^='border-']),
+.widget__content-inner :deep([class*=' border-']) {
+  border-width: 0 !important;
 }
 
 .widget__body--auto .widget__content-scale {
@@ -2214,28 +2279,21 @@ function onRootKeydown(event: KeyboardEvent) {
   pointer-events: none;
 }
 
-.widget[data-edit="true"]:hover .resize-handle,
-.widget.is-selected .resize-handle,
-.widget.is-resizing .resize-handle,
-.widget.drag-armed .resize-handle,
-.widget:focus-within .resize-handle {
+.widget.is-selected:hover .resize-handle,
+.widget.is-resizing .resize-handle {
   --handle-scale: 1;
   opacity: 1;
   pointer-events: auto;
 }
 
-.widget[data-edit="true"]:hover .resize-edge,
-.widget.is-selected .resize-edge,
-.widget.is-resizing .resize-edge,
-.widget.drag-armed .resize-edge,
-.widget:focus-within .resize-edge {
+.widget.is-selected:hover .resize-edge,
+.widget.is-resizing .resize-edge {
   opacity: 1;
   pointer-events: auto;
 }
 
 .widget[data-edit="true"]:hover .resize-rail,
 .widget.is-resizing .resize-rail,
-.widget.drag-armed .resize-rail,
 .widget:focus-within .resize-rail {
   opacity: 0;
 }
@@ -2289,10 +2347,8 @@ function onRootKeydown(event: KeyboardEvent) {
   white-space: nowrap;
 }
 
-.widget[data-edit="true"]:hover .resize-meta,
-.widget.is-resizing .resize-meta,
-.widget.drag-armed .resize-meta,
-.widget:focus-within .resize-meta {
+.widget.is-selected:hover .resize-meta,
+.widget.is-resizing .resize-meta {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }
@@ -2304,7 +2360,7 @@ function onRootKeydown(event: KeyboardEvent) {
   }
 
   .resize-edge {
-    opacity: 1;
+    opacity: 0;
   }
 
   .resize-edge--n,
@@ -2324,7 +2380,20 @@ function onRootKeydown(event: KeyboardEvent) {
   .resize-handle {
     --handle-size: 22px;
     --handle-hit: 64px;
+    opacity: 0;
+  }
+
+  .widget.is-selected .resize-edge,
+  .widget.is-resizing .resize-edge {
     opacity: 1;
+    pointer-events: auto;
+  }
+
+  .widget.is-selected .resize-handle,
+  .widget.is-resizing .resize-handle {
+    --handle-scale: 1;
+    opacity: 1;
+    pointer-events: auto;
   }
 
   .resize-handle--n,

@@ -14,7 +14,7 @@
       </TransitionChild>
 
       <div class="fixed inset-0 overflow-y-auto">
-        <div class="flex min-h-full items-center justify-center p-4">
+        <div class="flex min-h-full items-end sm:items-center justify-center p-2 sm:p-4">
           <TransitionChild
             as="template"
             enter="duration-170 ease-out"
@@ -25,7 +25,7 @@
             leaveTo="opacity-0 scale-95 translate-y-1"
           >
             <DialogPanel
-              class="glass-panel w-full rounded-[22px]"
+              class="glass-panel w-full max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] rounded-[22px]"
               :class="isTextWidgetSettings ? 'max-w-4xl' : 'max-w-lg'"
             >
               <div class="glass-header px-4 py-3 flex items-center">
@@ -40,7 +40,7 @@
                 </button>
               </div>
 
-              <div class="settings-body p-4" :class="{ 'settings-body--text': isTextWidgetSettings }">
+              <div class="settings-body settings-scroll p-4" :class="{ 'settings-body--text': isTextWidgetSettings }">
                 <div v-if="!orderedFields.length" class="text-sm text-white/60">
                   Pas de reglages pour ce widget.
                 </div>
@@ -500,6 +500,12 @@ watch(
   display: grid;
   gap: 12px;
 }
+.settings-scroll {
+  max-height: min(68dvh, 760px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
 .settings-body--text {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
@@ -769,12 +775,22 @@ watch(
   outline-offset: 2px;
 }
 @media (max-width: 860px) {
+  .settings-scroll {
+    max-height: min(70dvh, 760px);
+  }
   .settings-body--text {
     grid-template-columns: 1fr;
   }
   .tile-grid--3,
   .tile-grid--fonts {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .settings-scroll {
+    max-height: min(72dvh, 760px);
+    padding: 12px;
   }
 }
 </style>
