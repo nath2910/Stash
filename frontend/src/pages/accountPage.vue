@@ -1,7 +1,7 @@
 <template>
-  <div class="min-h-screen bg-slate-950 px-4 py-6 sm:py-10">
-    <div class="mx-auto w-full max-w-6xl">
-      <div class="mb-6 flex items-center justify-between">
+  <div class="min-h-full bg-slate-950 text-slate-100">
+    <div class="mx-auto w-full max-w-[1360px] px-3 py-4 sm:px-5 sm:py-6 md:px-6 lg:px-8 xl:py-8">
+      <div class="mb-4 flex flex-wrap items-center justify-between gap-3 sm:mb-6">
         <button
           type="button"
           @click="goBack"
@@ -10,69 +10,57 @@
           <span class="text-sm"><-</span>
           <span>Retour</span>
         </button>
+
+        <span class="inline-flex items-center rounded-full border border-slate-800 bg-slate-900/60 px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-slate-400">
+          Mon compte
+        </span>
       </div>
 
-      <div class="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
+      <div class="grid items-start gap-4 sm:gap-6 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] 2xl:gap-8">
         <section
-          class="rounded-3xl border border-slate-800/80 bg-gradient-to-b from-slate-900/95 via-slate-900/80 to-slate-950/70 p-6 shadow-2xl backdrop-blur sm:p-7"
+          class="rounded-2xl border border-slate-800/80 bg-gradient-to-b from-slate-900/95 via-slate-900/80 to-slate-950/70 p-4 shadow-2xl backdrop-blur sm:rounded-3xl sm:p-6 lg:p-7"
         >
-          <div class="flex flex-wrap items-center gap-4">
-            <div
-              class="flex h-14 w-14 items-center justify-center rounded-2xl border border-violet-400/30 bg-violet-400/10 text-lg font-semibold text-violet-200"
-            >
-              {{ initials }}
-            </div>
-            <div>
-              <h1 class="text-xl font-semibold text-white sm:text-2xl">Mon compte</h1>
-              <p class="mt-1 text-sm text-slate-400">{{ currentUser.email || '-' }}</p>
-            </div>
-            <div class="w-full sm:ml-auto sm:w-auto">
-              <button
-                type="button"
-                class="w-full rounded-xl border border-emerald-300/40 bg-emerald-300/10 px-3 py-2 text-xs font-semibold text-emerald-100 hover:bg-emerald-300/15 sm:w-auto"
-                @click="goAbo"
+          <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div class="flex min-w-0 items-center gap-4">
+              <div
+                class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-violet-400/30 bg-violet-400/10 text-lg font-semibold text-violet-200"
               >
-                Gérer l'abonnement
-              </button>
+                {{ initials }}
+              </div>
+              <div class="min-w-0">
+                <h1 class="text-xl font-semibold text-white sm:text-2xl">Mon compte</h1>
+                <p class="mt-1 break-all text-sm text-slate-400 sm:break-normal sm:truncate">{{ currentUser.email || '-' }}</p>
+              </div>
             </div>
+
+            <button
+              type="button"
+              class="w-full rounded-xl border border-emerald-300/40 bg-emerald-300/10 px-3 py-2 text-xs font-semibold text-emerald-100 transition hover:bg-emerald-300/15 sm:w-auto"
+              @click="goAbo"
+            >
+              Gerer l'abonnement
+            </button>
           </div>
 
-          <div class="mt-6 grid gap-3 text-sm text-slate-200 sm:grid-cols-2">
-            <div>
+          <div class="mt-5 grid gap-3 text-sm text-slate-200 sm:mt-6 sm:grid-cols-2">
+            <div class="rounded-xl border border-slate-800/80 bg-slate-900/55 px-4 py-3">
               <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Prenom</p>
-              <p class="mt-1 font-medium">{{ currentUser.firstName || '-' }}</p>
+              <p class="mt-1 break-words font-medium">{{ currentUser.firstName || '-' }}</p>
             </div>
-            <div>
+            <div class="rounded-xl border border-slate-800/80 bg-slate-900/55 px-4 py-3">
               <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Nom</p>
-              <p class="mt-1 font-medium">{{ currentUser.lastName || '-' }}</p>
+              <p class="mt-1 break-words font-medium">{{ currentUser.lastName || '-' }}</p>
             </div>
           </div>
 
-          <div class="mt-6 flex flex-wrap gap-2">
-            <span
-              class="inline-flex items-center rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1 text-xs text-slate-300"
-            >
-              Email:
-              <span class="ml-1 font-semibold">
-                {{ currentUser.emailVerified ? 'verifie' : 'non verifie' }}
-              </span>
-            </span>
-            <span
-              class="inline-flex items-center rounded-full border border-violet-400/30 bg-violet-400/10 px-3 py-1 text-xs text-violet-200"
-            >
-              Compte protege
-            </span>
-          </div>
-
-          <div class="mt-6 border-t border-slate-800/80 pt-6">
-            <h3 class="text-base font-semibold text-red-200">Zone dangereuse</h3>
-            <p class="mt-2 text-sm text-slate-400">
+          <div class="mt-6 rounded-2xl border border-red-500/20 bg-red-500/5 p-4 sm:p-5">
+            <p class="text-sm text-slate-400">
               Cette action supprime definitivement ton compte et tes donnees.
             </p>
 
             <div class="mt-4 space-y-3 text-sm text-slate-200">
-              <label class="flex items-center gap-2">
-                <input v-model="deleteConfirmChecked" type="checkbox" class="h-4 w-4" />
+              <label class="flex items-start gap-2">
+                <input v-model="deleteConfirmChecked" type="checkbox" class="mt-0.5 h-4 w-4" />
                 <span>Je comprends que cette action est irreversible.</span>
               </label>
 
@@ -100,15 +88,16 @@
               type="button"
               :disabled="deleting || !canDelete"
               @click="submitDelete"
-              class="mt-4 inline-flex items-center justify-center gap-2 rounded-xl bg-red-500 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-red-400 focus:outline-none focus:ring-2 focus:ring-red-400 disabled:cursor-not-allowed disabled:opacity-50"
+              class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-red-500 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-red-400 focus:outline-none focus:ring-2 focus:ring-red-400 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
             >
               {{ deleting ? 'Suppression...' : 'Supprimer mon compte' }}
             </button>
           </div>
+
         </section>
 
         <section
-          class="rounded-3xl border border-slate-800/80 bg-gradient-to-b from-slate-900/95 via-slate-900/80 to-slate-950/70 p-6 shadow-2xl backdrop-blur sm:p-7"
+          class="rounded-2xl border border-slate-800/80 bg-gradient-to-b from-slate-900/95 via-slate-900/80 to-slate-950/70 p-4 shadow-2xl backdrop-blur sm:rounded-3xl sm:p-6 lg:p-7"
         >
           <h2 class="text-lg font-semibold text-white">Securite</h2>
           <p class="mt-1 text-sm text-slate-400">Modifie ton mot de passe.</p>
@@ -190,11 +179,6 @@ const initials = computed(() => {
   return (first + last || 'U').toUpperCase()
 })
 
-const providerLabel = computed(() => {
-  const provider = currentUser.value.provider || 'LOCAL'
-  return String(provider).toUpperCase()
-})
-
 const form = ref({
   currentPassword: '',
   newPassword: '',
@@ -204,7 +188,6 @@ const form = ref({
 const loading = ref(false)
 const error = ref('')
 const success = ref('')
-
 const deleteConfirmChecked = ref(false)
 const deleteConfirmText = ref('')
 const deleting = ref(false)

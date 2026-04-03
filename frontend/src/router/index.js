@@ -97,7 +97,7 @@ const router = createRouter({
       path: '/compte',
       name: 'account',
       component: AccountPage,
-      meta: { requiresAuth: true, fullBleed: true },
+      meta: { requiresAuth: true, fullBleed: true, allowScroll: true },
     },
     {
       path: '/abo',
