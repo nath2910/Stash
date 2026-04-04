@@ -1,5 +1,11 @@
 <template>
   <div class="min-h-screen overflow-hidden bg-slate-950 px-4 py-4 sm:py-6 flex items-center">
+    <router-link
+      :to="{ name: 'discover' }"
+      class="fixed bottom-4 left-4 z-20 inline-flex items-center justify-center rounded-lg border border-violet-400/50 bg-violet-500/15 px-3 py-1.5 text-xs font-medium text-violet-100 shadow-lg shadow-black/25 transition hover:border-violet-300/80 hover:bg-violet-500/25 sm:bottom-6 sm:left-6"
+    >
+      Decouvrir l'offre
+    </router-link>
     <div class="mx-auto w-full max-w-5xl">
       <div class="grid items-center gap-6 md:grid-cols-[0.9fr_1.1fr]">
         <div class="text-slate-200">

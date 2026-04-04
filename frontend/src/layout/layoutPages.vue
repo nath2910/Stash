@@ -213,6 +213,7 @@ const isStatsLight = computed(() => isStats.value && theme.value === 'light')
 const isAuthRoute = computed(() =>
   [
     'auth',
+    'discover',
     'forgot-password',
     'reset-password',
     'authCallback',
@@ -485,4 +486,3 @@ body,
 }
 
 </style>
-

@@ -9,6 +9,7 @@ const GestionPage = () => import('@/pages/gestionPage.vue')
 const AboPage = () => import('@/pages/aboPage.vue')
 const AboViewPage = () => import('@/pages/aboViewPage.vue')
 const AuthPage = () => import('@/pages/AuthPage.vue')
+const DiscoverPage = () => import('@/pages/DiscoverPage.vue')
 const AccountPage = () => import('@/pages/accountPage.vue')
 const AuthCallbackPage = () => import('@/pages/authCallbackPage.vue')
 const ForgotPasswordPage = () => import('@/pages/ForgotPasswordPage.vue')
@@ -43,6 +44,12 @@ const router = createRouter({
 
     // auth
     { path: '/auth', name: 'auth', component: AuthPage, meta: { fullBleed: true } },
+    {
+      path: '/discover',
+      name: 'discover',
+      component: DiscoverPage,
+      meta: { fullBleed: true, allowScroll: true },
+    },
     {
       path: '/forgot-password',
       name: 'forgot-password',
@@ -122,6 +129,7 @@ const router = createRouter({
 
 const publicRoutes = new Set([
   'auth',
+  'discover',
   'authCallback',
   'forgot-password',
   'reset-password',

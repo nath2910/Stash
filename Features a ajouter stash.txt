@@ -1,29 +1,58 @@
-Features à ajouter – Stash
+Features a ajouter stash
 
-Fix à faire :
-- Histoire de connexion/déconnexion (le petit indicateur en haut).
-- Faire en sorte que chacun ait ses stats (actuellement ça ne marche pas).
-- Bien gérer l’échelle de la page stats.
-- Ajouter zone de texte dans stats + pouvoir avoir une vue plein écran d’une stat.
+fix a faire : histoire de connexion deco genre le ptit truc en haut 
 
-Mode boutique (Hiboutik) et mode reseller :
-- Import CSV propre.
-- Scan code-barres / QR.
-- Mode comptage inventaire (tu bipes → ça incrémente).
-- Alertes : « rupture bientôt », « dort en stock depuis 90j ».
-- Marges, rotation, top ventes.
-- Suggestions de réassort (même simple).
-- Historique des mouvements (qui a fait quoi).
-- Plus de stats -> choix des stats voulues.
-- Ajout image aux items.
-- Relier à Shopify ou autre.
-- Système d’abonnement ?
+bien gerer l'echelle de la page stat
 
-Récupération Twilio : ME5Y1PY147ANHYF49WA62UWU
+pouvoir tout selectionner dans les stat pour deplacer otut 
 
-Idée de nom : Stash
+ia pour faire des annonces perso -> lien avec vinted lbc …
 
-Contacts :
+Truc pour rentrer la cote actuelle de l'item en question
+
+
+Mode boutique (Hiboutik) et mode reseller
+
+stat style canva ?
+
+mode boutique :
+
+Import CSV propre
+
+Scan code-barres / QR
+
+Mode comptage inventaire (tu bip → ça incrémente)
+
+alertes : “rupture bientôt”, “dort en stock depuis 90j”
+
+marges, rotation, top ventes
+
+suggestions de réassort (même simple)																								
+
+historique des mouvements (qui a fait quoi)
+
+plus de stat -> choix de des stats voulu 
+
+ajout iamge aux items
+
+relier a shopify ou autre
+
+système d'abonnement ?
+
+recupereation twilio : ME5Y1PY147ANHYF49WA62UWU
+
+
+Idee de nom : Stash 
+
+
+
+
+
+
+
+
+
+
 caroline.tchakerian@canal-plus.com
 muriel.bajard@francetelevisions.fr
 yacine.lotaut@yahoo.fr
@@ -31,16 +60,21 @@ eknitzeff@deezer.com
 guillaume.suxe@fnacdarty.com
 christophe.plouseau@louisvuitton.com
 
-Message de remerciement (draft) :
+
+
 Bonjour Monsieur Poutaraud,
 
 Je tenais à vous remercier pour le temps que vous m’avez accordé lors de notre entretien la semaine dernière, ainsi que pour vos explications sur le poste d'assistant coordinateur SG au sein de CEREALOG. L’échange m’a permis de mieux comprendre le contexte et l’organisation de votre équipe.
 
 Afin de mieux me projeter sur le poste à vos côtés, j’aurais quelques questions complémentaires :
-- Sur quels types de demandes clients interviendrais-je en priorité au démarrage ?
-- Sous quelle forme transmettez-vous les besoins recueillis auprès des clients pour les transmettre aux équipes techniques ?
-- À quoi ressemble une journée type en tant qu'assistant coordinateur SG ?
+
+Sur quels types de demandes clients interviendrais je en priorité au démarrage ?
+
+Sous quelle forme transmettez-vous les besoins recueillis auprès des clients pour les transmettre aux équipes techniques ?
+
+A quoi ressemble une journée type en tant qu'assistant Coordinateur SG ? 
+
 
 Je vous remercie par avance pour ces précisions et reste à votre disposition pour toute information complémentaire.
 
-Talvasson Nathan
+Talvasson nathan
