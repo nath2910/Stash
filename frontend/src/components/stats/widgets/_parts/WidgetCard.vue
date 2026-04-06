@@ -40,7 +40,7 @@ import { computed } from 'vue'
 const props = defineProps({
   title: { type: String, required: true },
   subtitle: { type: String, default: '' },
-  accent: { type: String, default: '#8B5CF6' },
+  accent: { type: String, default: '#38BDF8' },
   surface: { type: String, default: 'generic' },
   loading: { type: Boolean, default: false },
   error: { type: String, default: '' },
@@ -88,63 +88,32 @@ const cardStyle = computed(() => {
 
 <style scoped>
 .widget-card {
+  position: relative;
   overflow: hidden;
   border-radius: var(--widget-card-radius);
-  border: 1px solid rgba(148, 163, 184, 0.08);
-  background: linear-gradient(180deg, rgba(8, 12, 22, 0.95), rgba(6, 10, 18, 0.97));
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.04),
-    0 8px 16px rgba(2, 6, 23, 0.18);
-}
-
-.widget-card--kpi {
+  border: none;
   background:
-    linear-gradient(180deg, rgba(8, 12, 21, 0.96), rgba(6, 10, 17, 0.98)),
-    linear-gradient(
-      90deg,
-      color-mix(in srgb, var(--widget-card-accent) 12%, transparent),
+    linear-gradient(180deg, rgba(10, 15, 28, 0.95), rgba(7, 12, 22, 0.97)),
+    radial-gradient(
+      circle at 100% 0%,
+      color-mix(in srgb, var(--widget-card-accent) 11%, transparent),
       transparent 52%
     );
+  box-shadow: 0 6px 14px rgba(2, 6, 23, 0.18);
 }
 
-.widget-card--trend {
-  background:
-    linear-gradient(180deg, rgba(7, 11, 20, 0.96), rgba(5, 9, 16, 0.98)),
-    linear-gradient(
-      90deg,
-      color-mix(in srgb, var(--widget-card-accent) 10%, transparent),
-      transparent 58%
-    );
-}
-
-.widget-card--distribution {
-  background:
-    linear-gradient(180deg, rgba(9, 13, 21, 0.96), rgba(7, 10, 17, 0.98)),
-    linear-gradient(
-      90deg,
-      color-mix(in srgb, var(--widget-card-accent) 12%, transparent),
-      transparent 60%
-    );
-}
-
-.widget-card--ranking {
-  background:
-    linear-gradient(180deg, rgba(8, 12, 21, 0.96), rgba(6, 10, 17, 0.98)),
-    linear-gradient(
-      90deg,
-      color-mix(in srgb, var(--widget-card-accent) 11%, transparent),
-      transparent 56%
-    );
-}
-
+.widget-card--kpi,
+.widget-card--trend,
+.widget-card--distribution,
+.widget-card--ranking,
 .widget-card--utility,
 .widget-card--generic {
   background:
-    linear-gradient(180deg, rgba(8, 12, 21, 0.96), rgba(6, 10, 17, 0.98)),
-    linear-gradient(
-      90deg,
-      color-mix(in srgb, var(--widget-card-accent) 8%, transparent),
-      transparent 64%
+    linear-gradient(180deg, rgba(10, 15, 28, 0.95), rgba(7, 12, 22, 0.97)),
+    radial-gradient(
+      circle at 100% 0%,
+      color-mix(in srgb, var(--widget-card-accent) 11%, transparent),
+      transparent 52%
     );
 }
 
@@ -162,9 +131,9 @@ const cardStyle = computed(() => {
   align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
-  margin-bottom: 10px;
-  padding-bottom: 0;
-  border-bottom: none;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
 }
 
 .widget-card__titlewrap {
@@ -185,27 +154,28 @@ const cardStyle = computed(() => {
 
 .widget-card__subtitle {
   font-size: var(--widget-card-subtitle-size);
-  color: rgba(226, 232, 240, 0.56);
-  letter-spacing: 0.01em;
+  color: rgba(203, 213, 225, 0.76);
+  letter-spacing: 0.02em;
 }
 
 .widget-card__title {
   font-size: var(--widget-card-title-size);
-  line-height: 1.12;
-  font-weight: 600;
-  color: rgba(248, 250, 252, 0.96);
+  line-height: 1.14;
+  font-weight: 650;
+  color: rgba(248, 250, 252, 0.98);
 }
 
 .widget-card__dot {
-  width: var(--widget-card-dot-size);
-  height: var(--widget-card-dot-size);
+  width: calc(var(--widget-card-dot-size) + 6px);
+  height: 4px;
   border-radius: 999px;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--widget-card-accent) 14%, transparent);
+  opacity: 0.9;
+  box-shadow: none;
 }
 
 .widget-card__status {
   font-size: var(--widget-card-status-size);
-  color: rgba(226, 232, 240, 0.62);
+  color: rgba(203, 213, 225, 0.78);
 }
 
 .widget-card__status--error {

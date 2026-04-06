@@ -29,7 +29,7 @@
       @pointerdown.capture="onPointerDown"
       @keydown="onRootKeydown"
     >
-      <div class="widget__surface" :class="{ 'drag-handle': isNetProfitWidget && editMode && !isFullscreen }">
+      <div class="widget__surface" :style="surfaceLayoutStyle">
       <div v-if="showHeader" class="widget__header drag-handle" :style="headerStyle">
         <div class="widget__title">
           <span class="dot" :style="dotStyle" />
@@ -37,7 +37,11 @@
           <span v-if="editMode" class="drag-grip" aria-hidden="true" />
         </div>
 
-        <div class="widget__actions" :class="{ 'widget__actions--compact': compactActions }">
+        <div
+          class="widget__actions"
+          :class="{ 'widget__actions--compact': compactActions }"
+          @pointerdown.stop
+        >
           <button
             type="button"
             class="iconbtn"
@@ -350,7 +354,14 @@
             class="widget__content-inner"
             @dblclick.stop="onWidgetBodyDoubleClick"
           >
-            <component v-if="!isInlineTextEditing" :is="comp" :from="from" :to="to" v-bind="mergedProps" />
+            <component
+              v-if="!isInlineTextEditing"
+              :is="comp"
+              :from="from"
+              :to="to"
+              v-bind="mergedProps"
+              @view-change="onWidgetViewChange"
+            />
             <div
               v-else
               ref="inlineEditorEl"
@@ -371,7 +382,7 @@
       </div>
       </div>
 
-      <div v-if="editMode && !isFullscreen && !groupSelected" class="widget__resize-overlay">
+      <div v-if="editMode && !isFullscreen" class="widget__resize-overlay">
         <template v-if="widget.type !== 'textTitle' && widget.type !== 'textBlock'">
           <span class="resize-rail resize-rail--h" />
           <span class="resize-rail resize-rail--v" />
@@ -450,6 +461,7 @@ type ResizeDir = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw'
 
 const props = defineProps<{
   widget: Widget
+  canvasScale: number
   editMode: boolean
   dragArmed: boolean
   selected: boolean
@@ -465,6 +477,7 @@ const emit = defineEmits<{
   (e: 'duplicate'): void
   (e: 'settings'): void
   (e: 'remove'): void
+  (e: 'propsPatch', patch: Record<string, unknown>): void
   (e: 'dragStart', ev: PointerEvent): void
   (e: 'activate'): void
   (e: 'textPropsChange', patch: Record<string, unknown>): void
@@ -478,9 +491,8 @@ const isTextWidget = computed(
   () => props.widget?.type === 'textTitle' || props.widget?.type === 'textBlock',
 )
 const isRoiWidget = computed(() => props.widget?.type === 'roi')
-const isNetProfitWidget = computed(() => props.widget?.type === 'netProfit')
-const showHeader = computed(() => !isTextWidget.value && !isNetProfitWidget.value)
-const showFloatingActions = computed(() => isNetProfitWidget.value && !isInlineTextEditing.value)
+const showHeader = computed(() => !isTextWidget.value)
+const showFloatingActions = computed(() => false)
 const isTitleWidget = computed(() => props.widget?.type === 'textTitle')
 const textFonts = [
   { label: 'Open Sans', value: 'open-sans' },
@@ -503,7 +515,6 @@ const textAlignOptions: Array<{
 const defaultFontSize = computed(() => (isTitleWidget.value ? 52 : 17))
 const defaultWeight = computed(() => (isTitleWidget.value ? 'bold' : 'regular'))
 const defaultColor = computed(() => (isTitleWidget.value ? '#ffffff' : '#e2e8f0'))
-const LIVE_RENDER_EPSILON = 4
 const liveRenderWidth = ref(0)
 const liveRenderHeight = ref(0)
 const TEXT_FONT_FAMILIES: Record<string, string> = {
@@ -608,6 +619,7 @@ const liveWidgetWidth = computed(() => {
 })
 const actionCount = computed(() => (props.editMode ? 4 : 1))
 const actionUiScale = computed(() => {
+  if (!isTextWidget.value) return 1
   const width = liveWidgetWidth.value
   if (!Number.isFinite(width) || width <= 0) return 1
   const reserveForTitle = isTextWidget.value ? 92 : 132
@@ -618,6 +630,12 @@ const actionUiScale = computed(() => {
   const needed = count * buttonBase + Math.max(0, count - 1) * gapBase
   if (!needed) return 1
   return Math.max(0.72, Math.min(1, available / needed))
+})
+const fullHeaderActionsWidth = computed(() => {
+  const buttonSize = 34
+  const gap = 8
+  const count = props.editMode ? 4 : 1
+  return count * buttonSize + Math.max(0, count - 1) * gap
 })
 const headerStyle = computed(() => {
   if (!isTextWidget.value) {
@@ -632,10 +650,14 @@ const headerStyle = computed(() => {
 })
 const rootTabIndex = computed(() => (props.editMode ? 0 : -1))
 const compactActions = computed(() => {
-  if (isTextWidget.value) return false
+  if (!showHeader.value) return false
   if (!props.editMode) return false
   const width = liveWidgetWidth.value
-  return Number.isFinite(width) && width > 0 && width < 420
+  if (!Number.isFinite(width) || width <= 0) return false
+  // Reserve a minimal space so title stays readable and actions remain clickable.
+  const minTitleSpace = 84
+  const headerPadding = 26
+  return width < fullHeaderActionsWidth.value + minTitleSpace + headerPadding
 })
 const widgetState = computed(() => {
   if (!props.editMode) return 'idle'
@@ -680,13 +702,43 @@ const contentSizing = computed(() => {
   }
 })
 
+const surfaceScale = computed(() => {
+  if (isTextWidget.value) {
+    return {
+      scaleX: 1,
+      scaleY: 1,
+    }
+  }
+  const sizing = contentSizing.value
+  const renderTotalHeight = sizing.renderHeight + headerOffset.value
+  const baseTotalHeight = Math.max(sizing.baseHeight + headerOffset.value, 1)
+  return {
+    scaleX: Math.max(0.2, Math.min(6, sizing.renderWidth / Math.max(sizing.baseWidth, 1))),
+    scaleY: Math.max(0.2, Math.min(6, renderTotalHeight / baseTotalHeight)),
+  }
+})
+
+const surfaceLayoutStyle = computed(() => {
+  if (isTextWidget.value) return {}
+  const sizing = contentSizing.value
+  const scale = surfaceScale.value
+  return {
+    width: `${Math.round(sizing.baseWidth)}px`,
+    height: `${Math.round(sizing.baseHeight + headerOffset.value)}px`,
+    transform: `scale(${scale.scaleX}, ${scale.scaleY})`,
+    transformOrigin: 'top left',
+  }
+})
+
 const mergedProps = computed(() => {
   const p = { ...(props.widget?.props ?? {}) } as Record<string, unknown>
   const sizing = contentSizing.value
+  const logicalWidth = isTextWidget.value ? sizing.renderWidth : sizing.baseWidth
+  const logicalHeight = isTextWidget.value ? sizing.renderHeight : sizing.baseHeight
   delete p.from
   delete p.to
-  p.widgetWidth = sizing.renderWidth
-  p.widgetHeight = sizing.renderHeight
+  p.widgetWidth = logicalWidth
+  p.widgetHeight = logicalHeight
   p.widgetBaseWidth = sizing.baseWidth
   p.widgetBaseHeight = sizing.baseHeight
   p.canvasEditMode = props.editMode
@@ -694,9 +746,6 @@ const mergedProps = computed(() => {
 })
 
 const bodyStyle = computed(() => {
-  if (isNetProfitWidget.value) {
-    return { padding: '0px' }
-  }
   const rawPadding = String(props.widget?.props?.padding ?? '').trim()
   const paddingMap: Record<string, string> = {
     none: '0px',
@@ -705,6 +754,12 @@ const bodyStyle = computed(() => {
     lg: '24px',
     xl: '32px',
   }
+  if (!isTextWidget.value) {
+    if (rawPadding && rawPadding in paddingMap) {
+      return { padding: paddingMap[rawPadding] }
+    }
+    return { padding: '0px' }
+  }
   return {
     padding: paddingMap[rawPadding] ?? (props.widget?.props?.tight ? '8px' : '12px'),
   }
@@ -712,7 +767,25 @@ const bodyStyle = computed(() => {
 
 const contentInnerEl = ref<HTMLElement | null>(null)
 
+const legibilityBoost = computed(() => {
+  if (isTextWidget.value) return 1
+  const scale = Number(props.canvasScale ?? 1)
+  if (!Number.isFinite(scale) || scale >= 0.96) return 1
+  // When zoomed out, slightly upscale inner content to keep text readable.
+  return Math.max(1, Math.min(1.3, 0.96 / Math.max(scale, 0.38)))
+})
+
 const contentLayoutStyle = computed(() => {
+  if (!isTextWidget.value) {
+    const boost = legibilityBoost.value
+    if (boost <= 1.01) return {}
+    return {
+      transform: `scale(${boost})`,
+      transformOrigin: 'top left',
+      width: `${(100 / boost).toFixed(2)}%`,
+      height: `${(100 / boost).toFixed(2)}%`,
+    }
+  }
   return {
     width: '100%',
     height: shouldAutoHeight.value ? 'auto' : '100%',
@@ -725,7 +798,7 @@ const dotStyle = computed(() => {
   const tone = getCategoryColor(widgetDef.value?.category)
   return {
     background: tone.color,
-    boxShadow: `0 0 0 4px ${tone.glow}`,
+    boxShadow: `0 0 0 2px ${tone.glow}`,
   }
 })
 
@@ -755,25 +828,22 @@ const handles: Array<{ dir: ResizeDir; title: string }> = [
 ]
 
 const visibleHandles = computed(() => {
-  if (isTextWidget.value) {
-    return handles.filter((handle) => ['ne', 'nw', 'se', 'sw'].includes(handle.dir))
-  }
-  return handles
+  return handles.filter((handle) => ['ne', 'nw', 'se', 'sw'].includes(handle.dir))
 })
 
 const edgeHandles = computed(() => {
   if (isTextWidget.value) {
     return handles.filter((handle) => ['e', 'w'].includes(handle.dir))
   }
-  return handles.filter((handle) => ['n', 's', 'e', 'w'].includes(handle.dir))
+  return []
 })
 
 const resizeHintText = computed(() =>
   isTextWidget.value
     ? 'Coins: taille du texte | Cotes: largeur et retour a la ligne'
     : isRoiWidget.value
-      ? 'Coins: scale ROI | Cotes: largeur/hauteur et reflow | Alt: centre'
-      : 'Coins: diagonale proportionnelle | Cotes: reflow reel | Alt: centre',
+      ? 'Coins: zoom uniforme | Alt: centre'
+      : 'Coins: zoom uniforme | Alt: centre',
 )
 
 function onResizeHandleDown(dir: ResizeDir, event: PointerEvent) {
@@ -785,6 +855,11 @@ function onResizeHandleDown(dir: ResizeDir, event: PointerEvent) {
 
 function emitTextProp(key: string, value: unknown) {
   emit('textPropsChange', { [key]: value })
+}
+
+function onWidgetViewChange(nextView: unknown) {
+  if (typeof nextView !== 'string' || !nextView.trim()) return
+  emit('propsPatch', { view: nextView })
 }
 
 function closeActionMenu() {
@@ -998,13 +1073,14 @@ function clearWidgetSizeObserver() {
 }
 
 function applyLiveRenderSize(width: number, height: number) {
+  const epsilon = isTextWidget.value ? 4 : 2
   const nextWidth = Math.max(1, Math.round(width))
   const nextHeight = Math.max(1, Math.round(height - headerOffset.value))
 
-  if (Math.abs(nextWidth - liveRenderWidth.value) >= LIVE_RENDER_EPSILON) {
+  if (Math.abs(nextWidth - liveRenderWidth.value) >= epsilon) {
     liveRenderWidth.value = nextWidth
   }
-  if (Math.abs(nextHeight - liveRenderHeight.value) >= LIVE_RENDER_EPSILON) {
+  if (Math.abs(nextHeight - liveRenderHeight.value) >= epsilon) {
     liveRenderHeight.value = nextHeight
   }
 }
@@ -1012,9 +1088,10 @@ function applyLiveRenderSize(width: number, height: number) {
 function measureWidgetSize() {
   const el = root.value
   if (!el) return
-  const rect = el.getBoundingClientRect()
-  if (!Number.isFinite(rect.width) || !Number.isFinite(rect.height)) return
-  applyLiveRenderSize(rect.width, rect.height)
+  const width = Number(el.offsetWidth)
+  const height = Number(el.offsetHeight)
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return
+  applyLiveRenderSize(width, height)
 }
 
 function scheduleWidgetSizeMeasure() {
@@ -1132,6 +1209,10 @@ watch(
   },
 )
 
+watch(compactActions, (compact) => {
+  if (!compact) closeActionMenu()
+})
+
 onBeforeUnmount(() => {
   if (resizeRaf) cancelAnimationFrame(resizeRaf)
   clearWidgetSizeObserver()
@@ -1177,20 +1258,23 @@ function onRootKeydown(event: KeyboardEvent) {
 <style scoped>
 .widget {
   position: absolute;
-  border-radius: 22px;
+  border-radius: 18px;
   overflow: visible;
-  background: rgba(17, 24, 39, 0.9);
-  border: none;
-  box-shadow: 0 2px 8px rgba(2, 6, 23, 0.16);
+  background: rgba(10, 15, 26, 0.88);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  box-shadow: 0 4px 14px rgba(2, 6, 23, 0.18);
   contain: layout paint;
   touch-action: none;
   outline: none;
 }
+.widget[data-edit='true'] {
+  contain: layout;
+}
 .widget:focus-visible {
   box-shadow:
-    0 0 0 1px rgba(99, 102, 241, 0.92),
-    0 0 0 4px rgba(99, 102, 241, 0.2),
-    0 8px 18px rgba(2, 6, 23, 0.26);
+    0 0 0 1px rgba(56, 189, 248, 0.92),
+    0 0 0 3px rgba(56, 189, 248, 0.18),
+    0 8px 18px rgba(2, 6, 23, 0.24);
 }
 .widget__surface {
   width: 100%;
@@ -1463,12 +1547,12 @@ function onRootKeydown(event: KeyboardEvent) {
   font-weight: 650;
   letter-spacing: 0.01em;
 }
-.widget--text .widget__resize-overlay {
+.widget__resize-overlay {
   inset: -14px;
   z-index: 30;
 }
-.widget--text .resize-edge--e,
-.widget--text .resize-edge--w {
+.resize-edge--e,
+.resize-edge--w {
   top: 18px;
   bottom: 18px;
   width: 36px;
@@ -1480,14 +1564,14 @@ function onRootKeydown(event: KeyboardEvent) {
     rgba(59, 130, 246, 0)
   );
 }
-.widget--text .resize-edge--e {
+.resize-edge--e {
   right: -14px;
 }
-.widget--text .resize-edge--w {
+.resize-edge--w {
   left: -14px;
 }
-.widget--text .resize-edge--e .resize-edge__line,
-.widget--text .resize-edge--w .resize-edge__line {
+.resize-edge--e .resize-edge__line,
+.resize-edge--w .resize-edge__line {
   top: 16px;
   bottom: 16px;
   width: 4px;
@@ -1570,21 +1654,6 @@ function onRootKeydown(event: KeyboardEvent) {
 .widget--roi .resize-edge__line {
   background: rgba(16, 185, 129, 0.5);
 }
-.widget--net-profit {
-  background: transparent;
-  box-shadow: none;
-}
-.widget--net-profit .widget__surface {
-  background: transparent;
-}
-.widget--net-profit:hover,
-.widget--net-profit.drag-armed,
-.widget--net-profit.is-selected,
-.widget--net-profit.is-dragging,
-.widget--net-profit.is-resizing,
-.widget--net-profit:focus-visible {
-  box-shadow: none;
-}
 .widget--roi .resize-edge:hover .resize-edge__line,
 .widget--roi .resize-edge:focus-visible .resize-edge__line,
 .widget--roi.is-resizing .resize-edge__line {
@@ -1620,34 +1689,25 @@ function onRootKeydown(event: KeyboardEvent) {
 .widget.is-dragging {
   cursor: grabbing;
   transition: none;
-  box-shadow: 0 3px 10px rgba(2, 6, 23, 0.2);
+  box-shadow: 0 5px 16px rgba(2, 6, 23, 0.24);
   will-change: transform;
 }
 .widget.is-resizing {
-  box-shadow: 0 3px 10px rgba(2, 6, 23, 0.2);
+  box-shadow: 0 5px 16px rgba(2, 6, 23, 0.24);
   will-change: transform, width, height;
 }
 .widget:hover {
-  box-shadow: 0 3px 10px rgba(2, 6, 23, 0.2);
+  box-shadow: 0 6px 18px rgba(2, 6, 23, 0.24);
 }
 .widget.is-selected {
   box-shadow:
-    0 0 0 1px rgba(59, 130, 246, 0.88),
-    0 0 0 3px rgba(59, 130, 246, 0.16),
-    0 3px 10px rgba(2, 6, 23, 0.24);
+    0 0 0 1px rgba(56, 189, 248, 0.92),
+    0 0 0 3px rgba(56, 189, 248, 0.18),
+    0 6px 18px rgba(2, 6, 23, 0.24);
 }
 .widget.drag-armed {
-  box-shadow: 0 3px 10px rgba(2, 6, 23, 0.2);
+  box-shadow: 0 6px 18px rgba(2, 6, 23, 0.24);
   cursor: grab;
-}
-.widget--net-profit,
-.widget--net-profit:hover,
-.widget--net-profit.is-selected,
-.widget--net-profit.drag-armed,
-.widget--net-profit.is-dragging,
-.widget--net-profit.is-resizing,
-.widget--net-profit:focus-visible {
-  box-shadow: none !important;
 }
 
 .widget__header {
@@ -1655,8 +1715,8 @@ function onRootKeydown(event: KeyboardEvent) {
   display: flex;
   align-items: center;
   padding: 0 10px 0 12px;
-  border-bottom: none;
-  background: rgba(10, 15, 30, 0.9);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+  background: rgba(8, 13, 24, 0.78);
   position: relative;
   z-index: 18;
 }
@@ -1665,6 +1725,8 @@ function onRootKeydown(event: KeyboardEvent) {
   display: inline-flex;
   align-items: center;
   gap: 10px;
+  flex: 1 1 auto;
+  min-width: 0;
   user-select: none;
 }
 .dot {
@@ -1673,22 +1735,27 @@ function onRootKeydown(event: KeyboardEvent) {
   border-radius: 999px;
 }
 .title {
-  color: rgba(255, 255, 255, 0.92);
+  color: rgba(241, 245, 249, 0.98);
   font-weight: 650;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .drag-grip {
   width: 14px;
   height: 14px;
   border-radius: 6px;
-  opacity: 0.7;
+  opacity: 0.52;
   background:
-    radial-gradient(circle, rgba(255, 255, 255, 0.45) 1px, transparent 1.5px) 0 0 / 6px 6px;
+    radial-gradient(circle, rgba(226, 232, 240, 0.62) 1px, transparent 1.5px) 0 0 / 6px 6px;
 }
 
 .widget__actions {
   margin-left: auto;
   display: inline-flex;
+  flex: 0 0 auto;
   gap: calc(8px * var(--action-ui-scale, 1));
   position: relative;
   z-index: 26;
@@ -1734,26 +1801,23 @@ function onRootKeydown(event: KeyboardEvent) {
     opacity 140ms ease,
     transform 140ms ease;
 }
-.widget--net-profit:hover .widget__floating-actions {
-  opacity: 1;
-  transform: translateY(0);
-  pointer-events: auto;
-}
 .iconbtn {
   width: calc(34px * var(--action-ui-scale, 1));
   height: calc(34px * var(--action-ui-scale, 1));
-  border-radius: calc(12px * var(--action-ui-scale, 1));
-  border: none;
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.92);
+  border-radius: calc(11px * var(--action-ui-scale, 1));
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: rgba(15, 23, 42, 0.52);
+  color: rgba(226, 232, 240, 0.92);
   display: grid;
   place-items: center;
   transition:
+    border-color 160ms ease,
     background 160ms ease,
     opacity 160ms ease;
 }
 .iconbtn:hover {
-  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(148, 163, 184, 0.42);
+  background: rgba(30, 41, 59, 0.68);
 }
 .iconbtn :deep(svg) {
   width: calc(16px * var(--action-ui-scale, 1));
@@ -1771,19 +1835,17 @@ function onRootKeydown(event: KeyboardEvent) {
   right: 0;
   min-width: 162px;
   padding: 6px;
-  border-radius: 12px;
-  border: none;
-  background: linear-gradient(180deg, rgba(8, 14, 28, 0.98), rgba(6, 10, 20, 0.96));
-  box-shadow:
-    0 16px 28px rgba(2, 6, 23, 0.56),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  border-radius: 11px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: rgba(9, 15, 28, 0.96);
+  box-shadow: 0 14px 24px rgba(2, 6, 23, 0.4);
   display: grid;
   gap: 4px;
   z-index: 62;
 }
 .widget-action-menu__item {
-  border: 1px solid transparent;
-  background: transparent;
+  border: 1px solid rgba(148, 163, 184, 0);
+  background: rgba(15, 23, 42, 0);
   color: rgba(241, 245, 249, 0.96);
   border-radius: 9px;
   min-height: 32px;
@@ -1795,45 +1857,19 @@ function onRootKeydown(event: KeyboardEvent) {
   font-weight: 600;
 }
 .widget-action-menu__item:hover {
-  border-color: rgba(148, 163, 184, 0.4);
-  background: rgba(51, 65, 85, 0.42);
+  border-color: rgba(148, 163, 184, 0.34);
+  background: rgba(51, 65, 85, 0.36);
 }
 .widget-action-menu__item.is-danger {
-  color: rgba(254, 202, 202, 0.96);
+  color: rgba(254, 205, 211, 0.96);
 }
 .widget-action-menu__item.is-danger:hover {
-  border-color: rgba(248, 113, 113, 0.4);
-  background: rgba(127, 29, 29, 0.36);
+  border-color: rgba(248, 113, 113, 0.34);
+  background: rgba(127, 29, 29, 0.28);
 }
 .widget-action-menu__item:focus-visible {
-  outline: 2px solid rgba(129, 140, 248, 0.92);
+  outline: 2px solid rgba(56, 189, 248, 0.9);
   outline-offset: 2px;
-}
-.widget--net-profit .widget__floating-actions .iconbtn--glass {
-  width: 32px;
-  height: 32px;
-  border-radius: 11px;
-  border: none;
-  background: linear-gradient(162deg, rgba(255, 255, 255, 0.24) 0%, rgba(226, 233, 242, 0.12) 48%, rgba(162, 171, 186, 0.16) 100%);
-  backdrop-filter: blur(16px) saturate(124%);
-  -webkit-backdrop-filter: blur(16px) saturate(124%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.54),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.16),
-    0 8px 16px rgba(6, 12, 24, 0.14);
-  color: rgba(248, 251, 255, 0.96);
-}
-.widget--net-profit .widget__floating-actions .iconbtn--glass:hover {
-  background: linear-gradient(162deg, rgba(255, 255, 255, 0.3) 0%, rgba(233, 238, 245, 0.16) 48%, rgba(171, 180, 193, 0.2) 100%);
-}
-.widget--net-profit .widget-action-menu {
-  border: none;
-  background: linear-gradient(160deg, rgba(53, 62, 76, 0.72), rgba(35, 43, 56, 0.68));
-  backdrop-filter: blur(18px) saturate(126%);
-  -webkit-backdrop-filter: blur(18px) saturate(126%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.34),
-    0 16px 26px rgba(3, 7, 17, 0.24);
 }
 .iconbtn:focus-visible,
 .text-toolbar__btn:focus-visible,
@@ -1844,7 +1880,7 @@ function onRootKeydown(event: KeyboardEvent) {
 .resize-edge:focus-visible,
 .resize-handle:focus-visible,
 .text-scale-handle:focus-visible {
-  outline: 2px solid rgba(129, 140, 248, 0.92);
+  outline: 2px solid rgba(56, 189, 248, 0.9);
   outline-offset: 2px;
 }
 
@@ -1930,19 +1966,33 @@ function onRootKeydown(event: KeyboardEvent) {
 
 .widget__resize-overlay {
   position: absolute;
-  inset: -18px;
+  inset: -14px;
   pointer-events: none;
-  z-index: 14;
+  z-index: 30;
 }
 
 .resize-rail {
-  display: none;
+  position: absolute;
+  display: block;
+  pointer-events: none;
+  opacity: 0;
+  transition:
+    opacity 140ms ease,
+    background 140ms ease;
+  border-radius: 999px;
+  background: rgba(129, 140, 248, 0.26);
 }
 .resize-rail--h {
   inset-inline: 28px;
+  top: 50%;
+  height: 1px;
+  transform: translateY(-50%);
 }
 .resize-rail--v {
   inset-block: 28px;
+  left: 50%;
+  width: 1px;
+  transform: translateX(-50%);
 }
 
 .resize-edge {
@@ -1996,39 +2046,58 @@ function onRootKeydown(event: KeyboardEvent) {
 
 .resize-edge--e,
 .resize-edge--w {
-  top: 28px;
-  bottom: 28px;
-  width: 24px;
+  top: 18px;
+  bottom: 18px;
+  width: 36px;
+  border-radius: 999px;
+  background: linear-gradient(
+    180deg,
+    rgba(59, 130, 246, 0),
+    rgba(59, 130, 246, 0.08) 50%,
+    rgba(59, 130, 246, 0)
+  );
   cursor: ew-resize;
 }
 
 .resize-edge--e {
-  right: 0;
+  right: -14px;
 }
 
 .resize-edge--w {
-  left: 0;
+  left: -14px;
 }
 
 .resize-edge--e .resize-edge__line,
 .resize-edge--w .resize-edge__line {
   top: 16px;
   bottom: 16px;
-  left: 10px;
-  width: 3px;
+  width: 4px;
+  left: 16px;
+  border-radius: 999px;
+  background: linear-gradient(
+    180deg,
+    rgba(248, 250, 252, 1),
+    rgba(226, 232, 240, 1)
+  );
+  box-shadow:
+    0 0 0 1px rgba(59, 130, 246, 0.22),
+    0 0 8px rgba(96, 165, 250, 0.22),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.5);
 }
 
 .resize-handle {
-  --handle-size: 22px;
-  --handle-hit: 72px;
+  --handle-size: 20px;
+  --handle-hit: 104px;
   --handle-scale: 0.84;
   position: absolute;
   width: var(--handle-size);
   height: var(--handle-size);
   border-radius: 999px;
-  background: rgba(241, 245, 249, 0.98);
-  border: 1px solid rgba(15, 23, 42, 0.25);
-  box-shadow: 0 1px 4px rgba(2, 6, 23, 0.18);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 1), rgba(241, 245, 249, 1));
+  border: 1.5px solid rgba(59, 130, 246, 0.96);
+  box-shadow:
+    0 2px 7px rgba(2, 6, 23, 0.22),
+    0 0 0 2px rgba(147, 197, 253, 0.32);
   display: grid;
   place-items: center;
   opacity: 0;
@@ -2051,7 +2120,9 @@ function onRootKeydown(event: KeyboardEvent) {
 
 .resize-handle:hover {
   --handle-scale: 1.06;
-  box-shadow: 0 2px 8px rgba(2, 6, 23, 0.22);
+  box-shadow:
+    0 2px 9px rgba(2, 6, 23, 0.24),
+    0 0 0 2px rgba(125, 211, 252, 0.42);
 }
 
 .resize-handle:focus-visible {
@@ -2062,15 +2133,16 @@ function onRootKeydown(event: KeyboardEvent) {
   width: 4px;
   height: 4px;
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.78);
+  background: rgba(37, 99, 235, 0.96);
+  box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.95);
 }
 
 .handle-corner-dot {
-  width: 10px;
-  height: 10px;
+  width: 4px;
+  height: 4px;
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.9);
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.95);
+  background: rgba(37, 99, 235, 0.96);
+  box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.95);
 }
 
 .resize-handle--n {
@@ -2140,17 +2212,17 @@ function onRootKeydown(event: KeyboardEvent) {
 .resize-handle--nw,
 .resize-handle--se,
 .resize-handle--sw {
-  --handle-size: 36px;
-  --handle-hit: 132px;
+  --handle-size: 20px;
+  --handle-hit: 104px;
 }
 
 .resize-handle--corner {
   border-radius: 999px;
-  background: rgba(241, 245, 249, 0.98);
-  border: 2px solid rgba(255, 255, 255, 0.98);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 1), rgba(241, 245, 249, 1));
+  border: 1.5px solid rgba(59, 130, 246, 0.96);
   box-shadow:
-    0 4px 14px rgba(2, 6, 23, 0.35),
-    0 0 0 6px rgba(15, 23, 42, 0.2);
+    0 2px 7px rgba(2, 6, 23, 0.22),
+    0 0 0 2px rgba(147, 197, 253, 0.32);
 }
 
 .resize-handle--corner .handle-dot {
@@ -2158,21 +2230,13 @@ function onRootKeydown(event: KeyboardEvent) {
   height: 7px;
 }
 
-.widget[data-edit="true"] .resize-handle--corner {
+.widget--text[data-edit="true"] .resize-handle--corner {
   --handle-scale: 0.84;
   opacity: 0;
   pointer-events: none;
 }
 
 .widget--text .resize-handle--corner {
-  --handle-size: 20px;
-  --handle-hit: 104px;
-  border-radius: 999px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 1), rgba(241, 245, 249, 1));
-  border: 1.5px solid rgba(59, 130, 246, 0.96);
-  box-shadow:
-    0 2px 7px rgba(2, 6, 23, 0.22),
-    0 0 0 2px rgba(147, 197, 253, 0.32);
   z-index: 24;
 }
 
@@ -2200,35 +2264,21 @@ function onRootKeydown(event: KeyboardEvent) {
   transform: translate(-50%, 50%) scale(var(--handle-scale));
 }
 
-.widget--text .handle-corner-dot {
-  width: 4px;
-  height: 4px;
-  border-radius: 999px;
-  background: rgba(37, 99, 235, 0.96);
-  box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.95);
-}
-
 .widget--text[data-edit="true"] .resize-handle--corner {
   opacity: 0;
   --handle-scale: 0.84;
   pointer-events: none;
 }
 
-.widget[data-edit="true"]:hover .resize-handle,
 .widget.is-selected .resize-handle,
-.widget.is-resizing .resize-handle,
-.widget.drag-armed .resize-handle,
-.widget:focus-within .resize-handle {
+.widget.is-resizing .resize-handle {
   --handle-scale: 1;
   opacity: 1;
   pointer-events: auto;
 }
 
-.widget[data-edit="true"]:hover .resize-edge,
 .widget.is-selected .resize-edge,
-.widget.is-resizing .resize-edge,
-.widget.drag-armed .resize-edge,
-.widget:focus-within .resize-edge {
+.widget.is-resizing .resize-edge {
   opacity: 1;
   pointer-events: auto;
 }
@@ -2237,7 +2287,7 @@ function onRootKeydown(event: KeyboardEvent) {
 .widget.is-resizing .resize-rail,
 .widget.drag-armed .resize-rail,
 .widget:focus-within .resize-rail {
-  opacity: 0;
+  opacity: 0.92;
 }
 .widget.is-dragging .resize-handle {
   opacity: 0.25;
@@ -2264,7 +2314,18 @@ function onRootKeydown(event: KeyboardEvent) {
 }
 
 .resize-meta {
-  display: none;
+  position: absolute;
+  top: -26px;
+  left: 50%;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(4px);
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease;
 }
 
 .resize-metrics {
@@ -2303,10 +2364,6 @@ function onRootKeydown(event: KeyboardEvent) {
     inset: -18px;
   }
 
-  .resize-edge {
-    opacity: 1;
-  }
-
   .resize-edge--n,
   .resize-edge--s {
     height: 26px;
@@ -2324,7 +2381,6 @@ function onRootKeydown(event: KeyboardEvent) {
   .resize-handle {
     --handle-size: 22px;
     --handle-hit: 64px;
-    opacity: 1;
   }
 
   .resize-handle--n,
@@ -2355,7 +2411,3 @@ function onRootKeydown(event: KeyboardEvent) {
   overflow: hidden;
 }
 </style>
-
-
-
-

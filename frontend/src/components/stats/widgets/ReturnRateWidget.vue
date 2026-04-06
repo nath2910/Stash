@@ -6,6 +6,10 @@
     surface="trend"
     :loading="loading"
     :error="error"
+    :widget-width="props.widgetWidth"
+    :widget-height="props.widgetHeight"
+    :widget-base-width="props.widgetBaseWidth"
+    :widget-base-height="props.widgetBaseHeight"
     :option="option"
   />
 </template>
@@ -22,6 +26,10 @@ const props = defineProps({
   to: String,
   bucket: { type: String, default: 'week' },
   warn: { type: Number, default: 4 }, // 4%
+  widgetWidth: { type: Number, default: 720 },
+  widgetHeight: { type: Number, default: 360 },
+  widgetBaseWidth: { type: Number, default: 720 },
+  widgetBaseHeight: { type: Number, default: 360 },
 })
 const accent = '#F97316'
 

@@ -14,6 +14,23 @@
   background: var(--bg);
 }
 
+body.canvas-resize-cursor,
+body.canvas-resize-cursor * {
+  cursor: var(--stats-resize-cursor, default) !important;
+}
+body.canvas-resize-cursor--ns {
+  --stats-resize-cursor: ns-resize;
+}
+body.canvas-resize-cursor--ew {
+  --stats-resize-cursor: ew-resize;
+}
+body.canvas-resize-cursor--nwse {
+  --stats-resize-cursor: nwse-resize;
+}
+body.canvas-resize-cursor--nesw {
+  --stats-resize-cursor: nesw-resize;
+}
+
 .viewport {
   position: absolute;
   inset: 0;
@@ -63,14 +80,14 @@
   position: fixed;
   top: var(--stats-top-gap);
   left: var(--stats-side-gap);
-  width: min(280px, calc(100vw - (var(--stats-side-gap) * 2) - 84px));
+  width: min(262px, calc(100vw - (var(--stats-side-gap) * 2) - 84px));
   max-width: calc(100vw - (var(--stats-side-gap) * 2) - 84px);
   z-index: 60;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 8px 10px;
-  border-radius: 12px;
+  gap: 5px;
+  padding: 7px 9px;
+  border-radius: 11px;
   background: rgba(2, 6, 23, 0.4);
   border: 1px solid rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(12px);
@@ -111,7 +128,7 @@
 }
 
 .date-title {
-  font-size: 0.58rem;
+  font-size: 0.54rem;
   text-transform: uppercase;
   letter-spacing: 0.22em;
   color: rgba(148, 163, 184, 0.8);
@@ -119,7 +136,7 @@
 
 .date-row {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 @media (min-width: 640px) {
@@ -130,18 +147,18 @@
 
 .date-actions {
   display: flex;
-  gap: 6px;
+  gap: 5px;
   flex-wrap: wrap;
 }
 
 .date-chip {
-  height: 24px;
-  padding: 0 10px;
+  height: 22px;
+  padding: 0 9px;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(255, 255, 255, 0.06);
   color: rgba(255, 255, 255, 0.85);
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   transition:
     border-color 160ms ease,
     background 160ms ease,
@@ -226,6 +243,7 @@
   height: var(--group-handle-size);
   display: grid;
   place-items: center;
+  transform-origin: center center;
 }
 
 .group-selection-handle::before {
@@ -236,8 +254,8 @@
 
 .group-selection-handle__dot {
   display: block;
-  width: var(--group-handle-size);
-  height: var(--group-handle-size);
+  width: 100%;
+  height: 100%;
   border-radius: 999px;
   background: #fff;
   border: 2px solid rgba(148, 163, 184, 0.95);
@@ -251,6 +269,48 @@
 .group-selection-handle--se,
 .group-selection-handle--sw {
   --group-handle-hit: 60px;
+}
+
+.group-selection-handle--n,
+.group-selection-handle--s {
+  width: 44px;
+  height: 12px;
+  border-radius: 999px;
+}
+
+.group-selection-handle--e,
+.group-selection-handle--w {
+  width: 12px;
+  height: 44px;
+  border-radius: 999px;
+}
+
+.group-selection-handle--n {
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  cursor: ns-resize;
+}
+
+.group-selection-handle--s {
+  left: 50%;
+  bottom: 0;
+  transform: translate(-50%, 50%);
+  cursor: ns-resize;
+}
+
+.group-selection-handle--e {
+  top: 50%;
+  right: 0;
+  transform: translate(50%, -50%);
+  cursor: ew-resize;
+}
+
+.group-selection-handle--w {
+  top: 50%;
+  left: 0;
+  transform: translate(-50%, -50%);
+  cursor: ew-resize;
 }
 
 .group-selection-handle--ne {
@@ -663,7 +723,7 @@
     --stats-profile-clearance: 70px;
   }
   .date-panel {
-    width: min(300px, calc(100vw - (var(--stats-side-gap) * 2) - 72px));
+    width: min(276px, calc(100vw - (var(--stats-side-gap) * 2) - 72px));
     max-width: calc(100vw - (var(--stats-side-gap) * 2) - 72px);
   }
 }
@@ -675,9 +735,9 @@
     --stats-profile-clearance: 60px;
   }
   .date-panel {
-    padding: 9px 10px;
-    border-radius: 14px;
-    width: min(260px, calc(100vw - (var(--stats-side-gap) * 2) - 68px));
+    padding: 8px 9px;
+    border-radius: 13px;
+    width: min(246px, calc(100vw - (var(--stats-side-gap) * 2) - 68px));
     max-width: calc(100vw - (var(--stats-side-gap) * 2) - 68px);
   }
   .date-panel--compact {
@@ -730,7 +790,7 @@
     height: 36px;
   }
   .date-panel {
-    width: min(232px, calc(100vw - (var(--stats-side-gap) * 2) - 62px));
+    width: min(224px, calc(100vw - (var(--stats-side-gap) * 2) - 62px));
     max-width: calc(100vw - (var(--stats-side-gap) * 2) - 62px);
   }
   .profile-switcher {
@@ -1117,4 +1177,3 @@
   background: linear-gradient(180deg, rgba(248, 250, 252, 0.95), rgba(241, 245, 249, 0.95));
   color: #1e293b;
 }
-

@@ -6,6 +6,10 @@
     surface="kpi"
     :loading="loading"
     :error="error"
+    :widget-width="props.widgetWidth"
+    :widget-height="props.widgetHeight"
+    :widget-base-width="props.widgetBaseWidth"
+    :widget-base-height="props.widgetBaseHeight"
     :valueText="valueText"
     :spark="spark"
   >
@@ -59,6 +63,10 @@ const props = defineProps({
   bucket: { type: String, default: 'week' },
   categories: { type: Array, default: () => [] },
   types: { type: Array, default: () => [] },
+  widgetWidth: { type: Number, default: 520 },
+  widgetHeight: { type: Number, default: 260 },
+  widgetBaseWidth: { type: Number, default: 520 },
+  widgetBaseHeight: { type: Number, default: 260 },
 })
 const accent = '#38BDF8'
 const target = 50

@@ -1,46 +1,5 @@
 ﻿<template>
-  <div
-    class="relative h-full w-full overflow-hidden rounded-[30px] px-4 py-3.5 text-slate-50"
-    :style="shellStyle"
-  >
-    <div
-      class="pointer-events-none absolute inset-0 opacity-[0.02] [background-image:radial-gradient(rgba(255,255,255,0.9)_0.45px,transparent_0.45px)] [background-size:4px_4px]"
-      aria-hidden="true"
-    ></div>
-    <div
-      class="pointer-events-none absolute inset-0 bg-[linear-gradient(138deg,rgba(245,248,255,0.28)_0%,rgba(233,239,249,0.12)_34%,rgba(177,188,205,0.16)_68%,rgba(138,151,172,0.22)_100%)]"
-      aria-hidden="true"
-    ></div>
-    <div
-      class="pointer-events-none absolute inset-x-0 top-0 h-[42%] bg-[linear-gradient(180deg,rgba(255,255,255,0.42)_0%,rgba(255,255,255,0.16)_42%,rgba(255,255,255,0)_100%)]"
-      aria-hidden="true"
-    ></div>
-    <div
-      class="pointer-events-none absolute -left-[14%] -top-12 h-36 w-[62%] rounded-full bg-white/[0.2] blur-[44px]"
-      aria-hidden="true"
-    ></div>
-    <div
-      class="pointer-events-none absolute right-[4%] top-[22%] h-32 w-44 rounded-full blur-[44px]"
-      :style="{ background: palette.tint }"
-      aria-hidden="true"
-    ></div>
-    <div
-      class="pointer-events-none absolute inset-x-0 -bottom-16 h-36 bg-[radial-gradient(ellipse_at_center,rgba(26,36,50,0.16)_0%,rgba(26,36,50,0)_72%)]"
-      aria-hidden="true"
-    ></div>
-    <div
-      class="pointer-events-none absolute left-[8%] bottom-[8%] h-16 w-40 rounded-full bg-[rgba(201,215,186,0.12)] blur-[34px]"
-      aria-hidden="true"
-    ></div>
-    <div
-      class="pointer-events-none absolute right-[9%] bottom-[10%] h-16 w-44 rounded-full bg-[rgba(176,201,199,0.11)] blur-[36px]"
-      aria-hidden="true"
-    ></div>
-    <div
-      class="pointer-events-none absolute inset-0 bg-[linear-gradient(138deg,rgba(255,255,255,0.22)_0%,rgba(255,255,255,0.06)_44%,rgba(255,255,255,0)_76%)] mix-blend-screen opacity-68"
-      aria-hidden="true"
-    ></div>
-
+  <div class="relative h-full w-full overflow-hidden rounded-2xl px-3 py-2.5 text-slate-100">
     <template v-if="dataState === 'ready'">
       <div
         class="relative z-10 grid h-full min-h-0 gap-3.5"
@@ -326,7 +285,6 @@ const palette = computed(() => {
       line: '#D9E7DE',
       primaryMetric: 'rgba(215, 255, 235, 0.98)',
       secondaryMetric: 'rgba(194, 244, 219, 0.96)',
-      tint: 'radial-gradient(circle at center, rgba(191, 212, 201, 0.18), rgba(191, 212, 201, 0.01) 72%)',
     }
   }
 
@@ -335,7 +293,6 @@ const palette = computed(() => {
       line: '#E6DADF',
       primaryMetric: 'rgba(255, 220, 231, 0.98)',
       secondaryMetric: 'rgba(244, 198, 213, 0.96)',
-      tint: 'radial-gradient(circle at center, rgba(208, 192, 198, 0.16), rgba(208, 192, 198, 0.01) 72%)',
     }
   }
 
@@ -343,18 +300,8 @@ const palette = computed(() => {
     line: '#E0E5EC',
     primaryMetric: 'rgba(225, 236, 255, 0.98)',
     secondaryMetric: 'rgba(199, 218, 246, 0.96)',
-    tint: 'radial-gradient(circle at center, rgba(196, 203, 214, 0.18), rgba(196, 203, 214, 0.01) 74%)',
   }
 })
-
-const shellStyle = computed(() => ({
-  background: 'rgba(173, 185, 202, 0.22)',
-  backdropFilter: 'blur(38px) saturate(142%) brightness(1.06)',
-  WebkitBackdropFilter: 'blur(38px) saturate(142%) brightness(1.06)',
-  boxShadow:
-    'inset 0 1px 0 rgba(255,255,255,0.72), inset 0 -1px 0 rgba(255,255,255,0.16), inset 10px 0 24px rgba(255,255,255,0.04), inset -12px -18px 28px rgba(33,43,57,0.12), 0 12px 24px rgba(5,10,20,0.18)',
-  fontFamily: '"SF Pro Display", "Inter", "Segoe UI", sans-serif',
-}))
 
 const maxPoint = computed<SeriesPoint | null>(() => {
   if (!series.value.length) return null

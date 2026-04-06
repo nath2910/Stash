@@ -226,8 +226,8 @@ const FORM_OPTIONS = {
   },
   line: {
     key: 'line',
-    label: 'Courbe',
-    hint: 'Evolution temporelle',
+    label: 'Graphe',
+    hint: 'Courbe temporelle',
     icon: LineChart,
     color: '#0f766e',
   },

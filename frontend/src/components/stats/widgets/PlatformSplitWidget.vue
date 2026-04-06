@@ -6,6 +6,10 @@
     surface="distribution"
     :loading="loading"
     :error="error"
+    :widget-width="props.widgetWidth"
+    :widget-height="props.widgetHeight"
+    :widget-base-width="props.widgetBaseWidth"
+    :widget-base-height="props.widgetBaseHeight"
     :option="option"
   />
 </template>
@@ -17,7 +21,14 @@ import { normalizeBreakdown } from '@/services/statsAdapters'
 import { formatEUR } from '@/utils/formatters'
 import ChartCard from './_parts/ChartCard.vue'
 
-const props = defineProps({ from: String, to: String })
+const props = defineProps({
+  from: String,
+  to: String,
+  widgetWidth: { type: Number, default: 720 },
+  widgetHeight: { type: Number, default: 420 },
+  widgetBaseWidth: { type: Number, default: 720 },
+  widgetBaseHeight: { type: Number, default: 420 },
+})
 const accent = '#22C55E'
 
 const loading = ref(false)

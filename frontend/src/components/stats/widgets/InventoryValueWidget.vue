@@ -6,6 +6,10 @@
     surface="kpi"
     :loading="loading"
     :error="error"
+    :widget-width="props.widgetWidth"
+    :widget-height="props.widgetHeight"
+    :widget-base-width="props.widgetBaseWidth"
+    :widget-base-height="props.widgetBaseHeight"
     :valueText="valueText"
     hint="au cout d'achat"
   >
@@ -31,6 +35,10 @@ const props = defineProps({
   useGlobalRange: { type: Boolean, default: true },
   categories: { type: Array, default: () => [] },
   types: { type: Array, default: () => [] },
+  widgetWidth: { type: Number, default: 520 },
+  widgetHeight: { type: Number, default: 240 },
+  widgetBaseWidth: { type: Number, default: 520 },
+  widgetBaseHeight: { type: Number, default: 240 },
 })
 const accent = '#06B6D4'
 

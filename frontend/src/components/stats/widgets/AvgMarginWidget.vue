@@ -6,6 +6,10 @@
     surface="kpi"
     :loading="loading"
     :error="error"
+    :widget-width="props.widgetWidth"
+    :widget-height="props.widgetHeight"
+    :widget-base-width="props.widgetBaseWidth"
+    :widget-base-height="props.widgetBaseHeight"
     compact
     :valueText="valueText"
     :deltaPct="kpi.deltaPct"
@@ -54,6 +58,10 @@ const props = defineProps({
   bucket: { type: String, default: 'week' },
   categories: { type: Array, default: () => [] },
   types: { type: Array, default: () => [] },
+  widgetWidth: { type: Number, default: 520 },
+  widgetHeight: { type: Number, default: 200 },
+  widgetBaseWidth: { type: Number, default: 520 },
+  widgetBaseHeight: { type: Number, default: 200 },
 })
 const accent = '#F59E0B'
 

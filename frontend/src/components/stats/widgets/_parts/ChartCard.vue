@@ -25,7 +25,7 @@ import WidgetCard from './WidgetCard.vue'
 const props = defineProps({
   title: String,
   subtitle: String,
-  accent: { type: String, default: '#8B5CF6' },
+  accent: { type: String, default: '#38BDF8' },
   surface: { type: String, default: 'trend' },
   loading: Boolean,
   error: String,

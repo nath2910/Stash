@@ -78,6 +78,7 @@
           v-for="w in visibleWidgets"
           :key="w.id"
           :widget="w"
+          :canvas-scale="scale"
           :edit-mode="editMode"
           :selected="isWidgetSelected(w.id) && !isGroupSelectionActive"
           :group-selected="isGroupSelectionActive && isWidgetSelected(w.id)"
@@ -92,6 +93,7 @@
           @dragStart="startDrag(w.id, $event)"
           @resizeStart="startResize(w.id, $event.dir, $event.event)"
           @textPropsChange="updateTextWidgetProps(w.id, $event)"
+          @propsPatch="updateWidgetProps(w.id, $event)"
           @textScaleStart="startTextScale(w.id, $event)"
           @fullscreen-change="onWidgetFullscreenChange"
           @autoResize="autoResize(w.id, $event)"
@@ -234,6 +236,7 @@
             <li><span>?</span><kbd>Afficher cette aide</kbd></li>
             <li><span>Shift + resize</span><kbd>Conserver les proportions</kbd></li>
             <li><span>Alt + resize</span><kbd>Redimensionner depuis le centre</kbd></li>
+            <li><span>Ctrl/Cmd + resize</span><kbd>Desactiver le snap</kbd></li>
             <li><span>Esc</span><kbd>Fermer les panneaux ouverts</kbd></li>
           </ul>
         </div>
@@ -614,6 +617,7 @@ const MIN_W = 320
 const MIN_H = 220
 const BOARD_W = 9000
 const BOARD_H = 6000
+const NON_TEXT_MAX_SCALE = 2.4
 const SNAP_DIST = 8
 const GRID_SNAP_DIST = 6
 
@@ -625,6 +629,22 @@ function minSizeFor(w: Widget) {
   return {
     w: def?.minSize?.w ?? MIN_W,
     h: def?.minSize?.h ?? MIN_H,
+  }
+}
+
+function maxSizeFor(w: Widget) {
+  if (isTextWidget(w)) {
+    return {
+      w: BOARD_W,
+      h: BOARD_H,
+    }
+  }
+  const def = getWidgetDef(w.type)
+  const baseW = Math.max(Number(def?.defaultSize?.w ?? w.w ?? MIN_W), 1)
+  const baseH = Math.max(Number(def?.defaultSize?.h ?? w.h ?? MIN_H), 1)
+  return {
+    w: clamp(Math.round(baseW * NON_TEXT_MAX_SCALE), MIN_W, BOARD_W),
+    h: clamp(Math.round(baseH * NON_TEXT_MAX_SCALE), MIN_H, BOARD_H),
   }
 }
 
@@ -1765,6 +1785,14 @@ function onCanvasPointerDown(e: PointerEvent) {
   const target = e.target as HTMLElement | null
   const insideBoard = Boolean(target?.closest('.board'))
   if (!insideBoard) return
+  // Ignore controls inside widgets (actions/menu/inputs) so click intent
+  // does not conflict with canvas selection logic.
+  const interactiveTarget = Boolean(
+    target?.closest(
+      '.widget__actions, .widget-action-menu, .iconbtn, .text-toolbar, .text-inline-editor, [contenteditable="true"], button, a, input, select, textarea',
+    ),
+  )
+  if (interactiveTarget) return
   const additive = e.shiftKey || e.ctrlKey || e.metaKey
 
   if (isSecondary) {
@@ -1958,6 +1986,16 @@ function updateTextWidgetProps(id: string, patch: Record<string, unknown>) {
     fitTextWidgetAfterRender(w, widgetEls.get(w.id) ?? null, {
       preserveWidth: shouldPreserveTextWidth(w, 'content'),
     })
+  }
+  scheduleSave()
+}
+
+function updateWidgetProps(id: string, patch: Record<string, unknown>) {
+  const w = widgets.value.find((item) => item.id === id)
+  if (!w || !patch || typeof patch !== 'object') return
+  w.props = {
+    ...(w.props ?? {}),
+    ...patch,
   }
   scheduleSave()
 }
@@ -2169,10 +2207,13 @@ type ResizeState = {
   yTargets: SnapTarget[]
   minW: number
   minH: number
+  maxW: number
+  maxH: number
   isText: boolean
 }
 const resizeStates = new Map<string, ResizeState>()
 let activeResizeId: string | null = null
+let activeResizeCursorClass: string | null = null
 
 type GroupResizeMember = {
   id: string
@@ -2222,6 +2263,32 @@ type TextScaleState = {
   appliedScale: number
 }
 let activeTextScaleState: TextScaleState | null = null
+
+function cursorClassForResizeDir(dir: ResizeDir) {
+  if (dir === 'n' || dir === 's') return 'canvas-resize-cursor--ns'
+  if (dir === 'e' || dir === 'w') return 'canvas-resize-cursor--ew'
+  if (dir === 'nw' || dir === 'se') return 'canvas-resize-cursor--nwse'
+  return 'canvas-resize-cursor--nesw'
+}
+
+function setGlobalResizeCursor(dir: ResizeDir) {
+  if (typeof document === 'undefined') return
+  const nextClass = cursorClassForResizeDir(dir)
+  if (activeResizeCursorClass === nextClass) return
+  clearGlobalResizeCursor()
+  document.body.classList.add('canvas-resize-cursor')
+  document.body.classList.add(nextClass)
+  activeResizeCursorClass = nextClass
+}
+
+function clearGlobalResizeCursor() {
+  if (typeof document === 'undefined') return
+  document.body.classList.remove('canvas-resize-cursor')
+  if (activeResizeCursorClass) {
+    document.body.classList.remove(activeResizeCursorClass)
+    activeResizeCursorClass = null
+  }
+}
 
 function widgetIntersectsVisibleRect(
   w: Widget,
@@ -3010,7 +3077,6 @@ function applyGroupResizeStep(event: PointerEvent) {
 function finishGroupResize() {
   const state = activeGroupResizeState
   if (!state) return
-  const cornerResize = (state.dir.includes('e') || state.dir.includes('w')) && (state.dir.includes('n') || state.dir.includes('s'))
 
   if (state.raf) {
     cancelAnimationFrame(state.raf)
@@ -3019,7 +3085,7 @@ function finishGroupResize() {
 
   for (const member of state.members) {
     member.el?.classList.remove('is-resizing')
-    const fineSnap = member.isText || cornerResize
+    const fineSnap = true
     member.widget.x = clamp(fineSnap ? Math.round(member.x) : snap(member.x), 0, BOARD_W - member.w)
     member.widget.y = clamp(fineSnap ? Math.round(member.y) : snap(member.y), 0, BOARD_H - member.h)
     member.widget.w = clamp(fineSnap ? Math.round(member.w) : snap(member.w), member.minW, BOARD_W)
@@ -3030,6 +3096,7 @@ function finishGroupResize() {
 
   activeGroupResizeState = null
   setSnapGuides(null, null)
+  clearGlobalResizeCursor()
   setCanvasPanEnabled(true)
   scheduleSave()
   bumpInteractionTick()
@@ -3067,6 +3134,7 @@ function startResize(id: string, dir: ResizeDir, event: PointerEvent) {
     clearResizeState(id)
     activeResizeId = null
     if (!startGroupResize(groupIds, dir, event)) return
+    setGlobalResizeCursor(dir)
     setCanvasPanEnabled(false)
     window.addEventListener('pointermove', onResizePointerMove)
     window.addEventListener('pointerup', onResizePointerUp, { once: true })
@@ -3079,6 +3147,7 @@ function startResize(id: string, dir: ResizeDir, event: PointerEvent) {
 
   const s = Number(camera.scale.value || 1)
   const minSize = minSizeFor(w)
+  const maxSize = maxSizeFor(w)
   const isText = isTextWidget(w)
   if (!isText && w.props?.autoHeight === true) {
     w.props = { ...(w.props ?? {}), autoHeight: false }
@@ -3107,10 +3176,13 @@ function startResize(id: string, dir: ResizeDir, event: PointerEvent) {
     yTargets: collectAxisTargets(id, 'y'),
     minW: minSize.w,
     minH: minSize.h,
+    maxW: maxSize.w,
+    maxH: maxSize.h,
     isText,
   })
 
   el.classList.add('is-resizing')
+  setGlobalResizeCursor(dir)
   setCanvasPanEnabled(false)
 
   window.addEventListener('pointermove', onResizePointerMove)
@@ -3170,11 +3242,12 @@ function onResizePointerMove(event: PointerEvent) {
   const dy = (event.clientY - state.pointerStartY) / state.scale
   const minW = state.minW
   const minH = state.minH
+  const stateMaxW = state.maxW
+  const stateMaxH = state.maxH
   const xSign = axisSign(state.dir, 'e', 'w')
   const ySign = axisSign(state.dir, 's', 'n')
   const cornerResize = xSign !== 0 && ySign !== 0
   const fromCenter = event.altKey
-  const keepRatio = state.aspect > 0 && (event.shiftKey || cornerResize)
 
   if (state.isText) {
     if (cornerResize) {
@@ -3203,8 +3276,8 @@ function onResizePointerMove(event: PointerEvent) {
         targetHeight: state.originH,
         lockWidth: true,
       })
-      const nextW = clamp(state.originW, state.minW, BOARD_W)
-      const nextH = clamp(measured.h, state.minH, BOARD_H)
+      const nextW = clamp(state.originW, state.minW, stateMaxW)
+      const nextH = clamp(measured.h, state.minH, stateMaxH)
 
       state.x = clamp(state.originX, 0, BOARD_W - nextW)
       state.y = clamp(state.originY, 0, BOARD_H - nextH)
@@ -3218,7 +3291,7 @@ function onResizePointerMove(event: PointerEvent) {
 
     const horizontalSign = xSign === 0 ? 1 : xSign
     const widthDelta = dx * horizontalSign * (fromCenter ? 2 : 1)
-    let nextW = clamp(state.originW + widthDelta, state.minW, BOARD_W)
+    let nextW = clamp(state.originW + widthDelta, state.minW, stateMaxW)
 
     let left = fromCenter ? state.originCenterX - nextW / 2 : state.originX
     let right = fromCenter ? state.originCenterX + nextW / 2 : state.originX + state.originW
@@ -3250,13 +3323,13 @@ function onResizePointerMove(event: PointerEvent) {
       }
     }
 
-    nextW = clamp(right - left, state.minW, BOARD_W)
+    nextW = clamp(right - left, state.minW, stateMaxW)
     const measured = estimateTextWidgetSize(w, {
       targetWidth: nextW,
       targetHeight: state.originH,
       lockWidth: true,
     })
-    const nextH = clamp(measured.h, state.minH, BOARD_H)
+    const nextH = clamp(measured.h, state.minH, stateMaxH)
 
     let nextX = fromCenter
       ? clamp(state.originCenterX - nextW / 2, 0, BOARD_W - nextW)
@@ -3280,127 +3353,63 @@ function onResizePointerMove(event: PointerEvent) {
   let nextW = state.originW
   let nextH = state.originH
 
-  if (xSign !== 0) {
-    nextW = state.originW + dx * xSign * (fromCenter ? 2 : 1)
-  }
-  if (ySign !== 0) {
-    nextH = state.originH + dy * ySign * (fromCenter ? 2 : 1)
-  }
+  if (cornerResize) {
+    const outwardX = xSign * dx
+    const outwardY = ySign * dy
+    const dominant = Math.abs(outwardX) >= Math.abs(outwardY) ? outwardX : outwardY
+    const delta = dominant * (fromCenter ? 2 : 1)
+    const minUniformScale = Math.max(minW / Math.max(state.originW, 1), minH / Math.max(state.originH, 1), 0.01)
+    const maxUniformScaleByWidget = Math.min(
+      stateMaxW / Math.max(state.originW, 1),
+      stateMaxH / Math.max(state.originH, 1),
+    )
+    const rawUniformScale = (state.originW + delta) / Math.max(state.originW, 1)
+    let uniformScale = Math.max(rawUniformScale, minUniformScale)
 
-  nextW = clamp(nextW, minW, BOARD_W)
-  nextH = clamp(nextH, minH, BOARD_H)
-
-  if (keepRatio) {
-    const aspect = Math.max(state.aspect, 0.01)
-    if (xSign !== 0 && ySign !== 0) {
-      const relW = Math.abs((nextW - state.originW) / Math.max(state.originW, 1))
-      const relH = Math.abs((nextH - state.originH) / Math.max(state.originH, 1))
-      if (relW >= relH) {
-        nextH = nextW / aspect
-      } else {
-        nextW = nextH * aspect
+    let maxUniformScale = Infinity
+    if (fromCenter) {
+      const maxW = Math.max(2, 2 * Math.min(state.originCenterX, BOARD_W - state.originCenterX))
+      const maxH = Math.max(2, 2 * Math.min(state.originCenterY, BOARD_H - state.originCenterY))
+      maxUniformScale = Math.min(maxW / Math.max(state.originW, 1), maxH / Math.max(state.originH, 1))
+    } else {
+      if (xSign > 0) {
+        maxUniformScale = Math.min(maxUniformScale, (BOARD_W - state.originX) / Math.max(state.originW, 1))
+      } else if (xSign < 0) {
+        const rightAnchor = state.originX + state.originW
+        maxUniformScale = Math.min(maxUniformScale, rightAnchor / Math.max(state.originW, 1))
       }
-    } else if (xSign !== 0) {
-      nextH = nextW / aspect
-    } else if (ySign !== 0) {
-      nextW = nextH * aspect
+      if (ySign > 0) {
+        maxUniformScale = Math.min(maxUniformScale, (BOARD_H - state.originY) / Math.max(state.originH, 1))
+      } else if (ySign < 0) {
+        const bottomAnchor = state.originY + state.originH
+        maxUniformScale = Math.min(maxUniformScale, bottomAnchor / Math.max(state.originH, 1))
+      }
     }
 
-    if (nextW < minW) {
-      nextW = minW
-      nextH = nextW / aspect
+    if (Number.isFinite(maxUniformScale)) {
+      uniformScale = Math.min(uniformScale, Math.max(maxUniformScale, minUniformScale))
     }
-    if (nextH < minH) {
-      nextH = minH
-      nextW = nextH * aspect
-    }
-    if (nextW > BOARD_W) {
-      nextW = BOARD_W
-      nextH = nextW / aspect
-    }
-    if (nextH > BOARD_H) {
-      nextH = BOARD_H
-      nextW = nextH * aspect
-    }
+    uniformScale = Math.min(uniformScale, Math.max(maxUniformScaleByWidget, minUniformScale))
 
-    nextW = clamp(nextW, minW, BOARD_W)
-    nextH = clamp(nextH, minH, BOARD_H)
-  }
-
-  let left = state.originX
-  let top = state.originY
-  let right = state.originX + state.originW
-  let bottom = state.originY + state.originH
-
-  if (fromCenter) {
-    left = state.originCenterX - nextW / 2
-    right = state.originCenterX + nextW / 2
-    top = state.originCenterY - nextH / 2
-    bottom = state.originCenterY + nextH / 2
+    nextW = clamp(state.originW * uniformScale, minW, stateMaxW)
+    nextH = clamp(state.originH * uniformScale, minH, stateMaxH)
   } else {
-    if (xSign > 0) {
-      left = state.originX
-      right = left + nextW
-    } else if (xSign < 0) {
-      right = state.originX + state.originW
-      left = right - nextW
-    } else {
-      left = state.originCenterX - nextW / 2
-      right = state.originCenterX + nextW / 2
+    if (xSign !== 0) {
+      nextW = state.originW + dx * xSign * (fromCenter ? 2 : 1)
+    }
+    if (ySign !== 0) {
+      nextH = state.originH + dy * ySign * (fromCenter ? 2 : 1)
     }
 
-    if (ySign > 0) {
-      top = state.originY
-      bottom = top + nextH
-    } else if (ySign < 0) {
-      bottom = state.originY + state.originH
-      top = bottom - nextH
-    } else {
-      top = state.originCenterY - nextH / 2
-      bottom = state.originCenterY + nextH / 2
-    }
+    nextW = clamp(nextW, minW, stateMaxW)
+    nextH = clamp(nextH, minH, stateMaxH)
   }
 
-  const smartSnap = shouldUseSmartSnap(event) && !fromCenter && !keepRatio
-  const xTargets = state.xTargets
-  const yTargets = state.yTargets
+  let nextX = state.originX
+  let nextY = state.originY
+  const smartSnap = shouldUseSmartSnap(event) && !fromCenter && !cornerResize
   let guideX: number | null = null
   let guideY: number | null = null
-
-  if (xSign > 0) {
-    const snappedRight = snapEdgeToTargets(right, xTargets, smartSnap)
-    if (snappedRight.value - left >= minW) {
-      right = snappedRight.value
-      guideX = snappedRight.guide
-    }
-  }
-  if (xSign < 0) {
-    const snappedLeft = snapEdgeToTargets(left, xTargets, smartSnap)
-    if (right - snappedLeft.value >= minW) {
-      left = snappedLeft.value
-      guideX = snappedLeft.guide
-    }
-  }
-  if (ySign > 0) {
-    const snappedBottom = snapEdgeToTargets(bottom, yTargets, smartSnap)
-    if (snappedBottom.value - top >= minH) {
-      bottom = snappedBottom.value
-      guideY = snappedBottom.guide
-    }
-  }
-  if (ySign < 0) {
-    const snappedTop = snapEdgeToTargets(top, yTargets, smartSnap)
-    if (bottom - snappedTop.value >= minH) {
-      top = snappedTop.value
-      guideY = snappedTop.guide
-    }
-  }
-
-  nextW = clamp(right - left, minW, BOARD_W)
-  nextH = clamp(bottom - top, minH, BOARD_H)
-
-  let nextX = left
-  let nextY = top
 
   if (fromCenter) {
     nextX = clamp(state.originCenterX - nextW / 2, 0, BOARD_W - nextW)
@@ -3421,8 +3430,51 @@ function onResizePointerMove(event: PointerEvent) {
       const bottomAnchor = state.originY + state.originH
       nextY = clamp(bottomAnchor - nextH, 0, BOARD_H - nextH)
     } else {
-      nextY = clamp(state.originCenterY - nextH / 2, 0, BOARD_H - nextH)
+      nextY = clamp(state.originY, 0, BOARD_H - nextH)
     }
+  }
+
+  if (smartSnap) {
+    if (xSign > 0) {
+      const left = nextX
+      const right = nextX + nextW
+      const snappedRight = snapEdgeToTargets(right, state.xTargets, true)
+      if (snappedRight.guide !== null && snappedRight.value - left >= minW) {
+        nextW = clamp(snappedRight.value - left, minW, stateMaxW)
+        guideX = snappedRight.guide
+      }
+    } else if (xSign < 0) {
+      const right = nextX + nextW
+      const snappedLeft = snapEdgeToTargets(nextX, state.xTargets, true)
+      if (snappedLeft.guide !== null && right - snappedLeft.value >= minW) {
+        nextX = clamp(snappedLeft.value, 0, right - minW)
+        nextW = clamp(right - nextX, minW, stateMaxW)
+        guideX = snappedLeft.guide
+      }
+    }
+
+    if (ySign > 0) {
+      const top = nextY
+      const bottom = nextY + nextH
+      const snappedBottom = snapEdgeToTargets(bottom, state.yTargets, true)
+      if (snappedBottom.guide !== null && snappedBottom.value - top >= minH) {
+        nextH = clamp(snappedBottom.value - top, minH, stateMaxH)
+        guideY = snappedBottom.guide
+      }
+    } else if (ySign < 0) {
+      const bottom = nextY + nextH
+      const snappedTop = snapEdgeToTargets(nextY, state.yTargets, true)
+      if (snappedTop.guide !== null && bottom - snappedTop.value >= minH) {
+        nextY = clamp(snappedTop.value, 0, bottom - minH)
+        nextH = clamp(bottom - nextY, minH, stateMaxH)
+        guideY = snappedTop.guide
+      }
+    }
+
+    nextW = clamp(nextW, minW, stateMaxW)
+    nextH = clamp(nextH, minH, stateMaxH)
+    nextX = clamp(nextX, 0, BOARD_W - nextW)
+    nextY = clamp(nextY, 0, BOARD_H - nextH)
   }
 
   state.x = nextX
@@ -3442,15 +3494,16 @@ function finishResize(id: string) {
 
   if (!state || !w) {
     clearResizeState(id)
+    clearGlobalResizeCursor()
     setCanvasPanEnabled(true)
     activeResizeId = null
     return
   }
 
   const cornerResize = (state.dir.includes('e') || state.dir.includes('w')) && (state.dir.includes('n') || state.dir.includes('s'))
-  const fineSnap = state.isText || cornerResize
-  const snappedW = clamp(fineSnap ? Math.round(state.w) : snap(state.w), state.minW, BOARD_W)
-  const snappedH = clamp(fineSnap ? Math.round(state.h) : snap(state.h), state.minH, BOARD_H)
+  const fineSnap = true
+  const snappedW = clamp(fineSnap ? Math.round(state.w) : snap(state.w), state.minW, state.maxW)
+  const snappedH = clamp(fineSnap ? Math.round(state.h) : snap(state.h), state.minH, state.maxH)
   const snappedX = clamp(fineSnap ? Math.round(state.x) : snap(state.x), 0, BOARD_W - snappedW)
   const snappedY = clamp(fineSnap ? Math.round(state.y) : snap(state.y), 0, BOARD_H - snappedH)
 
@@ -3463,6 +3516,7 @@ function finishResize(id: string) {
   setSnapGuides(null, null)
 
   clearResizeState(id)
+  clearGlobalResizeCursor()
   setCanvasPanEnabled(true)
   activeResizeId = null
 
@@ -3587,6 +3641,7 @@ function onResizePointerUp() {
   if (!activeResizeId) return
   if (!resizeStates.has(activeResizeId)) {
     setSnapGuides(null, null)
+    clearGlobalResizeCursor()
     activeResizeId = null
     setCanvasPanEnabled(true)
     return
@@ -3617,6 +3672,7 @@ function detachAllInteract() {
   activeTextWidgetId.value = null
   clearSelection()
   setSnapGuides(null, null)
+  clearGlobalResizeCursor()
   setCanvasPanEnabled(true)
 }
 
@@ -4005,6 +4061,7 @@ onBeforeUnmount(() => {
     toastTimer = null
   }
   detachAllInteract()
+  clearGlobalResizeCursor()
   camera.destroy()
 })
 
