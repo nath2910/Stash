@@ -1,5 +1,5 @@
 ﻿// src/components/stats/widgets/widgetRegistry.js
-// contient tout les reglages de chaque widget, leurs comportement leur taille etc 
+// contient tout les reglages de chaque widget, leurs comportement leur taille etc
 // aussi les types de graph dispo (number, pie ...)
 import {
   TrendingUp,
@@ -17,7 +17,7 @@ import {
 import NetProfitWidget from './widgets/NetProfitWidget.vue'
 
 import RoiWidget from './widgets/RoiWidget.vue'
-import GrossRevenueWidget from './widgets/GrossRevenueWidget.vue'
+import GrossRevenueWidget from './widgets/ChiffreDaffaireWidget.vue'
 import AvgMarginWidget from './widgets/AvgMarginWidget.vue'
 
 import InventoryValueWidget from './widgets/InventoryValueWidget.vue'
@@ -145,7 +145,7 @@ export const WIDGET_DEFS = [
     icon: TrendingUp,
     component: NetProfitWidget,
     forms: ['number'],
-    defaultSize: { w: 520, h: 240 },
+    defaultSize: { w: 520, h: 260 },
     minSize: { w: 380, h: 210 },
     defaultProps: { bucket: 'week', autoHeight: false, categories: [], types: [] },
     settings: [],
@@ -159,7 +159,7 @@ export const WIDGET_DEFS = [
     icon: GitCompareArrows,
     component: RoiWidget,
     forms: ['number'],
-    defaultSize: { w: 520, h: 260 },
+    defaultSize: { w: 620, h: 460 },
     minSize: { w: 420, h: 220 },
     defaultProps: { autoHeight: true, categories: [], types: [] },
     settings: [],
@@ -173,8 +173,8 @@ export const WIDGET_DEFS = [
     icon: LineChart,
     component: GrossRevenueWidget,
     forms: ['number', 'line'],
-    defaultSize: { w: 820, h: 520 },
-    minSize: { w: 560, h: 360 },
+    defaultSize: { w: 1080, h: 680 },
+    minSize: { w: 760, h: 460 },
     defaultProps: { bucket: 'day', view: 'number', autoHeight: true, categories: [], types: [] },
     settings: [],
     categoryFilter: true,
@@ -187,9 +187,10 @@ export const WIDGET_DEFS = [
     icon: Gauge,
     component: AvgMarginWidget,
     forms: ['number'],
-    defaultSize: { w: 520, h: 200 },
-    minSize: { w: 420, h: 200 },
-    defaultProps: { bucket: 'week', autoHeight: true, categories: [], types: [] },
+    defaultSize: { w: 600, h: 420 },
+    minSize: { w: 460, h: 240 },
+    maxSize: { w: 980, h: 760 },
+    defaultProps: { bucket: 'week', autoHeight: false, categories: [], types: [] },
     settings: [],
     categoryFilter: true,
   },
@@ -213,7 +214,7 @@ export const WIDGET_DEFS = [
     type: 'sellThrough',
     title: "Taux d'ecoulement",
     category: 'Stock',
-    help: "Part du stock vendu",
+    help: 'Part du stock vendu',
     icon: BarChart3,
     component: SellThroughWidget,
     forms: ['bars'],
@@ -400,6 +401,22 @@ export function getWidgetDef(type) {
   return WIDGET_DEFS.find((d) => d.type === type)
 }
 
+export function cloneWidgetProps(value) {
+  if (value == null || typeof value !== 'object') return {}
+  if (typeof globalThis.structuredClone === 'function') {
+    try {
+      return globalThis.structuredClone(value)
+    } catch {
+      // fallback below
+    }
+  }
+  try {
+    return JSON.parse(JSON.stringify(value))
+  } catch {
+    return { ...value }
+  }
+}
+
 export function newWidget(type, x, y) {
   const uid =
     globalThis.crypto?.randomUUID?.() ?? `${Date.now()}_${Math.random().toString(16).slice(2)}`
@@ -414,6 +431,6 @@ export function newWidget(type, x, y) {
     y,
     w: def.defaultSize.w,
     h: def.defaultSize.h,
-    props: { ...def.defaultProps },
+    props: cloneWidgetProps(def.defaultProps),
   }
 }

@@ -741,6 +741,8 @@ const mergedProps = computed(() => {
   p.widgetHeight = logicalHeight
   p.widgetBaseWidth = sizing.baseWidth
   p.widgetBaseHeight = sizing.baseHeight
+  p.widgetRenderWidth = sizing.renderWidth
+  p.widgetRenderHeight = sizing.renderHeight
   p.canvasEditMode = props.editMode
   return p
 })
@@ -767,24 +769,10 @@ const bodyStyle = computed(() => {
 
 const contentInnerEl = ref<HTMLElement | null>(null)
 
-const legibilityBoost = computed(() => {
-  if (isTextWidget.value) return 1
-  const scale = Number(props.canvasScale ?? 1)
-  if (!Number.isFinite(scale) || scale >= 0.96) return 1
-  // When zoomed out, slightly upscale inner content to keep text readable.
-  return Math.max(1, Math.min(1.3, 0.96 / Math.max(scale, 0.38)))
-})
-
 const contentLayoutStyle = computed(() => {
   if (!isTextWidget.value) {
-    const boost = legibilityBoost.value
-    if (boost <= 1.01) return {}
-    return {
-      transform: `scale(${boost})`,
-      transformOrigin: 'top left',
-      width: `${(100 / boost).toFixed(2)}%`,
-      height: `${(100 / boost).toFixed(2)}%`,
-    }
+    // Keep a stable widget structure at every canvas/page zoom level.
+    return {}
   }
   return {
     width: '100%',
@@ -832,15 +820,13 @@ const visibleHandles = computed(() => {
 })
 
 const edgeHandles = computed(() => {
-  if (isTextWidget.value) {
-    return handles.filter((handle) => ['e', 'w'].includes(handle.dir))
-  }
+  // Keep resize interactions only on corner handles for every widget.
   return []
 })
 
 const resizeHintText = computed(() =>
   isTextWidget.value
-    ? 'Coins: taille du texte | Cotes: largeur et retour a la ligne'
+    ? 'Coins: taille du texte'
     : isRoiWidget.value
       ? 'Coins: zoom uniforme | Alt: centre'
       : 'Coins: zoom uniforme | Alt: centre',
@@ -1649,7 +1635,7 @@ function onRootKeydown(event: KeyboardEvent) {
   opacity: 0;
 }
 .widget--text .resize-meta {
-  top: -24px;
+  top: -34px;
 }
 .widget--roi .resize-edge__line {
   background: rgba(16, 185, 129, 0.5);
@@ -1661,7 +1647,6 @@ function onRootKeydown(event: KeyboardEvent) {
 }
 .widget--roi .resize-handle--corner {
   --handle-size: 30px;
-  --handle-hit: 124px;
   border-radius: 999px;
   background: linear-gradient(180deg, rgba(236, 253, 245, 1), rgba(209, 250, 229, 1));
   border: 1.5px solid rgba(16, 185, 129, 0.94);
@@ -2087,7 +2072,6 @@ function onRootKeydown(event: KeyboardEvent) {
 
 .resize-handle {
   --handle-size: 20px;
-  --handle-hit: 104px;
   --handle-scale: 0.84;
   position: absolute;
   width: var(--handle-size);
@@ -2111,11 +2095,6 @@ function onRootKeydown(event: KeyboardEvent) {
   padding: 0;
   appearance: none;
   cursor: pointer;
-}
-.resize-handle::before {
-  content: '';
-  position: absolute;
-  inset: calc((var(--handle-size) - var(--handle-hit)) / 2);
 }
 
 .resize-handle:hover {
@@ -2213,7 +2192,6 @@ function onRootKeydown(event: KeyboardEvent) {
 .resize-handle--se,
 .resize-handle--sw {
   --handle-size: 20px;
-  --handle-hit: 104px;
 }
 
 .resize-handle--corner {
@@ -2315,37 +2293,37 @@ function onRootKeydown(event: KeyboardEvent) {
 
 .resize-meta {
   position: absolute;
-  top: -26px;
+  top: -38px;
   left: 50%;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   opacity: 0;
   pointer-events: none;
-  transform: translateX(-50%) translateY(4px);
+  transform: translateX(-50%) translateY(3px);
   transition:
     opacity 140ms ease,
     transform 140ms ease;
 }
 
 .resize-metrics {
-  padding: 2px 8px;
+  padding: 1px 7px;
   border-radius: 999px;
   border: 1px solid rgba(129, 140, 248, 0.5);
   background: rgba(15, 23, 42, 0.9);
   color: rgba(241, 245, 249, 0.95);
-  font-size: 11px;
+  font-size: 10px;
   letter-spacing: 0.02em;
   font-variant-numeric: tabular-nums;
 }
 
 .resize-hints {
-  padding: 2px 8px;
+  padding: 1px 7px;
   border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.26);
   background: rgba(15, 23, 42, 0.72);
   color: rgba(226, 232, 240, 0.82);
-  font-size: 10px;
+  font-size: 9px;
   letter-spacing: 0.01em;
   white-space: nowrap;
 }
@@ -2380,7 +2358,6 @@ function onRootKeydown(event: KeyboardEvent) {
 
   .resize-handle {
     --handle-size: 22px;
-    --handle-hit: 64px;
   }
 
   .resize-handle--n,
@@ -2400,7 +2377,6 @@ function onRootKeydown(event: KeyboardEvent) {
   .resize-handle--se,
   .resize-handle--sw {
     --handle-size: 38px;
-    --handle-hit: 128px;
   }
 
   .resize-hints {

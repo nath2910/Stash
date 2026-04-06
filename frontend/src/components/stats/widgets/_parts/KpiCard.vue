@@ -12,10 +12,10 @@
     :widget-base-height="widgetBaseHeight"
   >
     <div class="kpi-card h-full flex flex-col pb-1" :class="containerClass" :style="kpiStyle">
-      <div class="flex items-end justify-between gap-3">
+      <div class="kpi-card__head flex min-w-0 items-end justify-between gap-3">
         <div class="min-w-0">
-          <div class="kpi-card__value truncate">{{ valueText }}</div>
-          <div class="mt-2 flex items-center gap-2 flex-wrap">
+          <div class="kpi-card__value" :class="{ truncate: isShort }">{{ valueText }}</div>
+          <div class="kpi-card__meta-row mt-2 flex items-center gap-2 flex-wrap" :class="{ 'is-short': isShort }">
             <span
               v-if="deltaPct != null"
               class="kpi-card__badge"
@@ -32,7 +32,9 @@
         </div>
       </div>
 
-      <slot />
+      <div v-if="showSlot" class="kpi-card__slot">
+        <slot />
+      </div>
     </div>
   </WidgetCard>
 </template>
@@ -64,6 +66,9 @@ const props = defineProps({
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
 
+const isShort = computed(() => Number(props.widgetHeight ?? 0) < 205)
+const isVeryShort = computed(() => Number(props.widgetHeight ?? 0) < 186)
+
 const deltaClass = computed(() => {
   if (props.deltaClass) return props.deltaClass
   if (props.deltaPct == null) return ''
@@ -75,17 +80,24 @@ const deltaClass = computed(() => {
 
 const containerClass = computed(() =>
   [
-    props.compact ? 'justify-start gap-3' : 'justify-between',
+    props.compact ? 'justify-start gap-2.5' : 'justify-between',
     props.widgetWidth < 460 ? 'kpi-card--narrow' : '',
+    isShort.value ? 'kpi-card--short' : '',
   ].filter(Boolean),
 )
-const showSpark = computed(() => Boolean(props.spark?.length) && props.widgetWidth >= 360)
+const showSpark = computed(
+  () =>
+    Boolean(props.spark?.length) &&
+    Number(props.widgetWidth ?? 0) >= 380 &&
+    Number(props.widgetHeight ?? 0) >= 205,
+)
+const showSlot = computed(() => !isVeryShort.value)
 
 const kpiStyle = computed(() => {
-  const valueBase = Math.min(props.widgetWidth * 0.06, props.widgetHeight * 0.34)
-  const valueSize = clamp(Math.round(valueBase), 28, 56)
-  const metaSize = clamp(Math.round(valueSize * 0.28), 11, 15)
-  const sparkWidth = clamp(Math.round(props.widgetWidth * 0.22), 92, 180)
+  const valueBase = Math.min(props.widgetWidth * 0.05, props.widgetHeight * 0.24)
+  const valueSize = clamp(Math.round(valueBase), 22, 44)
+  const metaSize = clamp(Math.round(valueSize * 0.31), 10, 14)
+  const sparkWidth = clamp(Math.round(props.widgetWidth * 0.2), 88, 170)
 
   return {
     '--kpi-value-size': `${valueSize}px`,
@@ -96,17 +108,30 @@ const kpiStyle = computed(() => {
 </script>
 
 <style scoped>
+.kpi-card {
+  min-width: 0;
+  min-height: 0;
+}
+
+.kpi-card__head {
+  flex: 0 0 auto;
+}
+
 .kpi-card__value {
   font-size: var(--kpi-value-size);
-  line-height: 1;
+  line-height: 1.06;
   font-weight: 620;
   letter-spacing: -0.025em;
   color: rgba(248, 250, 252, 0.96);
 }
 
+.kpi-card__meta-row.is-short {
+  margin-top: 0.36rem;
+}
+
 .kpi-card__badge {
   font-size: var(--kpi-meta-size);
-  padding: 0.26rem 0.56rem;
+  padding: 0.24rem 0.52rem;
   border-radius: 999px;
   border: none;
 }
@@ -121,11 +146,23 @@ const kpiStyle = computed(() => {
   flex: 0 0 auto;
 }
 
+.kpi-card__slot {
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: auto;
+  padding-right: 2px;
+}
+
 .kpi-card--narrow .kpi-card__value {
   letter-spacing: -0.02em;
 }
 
 .kpi-card--narrow .kpi-card__badge {
   padding-inline: 0.48rem;
+}
+
+.kpi-card--short {
+  gap: 2px !important;
 }
 </style>

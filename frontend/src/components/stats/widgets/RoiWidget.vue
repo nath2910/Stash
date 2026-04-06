@@ -11,24 +11,31 @@
     :widget-base-width="props.widgetBaseWidth"
     :widget-base-height="props.widgetBaseHeight"
   >
+    <template #actions>
+      <div class="roi-header-period" :title="periodText" aria-label="Periode active">
+        <CalendarDays class="roi-header-period__icon" aria-hidden="true" />
+        <span class="roi-header-period__text">{{ periodText }}</span>
+      </div>
+    </template>
+
     <div class="roi-root" :class="layoutClass" :style="roiVars">
-      <section class="roi-panel roi-panel--primary" aria-label="Synthese ROI">
-        <div class="roi-primary-head">
-          <p class="roi-overline">ROI principal</p>
-          <span class="roi-state-chip" :class="`is-${trendState}`">
-            <component :is="trendIcon" class="roi-state-icon" aria-hidden="true" />
-            <span>{{ trendLabel }}</span>
-          </span>
-        </div>
+      <section class="roi-summary-grid" aria-label="Synthese ROI">
+        <article class="roi-tile roi-tile--hero">
+          <div class="roi-tile-head">
+            <p class="roi-overline">ROI moyen</p>
+            <span class="roi-state-chip" :class="`is-${trendState}`">
+              <component :is="trendIcon" class="roi-state-icon" aria-hidden="true" />
+              <span>{{ trendLabel }}</span>
+            </span>
+          </div>
+          <p class="roi-main-value" aria-live="polite">{{ roiText }}</p>
+          <div class="roi-delta-row" :class="`is-${trendState}`">
+            <span class="roi-delta-value">{{ deltaPtsText }}</span>
+            <span class="roi-delta-note">{{ deltaDescription }}</span>
+          </div>
+        </article>
 
-        <p class="roi-main-value" aria-live="polite">{{ roiText }}</p>
-
-        <div class="roi-delta-row" :class="`is-${trendState}`">
-          <span class="roi-delta-value">{{ deltaPtsText }}</span>
-          <span class="roi-delta-note">{{ deltaDescription }}</span>
-        </div>
-
-        <div class="roi-goal-box" :class="`is-${targetState}`">
+        <article class="roi-tile roi-tile--goal" :class="`is-${targetState}`">
           <div class="roi-goal-head">
             <div class="roi-goal-meta">
               <p class="roi-overline">Objectif ROI</p>
@@ -36,7 +43,6 @@
             </div>
             <p class="roi-goal-delta">{{ targetDeltaText }}</p>
           </div>
-
           <div
             class="roi-progress"
             role="progressbar"
@@ -47,26 +53,16 @@
           >
             <span class="roi-progress-fill" :style="goalFillStyle"></span>
           </div>
-
           <p class="roi-goal-hint">{{ targetHint }}</p>
-        </div>
-
-        <div class="roi-period-row" aria-label="Periode active">
-          <CalendarDays class="roi-period-icon" aria-hidden="true" />
-          <div class="roi-period-text">
-            <p class="roi-overline">Periode active</p>
-            <p class="roi-period-value">{{ periodText }}</p>
-          </div>
-        </div>
+        </article>
       </section>
 
-      <section class="roi-panel roi-panel--breakdown" aria-label="Top categories profit">
+      <section class="roi-breakdown-panel" aria-label="Top categories profit">
         <header class="roi-breakdown-head">
           <div>
             <p class="roi-overline">Top categories profit</p>
             <p class="roi-breakdown-sub">Impact sur le profit total</p>
           </div>
-          <p v-if="hasTopCategories" class="roi-breakdown-total">{{ topCategoriesTotalText }}</p>
         </header>
 
         <ul
@@ -138,7 +134,7 @@ async function load() {
     const [k, kPrev, c] = await Promise.all([
       StatsServices.kpi('roi', props.from, props.to, props.categories, props.types),
       StatsServices.kpi('roi', prevFrom, prevTo, props.categories, props.types),
-      StatsServices.rank('topCategoriesProfit', props.from, props.to, 4, props.categories, props.types),
+      StatsServices.rank('topCategoriesProfit', props.from, props.to, 2, props.categories, props.types),
     ])
 
     if (id !== req) return
@@ -213,7 +209,7 @@ const toLabel = computed(() =>
   formatDateFR(props.to, { day: '2-digit', month: 'short', year: 'numeric' }),
 )
 
-const periodText = computed(() => `${fromLabel.value} -> ${toLabel.value}`)
+const periodText = computed(() => `${fromLabel.value} - ${toLabel.value}`)
 
 const targetDelta = computed(() => roiNumeric.value - roiTarget)
 const targetState = computed(() => (targetDelta.value >= 0 ? 'ok' : 'risk'))
@@ -239,17 +235,15 @@ const targetHint = computed(() => {
 })
 
 const topCategoriesSafe = computed(() =>
-  topCategories.value.map((item) => ({
-    label: String(item?.label ?? '-'),
-    value: asFinite(item?.value, 0),
-  })),
+  topCategories.value
+    .slice(0, 2)
+    .map((item) => ({
+      label: String(item?.label ?? '-'),
+      value: asFinite(item?.value, 0),
+    })),
 )
 
 const hasTopCategories = computed(() => topCategoriesSafe.value.length > 0)
-
-const topCategoriesTotal = computed(() =>
-  topCategoriesSafe.value.reduce((sum, item) => sum + item.value, 0),
-)
 
 const topCategoriesTotalAbs = computed(() =>
   topCategoriesSafe.value.reduce((sum, item) => sum + Math.abs(item.value), 0),
@@ -259,8 +253,6 @@ const topCategoryMaxAbs = computed(() => {
   const max = topCategoriesSafe.value.reduce((acc, item) => Math.max(acc, Math.abs(item.value)), 0)
   return max > 0 ? max : 1
 })
-
-const topCategoriesTotalText = computed(() => formatEUR(topCategoriesTotal.value, { compact: true }))
 
 function categoryWidth(item) {
   const width = (Math.abs(item.value) / topCategoryMaxAbs.value) * 100
@@ -289,7 +281,7 @@ const heightScale = computed(() => safeHeight.value / baseHeight.value)
 const visualScale = computed(() => {
   const fitScale = Math.min(widthScale.value, heightScale.value)
   const areaScale = Math.sqrt(widthScale.value * heightScale.value)
-  return clamp(fitScale * 0.86 + areaScale * 0.14, 0.76, 2.1)
+  return clamp(fitScale * 0.88 + areaScale * 0.12, 0.82, 1.38)
 })
 
 const isWide = computed(() => safeWidth.value >= 760 && safeHeight.value >= 230)
@@ -306,14 +298,14 @@ const roiVars = computed(() => {
   const scale = visualScale.value
 
   return {
-    '--roi-gap': `${clamp(Math.round(14 * scale), 10, 30)}px`,
-    '--roi-panel-pad': `${clamp(Math.round(12 * scale), 10, 24)}px`,
-    '--roi-panel-radius': `${clamp(Math.round(12 * scale), 10, 24)}px`,
-    '--roi-kpi-size': `${clamp(Math.round(42 * scale), 26, 96)}px`,
-    '--roi-title-size': `${clamp(Math.round(11 * scale), 10, 16)}px`,
-    '--roi-body-size': `${clamp(Math.round(13 * scale), 11, 22)}px`,
-    '--roi-meta-size': `${clamp(Math.round(12 * scale), 10, 18)}px`,
-    '--roi-small-size': `${clamp(Math.round(10 * scale), 9, 15)}px`,
+    '--roi-gap': `${clamp(Math.round(12 * scale), 8, 18)}px`,
+    '--roi-panel-pad': `${clamp(Math.round(11 * scale), 9, 18)}px`,
+    '--roi-panel-radius': `${clamp(Math.round(12 * scale), 10, 18)}px`,
+    '--roi-kpi-size': `${clamp(Math.round(36 * scale), 24, 62)}px`,
+    '--roi-title-size': `${clamp(Math.round(11 * scale), 10, 14)}px`,
+    '--roi-body-size': `${clamp(Math.round(13 * scale), 11, 16)}px`,
+    '--roi-meta-size': `${clamp(Math.round(12 * scale), 10, 14)}px`,
+    '--roi-small-size': `${clamp(Math.round(10 * scale), 9, 12)}px`,
     '--roi-bar-height': `${clamp(Math.round(8 * scale), 6, 14)}px`,
   }
 })
@@ -334,18 +326,50 @@ const roiVars = computed(() => {
   --roi-neutral-soft: rgba(100, 116, 139, 0.24);
 
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   gap: var(--roi-gap);
   height: 100%;
   min-height: 0;
   overflow: hidden;
 }
 
-.roi-root.is-wide {
-  grid-template-columns: minmax(0, 1.06fr) minmax(0, 0.94fr);
+.roi-header-period {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: min(52vw, 420px);
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  background: rgba(15, 23, 42, 0.56);
+  color: rgba(226, 232, 240, 0.9);
 }
 
-.roi-panel {
+.roi-header-period__icon {
+  width: 12px;
+  height: 12px;
+  color: rgba(148, 163, 184, 0.9);
+  flex: 0 0 auto;
+}
+
+.roi-header-period__text {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.roi-summary-grid {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--roi-gap);
+}
+
+.roi-tile,
+.roi-breakdown-panel {
   min-width: 0;
   min-height: 0;
   border-radius: var(--roi-panel-radius);
@@ -355,17 +379,17 @@ const roiVars = computed(() => {
   animation: roi-fade 180ms ease-out both;
 }
 
-.roi-panel--primary {
+.roi-tile {
   display: grid;
   align-content: start;
-  gap: clamp(10px, calc(var(--roi-panel-pad) * 0.7), 18px);
+  gap: clamp(8px, calc(var(--roi-panel-pad) * 0.58), 14px);
 }
 
-.roi-primary-head {
+.roi-tile-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
 }
 
 .roi-overline {
@@ -382,7 +406,7 @@ const roiVars = computed(() => {
   gap: 5px;
   border-radius: 999px;
   border: 1px solid transparent;
-  padding: 4px 8px;
+  padding: 3px 8px;
   font-size: var(--roi-small-size);
   font-weight: 600;
   line-height: 1.1;
@@ -418,9 +442,9 @@ const roiVars = computed(() => {
 .roi-main-value {
   margin: 0;
   font-size: var(--roi-kpi-size);
-  line-height: 0.96;
+  line-height: 1;
   letter-spacing: -0.04em;
-  font-weight: 730;
+  font-weight: 760;
   color: var(--roi-text-main);
   font-variant-numeric: tabular-nums;
 }
@@ -435,7 +459,7 @@ const roiVars = computed(() => {
 
 .roi-delta-value {
   font-size: var(--roi-body-size);
-  font-weight: 650;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
@@ -456,21 +480,12 @@ const roiVars = computed(() => {
   color: var(--roi-text-soft);
 }
 
-.roi-goal-box {
-  border-radius: calc(var(--roi-panel-radius) - 2px);
-  border: 1px solid var(--roi-border);
-  padding: clamp(8px, calc(var(--roi-panel-pad) * 0.65), 14px);
-  display: grid;
-  gap: clamp(8px, calc(var(--roi-panel-pad) * 0.5), 12px);
-  background: rgba(15, 23, 42, 0.56);
-}
-
-.roi-goal-box.is-ok {
+.roi-tile--goal.is-ok {
   border-color: color-mix(in srgb, var(--roi-positive) 38%, var(--roi-border));
   background: linear-gradient(160deg, rgba(20, 83, 45, 0.24), rgba(15, 23, 42, 0.56));
 }
 
-.roi-goal-box.is-risk {
+.roi-tile--goal.is-risk {
   border-color: color-mix(in srgb, var(--roi-negative) 34%, var(--roi-border));
   background: linear-gradient(160deg, rgba(136, 19, 55, 0.2), rgba(15, 23, 42, 0.56));
 }
@@ -487,7 +502,7 @@ const roiVars = computed(() => {
 }
 
 .roi-goal-target {
-  margin: 4px 0 0;
+  margin: 3px 0 0;
   font-size: var(--roi-meta-size);
   color: var(--roi-text-main);
   font-weight: 600;
@@ -525,38 +540,10 @@ const roiVars = computed(() => {
   color: var(--roi-text-soft);
 }
 
-.roi-period-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  border-top: 1px solid rgba(148, 163, 184, 0.2);
-  padding-top: clamp(8px, calc(var(--roi-panel-pad) * 0.62), 12px);
-}
-
-.roi-period-icon {
-  width: clamp(14px, calc(var(--roi-meta-size) * 1.05), 18px);
-  height: clamp(14px, calc(var(--roi-meta-size) * 1.05), 18px);
-  color: var(--roi-text-muted);
-  flex: 0 0 auto;
-  margin-top: 2px;
-}
-
-.roi-period-text {
-  min-width: 0;
-}
-
-.roi-period-value {
-  margin: 4px 0 0;
-  font-size: var(--roi-meta-size);
-  color: var(--roi-text-main);
-  line-height: 1.25;
-  font-variant-numeric: tabular-nums;
-}
-
-.roi-panel--breakdown {
+.roi-breakdown-panel {
   display: grid;
   grid-template-rows: auto 1fr;
-  gap: clamp(9px, calc(var(--roi-panel-pad) * 0.62), 16px);
+  gap: clamp(8px, calc(var(--roi-panel-pad) * 0.58), 12px);
 }
 
 .roi-breakdown-head {
@@ -567,17 +554,9 @@ const roiVars = computed(() => {
 }
 
 .roi-breakdown-sub {
-  margin: 4px 0 0;
+  margin: 3px 0 0;
   font-size: var(--roi-small-size);
   color: var(--roi-text-soft);
-}
-
-.roi-breakdown-total {
-  margin: 0;
-  font-size: var(--roi-meta-size);
-  color: var(--roi-text-main);
-  font-variant-numeric: tabular-nums;
-  font-weight: 630;
 }
 
 .roi-list {
@@ -586,7 +565,7 @@ const roiVars = computed(() => {
   padding: 0 2px 0 0;
   display: grid;
   align-content: start;
-  gap: clamp(8px, calc(var(--roi-panel-pad) * 0.52), 14px);
+  gap: clamp(6px, calc(var(--roi-panel-pad) * 0.44), 10px);
   min-height: 0;
   overflow: auto;
 }
@@ -594,9 +573,9 @@ const roiVars = computed(() => {
 .roi-list-item {
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: calc(var(--roi-panel-radius) - 4px);
-  padding: clamp(7px, calc(var(--roi-panel-pad) * 0.42), 11px);
+  padding: clamp(6px, calc(var(--roi-panel-pad) * 0.36), 9px);
   display: grid;
-  gap: clamp(5px, calc(var(--roi-panel-pad) * 0.34), 8px);
+  gap: clamp(4px, calc(var(--roi-panel-pad) * 0.3), 7px);
   background: rgba(15, 23, 42, 0.38);
   animation: roi-fade 180ms ease-out both;
 }
@@ -684,12 +663,33 @@ const roiVars = computed(() => {
   padding-inline: 7px;
 }
 
-.roi-root.is-dense .roi-panel {
+.roi-root.is-wide .roi-summary-grid {
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+}
+
+.roi-root.is-compact .roi-summary-grid {
+  grid-template-columns: 1fr;
+}
+
+.roi-root.is-compact .roi-tile--meta {
+  grid-column: auto;
+}
+
+.roi-root.is-dense .roi-tile,
+.roi-root.is-dense .roi-breakdown-panel {
   padding: max(9px, calc(var(--roi-panel-pad) - 2px));
 }
 
 .roi-root.is-dense .roi-list {
   gap: clamp(6px, calc(var(--roi-panel-pad) * 0.35), 10px);
+}
+
+.roi-root.is-dense .roi-header-period {
+  max-width: min(56vw, 300px);
+}
+
+.roi-root.is-dense .roi-header-period__text {
+  font-size: 10px;
 }
 
 @keyframes roi-fade {
@@ -705,7 +705,8 @@ const roiVars = computed(() => {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .roi-panel,
+  .roi-tile,
+  .roi-breakdown-panel,
   .roi-list-item {
     animation: none;
   }

@@ -26,7 +26,7 @@
           <div class="widget-card__status widget-card__status--error">Erreur : {{ error }}</div>
         </div>
 
-        <div v-else class="h-full">
+        <div v-else class="widget-card__slot">
           <slot />
         </div>
       </div>
@@ -149,7 +149,17 @@ const cardStyle = computed(() => {
 
 .widget-card__content {
   flex: 1 1 auto;
+  min-width: 0;
   min-height: 0;
+}
+
+.widget-card__slot {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 2px;
 }
 
 .widget-card__subtitle {

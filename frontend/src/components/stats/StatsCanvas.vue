@@ -322,7 +322,7 @@ import { Paintbrush, CalendarRange, Minus, Plus, LocateFixed, Lock, LockOpen, Pl
 import CompactDateInput from '@/components/ui/CompactDateInput.vue'
 import WidgetPalette from './WidgetPalette.vue'
 import WidgetSettingsModal from './WidgetSettingsModal.vue'
-import { WIDGET_DEFS, getCategoryColor, getWidgetDef, newWidget } from './widgetRegistry'
+import { WIDGET_DEFS, cloneWidgetProps, getCategoryColor, getWidgetDef, newWidget } from './widgetRegistry'
 import { getWidgetPaletteMeta } from './palette/widgetPaletteMeta'
 import { useTheme } from '@/composables/useTheme'
 import { useAuthStore } from '@/store/authStore'
@@ -642,16 +642,21 @@ function maxSizeFor(w: Widget) {
   const def = getWidgetDef(w.type)
   const baseW = Math.max(Number(def?.defaultSize?.w ?? w.w ?? MIN_W), 1)
   const baseH = Math.max(Number(def?.defaultSize?.h ?? w.h ?? MIN_H), 1)
+  const maxCfgW = Number(def?.maxSize?.w ?? Number.NaN)
+  const maxCfgH = Number(def?.maxSize?.h ?? Number.NaN)
+  const maxW = Number.isFinite(maxCfgW) && maxCfgW > 0 ? maxCfgW : BOARD_W
+  const maxH = Number.isFinite(maxCfgH) && maxCfgH > 0 ? maxCfgH : BOARD_H
   return {
-    w: clamp(Math.round(baseW * NON_TEXT_MAX_SCALE), MIN_W, BOARD_W),
-    h: clamp(Math.round(baseH * NON_TEXT_MAX_SCALE), MIN_H, BOARD_H),
+    w: clamp(Math.round(baseW * NON_TEXT_MAX_SCALE), MIN_W, Math.min(maxW, BOARD_W)),
+    h: clamp(Math.round(baseH * NON_TEXT_MAX_SCALE), MIN_H, Math.min(maxH, BOARD_H)),
   }
 }
 
 function clampWidget(w: Widget) {
   const minSize = minSizeFor(w)
-  w.w = clamp(w.w, minSize.w, BOARD_W)
-  w.h = clamp(w.h, minSize.h, BOARD_H)
+  const maxSize = maxSizeFor(w)
+  w.w = clamp(w.w, minSize.w, maxSize.w)
+  w.h = clamp(w.h, minSize.h, maxSize.h)
   w.x = clamp(w.x, 0, BOARD_W - w.w)
   w.y = clamp(w.y, 0, BOARD_H - w.h)
 }
@@ -998,7 +1003,7 @@ const defaultLayout = (): Widget[] => {
     w: def.defaultSize.w,
     h: def.defaultSize.h,
     props: {
-      ...def.defaultProps,
+      ...cloneWidgetProps(def.defaultProps),
       content:
         'Bienvenue sur ton espace stats. Ajoute des widgets depuis la palette pour composer ton dashboard.',
       align: 'center',
@@ -1044,7 +1049,28 @@ function normalizeLayout(raw: unknown): Widget[] | null {
       y: Number.isFinite((item as any)?.y) ? Number((item as any).y) : 0,
       w: Number.isFinite((item as any)?.w) ? Number((item as any).w) : def.defaultSize.w,
       h: Number.isFinite((item as any)?.h) ? Number((item as any).h) : def.defaultSize.h,
-      props: { ...def.defaultProps, ...((item as any)?.props ?? {}) },
+      props: {
+        ...cloneWidgetProps(def.defaultProps),
+        ...cloneWidgetProps((item as any)?.props ?? {}),
+      },
+    }
+
+    if (def.type === 'grossRevenue') {
+      const legacySizes = [
+        { w: 820, h: 520 },
+        { w: 980, h: 620 },
+      ]
+      const isLegacyDefault = legacySizes.some(
+        (size) => Math.abs(w.w - size.w) < 1 && Math.abs(w.h - size.h) < 1,
+      )
+      if (isLegacyDefault) {
+        w.w = def.defaultSize.w
+        w.h = def.defaultSize.h
+      }
+      const view = String((w.props as any)?.view ?? 'number')
+      if (view !== 'line' && view !== 'number') {
+        ;(w.props as any).view = 'number'
+      }
     }
 
     if (typeof (w.props as any)?.category === 'string' && !(w.props as any)?.categories) {
@@ -1716,24 +1742,26 @@ const settingsFields = computed(() => {
 })
 const settingsModel = computed(() => {
   const base = settingsWidget.value?.props ?? {}
+  const categories =
+    Array.isArray(base.categories) && base.categories.length
+      ? base.categories
+      : typeof base.category === 'string' && base.category
+        ? [base.category]
+        : []
+  const types =
+    Array.isArray(base.types) && base.types.length
+      ? base.types
+      : typeof base.type === 'string' && base.type
+        ? [base.type]
+        : []
   return {
+    ...base,
     useGlobalRange: base.useGlobalRange ?? true,
     from: base.from ?? localFrom.value,
     to: base.to ?? localTo.value,
     asOf: base.asOf ?? localTo.value,
-    categories:
-      Array.isArray(base.categories) && base.categories.length
-        ? base.categories
-        : typeof base.category === 'string' && base.category
-          ? [base.category]
-          : [],
-    types:
-      Array.isArray(base.types) && base.types.length
-        ? base.types
-        : typeof base.type === 'string' && base.type
-          ? [base.type]
-          : [],
-    ...base,
+    categories: categories.map((value) => String(value ?? '').trim()).filter(Boolean),
+    types: types.map((value) => String(value ?? '').trim()).filter(Boolean),
   }
 })
 
@@ -3846,7 +3874,7 @@ function duplicateWidget(id: string) {
     id: createWidgetId(source.type),
     x: source.x + offset,
     y: source.y + offset,
-    props: { ...(source.props ?? {}) },
+    props: cloneWidgetProps(source.props ?? {}),
     z: ++zTop,
   }
 

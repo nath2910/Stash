@@ -11,35 +11,45 @@
     :widget-base-width="props.widgetBaseWidth"
     :widget-base-height="props.widgetBaseHeight"
   >
-    <div class="dp-header">
-      <div class="dp-tabs">
-        <span class="dp-pill dp-pill--static">Age des paires</span>
-      </div>
-      <div class="period-chip">
-        <span class="period-label">Periode</span>
-        <span class="period-value">{{ fromLabel }} -> {{ toLabel }}</span>
-      </div>
-    </div>
-    <div class="dp-body">
-      <div class="dp-note">
-        Plus c'est rouge, plus c'est dormant.
-      </div>
-
-      <VChart class="dp-chart" :option="option" autoresize />
-      <div class="dp-scale">
-        <div class="dp-scale-title">Legende</div>
-        <div class="dp-scale-bar"></div>
-        <div class="dp-scale-labels">
-          <span>recent</span>
-          <span>moyen</span>
-          <span>lent</span>
-          <span>dormant</span>
+    <div class="dp-root" :class="{ 'is-compact': compactMode, 'is-dense': denseMode }">
+      <div class="dp-header">
+        <div class="dp-tabs">
+          <span class="dp-pill dp-pill--static">Age des paires</span>
+        </div>
+        <div class="period-chip">
+          <span class="period-label">Periode</span>
+          <span class="period-value">{{ fromLabel }} -> {{ toLabel }}</span>
         </div>
       </div>
-      <div class="dp-legend">
-        <div v-if="!rows.length" class="dp-empty">Aucune donnee sur la periode.</div>
-        <div v-else class="dp-list">
-         
+
+      <div class="dp-body">
+        <div class="dp-note">
+          Plus c'est rouge, plus c'est dormant.
+        </div>
+
+        <VChart class="dp-chart" :style="chartStyle" :option="option" autoresize />
+
+        <div class="dp-scale">
+          <div class="dp-scale-title">Legende</div>
+          <div class="dp-scale-bar"></div>
+          <div class="dp-scale-labels">
+            <span>recent</span>
+            <span>moyen</span>
+            <span>lent</span>
+            <span>dormant</span>
+          </div>
+        </div>
+
+        <div class="dp-legend">
+          <div v-if="!rows.length" class="dp-empty">Aucune donnee sur la periode.</div>
+          <div v-else class="dp-list">
+            <div v-for="row in rows" :key="row.label" class="dp-row">
+              <span class="dp-dot" :style="{ background: row.color }"></span>
+              <span class="dp-name">{{ row.label }}</span>
+              <span class="dp-pct">{{ row.pct }}%</span>
+              <span class="dp-val">{{ row.valueText }}</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -60,6 +70,8 @@ const props = defineProps({
   widgetHeight: { type: Number, default: 470 },
   widgetBaseWidth: { type: Number, default: 0 },
   widgetBaseHeight: { type: Number, default: 0 },
+  widgetRenderWidth: { type: Number, default: 0 },
+  widgetRenderHeight: { type: Number, default: 0 },
   categories: { type: Array, default: () => [] },
   types: { type: Array, default: () => [] },
 })
@@ -67,8 +79,10 @@ const accent = '#EF4444'
 
 const loading = ref(false)
 const error = ref('')
-const buckets = ref([]) // label: "0-30", "31-90", "91-180", "180+"
+const buckets = ref([])
 let req = 0
+
+const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
 
 async function load() {
   const id = ++req
@@ -95,6 +109,22 @@ async function load() {
 onMounted(load)
 watch(() => [props.from, props.to, props.categories, props.types], load)
 
+const layoutWidth = computed(() => {
+  return Math.max(Number(props.widgetWidth ?? 0), 1)
+})
+const layoutHeight = computed(() => {
+  return Math.max(Number(props.widgetHeight ?? 0), 1)
+})
+const compactMode = computed(() => layoutWidth.value < 620 || layoutHeight.value < 360)
+const denseMode = computed(() => layoutWidth.value < 520 || layoutHeight.value < 300)
+
+const chartHeight = computed(() => {
+  const reserved = denseMode.value ? 170 : 210
+  const available = Math.max(layoutHeight.value - reserved, 130)
+  return clamp(Math.min(available, layoutHeight.value * 0.5), 130, 250)
+})
+const chartStyle = computed(() => ({ height: `${chartHeight.value}px`, minHeight: '0px' }))
+
 function formatLabel(raw) {
   const s = String(raw ?? '').trim()
   if (!s) return ''
@@ -115,7 +145,7 @@ function barColor(label, index, totalCount) {
 
   const count = Math.max(1, Number(totalCount || 1))
   const t = count <= 1 ? 0 : index / (count - 1)
-  const hue = 120 - Math.round(120 * t) // 120=green -> 0=red
+  const hue = 120 - Math.round(120 * t)
   return `hsl(${hue} 85% 55%)`
 }
 
@@ -191,12 +221,19 @@ const toLabel = computed(() =>
 </script>
 
 <style scoped>
+.dp-root {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 8px;
+}
+
 .dp-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 6px;
 }
 .dp-tabs {
   display: inline-flex;
@@ -215,20 +252,19 @@ const toLabel = computed(() =>
 }
 .dp-body {
   height: 100%;
-  display: flex;
-  flex-direction: column;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto minmax(0, 1fr);
   gap: 8px;
 }
 .dp-note {
   font-size: 11px;
   color: rgba(226, 232, 240, 0.6);
   letter-spacing: 0.02em;
-  align-self: flex-start;
 }
 .dp-chart {
   width: 100%;
-  height: 200px;
-  min-height: 200px;
+  min-height: 0;
 }
 .dp-scale {
   display: flex;
@@ -268,12 +304,16 @@ const toLabel = computed(() =>
   letter-spacing: 0.04em;
 }
 .dp-legend {
-  margin-top: 4px;
+  min-height: 0;
+  overflow: hidden;
 }
 .dp-list {
+  min-height: 0;
+  overflow: auto;
   display: flex;
   flex-direction: column;
   gap: 4px;
+  padding-right: 2px;
 }
 .dp-row {
   display: grid;
@@ -327,6 +367,7 @@ const toLabel = computed(() =>
     inset 0 0 0 1px rgba(255, 255, 255, 0.03),
     0 6px 16px rgba(0, 0, 0, 0.25);
   margin-left: auto;
+  max-width: min(100%, 360px);
 }
 .period-label {
   opacity: 0.7;
@@ -336,5 +377,21 @@ const toLabel = computed(() =>
   letter-spacing: 0.02em;
   text-transform: none;
   color: rgba(226, 232, 240, 0.9);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.is-compact .dp-body {
+  grid-template-rows: auto minmax(0, 1fr) auto minmax(0, 0.9fr);
+}
+
+.is-dense .dp-row {
+  padding: 3px 7px;
+  gap: 7px;
+}
+
+.is-dense .dp-name,
+.is-dense .dp-val {
+  font-size: 11px;
 }
 </style>

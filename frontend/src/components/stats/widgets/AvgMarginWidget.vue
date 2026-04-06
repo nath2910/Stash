@@ -17,16 +17,19 @@
     hint="par article"
     :spark="spark"
   >
-    <div class="mt-0.5 pb-0.5">
+    <div v-if="showPeriodChip" class="mt-0.5 pb-0.5">
       <div class="period-chip">
         <span class="period-label">Periode</span>
         <span class="period-value">{{ periodText }}</span>
       </div>
     </div>
 
-    <div v-if="topItems.length" class="mt-0.5 space-y-1">
+    <div
+      v-if="visibleTopItems.length"
+      :class="showPeriodChip ? 'mt-2.5 space-y-1' : 'mt-0.5 space-y-1'"
+    >
       <div
-        v-for="(x, idx) in topItems"
+        v-for="(x, idx) in visibleTopItems"
         :key="`${x.nomItem}-${idx}`"
         class="flex items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/30 px-3 py-1"
       >
@@ -39,7 +42,7 @@
         </div>
       </div>
     </div>
-    <div v-else-if="!loading && !error" class="mt-3 text-[11px] text-white/40">
+    <div v-else-if="!loading && !error && !topItems.length" class="mt-3 text-[11px] text-white/40">
       Aucun article sur la periode.
     </div>
   </KpiCard>
@@ -86,8 +89,15 @@ async function load() {
   try {
     const [k, s, t] = await Promise.all([
       StatsServices.kpi('avgMargin', props.from, props.to, props.categories, props.types),
-      StatsServices.series('avgMargin', props.from, props.to, props.bucket, props.categories, props.types),
-      StatsServices.topSales(props.from, props.to, 3, props.categories, props.types),
+      StatsServices.series(
+        'avgMargin',
+        props.from,
+        props.to,
+        props.bucket,
+        props.categories,
+        props.types,
+      ),
+      StatsServices.topSales(props.from, props.to, topLimit.value, props.categories, props.types),
     ])
     if (id !== req) return
     kpi.value = normalizeKpi(k.data)
@@ -101,12 +111,31 @@ async function load() {
   }
 }
 
-onMounted(load)
-watch(() => [props.from, props.to, props.bucket, props.categories, props.types], load)
-
 const valueText = computed(() => formatEUR(kpi.value.value, { compact: true }))
 const deltaText = computed(() => (kpi.value.deltaPct == null ? '' : signFmt(kpi.value.deltaPct)))
 const spark = computed(() => series.value.slice(-18).map((p) => p.value))
+
+const topLimit = computed(() => {
+  const h = Number(props.widgetHeight ?? 0)
+  if (h < 320) return 3
+  if (h < 430) return 5
+  if (h < 560) return 7
+  return 10
+})
+
+onMounted(load)
+watch(() => [props.from, props.to, props.bucket, props.categories, props.types, topLimit.value], load)
+
+const showPeriodChip = computed(() => Number(props.widgetHeight ?? 0) >= 205)
+const visibleRowCount = computed(() => {
+  const h = Number(props.widgetHeight ?? 0)
+  if (h < 220) return 0
+  if (h < 280) return 1
+  if (h < 340) return 3
+  if (h < 430) return 5
+  return topItems.value.length
+})
+const visibleTopItems = computed(() => topItems.value.slice(0, visibleRowCount.value))
 
 const periodText = computed(() => {
   if (!props.from || !props.to) return '--'

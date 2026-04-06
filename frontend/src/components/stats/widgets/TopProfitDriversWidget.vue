@@ -11,49 +11,55 @@
     :widget-base-width="props.widgetBaseWidth"
     :widget-base-height="props.widgetBaseHeight"
   >
-    <div class="tp-header">
-      <div class="tp-tabs">
-        <span class="tp-pill tp-pill--static">Categories</span>
-      </div>
-      <div class="period-chip">
-        <span class="period-label">Periode</span>
-        <span class="period-value">{{ fromLabel }} -> {{ toLabel }}</span>
-      </div>
-    </div>
-
-    <div v-if="props.view === 'pie'" class="tp-main">
-      <div class="tp-legend">
-        <div v-if="!items.length" class="tp-empty">Aucune données sur la periode.</div>
-        <div v-else class="tp-list">
-          <div v-for="row in rows" :key="row.label" class="tp-row">
-            <span class="tp-dot" :style="{ background: row.color }"></span>
-            <span class="tp-name">{{ row.label }}</span>
-            <span class="tp-metric">
-              <span class="tp-pct">{{ row.pct }}%</span>
-              <span class="tp-val">{{ row.valueText }}</span>
-            </span>
-          </div>
+    <div
+      class="tp-root"
+      :class="{ 'is-compact': compactMode, 'is-dense': denseMode, 'is-pie': props.view === 'pie' }"
+    >
+      <div class="tp-header">
+        <div class="tp-tabs">
+          <span class="tp-pill tp-pill--static">Categories</span>
+        </div>
+        <div class="period-chip">
+          <span class="period-label">Periode</span>
+          <span class="period-value">{{ fromLabel }} -> {{ toLabel }}</span>
         </div>
       </div>
 
-      <VChart class="tp-chart" :style="chartStyle" :option="option" autoresize />
-    </div>
-    <template v-else>
-      <VChart class="tp-chart" :style="chartStyle" :option="option" autoresize />
-      <div class="tp-legend">
-        <div v-if="!items.length" class="tp-empty">Aucune données sur la periode.</div>
-        <div v-else class="tp-list">
-          <div v-for="row in rows" :key="row.label" class="tp-row">
-            <span class="tp-dot" :style="{ background: row.color }"></span>
-            <span class="tp-name">{{ row.label }}</span>
-            <span class="tp-metric">
-              <span class="tp-pct">{{ row.pct }}%</span>
-              <span class="tp-val">{{ row.valueText }}</span>
-            </span>
+      <div v-if="props.view === 'pie'" class="tp-main">
+        <div class="tp-legend">
+          <div v-if="!items.length" class="tp-empty">Aucune donnee sur la periode.</div>
+          <div v-else class="tp-list">
+            <div v-for="row in rows" :key="row.label" class="tp-row">
+              <span class="tp-dot" :style="{ background: row.color }"></span>
+              <span class="tp-name">{{ row.label }}</span>
+              <span class="tp-metric">
+                <span class="tp-pct">{{ row.pct }}%</span>
+                <span class="tp-val">{{ row.valueText }}</span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <VChart class="tp-chart" :style="chartStyle" :option="option" autoresize />
+      </div>
+
+      <div v-else class="tp-stack">
+        <VChart class="tp-chart" :style="chartStyle" :option="option" autoresize />
+        <div class="tp-legend">
+          <div v-if="!items.length" class="tp-empty">Aucune donnee sur la periode.</div>
+          <div v-else class="tp-list">
+            <div v-for="row in rows" :key="row.label" class="tp-row">
+              <span class="tp-dot" :style="{ background: row.color }"></span>
+              <span class="tp-name">{{ row.label }}</span>
+              <span class="tp-metric">
+                <span class="tp-pct">{{ row.pct }}%</span>
+                <span class="tp-val">{{ row.valueText }}</span>
+              </span>
+            </div>
           </div>
         </div>
       </div>
-    </template>
+    </div>
   </WidgetCard>
 </template>
 
@@ -73,13 +79,15 @@ const props = defineProps({
   widgetHeight: { type: Number, default: 360 },
   widgetBaseWidth: { type: Number, default: 0 },
   widgetBaseHeight: { type: Number, default: 0 },
+  widgetRenderWidth: { type: Number, default: 0 },
+  widgetRenderHeight: { type: Number, default: 0 },
   categories: { type: Array, default: () => [] },
   types: { type: Array, default: () => [] },
 })
 const accent = '#8B5CF6'
 const loading = ref(false)
 const error = ref('')
-const categories = ref([])
+const rankItems = ref([])
 let req = 0
 
 async function load() {
@@ -96,7 +104,7 @@ async function load() {
       props.types,
     )
     if (id !== req) return
-    categories.value = normalizeRank(c.data)
+    rankItems.value = normalizeRank(c.data)
   } catch (e) {
     if (id !== req) return
     error.value = e?.response?.data?.message ?? e?.message ?? 'Impossible de charger'
@@ -123,20 +131,42 @@ const PALETTE = [
   '#10B981',
 ]
 
+const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
+
 function pickColorByIndex(index) {
   return PALETTE[index % PALETTE.length]
 }
 
-const items = computed(() => categories.value)
+const layoutWidth = computed(() => {
+  return Math.max(Number(props.widgetWidth ?? 0), 1)
+})
+const layoutHeight = computed(() => {
+  return Math.max(Number(props.widgetHeight ?? 0), 1)
+})
+
+const compactMode = computed(() => layoutWidth.value < 680 || layoutHeight.value < 340)
+const denseMode = computed(() => layoutWidth.value < 560 || layoutHeight.value < 300)
+
+const items = computed(() => rankItems.value)
 const chartHeight = computed(() => {
-  if (props.view === 'pie') return 360
-  if (props.view === 'treemap' || props.view === 'heatmap') return 300
+  const reserved = props.view === 'pie' ? 92 : 150
+  const available = Math.max(layoutHeight.value - reserved, 120)
+
+  if (props.view === 'pie') {
+    return clamp(Math.min(available, layoutWidth.value * 0.52), 150, 320)
+  }
+
+  if (props.view === 'treemap' || props.view === 'heatmap') {
+    return clamp(available, 140, 280)
+  }
+
   const count = Math.max(2, items.value.length)
   const base = 110
-  const per = 34
-  return Math.min(420, base + count * per)
+  const per = denseMode.value ? 20 : 26
+  return clamp(Math.min(available, base + count * per), 120, 280)
 })
-const chartStyle = computed(() => ({ height: `${chartHeight.value}px` }))
+const chartStyle = computed(() => ({ height: `${chartHeight.value}px`, minHeight: '0px' }))
+
 const total = computed(() => items.value.reduce((acc, i) => acc + Number(i.value ?? 0), 0))
 const rows = computed(() =>
   items.value.map((i, index) => {
@@ -164,7 +194,7 @@ const option = computed(() => {
         confine: true,
         transitionDuration: 0,
         formatter: ({ name, value, percent }) =>
-          `${name}<br/>${formatEUR(value)} • ${percent}%`,
+          `${name}<br/>${formatEUR(value)} - ${percent}%`,
       },
       series: [
         {
@@ -313,12 +343,19 @@ const toLabel = computed(() =>
 </script>
 
 <style scoped>
+.tp-root {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 8px;
+}
+
 .tp-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 6px;
 }
 .tp-tabs {
   display: inline-flex;
@@ -336,22 +373,34 @@ const toLabel = computed(() =>
   color: rgba(226, 232, 240, 0.85);
 }
 .tp-main {
+  min-height: 0;
   display: grid;
   grid-template-columns: minmax(200px, 1fr) minmax(260px, 1.1fr);
   gap: 14px;
-  align-items: center;
+  align-items: stretch;
+}
+.tp-stack {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 8px;
 }
 .tp-chart {
   width: 100%;
-  min-height: 300px;
+  min-height: 0;
 }
 .tp-legend {
   margin-top: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 .tp-list {
+  min-height: 0;
+  overflow: auto;
   display: flex;
   flex-direction: column;
   gap: 4px;
+  padding-right: 2px;
 }
 .tp-row {
   display: grid;
@@ -385,6 +434,7 @@ const toLabel = computed(() =>
   align-items: center;
   gap: 8px;
   justify-self: end;
+  min-width: 0;
 }
 .tp-pct {
   font-size: 11px;
@@ -410,6 +460,7 @@ const toLabel = computed(() =>
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.03),
     0 6px 16px rgba(0, 0, 0, 0.25);
+  max-width: min(100%, 360px);
 }
 .period-label {
   opacity: 0.7;
@@ -419,5 +470,25 @@ const toLabel = computed(() =>
   letter-spacing: 0.02em;
   text-transform: none;
   color: rgba(226, 232, 240, 0.9);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.is-compact .tp-main {
+  grid-template-columns: 1fr;
+}
+
+.is-compact .period-chip {
+  max-width: 100%;
+}
+
+.is-dense .tp-row {
+  padding: 3px 7px;
+  gap: 7px;
+}
+
+.is-dense .tp-name,
+.is-dense .tp-val {
+  font-size: 11px;
 }
 </style>

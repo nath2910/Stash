@@ -11,50 +11,52 @@
     :widget-base-width="props.widgetBaseWidth"
     :widget-base-height="props.widgetBaseHeight"
   >
-    <div class="tm-head">
-      <div class="tm-chip">
-        <span class="tm-chip-label">Mesure</span>
-        <span class="tm-chip-value">{{ metricLabel }}</span>
+    <div class="tm-root" :class="{ 'is-compact': compactMode, 'is-dense': denseMode }">
+      <div class="tm-head">
+        <div class="tm-chip">
+          <span class="tm-chip-label">Mesure</span>
+          <span class="tm-chip-value">{{ metricLabel }}</span>
+        </div>
+        <div class="tm-chip">
+          <span class="tm-chip-label">Periode</span>
+          <span class="tm-chip-value">{{ fromLabel }} -> {{ toLabel }}</span>
+        </div>
       </div>
-      <div class="tm-chip">
-        <span class="tm-chip-label">Periode</span>
-        <span class="tm-chip-value">{{ fromLabel }} -> {{ toLabel }}</span>
-      </div>
-    </div>
 
-    <div v-if="view === 'pie'" class="tm-split">
-      <div class="tm-legend">
-        <div v-if="!rows.length" class="tm-empty">Aucune donnee sur la periode.</div>
-        <div v-else class="tm-list">
-          <div v-for="row in rows" :key="row.label" class="tm-row">
-            <span class="tm-dot" :style="{ background: row.color }"></span>
-            <span class="tm-name">{{ row.prettyLabel }}</span>
-            <span class="tm-metric">
-              <span class="tm-pct">{{ row.pct }}%</span>
-              <span class="tm-val">{{ row.valueText }}</span>
-            </span>
+      <div v-if="view === 'pie'" class="tm-split">
+        <div class="tm-legend">
+          <div v-if="!rows.length" class="tm-empty">Aucune donnee sur la periode.</div>
+          <div v-else class="tm-list">
+            <div v-for="row in rows" :key="row.label" class="tm-row">
+              <span class="tm-dot" :style="{ background: row.color }"></span>
+              <span class="tm-name">{{ row.prettyLabel }}</span>
+              <span class="tm-metric">
+                <span class="tm-pct">{{ row.pct }}%</span>
+                <span class="tm-val">{{ row.valueText }}</span>
+              </span>
+            </div>
+          </div>
+        </div>
+        <VChart class="tm-chart" :style="chartStyle" :option="option" autoresize />
+      </div>
+
+      <div v-else class="tm-stack">
+        <VChart class="tm-chart" :style="chartStyle" :option="option" autoresize />
+        <div class="tm-legend">
+          <div v-if="!rows.length" class="tm-empty">Aucune donnee sur la periode.</div>
+          <div v-else class="tm-list">
+            <div v-for="row in rows" :key="row.label" class="tm-row">
+              <span class="tm-dot" :style="{ background: row.color }"></span>
+              <span class="tm-name">{{ row.prettyLabel }}</span>
+              <span class="tm-metric">
+                <span class="tm-pct">{{ row.pct }}%</span>
+                <span class="tm-val">{{ row.valueText }}</span>
+              </span>
+            </div>
           </div>
         </div>
       </div>
-      <VChart class="tm-chart" :style="chartStyle" :option="option" autoresize />
     </div>
-
-    <template v-else>
-      <VChart class="tm-chart" :style="chartStyle" :option="option" autoresize />
-      <div class="tm-legend">
-        <div v-if="!rows.length" class="tm-empty">Aucune donnee sur la periode.</div>
-        <div v-else class="tm-list">
-          <div v-for="row in rows" :key="row.label" class="tm-row">
-            <span class="tm-dot" :style="{ background: row.color }"></span>
-            <span class="tm-name">{{ row.prettyLabel }}</span>
-            <span class="tm-metric">
-              <span class="tm-pct">{{ row.pct }}%</span>
-              <span class="tm-val">{{ row.valueText }}</span>
-            </span>
-          </div>
-        </div>
-      </div>
-    </template>
   </WidgetCard>
 </template>
 
@@ -72,6 +74,8 @@ const props = defineProps({
   widgetHeight: { type: Number, default: 420 },
   widgetBaseWidth: { type: Number, default: 0 },
   widgetBaseHeight: { type: Number, default: 0 },
+  widgetRenderWidth: { type: Number, default: 0 },
+  widgetRenderHeight: { type: Number, default: 0 },
   categories: { type: Array, default: () => [] },
   types: { type: Array, default: () => [] },
   metric: { type: String, default: 'profit' },
@@ -115,13 +119,21 @@ const TYPE_LABELS = {
   OTHER: 'Autres',
 }
 
+const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
+
 async function load() {
   const id = ++req
   loading.value = true
   error.value = ''
   try {
     const cfg = metricConfig[props.metric] ?? metricConfig.profit
-    const { data } = await StatsServices.breakdown(cfg.endpoint, props.from, props.to, props.categories, props.types)
+    const { data } = await StatsServices.breakdown(
+      cfg.endpoint,
+      props.from,
+      props.to,
+      props.categories,
+      props.types,
+    )
     if (id !== req) return
     items.value = normalizeBreakdown(data)
   } catch (e) {
@@ -134,6 +146,15 @@ async function load() {
 
 onMounted(load)
 watch(() => [props.from, props.to, props.categories, props.types, props.metric, props.view], load)
+
+const layoutWidth = computed(() => {
+  return Math.max(Number(props.widgetWidth ?? 0), 1)
+})
+const layoutHeight = computed(() => {
+  return Math.max(Number(props.widgetHeight ?? 0), 1)
+})
+const compactMode = computed(() => layoutWidth.value < 700 || layoutHeight.value < 360)
+const denseMode = computed(() => layoutWidth.value < 560 || layoutHeight.value < 300)
 
 const palette = ['#F59E0B', '#F97316', '#22C55E', '#3B82F6', '#A855F7', '#EC4899']
 const pickColor = (index) => palette[index % palette.length]
@@ -158,7 +179,18 @@ const rows = computed(() =>
   }),
 )
 
-const chartStyle = computed(() => ({ height: props.view === 'pie' ? '320px' : '280px' }))
+const chartHeight = computed(() => {
+  const reserved = props.view === 'pie' ? 96 : 156
+  const available = Math.max(layoutHeight.value - reserved, 120)
+  if (props.view === 'pie') {
+    return clamp(Math.min(available, layoutWidth.value * 0.5), 150, 320)
+  }
+  if (props.view === 'treemap') {
+    return clamp(available, 140, 280)
+  }
+  return clamp(available, 120, 270)
+})
+const chartStyle = computed(() => ({ height: `${chartHeight.value}px`, minHeight: '0px' }))
 
 const option = computed(() => {
   const cfg = metricConfig[props.metric] ?? metricConfig.profit
@@ -239,7 +271,7 @@ const option = computed(() => {
       trigger: 'item',
       confine: true,
       transitionDuration: 0,
-      formatter: ({ name, value, percent }) => `${name}<br/>${cfg.tooltip(value)} • ${percent}%`,
+      formatter: ({ name, value, percent }) => `${name}<br/>${cfg.tooltip(value)} - ${percent}%`,
     },
     series: [
       {
@@ -269,12 +301,19 @@ const toLabel = computed(() =>
 </script>
 
 <style scoped>
+.tm-root {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 8px;
+}
+
 .tm-head {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   justify-content: space-between;
-  margin-bottom: 10px;
 }
 .tm-chip {
   display: inline-flex;
@@ -288,29 +327,46 @@ const toLabel = computed(() =>
   font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  max-width: 100%;
 }
 .tm-chip-value {
   color: rgba(226, 232, 240, 0.95);
   font-size: 11px;
   letter-spacing: 0.02em;
   text-transform: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .tm-split {
+  min-height: 0;
   display: grid;
   grid-template-columns: minmax(180px, 1fr) minmax(220px, 1.1fr);
   gap: 14px;
-  align-items: center;
+  align-items: stretch;
+}
+.tm-stack {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 8px;
 }
 .tm-chart {
   width: 100%;
+  min-height: 0;
 }
 .tm-legend {
-  margin-top: 12px;
+  margin-top: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 .tm-list {
+  min-height: 0;
+  overflow: auto;
   display: flex;
   flex-direction: column;
   gap: 4px;
+  padding-right: 2px;
 }
 .tm-row {
   display: grid;
@@ -330,6 +386,9 @@ const toLabel = computed(() =>
 .tm-name {
   font-size: 12px;
   color: rgba(226, 232, 240, 0.92);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .tm-metric {
   display: inline-flex;
@@ -349,9 +408,16 @@ const toLabel = computed(() =>
   color: rgba(226, 232, 240, 0.5);
 }
 
-@media (max-width: 900px) {
-  .tm-split {
-    grid-template-columns: 1fr;
-  }
+.is-compact .tm-split {
+  grid-template-columns: 1fr;
+}
+
+.is-dense .tm-row {
+  padding: 3px 7px;
+}
+
+.is-dense .tm-name,
+.is-dense .tm-val {
+  font-size: 11px;
 }
 </style>
