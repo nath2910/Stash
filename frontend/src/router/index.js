@@ -110,7 +110,13 @@ const router = createRouter({
       path: '/abo',
       name: 'abo',
       component: AboPage,
-      meta: { requiresAuth: true, allowInactive: true, fullBleed: true, allowScroll: true },
+      meta: {
+        requiresAuth: true,
+        allowInactive: true,
+        fullBleed: true,
+        allowScroll: true,
+        hidePrimaryNav: true,
+      },
     },
     {
       path: '/mon-abonnement',

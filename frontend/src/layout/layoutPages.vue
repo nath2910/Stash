@@ -12,6 +12,7 @@
           <!-- Left spacer / burger -->
           <div class="flex items-center pointer-events-auto">
             <button
+              v-if="showPrimaryNav"
               type="button"
               class="md:hidden text-gray-300 hover:text-white p-2 rounded-xl hover:bg-white/5 transition"
               @click.stop="toggleMobileMenu"
@@ -35,10 +36,12 @@
                 />
               </svg>
             </button>
+            <span v-else class="h-9 w-9" aria-hidden="true"></span>
           </div>
 
           <!-- Center nav -->
           <nav
+            v-if="showPrimaryNav"
             v-motion
             :initial="false"
             :variants="navVariants"
@@ -126,7 +129,11 @@
         </div>
 
         <!-- Mobile menu -->
-        <div v-if="mobileMenuOpen" class="md:hidden layout-shell-row pb-3 pointer-events-auto" @click.stop>
+        <div
+          v-if="showPrimaryNav && mobileMenuOpen"
+          class="md:hidden layout-shell-row pb-3 pointer-events-auto"
+          @click.stop
+        >
           <div class="mt-2 rounded-2xl border backdrop-blur p-2 bg-gray-900/70 border-white/10">
             <RouterLink
               to="/"
@@ -240,6 +247,7 @@ const isAuthRoute = computed(() =>
 const fullBleedNeedsHeaderOffset = computed(
   () => route.meta.fullBleed === true && route.meta.allowScroll === true && !isAuthRoute.value,
 )
+const showPrimaryNav = computed(() => !isAuthRoute.value && route.meta.hidePrimaryNav !== true)
 
 const navSpring = {
   type: 'spring',

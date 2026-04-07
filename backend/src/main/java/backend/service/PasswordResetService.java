@@ -57,17 +57,25 @@ public class PasswordResetService {
 
   public void requestReset(String email) {
     if (email == null || email.isBlank()) {
+      logger.info("Password reset skipped: empty email payload");
       return;
     }
 
     var normalizedEmail = email.trim().toLowerCase();
     var userOpt = userRepository.findByEmail(normalizedEmail);
     if (userOpt.isEmpty()) {
+      logger.info("Password reset skipped: no user found for {}", normalizedEmail);
       return;
     }
 
     User user = userOpt.get();
     if (user.getPassword() == null || !"LOCAL".equalsIgnoreCase(user.getProvider())) {
+      logger.info(
+          "Password reset skipped: user {} is not eligible (provider={}, hasPassword={})",
+          user.getEmail(),
+          user.getProvider(),
+          user.getPassword() != null
+      );
       return;
     }
 
@@ -82,6 +90,7 @@ public class PasswordResetService {
 
     String link = buildResetLink(token);
     sendResetEmail(user.getEmail(), link);
+    logger.info("Password reset email queued for {}", user.getEmail());
   }
 
   public void resetPassword(ResetPasswordRequest request) {
@@ -139,6 +148,13 @@ public class PasswordResetService {
   private void ensureMailConfigured() {
     String host = environment.getProperty("spring.mail.host");
     if (host == null || host.isBlank()) {
+      logger.warn("Password reset blocked: spring.mail.host is missing");
+      throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Service email non configure");
+    }
+
+    String username = environment.getProperty("spring.mail.username");
+    if (username == null || username.isBlank()) {
+      logger.warn("Password reset blocked: spring.mail.username is missing");
       throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Service email non configure");
     }
   }
