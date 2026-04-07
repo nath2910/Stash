@@ -3,26 +3,38 @@ import BillingService from '@/services/BillingService'
 
 const status = ref('unknown') // unknown | active | past_due | canceled | inactive
 const portalUrl = ref('')
-let inflight = null
+let inflightBasic = null
+let inflightWithPortal = null
 
 async function fetchStatus(force = false, includePortal = false) {
   if (!force && !includePortal && status.value === 'active') return status.value
-  if (inflight) return inflight
-  inflight = BillingService.status(includePortal)
+  const currentInflight = includePortal ? inflightWithPortal : inflightBasic
+  if (!force && currentInflight) return currentInflight
+
+  const request = BillingService.status(includePortal)
     .then((res) => {
       status.value = res?.data?.status || 'inactive'
-      portalUrl.value = res?.data?.portalUrl || ''
+      if (includePortal) {
+        portalUrl.value = res?.data?.portalUrl || ''
+      }
       return status.value
     })
     .catch(() => {
       status.value = 'inactive'
-      portalUrl.value = ''
+      if (includePortal) {
+        portalUrl.value = ''
+      }
       return status.value
     })
     .finally(() => {
-      inflight = null
+      if (includePortal) inflightWithPortal = null
+      else inflightBasic = null
     })
-  return inflight
+
+  if (includePortal) inflightWithPortal = request
+  else inflightBasic = request
+
+  return request
 }
 
 function reset() {

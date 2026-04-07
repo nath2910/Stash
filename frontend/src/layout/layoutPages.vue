@@ -173,7 +173,7 @@
         class="layout-fullbleed"
         :class="[
           route.meta.allowScroll ? 'overflow-auto' : 'overflow-hidden',
-          fullBleedNeedsHeaderOffset ? 'layout-fullbleed--with-header' : '',
+          fullBleedHeaderOffsetClass,
         ]"
       >
         <slot />
@@ -244,10 +244,12 @@ const isAuthRoute = computed(() =>
     'verify-email-short',
   ].includes(route.name),
 )
-const fullBleedNeedsHeaderOffset = computed(
-  () => route.meta.fullBleed === true && route.meta.allowScroll === true && !isAuthRoute.value,
-)
 const showPrimaryNav = computed(() => !isAuthRoute.value && route.meta.hidePrimaryNav !== true)
+const fullBleedHeaderOffsetClass = computed(() => {
+  const needsOffset = route.meta.fullBleed === true && route.meta.allowScroll === true && !isAuthRoute.value
+  if (!needsOffset) return ''
+  return showPrimaryNav.value ? 'layout-fullbleed--with-header' : 'layout-fullbleed--with-header-compact'
+})
 
 const navSpring = {
   type: 'spring',
@@ -499,6 +501,10 @@ body,
   padding-top: calc(72px + env(safe-area-inset-top, 0px));
 }
 
+.layout-fullbleed--with-header-compact {
+  padding-top: calc(24px + env(safe-area-inset-top, 0px));
+}
+
 .layout-menu-actions {
   display: grid;
   gap: 2px;
@@ -529,6 +535,10 @@ body,
 @media (max-width: 767px) {
   .layout-fullbleed--with-header {
     padding-top: calc(66px + env(safe-area-inset-top, 0px));
+  }
+
+  .layout-fullbleed--with-header-compact {
+    padding-top: calc(18px + env(safe-area-inset-top, 0px));
   }
 }
 

@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-full bg-slate-950 text-slate-100">
-    <div class="app-shell app-page-stack max-w-6xl">
+    <div class="app-shell app-page-stack app-page-stack--abo max-w-6xl">
       <div class="app-topbar">
         <button
           type="button"
@@ -381,3 +381,9 @@ onBeforeUnmount(() => {
   if (poll) window.clearInterval(poll)
 })
 </script>
+
+<style scoped>
+.app-page-stack--abo {
+  padding-top: clamp(0.45rem, 1vw, 0.95rem);
+}
+</style>

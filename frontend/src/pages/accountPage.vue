@@ -268,6 +268,6 @@ const goBack = () => {
 }
 
 const goAbo = () => {
-  router.push({ name: 'abo' })
+  router.push({ name: 'abo-view' })
 }
 </script>

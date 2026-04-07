@@ -35,7 +35,7 @@ public class BillingController {
     try {
       billingService.refreshStatus(user);
       String portalUrl = "";
-      if (includePortal && "active".equalsIgnoreCase(user.getSubscriptionStatus())) {
+      if (includePortal && isPortalEligibleStatus(user.getSubscriptionStatus())) {
         var portal = billingService.createPortal(user);
         portalUrl = portal.getUrl();
       }
@@ -64,5 +64,12 @@ public class BillingController {
   public ResponseEntity<Void> webhook(@RequestBody String payload, @RequestHeader("Stripe-Signature") String sig) {
     billingService.handleWebhook(payload, sig);
     return ResponseEntity.ok().build();
+  }
+
+  private boolean isPortalEligibleStatus(String status) {
+    if (status == null) return false;
+    return "active".equalsIgnoreCase(status)
+        || "past_due".equalsIgnoreCase(status)
+        || "canceled".equalsIgnoreCase(status);
   }
 }
