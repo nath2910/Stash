@@ -751,10 +751,10 @@ const bodyStyle = computed(() => {
   const rawPadding = String(props.widget?.props?.padding ?? '').trim()
   const paddingMap: Record<string, string> = {
     none: '0px',
-    sm: '10px',
-    md: '16px',
-    lg: '24px',
-    xl: '32px',
+    sm: '8px',
+    md: '12px',
+    lg: '18px',
+    xl: '24px',
   }
   if (!isTextWidget.value) {
     if (rawPadding && rawPadding in paddingMap) {
@@ -820,7 +820,11 @@ const visibleHandles = computed(() => {
 })
 
 const edgeHandles = computed(() => {
-  // Keep resize interactions only on corner handles for every widget.
+  // Text widgets keep Canva-like side rails (left/right) for width resize.
+  if (isTextWidget.value) {
+    return handles.filter((handle) => handle.dir === 'e' || handle.dir === 'w')
+  }
+  // Other widgets: corner handles only.
   return []
 })
 

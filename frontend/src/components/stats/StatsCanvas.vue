@@ -647,6 +647,12 @@ const snap = (n: number) => Math.round(n / GRID) * GRID
 
 function minSizeFor(w: Widget) {
   const def = getWidgetDef(w.type)
+  if (isTextWidget(w)) {
+    return {
+      w: textWidgetMinimumWidth(w),
+      h: textWidgetMinimumHeight(w),
+    }
+  }
   return {
     w: def?.minSize?.w ?? MIN_W,
     h: def?.minSize?.h ?? MIN_H,
@@ -745,19 +751,46 @@ function textWidgetPaddingPx(widget: Widget) {
   const rawPadding = String(widget.props?.padding ?? '').trim()
   const paddingMap: Record<string, number> = {
     none: 0,
-    sm: 10,
-    md: 16,
-    lg: 24,
-    xl: 32,
+    sm: 8,
+    md: 12,
+    lg: 18,
+    xl: 24,
   }
   if (rawPadding && rawPadding in paddingMap) return paddingMap[rawPadding]
   return widget.props?.tight ? 8 : 12
+}
+
+function textWidgetMinimumWidth(widget: Widget) {
+  if (!isTextWidget(widget)) return MIN_W
+  const pad = textWidgetPaddingPx(widget)
+  const floor = widget.type === 'textTitle' ? 56 : 72
+  const ceiling = widget.type === 'textTitle' ? 180 : 220
+  return clamp(Math.ceil(pad * 2 + 24), floor, ceiling)
 }
 
 function titleLineHeightFactor(widget: Widget) {
   const sizeKey = String(widget.props?.size ?? 'lg')
   const map: Record<string, number> = { sm: 0.98, md: 0.96, lg: 0.94, xl: 0.9 }
   return map[sizeKey] ?? 0.94
+}
+
+function textBlockLineHeightFactor(widget: Widget) {
+  const sizeKey = String(widget.props?.size ?? 'md')
+  const map: Record<string, number> = { sm: 1.6, md: 1.58, lg: 1.5, xl: 1.42 }
+  return map[sizeKey] ?? 1.58
+}
+
+function textWidgetMinimumHeight(widget: Widget) {
+  if (!isTextWidget(widget)) return MIN_H
+  const pad = textWidgetPaddingPx(widget)
+  const fontPx = textWidgetResolvedFontSize(widget)
+  const lineHeightPx =
+    widget.type === 'textTitle'
+      ? fontPx * titleLineHeightFactor(widget)
+      : fontPx * textBlockLineHeightFactor(widget)
+  const floor = widget.type === 'textTitle' ? 24 : 30
+  const ceiling = widget.type === 'textTitle' ? 320 : 460
+  return clamp(Math.ceil(lineHeightPx + pad * 2 + 2), floor, ceiling)
 }
 
 function estimateTextWidgetSize(
@@ -773,6 +806,8 @@ function estimateTextWidgetSize(
   const widthHint = Math.max(options.targetWidth ?? widget.w ?? 0, 0)
   const heightHint = Math.max(options.targetHeight ?? widget.h ?? 0, 0)
   const lockWidth = options.lockWidth === true
+  const minWidth = textWidgetMinimumWidth(widget)
+  const minHeight = textWidgetMinimumHeight(widget)
   const pad = textWidgetPaddingPx(widget)
   const padX = pad * 2
   const padY = pad * 2
@@ -798,14 +833,14 @@ function estimateTextWidgetSize(
     const measuredLine = (line: string) => (ctx ? ctx.measureText(line || ' ').width : Math.max(line.length, 1) * fontPx * 0.62)
     const measured = measuredLine(longestLine)
     const width = lockWidth
-      ? clamp(Math.ceil(widthHint || measured + padX + 2), 140, 2600)
-      : clamp(Math.ceil(measured + padX + 2), 140, Math.max(widthHint || 0, 2600))
+      ? clamp(Math.ceil(widthHint || measured + padX + 2), minWidth, 2600)
+      : clamp(Math.ceil(measured + padX + 2), minWidth, Math.max(widthHint || 0, 2600))
     const usableWidth = Math.max(width - padX, 1)
     const visualLines = lines.reduce((count, line) => count + Math.max(1, Math.ceil(measuredLine(line) / usableWidth)), 0)
     const lineHeightPx = fontPx * titleLineHeightFactor(widget)
     const height = clamp(
       Math.ceil(visualLines * lineHeightPx + padY + 2),
-      84,
+      minHeight,
       Math.max(heightHint || 0, 1200),
     )
     return { w: width, h: height }
@@ -821,9 +856,7 @@ function estimateTextWidgetSize(
           ? 500
           : 400
   const fontPx = clamp(Math.round(fontBase), 12, 180)
-  const sizeKey = String(widget.props?.size ?? 'md')
-  const lineHeightMap: Record<string, number> = { sm: 1.6, md: 1.58, lg: 1.5, xl: 1.42 }
-  const lineHeightFactor = lineHeightMap[sizeKey] ?? 1.58
+  const lineHeightFactor = textBlockLineHeightFactor(widget)
   if (ctx) {
     ctx.font = `${widget.props?.italic ? 'italic ' : ''}${fontWeight} ${fontPx}px ${textWidgetFontFamily(widget)}`
   }
@@ -831,8 +864,12 @@ function estimateTextWidgetSize(
     ctx ? ctx.measureText(line || ' ').width : Math.max(line.length, 1) * fontPx * 0.56
   const measured = measuredLine(longestLine)
   const width = lockWidth
-    ? clamp(Math.ceil(widthHint || Math.max(measured + padX + 2, 320)), 220, 1800)
-    : clamp(Math.ceil(Math.max(measured + padX + 2, 320)), 220, Math.max(widthHint || 0, 1800))
+    ? clamp(Math.ceil(widthHint || Math.max(measured + padX + 2, minWidth)), minWidth, 1800)
+    : clamp(
+        Math.ceil(Math.max(measured + padX + 2, minWidth)),
+        minWidth,
+        Math.max(widthHint || 0, 1800),
+      )
   const usableWidth = Math.max(width - padX, 1)
   const spaceWidth = measuredLine(' ')
   const wrappedLineCount = (line: string) => {
@@ -875,7 +912,7 @@ function estimateTextWidgetSize(
   const visualLines = lines.reduce((count, line) => count + wrappedLineCount(line), 0)
   const height = clamp(
     Math.ceil(visualLines * fontPx * lineHeightFactor + padY + 2),
-    120,
+    minHeight,
     Math.max(heightHint || 0, 1800),
   )
   return { w: width, h: height }
@@ -2151,6 +2188,14 @@ function scheduleVisibleRectUpdate() {
   })
 }
 
+function normalizeVisibleTextWidgets(preserveWidth = true) {
+  const textWidgets = widgets.value.filter((widget) => isTextWidget(widget))
+  if (!textWidgets.length) return
+  for (const widget of textWidgets) {
+    fitTextWidgetAfterRender(widget, widgetEls.get(widget.id) ?? null, { preserveWidth })
+  }
+}
+
 function toggleProfileSwitcher() {
   profileSwitcherExpanded.value = !profileSwitcherExpanded.value
 }
@@ -2683,7 +2728,8 @@ function startDrag(id: string, event: PointerEvent) {
     }
   }
   if (!w || !el) return
-  if (!isWidgetSelected(id)) {
+  const wasSelected = isWidgetSelected(id)
+  if (!wasSelected) {
     selectSingleWidget(id)
   }
   const dragIds = selectedWidgetIds.value.includes(id) ? [...selectedWidgetIds.value] : [id]
@@ -2691,7 +2737,14 @@ function startDrag(id: string, event: PointerEvent) {
     selectSingleWidget(id)
     dragIds.push(id)
   }
-  const shouldActivateText = dragIds.length === 1 && isTextWidget(w) && event.detail >= 2
+  const shouldActivateText = dragIds.length === 1 && isTextWidget(w)
+  const shouldPrimeTextSelection =
+    shouldActivateText && (!wasSelected || activeTextWidgetId.value !== id)
+  if (shouldPrimeTextSelection) {
+    setActiveTextWidget(id)
+    dragArmedId.value = id
+    return
+  }
   setActiveTextWidget(shouldActivateText ? id : null)
 
   event.preventDefault()
@@ -3813,6 +3866,7 @@ watch(
     }
     if (String(userId.value) !== expectedUserId) return
     applyStoredRangeForActiveProfile()
+    normalizeVisibleTextWidgets(true)
   },
   { immediate: false },
 )
@@ -4108,6 +4162,7 @@ onMounted(async () => {
   }
   if (String(userId.value) !== expectedUserId) return
   applyStoredRangeForActiveProfile()
+  normalizeVisibleTextWidgets(true)
 
   const resizeHandler = () => {
     const compact = window.innerWidth < COMPACT_BREAKPOINT
@@ -4160,6 +4215,7 @@ function switchProfile(profileId: string) {
   }
   if (isCompact.value) profileSwitcherExpanded.value = false
   nextTick(() => {
+    normalizeVisibleTextWidgets(true)
     widgets.value.forEach((w) => clampWidget(w))
     centerView()
     scheduleVisibleRectUpdate()
