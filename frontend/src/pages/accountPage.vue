@@ -10,10 +10,6 @@
           <span class="text-sm"><-</span>
           <span>Retour</span>
         </button>
-
-        <span class="app-pill border-slate-800 bg-slate-900/60 text-slate-400">
-          Mon compte
-        </span>
       </div>
 
       <div class="grid items-start gap-4 sm:gap-6 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] 2xl:gap-8">
