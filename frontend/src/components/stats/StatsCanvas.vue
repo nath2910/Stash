@@ -194,20 +194,39 @@
       <div v-if="showSaveToast" class="save-toast" role="status">Layout enregistre</div>
     </Transition>
 
-    <div v-show="!paletteOpen && !fullscreenActive" class="profile-switcher" role="group" aria-label="Profils">
+    <div
+      v-show="!paletteOpen && !fullscreenActive"
+      class="profile-switcher"
+      :class="{ 'is-collapsed': isCompact && !profileSwitcherExpanded }"
+      role="group"
+      aria-label="Profils"
+    >
+      <template v-if="!isCompact || profileSwitcherExpanded">
+        <button
+          v-for="p in PROFILES"
+          :key="p.id"
+          type="button"
+          class="profile-pill"
+          :class="{ 'is-active': activeProfile === p.id }"
+          @click="switchProfile(p.id)"
+        >
+          <span class="profile-dot" :style="{ background: profileColors[p.id] ?? p.color }"></span>
+          <span class="profile-label">{{ profileNames[p.id] ?? p.label }}</span>
+        </button>
+        <button type="button" class="profile-edit" @click="openProfileEditor">
+          <Paintbrush class="w-4 h-4" />
+        </button>
+      </template>
+
       <button
-        v-for="p in PROFILES"
-        :key="p.id"
+        v-if="isCompact"
         type="button"
-        class="profile-pill"
-        :class="{ 'is-active': activeProfile === p.id }"
-        @click="switchProfile(p.id)"
+        class="profile-toggle"
+        :aria-expanded="profileSwitcherExpanded"
+        :aria-label="profileSwitcherExpanded ? 'Replier les profils' : 'Deplier les profils'"
+        @click.stop="toggleProfileSwitcher"
       >
-        <span class="profile-dot" :style="{ background: profileColors[p.id] ?? p.color }"></span>
-        <span class="profile-label">{{ profileNames[p.id] ?? p.label }}</span>
-      </button>
-      <button type="button" class="profile-edit" @click="openProfileEditor">
-        <Paintbrush class="w-4 h-4" />
+        <component :is="profileSwitcherExpanded ? ChevronLeft : ChevronRight" class="h-3.5 w-3.5" />
       </button>
     </div>
 
@@ -317,7 +336,7 @@ import CanvasDock from './canvas/CanvasDock.vue'
 import WidgetFrame from './canvas/WidgetFrame.vue'
 import { useCanvasCamera } from './canvas/useCanvaCamera'
 import { useCanvasShortcuts } from './canvas/useCanvasShortcuts'
-import { Paintbrush, CalendarRange, Minus, Plus, LocateFixed, Lock, LockOpen, PlusSquare } from 'lucide-vue-next'
+import { Paintbrush, CalendarRange, Minus, Plus, LocateFixed, Lock, LockOpen, PlusSquare, ChevronLeft, ChevronRight } from 'lucide-vue-next'
 
 import CompactDateInput from '@/components/ui/CompactDateInput.vue'
 import WidgetPalette from './WidgetPalette.vue'
@@ -2044,6 +2063,7 @@ const camera = useCanvasCamera(viewportEl, boardEl, {
 const scale = computed(() => camera.scale.value)
 const isCompact = ref(false)
 const datePanelOpen = ref(true)
+const profileSwitcherExpanded = ref(true)
 const visibleRect = ref<{ left: number; top: number; right: number; bottom: number } | null>(null)
 let visibleRectRaf: number | null = null
 const cameraInteracting = ref(false)
@@ -2103,6 +2123,10 @@ function scheduleVisibleRectUpdate() {
     visibleRectRaf = null
     updateVisibleRectNow()
   })
+}
+
+function toggleProfileSwitcher() {
+  profileSwitcherExpanded.value = !profileSwitcherExpanded.value
 }
 
 function fitToWidgets(padding = 120, animate = true) {
@@ -4064,7 +4088,8 @@ onMounted(async () => {
     const wasCompact = isCompact.value
     if (compact !== isCompact.value) {
       isCompact.value = compact
-      datePanelOpen.value = !compact // ouvert par défaut en large, fermé en compact
+      datePanelOpen.value = !compact
+      profileSwitcherExpanded.value = !compact
     }
     if (!wasCompact && compact) zoomToFitContent()
     scheduleVisibleRectUpdate()
@@ -4107,6 +4132,7 @@ function switchProfile(profileId: string) {
     emit('update:from', nextRange.from)
     emit('update:to', nextRange.to)
   }
+  if (isCompact.value) profileSwitcherExpanded.value = false
   nextTick(() => {
     widgets.value.forEach((w) => clampWidget(w))
     centerView()
@@ -4146,6 +4172,4 @@ function saveProfileEditor() {
 </script>
 
 <style scoped src="./StatsCanvas.css"></style>
-
-
 

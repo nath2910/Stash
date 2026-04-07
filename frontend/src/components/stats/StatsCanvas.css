@@ -1,7 +1,7 @@
 .canvas-root {
   --bg: #060a12;
   --stats-top-gap: max(16px, env(safe-area-inset-top, 0px) + 10px);
-  --stats-side-gap: clamp(10px, 2.8vw, 18px);
+  --stats-side-gap: var(--app-edge-gap, clamp(10px, 2.8vw, 18px));
   --stats-bottom-gap: max(16px, env(safe-area-inset-bottom, 0px) + 10px);
   --stats-toolbar-clearance: 84px;
   --stats-profile-clearance: 76px;
@@ -594,6 +594,27 @@ body.canvas-resize-cursor--nesw {
     background 160ms ease,
     transform 140ms ease;
 }
+.profile-toggle {
+  display: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(226, 232, 240, 0.92);
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    transform 140ms ease;
+}
+.profile-toggle:hover {
+  border-color: rgba(148, 163, 184, 0.4);
+  background: rgba(255, 255, 255, 0.14);
+  transform: translateY(-1px);
+}
 .profile-edit:hover {
   border-color: rgba(148, 163, 184, 0.4);
   background: rgba(255, 255, 255, 0.14);
@@ -617,52 +638,34 @@ body.canvas-resize-cursor--nesw {
   letter-spacing: 0.02em;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .canvas-root {
     --stats-toolbar-clearance: 132px;
     --stats-profile-clearance: 64px;
+    --stats-profile-inline-width: 40px;
+    --stats-inline-gap: 8px;
+    --stats-mobile-row-height: 48px;
   }
   .mobile-toolbar {
     position: fixed;
-    left: var(--stats-side-gap);
+    left: calc(var(--stats-side-gap) + var(--stats-profile-inline-width) + var(--stats-inline-gap));
     right: var(--stats-side-gap);
-    bottom: calc(var(--stats-bottom-gap) + var(--stats-profile-clearance) + 12px);
+    bottom: var(--stats-bottom-gap);
     z-index: 72;
     display: grid;
     grid-template-columns: repeat(7, minmax(0, 1fr));
-    gap: 6px;
-    padding: 6px;
-    border-radius: 18px;
+    gap: 5px;
+    padding: 5px;
+    border-radius: 16px;
     background: rgba(10, 12, 18, 0.78);
     border: 1px solid rgba(255, 255, 255, 0.14);
     backdrop-filter: blur(14px);
     box-shadow: 0 16px 40px rgba(0, 0, 0, 0.38);
   }
-  .canvas-hud {
-    left: var(--stats-side-gap);
-    right: var(--stats-side-gap);
-    bottom: calc(var(--stats-bottom-gap) + var(--stats-profile-clearance) + 62px);
-    justify-content: space-between;
-    border-radius: 16px;
-    gap: 4px;
-    padding: 6px;
-  }
-  .hud-pill {
-    font-size: 0.68rem;
-    padding: 0 8px;
-    height: 26px;
-  }
-  .hud-pill:nth-child(3) {
-    display: none;
-  }
-  .hud-help {
-    height: 26px;
-    padding: 0 8px;
-  }
   .mobile-toolbtn {
     min-width: 0;
-    height: 42px;
-    border-radius: 14px;
+    height: 38px;
+    border-radius: 12px;
     border: 1px solid rgba(255, 255, 255, 0.1);
     background: rgba(255, 255, 255, 0.06);
     color: rgba(226, 232, 240, 0.92);
@@ -670,7 +673,7 @@ body.canvas-resize-cursor--nesw {
     align-items: center;
     justify-content: center;
     gap: 6px;
-    font-size: 0.83rem;
+    font-size: 0.82rem;
     font-weight: 700;
     letter-spacing: 0.01em;
     touch-action: manipulation;
@@ -693,46 +696,138 @@ body.canvas-resize-cursor--nesw {
   }
   .profile-switcher {
     left: var(--stats-side-gap);
-    right: var(--stats-side-gap);
+    right: auto;
     bottom: var(--stats-bottom-gap);
-    max-width: none;
-    gap: 5px;
-    padding: 6px;
+    width: var(--stats-profile-inline-width);
+    max-width: var(--stats-profile-inline-width);
+    gap: 4px;
+    padding: 4px;
     border-radius: 16px;
-    flex-wrap: nowrap;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    overflow: hidden;
+  }
+  .profile-switcher.is-collapsed {
+    width: auto;
+    max-width: none;
+    padding: 4px;
+    gap: 0;
+  }
+  .profile-toggle {
+    display: inline-flex;
   }
   .profile-pill {
-    height: 28px;
-    padding: 0 8px;
-    gap: 6px;
+    height: 30px;
+    width: 30px;
+    min-width: 30px;
+    padding: 0;
+    gap: 0;
     font-size: 11px;
+    justify-content: center;
     flex: 0 0 auto;
   }
   .profile-label {
     display: none;
   }
+  .profile-dot {
+    width: 10px;
+    height: 10px;
+  }
   .profile-edit {
     width: 30px;
     height: 30px;
+    border-radius: 999px;
     flex: 0 0 auto;
   }
-}
-
-@media (max-width: 1024px) {
-  .canvas-root {
-    --stats-profile-clearance: 70px;
+  .canvas-hud {
+    left: var(--stats-side-gap);
+    right: var(--stats-side-gap);
+    bottom: calc(var(--stats-bottom-gap) + var(--stats-mobile-row-height) + 62px);
+    justify-content: space-between;
+    border-radius: 16px;
+    gap: 4px;
+    padding: 6px;
+  }
+  .hud-pill {
+    font-size: 0.68rem;
+    padding: 0 8px;
+    height: 26px;
+  }
+  .hud-pill:nth-child(3) {
+    display: none;
+  }
+  .hud-help {
+    height: 26px;
+    padding: 0 8px;
   }
   .date-panel {
     width: min(276px, calc(100vw - (var(--stats-side-gap) * 2) - 72px));
     max-width: calc(100vw - (var(--stats-side-gap) * 2) - 72px);
+  }
+  .date-panel--compact {
+    left: calc(var(--stats-side-gap) + var(--stats-profile-inline-width) + var(--stats-inline-gap));
+    right: var(--stats-side-gap);
+    bottom: calc(var(--stats-bottom-gap) + var(--stats-mobile-row-height) + 10px);
+    width: auto;
+    max-width: none;
+  }
+  .date-toggle--compact {
+    left: calc(var(--stats-side-gap) + var(--stats-profile-inline-width) + var(--stats-inline-gap));
+    bottom: calc(var(--stats-bottom-gap) + var(--stats-mobile-row-height) + 8px);
+  }
+}
+
+@media (max-width: 768px) {
+  .canvas-root {
+    --stats-profile-inline-width: 38px;
+    --stats-inline-gap: 6px;
+    --stats-mobile-row-height: 46px;
+  }
+  .mobile-toolbar {
+    gap: 4px;
+    padding: 4px;
+    border-radius: 14px;
+  }
+  .mobile-toolbtn {
+    height: 36px;
+    border-radius: 11px;
+    font-size: 0.78rem;
+  }
+  .profile-switcher {
+    padding: 3px;
+    gap: 3px;
+    border-radius: 14px;
+  }
+  .profile-pill,
+  .profile-edit,
+  .profile-toggle {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+  }
+  .profile-dot {
+    width: 9px;
+    height: 9px;
   }
 }
 
 @media (max-width: 640px) {
   .canvas-root {
     --stats-side-gap: 12px;
-    --stats-toolbar-clearance: 126px;
-    --stats-profile-clearance: 60px;
+    --stats-profile-inline-width: 36px;
+    --stats-inline-gap: 6px;
+    --stats-mobile-row-height: 44px;
+  }
+  .mobile-toolbar {
+    gap: 4px;
+    padding: 4px;
+    border-radius: 13px;
+  }
+  .mobile-toolbtn {
+    height: 34px;
+    border-radius: 10px;
+    font-size: 0.74rem;
   }
   .date-panel {
     padding: 8px 9px;
@@ -741,10 +836,10 @@ body.canvas-resize-cursor--nesw {
     max-width: calc(100vw - (var(--stats-side-gap) * 2) - 68px);
   }
   .date-panel--compact {
-    bottom: calc(var(--stats-bottom-gap) + var(--stats-profile-clearance) + 74px);
+    bottom: calc(var(--stats-bottom-gap) + var(--stats-mobile-row-height) + 8px);
   }
   .date-toggle--compact {
-    bottom: calc(var(--stats-bottom-gap) + var(--stats-profile-clearance) + 74px);
+    bottom: calc(var(--stats-bottom-gap) + var(--stats-mobile-row-height) + 6px);
   }
   .save-toast {
     left: var(--stats-side-gap);
@@ -778,12 +873,14 @@ body.canvas-resize-cursor--nesw {
 @media (max-width: 420px) {
   .canvas-root {
     --stats-side-gap: 10px;
-    --stats-profile-clearance: 56px;
+    --stats-profile-inline-width: 34px;
+    --stats-inline-gap: 5px;
+    --stats-mobile-row-height: 42px;
   }
   .mobile-toolbar {
-    gap: 5px;
-    padding: 5px;
-    border-radius: 16px;
+    gap: 3px;
+    padding: 3px;
+    border-radius: 12px;
   }
   .date-toggle {
     width: 36px;
@@ -794,17 +891,36 @@ body.canvas-resize-cursor--nesw {
     max-width: calc(100vw - (var(--stats-side-gap) * 2) - 62px);
   }
   .profile-switcher {
-    padding: 5px;
-    gap: 4px;
+    width: var(--stats-profile-inline-width);
+    max-width: var(--stats-profile-inline-width);
+    padding: 3px;
+    gap: 2px;
+    border-radius: 12px;
   }
   .profile-pill {
-    min-width: 28px;
-    padding: 0 7px;
+    width: 26px;
+    min-width: 26px;
+    height: 26px;
+    padding: 0;
+  }
+  .profile-edit {
+    width: 26px;
+    height: 26px;
+  }
+  .profile-toggle {
+    width: 26px;
+    height: 26px;
+    min-width: 26px;
+    gap: 4px;
+  }
+  .profile-dot {
+    width: 8px;
+    height: 8px;
   }
   .mobile-toolbtn {
-    height: 40px;
-    border-radius: 12px;
-    font-size: 0.76rem;
+    height: 32px;
+    border-radius: 9px;
+    font-size: 0.72rem;
   }
 }
 
@@ -1064,6 +1180,7 @@ body.canvas-resize-cursor--nesw {
 .canvas-root.theme-light .hud-help,
 .canvas-root.theme-light .profile-pill,
 .canvas-root.theme-light .profile-edit,
+.canvas-root.theme-light .profile-toggle,
 .canvas-root.theme-light .mobile-toolbtn {
   background: rgba(248, 250, 252, 0.9);
   border-color: rgba(148, 163, 184, 0.42);

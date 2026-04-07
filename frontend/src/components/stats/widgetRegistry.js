@@ -246,7 +246,7 @@ export const WIDGET_DEFS = [
     icon: Boxes,
     component: DeathPileWidget,
     forms: ['bars'],
-    defaultSize: { w: 620, h: 470 },
+    defaultSize: { w: 620, h: 800 },
     minSize: { w: 520, h: 360 },
     defaultProps: { autoHeight: false, categories: [], types: [] },
     settings: [],

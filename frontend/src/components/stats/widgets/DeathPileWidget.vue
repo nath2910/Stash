@@ -27,7 +27,7 @@
           Plus c'est rouge, plus c'est dormant.
         </div>
 
-        <VChart class="dp-chart" :style="chartStyle" :option="option" autoresize />
+        <VChart class="dp-chart" :option="option" autoresize />
 
         <div class="dp-scale">
           <div class="dp-scale-title">Legende</div>
@@ -42,7 +42,7 @@
 
         <div class="dp-legend">
           <div v-if="!rows.length" class="dp-empty">Aucune donnee sur la periode.</div>
-          <div v-else class="dp-list">
+          <div v-else class="dp-list" :style="legendListStyle">
             <div v-for="row in rows" :key="row.label" class="dp-row">
               <span class="dp-dot" :style="{ background: row.color }"></span>
               <span class="dp-name">{{ row.label }}</span>
@@ -82,8 +82,6 @@ const error = ref('')
 const buckets = ref([])
 let req = 0
 
-const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
-
 async function load() {
   const id = ++req
   loading.value = true
@@ -118,12 +116,9 @@ const layoutHeight = computed(() => {
 const compactMode = computed(() => layoutWidth.value < 620 || layoutHeight.value < 360)
 const denseMode = computed(() => layoutWidth.value < 520 || layoutHeight.value < 300)
 
-const chartHeight = computed(() => {
-  const reserved = denseMode.value ? 170 : 210
-  const available = Math.max(layoutHeight.value - reserved, 130)
-  return clamp(Math.min(available, layoutHeight.value * 0.5), 130, 250)
-})
-const chartStyle = computed(() => ({ height: `${chartHeight.value}px`, minHeight: '0px' }))
+const legendListStyle = computed(() => ({
+  '--dp-row-count': String(Math.max(rows.value.length, 1)),
+}))
 
 function formatLabel(raw) {
   const s = String(raw ?? '').trim()
@@ -254,8 +249,9 @@ const toLabel = computed(() =>
   height: 100%;
   min-height: 0;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1.35fr) auto minmax(0, 1fr);
   gap: 8px;
+  align-content: stretch;
 }
 .dp-note {
   font-size: 11px;
@@ -264,6 +260,7 @@ const toLabel = computed(() =>
 }
 .dp-chart {
   width: 100%;
+  height: 100%;
   min-height: 0;
 }
 .dp-scale {
@@ -306,12 +303,14 @@ const toLabel = computed(() =>
 .dp-legend {
   min-height: 0;
   overflow: hidden;
-}
-.dp-list {
-  min-height: 0;
-  overflow: auto;
   display: flex;
   flex-direction: column;
+}
+.dp-list {
+  min-height: 100%;
+  overflow: auto;
+  display: grid;
+  grid-template-rows: repeat(var(--dp-row-count, 4), minmax(0, 1fr));
   gap: 4px;
   padding-right: 2px;
 }
@@ -320,6 +319,7 @@ const toLabel = computed(() =>
   grid-template-columns: 12px 1fr auto auto;
   gap: 8px;
   align-items: center;
+  min-height: 0;
   padding: 4px 8px;
   border-radius: 12px;
   background: rgba(15, 23, 42, 0.45);
@@ -382,7 +382,7 @@ const toLabel = computed(() =>
 }
 
 .is-compact .dp-body {
-  grid-template-rows: auto minmax(0, 1fr) auto minmax(0, 0.9fr);
+  grid-template-rows: auto minmax(0, 1.2fr) auto minmax(0, 1fr);
 }
 
 .is-dense .dp-row {

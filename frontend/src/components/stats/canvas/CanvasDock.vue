@@ -156,24 +156,12 @@ onBeforeUnmount(() => {
 .dock {
   position: fixed;
   top: max(78px, env(safe-area-inset-top, 0px) + 68px);
-  right: calc(((100vw - min(100vw, 1536px)) / 2) + 12px);
+  right: var(--stats-side-gap, var(--app-edge-gap, 12px));
   z-index: 60;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 16px;
-}
-
-@media (min-width: 640px) {
-  .dock {
-    right: calc(((100vw - min(100vw, 1536px)) / 2) + 20px);
-  }
-}
-
-@media (min-width: 1024px) {
-  .dock {
-    right: calc(((100vw - min(100vw, 1536px)) / 2) + 28px);
-  }
 }
 
 @media (max-width: 1023px) {
@@ -482,4 +470,3 @@ onBeforeUnmount(() => {
   background: rgba(99, 102, 241, 0.22);
 }
 </style>
-

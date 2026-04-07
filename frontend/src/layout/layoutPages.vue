@@ -1,10 +1,14 @@
 <template>
-  <div class="h-screen flex flex-col font-poppins bg-slate-950" :class="isStatsLight ? 'text-black' : 'text-slate-100'">
+  <div
+    class="h-screen flex flex-col font-poppins bg-slate-950"
+    :class="isStatsLight ? 'text-black' : 'text-slate-100'"
+    :style="layoutVars"
+  >
     <!-- Header -->
     <template v-if="!isAuthRoute">
       <!-- Header for stats: simple bar -->
       <header class="fixed top-4 left-0 right-0 z-50 pointer-events-none">
-        <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between pointer-events-none">
+        <div class="layout-shell-row h-14 flex items-center justify-between pointer-events-none">
           <!-- Left spacer / burger -->
           <div class="flex items-center pointer-events-auto">
             <button
@@ -122,7 +126,7 @@
         </div>
 
         <!-- Mobile menu -->
-        <div v-if="mobileMenuOpen" class="md:hidden px-4 pb-3 pointer-events-auto" @click.stop>
+        <div v-if="mobileMenuOpen" class="md:hidden layout-shell-row pb-3 pointer-events-auto" @click.stop>
           <div class="mt-2 rounded-2xl border backdrop-blur p-2 bg-gray-900/70 border-white/10">
             <RouterLink
               to="/"
@@ -172,7 +176,7 @@
             <div class="absolute bottom-[-30%] left-[-10%] h-[30rem] w-[30rem] rounded-full blur-3xl bg-amber-400/4"></div>
             <div class="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.25),_transparent_60%)]"></div>
           </div>
-          <div class="min-h-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12 pb-16">
+          <div class="layout-shell-row min-h-full py-10 sm:py-12 pb-16">
             <slot />
           </div>
         </div>
@@ -210,6 +214,15 @@ const { theme } = useTheme()
 
 const isStats = computed(() => route.path === '/stats')
 const isStatsLight = computed(() => isStats.value && theme.value === 'light')
+const isFullBleedRoute = computed(() => route.meta.fullBleed === true)
+const layoutVars = computed(() => {
+  const edgeGap = isFullBleedRoute.value ? 'clamp(12px, 2.4vw, 28px)' : 'clamp(16px, 2.2vw, 32px)'
+  return {
+    '--layout-shell-max-width': isFullBleedRoute.value ? '100%' : '1536px',
+    '--layout-shell-gutter': edgeGap,
+    '--app-edge-gap': edgeGap,
+  }
+})
 const isAuthRoute = computed(() =>
   [
     'auth',
@@ -456,6 +469,12 @@ html,
 body,
 #app {
   height: 100%;
+}
+
+.layout-shell-row {
+  width: min(100%, var(--layout-shell-max-width, 1536px));
+  margin-inline: auto;
+  padding-inline: var(--layout-shell-gutter, clamp(16px, 2.2vw, 32px));
 }
 
 .layout-menu-actions {

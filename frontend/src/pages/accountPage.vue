@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-full bg-slate-950 text-slate-100">
-    <div class="mx-auto w-full max-w-[1360px] px-3 py-4 sm:px-5 sm:py-6 md:px-6 lg:px-8 xl:py-8">
+    <div class="account-shell mx-auto w-full py-4 sm:py-6 xl:py-8">
       <div class="mb-4 flex flex-wrap items-center justify-between gap-3 sm:mb-6">
         <button
           type="button"
@@ -265,3 +265,10 @@ const goAbo = () => {
   router.push({ name: 'abo' })
 }
 </script>
+
+<style scoped>
+.account-shell {
+  max-width: min(100%, 1536px);
+  padding-inline: var(--app-edge-gap, clamp(12px, 2.4vw, 28px));
+}
+</style>
