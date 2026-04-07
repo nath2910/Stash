@@ -77,6 +77,7 @@
         <WidgetFrame
           v-for="w in visibleWidgets"
           :key="w.id"
+          v-memo="widgetMemoDeps(w)"
           :widget="w"
           :canvas-scale="scale"
           :edit-mode="editMode"
@@ -417,7 +418,7 @@ const categoryOptions = computed(() =>
 )
 const typeOptions = computed(() => ITEM_TYPE_OPTIONS)
 
-/* ===== Mode édition/figé ===== */
+/* ===== Mode edition/fige ===== */
 // Le mode edition est stocke par utilisateur pour eviter les fuites d'etat UI.
 const EDIT_KEY_PREFIX = 'snk_stats_canvas_edit_v1'
 const editKey = computed(() => `${EDIT_KEY_PREFIX}_${userId.value}`)
@@ -537,8 +538,8 @@ function saveRangeForProfile(
 
 function preset(kind: 'month' | 'ytd' | 'year') {
   /**
-   * 1) On se met sur "aujourd'hui" à 00:00 (heure locale)
-   *    -> évite les décalages quand on formate en YYYY-MM-DD
+   * 1) On se met sur "aujourd'hui" a 00:00 (heure locale)
+   *    -> evite les decalages quand on formate en YYYY-MM-DD
    */
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -560,7 +561,7 @@ function preset(kind: 'month' | 'ytd' | 'year') {
     const day = date.getDate()
 
     // On construit le 1er jour du mois cible.
-    // new Date(year, monthIndex, 1) gère automatiquement les passages d'année.
+    // new Date(year, monthIndex, 1) gere automatiquement les passages d'annee.
     const firstOfTargetMonth = new Date(date.getFullYear(), date.getMonth() - months, 1)
 
     // Dernier jour du mois cible: jour 0 du mois suivant
@@ -570,15 +571,15 @@ function preset(kind: 'month' | 'ytd' | 'year') {
       0,
     ).getDate()
 
-    // Clamp du jour pour éviter que JS "déborde" sur le mois suivant
+    // Clamp du jour pour eviter que JS "deborde" sur le mois suivant
     const clampedDay = Math.min(day, lastDayOfTargetMonth)
 
-    // Date finale (à 00:00)
+    // Date finale (a 00:00)
     return new Date(firstOfTargetMonth.getFullYear(), firstOfTargetMonth.getMonth(), clampedDay)
   }
 
   /**
-   * 4) Helper: "soustraire N années" en gardant mois+jour si possible,
+   * 4) Helper: "soustraire N annees" en gardant mois+jour si possible,
    *    sinon clamp (cas typique: 29/02).
    *
    *    Exemple:
@@ -589,7 +590,7 @@ function preset(kind: 'month' | 'ytd' | 'year') {
     const month = date.getMonth()
     const day = date.getDate()
 
-    // Dernier jour du mois dans l'année cible
+    // Dernier jour du mois dans l'annee cible
     const lastDayOfTargetMonth = new Date(targetYear, month + 1, 0).getDate()
     const clampedDay = Math.min(day, lastDayOfTargetMonth)
 
@@ -597,7 +598,7 @@ function preset(kind: 'month' | 'ytd' | 'year') {
   }
 
   /**
-   * 5) Applique la plage au composant + émet les events
+   * 5) Applique la plage au composant + emet les events
    */
   const applyRange = (fromDate: Date, toDate: Date) => {
     const fromStr = ymd(fromDate)
@@ -612,9 +613,9 @@ function preset(kind: 'month' | 'ytd' | 'year') {
 
   /**
    * 6) Presets
-   * - month : 1 mois glissant en arrière depuis aujourd'hui
-   * - ytd   : du 1er janvier (année courante) à aujourd'hui
-   * - year  : 1 an glissant en arrière depuis aujourd'hui
+   * - month : 1 mois glissant en arriere depuis aujourd'hui
+   * - ytd   : du 1er janvier (annee courante) a aujourd'hui
+   * - year  : 1 an glissant en arriere depuis aujourd'hui
    */
   if (kind === 'month') {
     applyRange(subMonthsClamp(today, 1), today)
@@ -1037,6 +1038,33 @@ const STORAGE_KEY_PREFIX = 'snk_stats_canvas_layout_v4'
 const layoutKey = computed(() => `${STORAGE_KEY_PREFIX}_${userId.value}`)
 
 const widgets = ref<Widget[]>([])
+const widgetStyleCache = new Map<
+  string,
+  { x: number; y: number; w: number; h: number; z: number; style: Record<string, string | number> }
+>()
+const widgetById = computed(() => {
+  const map = new Map<string, Widget>()
+  for (const widget of widgets.value) {
+    map.set(widget.id, widget)
+  }
+  return map
+})
+
+function getWidgetById(id: string) {
+  return widgetById.value.get(id) ?? null
+}
+
+function clearWidgetStyleCacheFor(id: string) {
+  widgetStyleCache.delete(id)
+}
+
+function pruneWidgetStyleCache() {
+  if (!widgetStyleCache.size) return
+  const existing = new Set(widgets.value.map((widget) => widget.id))
+  for (const id of widgetStyleCache.keys()) {
+    if (!existing.has(id)) widgetStyleCache.delete(id)
+  }
+}
 
 function loadLayout(key: string): unknown | null {
   try {
@@ -1224,6 +1252,7 @@ function applyProfileLayout(bundle: LayoutBundle, profileId: string) {
   profileColors.value = { ...PROFILE_COLORS, ...(bundle.profileColors ?? {}) }
   const normalized = normalizeLayout(raw)
   widgets.value = normalized ?? defaultLayout()
+  widgetStyleCache.clear()
 }
 
 function loadLayoutForUser() {
@@ -1363,13 +1392,69 @@ function scheduleRemoteSave(payload: unknown = layoutBundle.value) {
 
 function widgetStyle(w: Widget) {
   const rect = liveWidgetRect(w)
-  return {
+  const z = Number(w.z ?? 1)
+  const cached = widgetStyleCache.get(w.id)
+  if (
+    cached &&
+    cached.x === rect.x &&
+    cached.y === rect.y &&
+    cached.w === rect.w &&
+    cached.h === rect.h &&
+    cached.z === z
+  ) {
+    return cached.style
+  }
+
+  const style = {
     width: `${rect.w}px`,
     height: `${rect.h}px`,
     transform: `translate3d(${rect.x}px, ${rect.y}px, 0)`,
-    zIndex: w.z ?? 1,
+    zIndex: z,
   }
+  widgetStyleCache.set(w.id, {
+    x: rect.x,
+    y: rect.y,
+    w: rect.w,
+    h: rect.h,
+    z,
+    style,
+  })
+  return style
 }
+
+function widgetMemoDeps(w: Widget) {
+  const selected = isWidgetSelected(w.id)
+  const grouped = isGroupSelectionActive.value && selected
+  const useGlobal = w.props?.useGlobalRange !== false
+  const fromVal = useGlobal ? from.value : (w.props?.from ?? from.value)
+  const toVal = useGlobal ? to.value : (w.props?.to ?? to.value)
+  return [
+    w.id,
+    w.type,
+    w.title,
+    w.x,
+    w.y,
+    w.w,
+    w.h,
+    Number(w.z ?? 1),
+    w.props,
+    editMode.value,
+    dragArmedId.value === w.id,
+    activeTextWidgetId.value === w.id,
+    selected,
+    grouped,
+    fromVal,
+    toVal,
+    themeMode.value,
+  ]
+}
+
+watch(
+  () => widgets.value.map((widget) => widget.id).join('|'),
+  () => {
+    pruneWidgetStyleCache()
+  }
+)
 
 /* ===== Widget registry ===== */
 const paletteOpen = ref(false)
@@ -1417,6 +1502,7 @@ const paletteGroups = computed(() => {
 const dragArmedId = ref<string | null>(null)
 const activeTextWidgetId = ref<string | null>(null)
 const selectedWidgetIds = ref<string[]>([])
+const selectedWidgetIdSet = computed(() => new Set(selectedWidgetIds.value))
 const marqueeSelection = ref<{
   startX: number
   startY: number
@@ -1438,7 +1524,7 @@ function disarmWidget() {
 }
 
 function isWidgetSelected(id: string) {
-  return selectedWidgetIds.value.includes(id)
+  return selectedWidgetIdSet.value.has(id)
 }
 
 function setSelectedWidgets(ids: string[]) {
@@ -1468,7 +1554,7 @@ function setActiveTextWidget(id: string | null) {
     activeTextWidgetId.value = null
     return
   }
-  const widget = widgets.value.find((item) => item.id === id)
+  const widget = getWidgetById(id)
   if (!widget || !isTextWidget(widget)) {
     activeTextWidgetId.value = null
     return
@@ -1560,7 +1646,7 @@ function selectedGroupBounds() {
   if (ids.length < 2) return null
 
   const members = ids
-    .map((id) => widgets.value.find((widget) => widget.id === id))
+    .map((id) => getWidgetById(id))
     .filter((widget): widget is Widget => Boolean(widget))
   if (members.length < 2) return null
 
@@ -1639,7 +1725,7 @@ function finishMarqueeSelection() {
 
   if (selectedWidgetIds.value.length === 1) {
     const onlyId = selectedWidgetIds.value[0]
-    const onlyWidget = widgets.value.find((item) => item.id === onlyId)
+    const onlyWidget = getWidgetById(onlyId)
     setActiveTextWidget(onlyWidget && isTextWidget(onlyWidget) ? onlyId : null)
   } else {
     setActiveTextWidget(null)
@@ -1721,13 +1807,13 @@ const settingsOpen = ref(false)
 const settingsWidgetId = ref<string | null>(null)
 
 const settingsWidget = computed(
-  () => widgets.value.find((x) => x.id === settingsWidgetId.value) ?? null,
+  () => (settingsWidgetId.value ? getWidgetById(settingsWidgetId.value) : null) ?? null,
 )
 const settingsDef = computed(() =>
   settingsWidget.value ? getWidgetDef(settingsWidget.value.type) : null,
 )
 
-const settingsTitle = computed(() => settingsWidget.value?.title ?? 'Réglages')
+const settingsTitle = computed(() => settingsWidget.value?.title ?? 'Reglages')
 const SIMPLE_TEXT_SETTINGS = new Set(['content', 'fontSize', 'align', 'color'])
 const SIMPLE_COMMON_HIDDEN_SETTINGS = new Set(['types'])
 
@@ -1922,7 +2008,7 @@ function onCanvasPointerDown(e: PointerEvent) {
     }
 
     const onlyId = selectedWidgetIds.value[0]
-    const onlyWidget = widgets.value.find((item) => item.id === onlyId)
+    const onlyWidget = getWidgetById(onlyId)
     if (!onlyWidget || !isTextWidget(onlyWidget)) {
       activeTextWidgetId.value = null
       return
@@ -1977,7 +2063,7 @@ watch(
   () => activeTextWidgetId.value,
   (nextId, prevId) => {
     if (!prevId || prevId === nextId) return
-    const previous = widgets.value.find((item) => item.id === prevId)
+    const previous = getWidgetById(prevId)
     if (!isBlankTextWidgetContent(previous)) return
     removeWidget(prevId)
   },
@@ -2085,7 +2171,7 @@ function applySettings(newModel: Record<string, unknown>) {
   scheduleSave()
 }
 function updateTextWidgetProps(id: string, patch: Record<string, unknown>) {
-  const w = widgets.value.find((item) => item.id === id)
+  const w = getWidgetById(id)
   if (!w || !isTextWidget(w)) return
   const shouldFitText = patchTouchesTextLayout(patch)
   w.props = {
@@ -2101,7 +2187,7 @@ function updateTextWidgetProps(id: string, patch: Record<string, unknown>) {
 }
 
 function updateWidgetProps(id: string, patch: Record<string, unknown>) {
-  const w = widgets.value.find((item) => item.id === id)
+  const w = getWidgetById(id)
   if (!w || !patch || typeof patch !== 'object') return
   w.props = {
     ...(w.props ?? {}),
@@ -2302,6 +2388,8 @@ type DragState = {
 const dragStates = new Map<string, DragState>()
 let activeDragId: string | null = null
 let activeDragIds: string[] = []
+let dragPointerMoveRaf: number | null = null
+let queuedDragPointerEvent: PointerEvent | null = null
 let zTop = 10
 const snapGuides = ref<{ x: number | null; y: number | null }>({ x: null, y: null })
 const interactionTick = ref(0)
@@ -2337,6 +2425,8 @@ type ResizeState = {
 const resizeStates = new Map<string, ResizeState>()
 let activeResizeId: string | null = null
 let activeResizeCursorClass: string | null = null
+let resizePointerMoveRaf: number | null = null
+let queuedResizePointerEvent: PointerEvent | null = null
 
 type GroupResizeMember = {
   id: string
@@ -2445,7 +2535,7 @@ const visibleWidgets = computed(() => {
 
 function setWidgetRef(id: string, c: any) {
   // c est le composant; on garde la derniere ref DOM valide, et on ne purge
-  // que lorsqu'on recoit null (démontage). Cela évite de perdre la ref pendant
+  // que lorsqu'on recoit null (demontage). Cela evite de perdre la ref pendant
   // les phases de montage/teleport et de casser le drag.
   if (c == null) {
     widgetEls.delete(id)
@@ -2717,9 +2807,9 @@ function startDrag(id: string, event: PointerEvent) {
   if (additive) {
     return
   }
-  const w = widgets.value.find((x) => x.id === id)
+  const w = getWidgetById(id)
   let el = widgetEls.get(id)
-  // Fallback: récupère l'élément DOM depuis l'event si la ref n'est pas encore disposée.
+  // Fallback: recupere l'element DOM depuis l'event si la ref n'est pas encore disponible.
   if (!el) {
     const target = (event.target as HTMLElement | null)?.closest('.widget') as HTMLElement | null
     if (target) {
@@ -2752,7 +2842,7 @@ function startDrag(id: string, event: PointerEvent) {
 
   dragArmedId.value = id
   for (const dragId of dragIds) {
-    const widget = widgets.value.find((item) => item.id === dragId)
+    const widget = getWidgetById(dragId)
     if (!widget) continue
     widget.z = ++zTop
   }
@@ -2762,7 +2852,7 @@ function startDrag(id: string, event: PointerEvent) {
 
   const s = Number(camera.scale.value || 1)
   for (const dragId of dragIds) {
-    const dragWidget = widgets.value.find((item) => item.id === dragId)
+    const dragWidget = getWidgetById(dragId)
     if (!dragWidget) continue
     let dragEl = widgetEls.get(dragId)
     if (!dragEl && dragId === id) dragEl = el
@@ -2789,7 +2879,7 @@ function startDrag(id: string, event: PointerEvent) {
   window.addEventListener('pointercancel', onGlobalPointerUp, { once: true })
 }
 
-function onGlobalPointerMove(event: PointerEvent) {
+function applyGlobalPointerMove(event: PointerEvent) {
   if (!activeDragId) return
   const state = dragStates.get(activeDragId)
   if (!state) return
@@ -2863,9 +2953,32 @@ function onGlobalPointerMove(event: PointerEvent) {
   scheduleDragApply(state)
 }
 
+function flushQueuedDragPointerMove() {
+  if (dragPointerMoveRaf != null) {
+    cancelAnimationFrame(dragPointerMoveRaf)
+    dragPointerMoveRaf = null
+  }
+  const queued = queuedDragPointerEvent
+  queuedDragPointerEvent = null
+  if (queued) applyGlobalPointerMove(queued)
+}
+
+function onGlobalPointerMove(event: PointerEvent) {
+  if (!activeDragId) return
+  queuedDragPointerEvent = event
+  if (dragPointerMoveRaf != null) return
+  dragPointerMoveRaf = requestAnimationFrame(() => {
+    dragPointerMoveRaf = null
+    const queued = queuedDragPointerEvent
+    queuedDragPointerEvent = null
+    if (!queued) return
+    applyGlobalPointerMove(queued)
+  })
+}
+
 function finishDrag(id: string) {
   const state = dragStates.get(id)
-  const w = state?.widget ?? widgets.value.find((x) => x.id === id)
+  const w = state?.widget ?? getWidgetById(id)
   const el = state?.el ?? widgetEls.get(id)
   if (el) el.classList.remove('is-dragging')
 
@@ -2906,7 +3019,7 @@ function finishDragGroup(ids: string[]) {
 
   for (const id of uniqueIds) {
     const state = dragStates.get(id)
-    const w = state?.widget ?? widgets.value.find((item) => item.id === id)
+    const w = state?.widget ?? getWidgetById(id)
     const el = state?.el ?? widgetEls.get(id)
     if (el) el.classList.remove('is-dragging')
     if (!state || !w) {
@@ -2938,6 +3051,7 @@ function finishDragGroup(ids: string[]) {
 
 function onGlobalPointerUp() {
   window.removeEventListener('pointermove', onGlobalPointerMove)
+  flushQueuedDragPointerMove()
   const ids = activeDragIds.length ? [...activeDragIds] : activeDragId ? [activeDragId] : []
   if (!ids.length) return
   if (!ids.some((id) => dragStates.has(id))) {
@@ -2949,7 +3063,7 @@ function onGlobalPointerUp() {
   }
   finishDragGroup(ids)
 }
-/** active/désactive le pan du board */
+/** active/desactive le pan du board */
 function setCanvasPanEnabled(enabled: boolean) {
   camera.setPanEnabled(enabled)
 }
@@ -2967,7 +3081,7 @@ function startGroupResize(ids: string[], dir: ResizeDir, event: PointerEvent) {
   let maxY = -Infinity
 
   for (const memberId of ids) {
-    const widget = widgets.value.find((x) => x.id === memberId)
+    const widget = getWidgetById(memberId)
     if (!widget) continue
     const minSize = minSizeFor(widget)
     const isText = isTextWidget(widget)
@@ -3237,7 +3351,7 @@ function startResize(id: string, dir: ResizeDir, event: PointerEvent) {
   if (!editMode.value) return
   if (spacePanActive.value) return
   if (fullscreenActive.value) return
-  const w = widgets.value.find((x) => x.id === id)
+  const w = getWidgetById(id)
   const groupIds = selectedWidgetIds.value.includes(id) ? [...selectedWidgetIds.value] : [id]
   const useGroupResize = groupIds.length > 1
   let el = widgetEls.get(id)
@@ -3325,7 +3439,7 @@ function startTextScale(id: string, event: PointerEvent) {
   if (!editMode.value) return
   if (spacePanActive.value) return
   if (fullscreenActive.value) return
-  const w = widgets.value.find((x) => x.id === id)
+  const w = getWidgetById(id)
   if (!w || !isTextWidget(w)) return
   selectSingleWidget(id)
   setActiveTextWidget(id)
@@ -3359,7 +3473,7 @@ function startTextScale(id: string, event: PointerEvent) {
   window.addEventListener('pointercancel', onTextScalePointerUp, { once: true })
 }
 
-function onResizePointerMove(event: PointerEvent) {
+function applyResizePointerMove(event: PointerEvent) {
   if (activeGroupResizeState) {
     applyGroupResizeStep(event)
     return
@@ -3617,9 +3731,32 @@ function onResizePointerMove(event: PointerEvent) {
   scheduleResizeApply(state)
 }
 
+function flushQueuedResizePointerMove() {
+  if (resizePointerMoveRaf != null) {
+    cancelAnimationFrame(resizePointerMoveRaf)
+    resizePointerMoveRaf = null
+  }
+  const queued = queuedResizePointerEvent
+  queuedResizePointerEvent = null
+  if (queued) applyResizePointerMove(queued)
+}
+
+function onResizePointerMove(event: PointerEvent) {
+  if (!activeResizeId && !activeGroupResizeState) return
+  queuedResizePointerEvent = event
+  if (resizePointerMoveRaf != null) return
+  resizePointerMoveRaf = requestAnimationFrame(() => {
+    resizePointerMoveRaf = null
+    const queued = queuedResizePointerEvent
+    queuedResizePointerEvent = null
+    if (!queued) return
+    applyResizePointerMove(queued)
+  })
+}
+
 function finishResize(id: string) {
   const state = resizeStates.get(id)
-  const w = state?.widget ?? widgets.value.find((x) => x.id === id)
+  const w = state?.widget ?? getWidgetById(id)
   const el = state?.el ?? widgetEls.get(id)
   if (el) el.classList.remove('is-resizing')
 
@@ -3670,7 +3807,7 @@ function finishResize(id: string) {
 
 function applyTextScaleStep(state: TextScaleState) {
   if (!Number.isFinite(state.pendingDelta) || Math.abs(state.pendingDelta) < 0.001) return
-  const w = widgets.value.find((x) => x.id === state.widgetId)
+  const w = getWidgetById(state.widgetId)
   if (!w || !isTextWidget(w)) {
     state.pendingDelta = 0
     return
@@ -3749,7 +3886,7 @@ function finishTextScale() {
   setCanvasPanEnabled(true)
   if (!state) return
 
-  const w = widgets.value.find((x) => x.id === state.widgetId)
+  const w = getWidgetById(state.widgetId)
   if (!w || !isTextWidget(w)) return
 
   fitTextWidgetAfterRender(w, widgetEls.get(w.id) ?? null, {
@@ -3765,6 +3902,7 @@ function onTextScalePointerUp() {
 
 function onResizePointerUp() {
   window.removeEventListener('pointermove', onResizePointerMove)
+  flushQueuedResizePointerMove()
   if (activeGroupResizeState) {
     finishGroupResize()
     return
@@ -3787,6 +3925,16 @@ function detachAllInteract() {
   window.removeEventListener('pointermove', onMarqueePointerMove)
   window.removeEventListener('pointerup', onMarqueePointerUp)
   window.removeEventListener('pointercancel', onMarqueePointerUp)
+  if (dragPointerMoveRaf != null) {
+    cancelAnimationFrame(dragPointerMoveRaf)
+    dragPointerMoveRaf = null
+  }
+  queuedDragPointerEvent = null
+  if (resizePointerMoveRaf != null) {
+    cancelAnimationFrame(resizePointerMoveRaf)
+    resizePointerMoveRaf = null
+  }
+  queuedResizePointerEvent = null
   widgetEls.forEach((el) => {
     if (!el || !el.classList) return
     el.classList.remove('is-dragging')
@@ -3939,6 +4087,7 @@ function removeWidget(id: string) {
     selectedWidgetIds.value = selectedWidgetIds.value.filter((item) => item !== id)
   }
   widgets.value.splice(idx, 1)
+  clearWidgetStyleCacheFor(id)
   setSnapGuides(null, null)
   scheduleSave()
 }
@@ -3946,10 +4095,39 @@ function removeWidget(id: string) {
 function removeSelectedWidgets() {
   if (!editMode.value) return
   if (!selectedWidgetIds.value.length) return
-  const ids = [...selectedWidgetIds.value]
+  const ids = new Set(selectedWidgetIds.value)
+  const beforeLen = widgets.value.length
+
   for (const id of ids) {
-    removeWidget(id)
+    clearDragState(id)
+    clearResizeState(id)
+    clearWidgetStyleCacheFor(id)
   }
+
+  activeDragIds = activeDragIds.filter((id) => !ids.has(id))
+  if (activeDragId && ids.has(activeDragId)) activeDragId = null
+  if (activeResizeId && ids.has(activeResizeId)) {
+    activeResizeId = null
+    clearGlobalResizeCursor()
+    setCanvasPanEnabled(true)
+  }
+  if (dragArmedId.value && ids.has(dragArmedId.value)) dragArmedId.value = null
+  if (activeTextWidgetId.value && ids.has(activeTextWidgetId.value)) activeTextWidgetId.value = null
+  if (activeTextScaleState?.widgetId && ids.has(activeTextScaleState.widgetId)) {
+    clearTextScaleState()
+    setCanvasPanEnabled(true)
+  }
+  if (activeGroupResizeState?.members.some((member) => ids.has(member.id))) {
+    clearGroupResizeState()
+    clearGlobalResizeCursor()
+    setCanvasPanEnabled(true)
+  }
+
+  widgets.value = widgets.value.filter((widget) => !ids.has(widget.id))
+  if (widgets.value.length === beforeLen) return
+
+  setSnapGuides(null, null)
+  scheduleSave()
   clearSelection()
 }
 
@@ -3969,7 +4147,7 @@ function createWidgetId(type: string) {
 
 function duplicateWidget(id: string) {
   if (!editMode.value) return
-  const source = widgets.value.find((w) => w.id === id)
+  const source = getWidgetById(id)
   if (!source) return
 
   const offset = GRID * 6
@@ -4007,14 +4185,15 @@ function resetLayout() {
   paletteOpen.value = false
   closeSettings()
 
-  // on débranche tout et on vide
+  // on debranche tout et on vide
   detachAllInteract()
   widgets.value = []
+  widgetStyleCache.clear()
 
   nextTick(() => {
-    // recentre la caméra au milieu de la board (vu que plus de widgets)
+    // recentre la camera au milieu de la board (vu que plus de widgets)
     centerView()
-    // save immédiat (pour être sûr que le layout vide est persisté)
+    // save immediat (pour etre sur que le layout vide est persiste)
     scheduleVisibleRectUpdate()
     saveLayoutNow()
   })
@@ -4079,7 +4258,7 @@ watch(fullscreenActive, (active) => {
 })
 
 function autoResize(id: string, height: number) {
-  const w = widgets.value.find((x) => x.id === id)
+  const w = getWidgetById(id)
   if (!w) return
   if (!Number.isFinite(height)) return
   const isSingleResizeActive = activeResizeId === id && resizeStates.has(id)
@@ -4108,7 +4287,7 @@ function onSelectionKeyDown(event: KeyboardEvent) {
   if (event.key !== 'Enter' && event.key !== 'F2') return
   if (selectedWidgetIds.value.length !== 1) return
   const selectedId = selectedWidgetIds.value[0]
-  const selectedWidget = widgets.value.find((item) => item.id === selectedId)
+  const selectedWidget = getWidgetById(selectedId)
   if (!selectedWidget) return
   event.preventDefault()
   event.stopPropagation()
@@ -4121,7 +4300,7 @@ function onSelectionKeyDown(event: KeyboardEvent) {
 
 /* ===== Lifecycle ===== */
 onMounted(async () => {
-  // init camera + centre quand la vue est prête
+  // init camera + centre quand la vue est prete
   camera.init(() => {
     centerView()
     syncPanzoomExclude(shouldUsePanzoomExclude())
