@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-screen text-slate-100">
-    <section class="relative w-full px-4 sm:px-6 lg:px-10 py-6 sm:py-10 space-y-8">
+    <section class="relative w-full app-page-stack">
       <teleport to="body">
         <div v-if="showOnboarding" class="fixed inset-0 z-50">
           <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="closeOnboarding"></div>

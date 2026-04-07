@@ -13,6 +13,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import backend.dto.ResetPasswordRequest;
 import backend.entity.PasswordResetToken;
@@ -31,6 +33,7 @@ public class PasswordResetService {
   private final long expirationMinutes;
   private final String resetPasswordUrl;
   private final String mailFrom;
+  private final Logger logger = LoggerFactory.getLogger(PasswordResetService.class);
 
   public PasswordResetService(
       UserRepository userRepository,
@@ -128,6 +131,7 @@ public class PasswordResetService {
     try {
       mailSender.send(message);
     } catch (Exception ex) {
+      logger.warn("Password reset email send failed for {}", to, ex);
       throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Erreur envoi email");
     }
   }

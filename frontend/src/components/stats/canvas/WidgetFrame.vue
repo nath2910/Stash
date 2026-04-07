@@ -1665,10 +1665,13 @@ function onRootKeydown(event: KeyboardEvent) {
 }
 .widget.is-fullscreen {
   position: fixed;
-  inset: 12px;
-  width: calc(100vw - 24px) !important;
-  height: calc(100vh - 24px) !important;
-  z-index: 40; /* header is z-50 -> nav remains clickable even in fullscréen */
+  top: max(10px, env(safe-area-inset-top, 0px) + 6px);
+  right: max(10px, env(safe-area-inset-right, 0px) + 6px);
+  bottom: max(10px, env(safe-area-inset-bottom, 0px) + 6px);
+  left: max(10px, env(safe-area-inset-left, 0px) + 6px);
+  width: auto !important;
+  height: auto !important;
+  z-index: 40; /* header is z-50 -> nav remains clickable even in fullscreen */
   cursor: default;
 }
 .widget.is-dragging {
@@ -2337,6 +2340,32 @@ function onRootKeydown(event: KeyboardEvent) {
 }
 
 @media (pointer: coarse) {
+  .widget__header {
+    min-height: 46px;
+    padding: 0 10px 0 11px;
+  }
+
+  .widget[data-edit='true'] .widget__actions,
+  .widget[data-edit='false'] .widget__actions,
+  .widget.is-fullscreen .widget__actions {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  .widget__actions {
+    gap: 6px;
+  }
+
+  .iconbtn {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+  }
+
+  .widget-action-menu {
+    min-width: 176px;
+  }
 
   .widget__resize-overlay {
     inset: -18px;

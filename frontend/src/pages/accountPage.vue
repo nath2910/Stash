@@ -1,17 +1,17 @@
 <template>
   <div class="min-h-full bg-slate-950 text-slate-100">
-    <div class="account-shell mx-auto w-full py-4 sm:py-6 xl:py-8">
-      <div class="mb-4 flex flex-wrap items-center justify-between gap-3 sm:mb-6">
+    <div class="app-shell app-page-stack">
+      <div class="app-topbar">
         <button
           type="button"
           @click="goBack"
-          class="inline-flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-xs font-medium text-slate-200 transition hover:border-violet-400/50 hover:text-white"
+          class="app-touch-btn inline-flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-xs font-medium text-slate-200 transition hover:border-violet-400/50 hover:text-white"
         >
           <span class="text-sm"><-</span>
           <span>Retour</span>
         </button>
 
-        <span class="inline-flex items-center rounded-full border border-slate-800 bg-slate-900/60 px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-slate-400">
+        <span class="app-pill border-slate-800 bg-slate-900/60 text-slate-400">
           Mon compte
         </span>
       </div>
@@ -34,6 +34,7 @@
             </div>
 
             <button
+              v-if="showSubscriptionButton"
               type="button"
               class="w-full rounded-xl border border-emerald-300/40 bg-emerald-300/10 px-3 py-2 text-xs font-semibold text-emerald-100 transition hover:bg-emerald-300/15 sm:w-auto"
               @click="goAbo"
@@ -163,13 +164,15 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/store/authStore'
+import { useBillingStore } from '@/store/billingStore'
 import AuthService from '@/services/AuthService'
 
 const router = useRouter()
 const auth = useAuthStore()
+const billing = useBillingStore()
 
 const currentUser = computed(() => auth.user.value || {})
 
@@ -196,6 +199,13 @@ const deleteError = ref('')
 const canDelete = computed(
   () => deleteConfirmChecked.value && deleteConfirmText.value.trim() === 'SUPPRIMER',
 )
+const showSubscriptionButton = computed(() =>
+  ['active', 'past_due', 'canceled'].includes(billing.status.value),
+)
+
+onMounted(() => {
+  void billing.fetchStatus()
+})
 
 const resetMessages = () => {
   error.value = ''
@@ -265,10 +275,3 @@ const goAbo = () => {
   router.push({ name: 'abo' })
 }
 </script>
-
-<style scoped>
-.account-shell {
-  max-width: min(100%, 1536px);
-  padding-inline: var(--app-edge-gap, clamp(12px, 2.4vw, 28px));
-}
-</style>

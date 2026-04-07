@@ -116,6 +116,8 @@ body.canvas-resize-cursor--nesw {
   bottom: calc(var(--stats-bottom-gap) + var(--stats-profile-clearance) + 18px);
   width: auto;
   max-width: none;
+  max-height: min(54dvh, 360px);
+  overflow: auto;
 }
 .date-toggle--compact {
   top: auto;
@@ -661,6 +663,7 @@ body.canvas-resize-cursor--nesw {
     border: 1px solid rgba(255, 255, 255, 0.14);
     backdrop-filter: blur(14px);
     box-shadow: 0 16px 40px rgba(0, 0, 0, 0.38);
+    touch-action: manipulation;
   }
   .mobile-toolbtn {
     min-width: 0;
@@ -820,14 +823,18 @@ body.canvas-resize-cursor--nesw {
     --stats-mobile-row-height: 44px;
   }
   .mobile-toolbar {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 4px;
     padding: 4px;
     border-radius: 13px;
   }
+  .mobile-toolbtn--scale {
+    grid-column: span 2;
+  }
   .mobile-toolbtn {
-    height: 34px;
+    height: 38px;
     border-radius: 10px;
-    font-size: 0.74rem;
+    font-size: 0.76rem;
   }
   .date-panel {
     padding: 8px 9px;
@@ -918,9 +925,9 @@ body.canvas-resize-cursor--nesw {
     height: 8px;
   }
   .mobile-toolbtn {
-    height: 32px;
+    height: 36px;
     border-radius: 9px;
-    font-size: 0.72rem;
+    font-size: 0.74rem;
   }
 }
 

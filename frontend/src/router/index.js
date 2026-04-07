@@ -116,7 +116,7 @@ const router = createRouter({
       path: '/mon-abonnement',
       name: 'abo-view',
       component: AboViewPage,
-      meta: { requiresAuth: true, fullBleed: true },
+      meta: { requiresAuth: true, fullBleed: true, allowScroll: true },
     },
 
     // ✅ toujours en dernier

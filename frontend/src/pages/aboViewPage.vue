@@ -1,15 +1,18 @@
 <template>
-  <div class="min-h-[100dvh] overflow-y-auto bg-slate-950 text-slate-100 px-4 py-6 sm:py-10">
-    <div class="max-w-5xl mx-auto space-y-8 pb-8">
-      <div class="flex items-center justify-between">
+  <div class="min-h-full bg-slate-950 text-slate-100">
+    <div class="app-shell app-page-stack max-w-5xl pb-8">
+      <div class="app-topbar">
         <button
           type="button"
           @click="goBack"
-          class="inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900/70 px-4 py-2 text-xs font-semibold text-slate-200 transition hover:border-emerald-400/50 hover:text-white"
+          class="app-touch-btn inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900/70 px-4 py-2 text-xs font-semibold text-slate-200 transition hover:border-emerald-400/50 hover:text-white"
         >
           <span class="text-sm">←</span>
           <span>Retour profil</span>
         </button>
+        <span class="app-pill border-slate-700 bg-slate-900/70 text-slate-300">
+          {{ statusMeta.label }}
+        </span>
       </div>
 
       <header
@@ -73,7 +76,7 @@
       </section>
 
       <section class="rounded-3xl border border-slate-800/80 bg-slate-900/75 p-5 shadow-2xl space-y-4">
-        <div class="flex items-center justify-between">
+        <div class="flex flex-wrap items-center justify-between gap-2">
           <h2 class="text-lg font-semibold text-white">Actions rapides</h2>
           <span class="text-xs text-slate-500">Portail Stripe requis</span>
         </div>

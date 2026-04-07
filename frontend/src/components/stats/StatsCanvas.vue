@@ -393,6 +393,7 @@ const PROFILES = [
   { id: 'p2', label: DEFAULT_PROFILE_NAMES.p2, color: PROFILE_COLORS.p2 },
   { id: 'p3', label: DEFAULT_PROFILE_NAMES.p3, color: PROFILE_COLORS.p3 },
 ]
+const COMPACT_BREAKPOINT = 1100
 const activeProfile = ref('p1')
 const layoutBundle = ref<LayoutBundle>({ version: 1, activeProfile: 'p1', profiles: {}, ranges: {} })
 const profileNames = ref({ ...DEFAULT_PROFILE_NAMES })
@@ -424,7 +425,8 @@ const editMode = ref(true)
 
 function loadEditMode() {
   const raw = localStorage.getItem(editKey.value)
-  const compactDefault = typeof window !== 'undefined' && window.innerWidth < 1024
+  const compactDefault =
+    typeof window !== 'undefined' && window.innerWidth < COMPACT_BREAKPOINT
   editMode.value = raw ? raw === 'true' : !compactDefault
 }
 loadEditMode()
@@ -1690,7 +1692,7 @@ const settingsDef = computed(() =>
 
 const settingsTitle = computed(() => settingsWidget.value?.title ?? 'Réglages')
 const SIMPLE_TEXT_SETTINGS = new Set(['content', 'fontSize', 'align', 'color'])
-const SIMPLE_COMMON_HIDDEN_SETTINGS = new Set(['useGlobalRange', 'from', 'to', 'types'])
+const SIMPLE_COMMON_HIDDEN_SETTINGS = new Set(['types'])
 
 function simplifySettingsFields(
   widget: Widget | null,
@@ -1721,7 +1723,7 @@ const settingsFields = computed(() => {
 
   const mappedBase = base.map((f) => {
     if (f?.type === 'date' && dateMode === 'asOf') {
-      return { ...f, hideWhenGlobalRange: false }
+      return { ...f, hideWhenGlobalRange: true }
     }
     return f
   })
@@ -1746,12 +1748,16 @@ const settingsFields = computed(() => {
     : []
 
   const rawFields: Array<Record<string, unknown>> = [
-    {
-      key: 'useGlobalRange',
-      label: 'Utiliser periode globale',
-      type: 'toggle',
-      hint: 'Active par defaut',
-    },
+    ...(!hideRange
+      ? [
+          {
+            key: 'useGlobalRange',
+            label: 'Utiliser periode globale',
+            type: 'toggle',
+            hint: 'Active par defaut',
+          },
+        ]
+      : []),
     ...rangeFields,
     ...filterFields,
     ...mappedBase,
@@ -2003,12 +2009,32 @@ function applySettings(newModel: Record<string, unknown>) {
   }
   if (!isTextWidget(w)) {
     next.types = []
-    if (def?.dateMode === 'asOf') {
-      next.useGlobalRange = false
-    } else if (def?.hideGlobalRange !== true) {
+    if (def?.hideGlobalRange === true) {
       next.useGlobalRange = true
+    } else {
+      next.useGlobalRange = next.useGlobalRange !== false
+    }
+
+    if (def?.dateMode === 'asOf') {
+      if (!next.useGlobalRange) {
+        const asOfRaw = typeof next.asOf === 'string' ? next.asOf : ''
+        next.asOf = clampDate(asOfRaw || to.value || from.value || '')
+      }
+    } else if (next.useGlobalRange) {
       delete next.from
       delete next.to
+    } else {
+      const localFromVal =
+        typeof next.from === 'string' && next.from ? next.from : localFrom.value
+      const localToVal =
+        typeof next.to === 'string' && next.to ? next.to : localTo.value
+      next.from = clampDate(localFromVal)
+      next.to = clampDate(localToVal)
+      if (typeof next.from === 'string' && typeof next.to === 'string' && next.from > next.to) {
+        const tmp = next.from
+        next.from = next.to
+        next.to = tmp
+      }
     }
   }
   w.props = next
@@ -4045,7 +4071,7 @@ onMounted(async () => {
   camera.init(() => {
     centerView()
     syncPanzoomExclude(shouldUsePanzoomExclude())
-    if (window.innerWidth < 1024) zoomToFitContent()
+    if (window.innerWidth < COMPACT_BREAKPOINT) zoomToFitContent()
     scheduleVisibleRectUpdate()
   })
 
@@ -4084,7 +4110,7 @@ onMounted(async () => {
   applyStoredRangeForActiveProfile()
 
   const resizeHandler = () => {
-    const compact = window.innerWidth < 1024
+    const compact = window.innerWidth < COMPACT_BREAKPOINT
     const wasCompact = isCompact.value
     if (compact !== isCompact.value) {
       isCompact.value = compact

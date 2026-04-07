@@ -233,7 +233,7 @@
             </div>
 
             <!-- Footer actions -->
-            <div class="flex flex-col-reverse gap-2 border-t border-gray-700 pt-4 sm:flex-row sm:items-center sm:justify-end">
+            <div class="modal-footer-sticky flex flex-col-reverse gap-2 border-t border-gray-700 pt-4 sm:flex-row sm:items-center sm:justify-end">
               <button
                 type="button"
                 @click="close"
@@ -460,9 +460,19 @@ const formatSize = (bytes) => {
 .modal-card::-webkit-scrollbar {
   display: none;
 }
+.modal-footer-sticky {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: linear-gradient(180deg, rgba(31, 41, 55, 0.88), rgba(31, 41, 55, 0.96));
+  backdrop-filter: blur(6px);
+}
 @media (max-width: 639px) {
   .modal-card {
     padding-bottom: max(env(safe-area-inset-bottom), 0.75rem);
+  }
+  .modal-footer-sticky {
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
   }
 }
 </style>

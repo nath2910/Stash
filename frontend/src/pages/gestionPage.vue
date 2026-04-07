@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-screen text-slate-100">
-    <div class="relative w-full space-y-8 px-4 py-6 sm:px-6 sm:py-8 lg:px-10">
+    <div class="relative w-full app-page-stack">
       <header
         class="rounded-[28px] border border-slate-800/80 bg-gradient-to-br from-slate-900/95 via-slate-900/85 to-slate-950/80 px-6 py-6 shadow-2xl backdrop-blur sm:px-8"
       >

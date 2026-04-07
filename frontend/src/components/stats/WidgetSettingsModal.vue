@@ -13,8 +13,8 @@
         <div class="fixed inset-0 bg-slate-950/60 backdrop-blur-[2px]" />
       </TransitionChild>
 
-      <div class="fixed inset-0 overflow-y-auto">
-        <div class="flex min-h-full items-center justify-center p-4">
+      <div class="fixed inset-0 overflow-y-auto overscroll-contain">
+        <div class="settings-stage flex min-h-full items-center justify-center p-4">
           <TransitionChild
             as="template"
             enter="duration-170 ease-out"
@@ -25,7 +25,7 @@
             leaveTo="opacity-0 scale-95 translate-y-1"
           >
             <DialogPanel
-              class="glass-panel w-full rounded-[22px]"
+              class="glass-panel settings-panel w-full rounded-[22px]"
               :class="isTextWidgetSettings ? 'max-w-4xl' : 'max-w-lg'"
             >
               <div class="glass-header px-4 py-3 flex items-center">
@@ -197,7 +197,7 @@
                 </template>
               </div>
 
-              <div class="glass-footer px-4 py-3 flex justify-end gap-2">
+              <div class="glass-footer settings-footer px-4 py-3 flex justify-end gap-2">
                 <button
                   type="button"
                   class="glass-btn px-4 h-10 rounded-xl"
@@ -431,6 +431,11 @@ watch(
     0 24px 60px rgba(2, 6, 23, 0.62),
     0 1px 0 rgba(255, 255, 255, 0.06) inset;
 }
+.settings-panel {
+  max-height: min(88dvh, 860px);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
 .glass-panel::before {
   display: none;
 }
@@ -499,6 +504,8 @@ watch(
 .settings-body {
   display: grid;
   gap: 12px;
+  overflow: auto;
+  min-height: 0;
 }
 .settings-body--text {
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -775,6 +782,49 @@ watch(
   .tile-grid--3,
   .tile-grid--fonts {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .settings-stage {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .settings-panel {
+    width: 100%;
+    max-width: none !important;
+    max-height: 100dvh;
+    min-height: min(72dvh, 620px);
+    border-radius: 18px 18px 0 0;
+    border-bottom: none;
+  }
+
+  .glass-header {
+    padding: 12px 14px;
+  }
+
+  .settings-body {
+    padding: 12px 14px;
+  }
+
+  .setting-card {
+    padding: 11px;
+  }
+
+  .tile-option {
+    min-height: 48px;
+  }
+
+  .settings-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 3;
+    padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .glass-btn {
+    min-height: 42px;
   }
 }
 </style>

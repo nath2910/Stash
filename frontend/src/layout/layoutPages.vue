@@ -163,8 +163,11 @@
     <main class="flex-1 min-h-0 bg-slate-950/30">
       <div
         v-if="route.meta.fullBleed"
-        class="relative h-full w-full"
-        :class="route.meta.allowScroll ? 'overflow-auto' : 'overflow-hidden'"
+        class="layout-fullbleed"
+        :class="[
+          route.meta.allowScroll ? 'overflow-auto' : 'overflow-hidden',
+          fullBleedNeedsHeaderOffset ? 'layout-fullbleed--with-header' : '',
+        ]"
       >
         <slot />
       </div>
@@ -231,10 +234,11 @@ const isAuthRoute = computed(() =>
     'reset-password',
     'authCallback',
     'verify-email',
-    'account',
-    'abo',
-    'abo-view',
+    'verify-email-short',
   ].includes(route.name),
+)
+const fullBleedNeedsHeaderOffset = computed(
+  () => route.meta.fullBleed === true && route.meta.allowScroll === true && !isAuthRoute.value,
 )
 
 const navSpring = {
@@ -477,6 +481,16 @@ body,
   padding-inline: var(--layout-shell-gutter, clamp(16px, 2.2vw, 32px));
 }
 
+.layout-fullbleed {
+  position: relative;
+  height: 100%;
+  width: 100%;
+}
+
+.layout-fullbleed--with-header {
+  padding-top: calc(72px + env(safe-area-inset-top, 0px));
+}
+
 .layout-menu-actions {
   display: grid;
   gap: 2px;
@@ -502,6 +516,12 @@ body,
 .layout-menu-actions.is-dark > button:hover,
 .layout-menu-actions.is-dark > button:active {
   background: rgba(148, 163, 184, 0.18);
+}
+
+@media (max-width: 767px) {
+  .layout-fullbleed--with-header {
+    padding-top: calc(66px + env(safe-area-inset-top, 0px));
+  }
 }
 
 </style>

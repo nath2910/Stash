@@ -18,11 +18,34 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import AjoutPaire from '@/components/gestion/GestionAjoutPaire.vue'
 
 const emit = defineEmits(['vente-ajoutee'])
 const showAdd = ref(false)
+const route = useRoute()
+const router = useRouter()
+
+const consumeAddQuery = async () => {
+  if (route.query.action !== 'add') return
+  showAdd.value = true
+  const nextQuery = { ...route.query }
+  delete nextQuery.action
+  await router.replace({ query: nextQuery })
+}
+
+onMounted(() => {
+  void consumeAddQuery()
+})
+
+watch(
+  () => route.query.action,
+  (action) => {
+    if (action !== 'add') return
+    void consumeAddQuery()
+  },
+)
 
 const handleAdded = () => {
   showAdd.value = false

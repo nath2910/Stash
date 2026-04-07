@@ -1,15 +1,19 @@
 <template>
-  <div class="min-h-screen bg-slate-950 text-slate-100">
-    <div class="mx-auto max-w-6xl space-y-8 px-4 py-10 sm:px-6 lg:px-8">
-      <div class="flex items-center justify-between">
+  <div class="min-h-full bg-slate-950 text-slate-100">
+    <div class="app-shell app-page-stack max-w-6xl">
+      <div class="app-topbar">
         <button
           type="button"
-          class="inline-flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-xs font-medium text-slate-200 transition hover:border-emerald-300/40 hover:text-white"
+          class="app-touch-btn inline-flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-xs font-medium text-slate-200 transition hover:border-emerald-300/40 hover:text-white"
           @click="goToLogin"
         >
           <span class="text-sm"><-</span>
           <span>Retour a la connexion</span>
         </button>
+
+        <span class="app-pill border-slate-700 bg-slate-900/70 text-slate-300">
+          {{ statusMeta.label }}
+        </span>
       </div>
 
       <header

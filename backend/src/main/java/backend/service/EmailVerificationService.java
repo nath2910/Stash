@@ -148,6 +148,7 @@ public class EmailVerificationService {
     try {
       mailSender.send(message);
     } catch (Exception ex) {
+      logger.warn("Verification email send failed for {}", to, ex);
       throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Erreur envoi email");
     }
   }
@@ -177,6 +178,7 @@ public class EmailVerificationService {
       mailSender.send(message);
     } catch (Exception ex) {
       // Ne bloque pas la validation si l'email de confirmation echoue.
+      logger.warn("Verification confirmation email failed for {}", to, ex);
     }
   }
 
