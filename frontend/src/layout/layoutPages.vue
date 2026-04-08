@@ -208,6 +208,63 @@
       </div>
     </footer>
 
+    <NotificationCenter
+      v-if="showNotificationSystem"
+      class="notification-center-root"
+      :open="notification.centerOpen.value"
+      :notifications="notification.notifications.value"
+      :unread-count="notification.unreadCount.value"
+      :loading="notification.loading.value"
+      :has-next="notification.hasNext.value"
+      @close="notification.closeCenter()"
+      @mark-read="markNotificationRead"
+      @read-all="markAllNotificationsRead"
+      @dismiss="dismissNotification"
+      @load-more="notification.loadMore()"
+      @open-notification="openNotificationTarget"
+    />
+
+    <NotificationToastStack
+      v-if="showNotificationSystem"
+      :toasts="notification.toastItems.value"
+      @close="notification.dismissToast"
+      @open-center="notification.openCenter()"
+      @cta="openNotificationTarget"
+    />
+
+    <div
+      v-if="showNotificationSystem"
+      class="fixed right-3 bottom-3 sm:right-6 sm:bottom-5 z-[84] transition-all duration-300"
+    >
+      <button
+        type="button"
+        class="notification-trigger group relative inline-flex items-center gap-2 rounded-full border shadow-[0_14px_35px_rgba(2,6,23,0.5)] backdrop-blur-md transition-all duration-300 focus:outline-none"
+        :class="notificationButtonClass"
+        :aria-expanded="notification.centerOpen.value"
+        aria-label="Ouvrir le centre de notifications"
+        @click.stop="notification.toggleCenter()"
+        @mouseenter="notificationButtonExpanded = true"
+        @mouseleave="notificationButtonExpanded = false"
+        @focusin="notificationButtonExpanded = true"
+        @focusout="notificationButtonExpanded = false"
+      >
+        <Bell class="h-4 w-4" :class="notificationButtonExpanded ? 'text-emerald-100' : 'text-slate-100'" />
+        <span
+          v-if="notificationButtonExpanded"
+          class="text-xs font-semibold tracking-[0.02em]"
+          :class="isStatsLight ? 'text-slate-900' : 'text-slate-100'"
+        >
+          Notifications
+        </span>
+        <span
+          v-if="notification.unreadCount.value > 0"
+          class="absolute -top-1.5 -right-1.5 inline-flex min-w-[20px] h-5 items-center justify-center rounded-full border border-emerald-200/45 bg-emerald-400 text-[11px] font-bold text-slate-900 px-1.5"
+        >
+          {{ unreadBadge }}
+        </span>
+      </button>
+    </div>
+
   </div>
 </template>
 
@@ -215,8 +272,11 @@
 import { computed, ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/store/authStore'
+import { useNotificationStore } from '@/store/notificationStore'
 import { useTheme } from '@/composables/useTheme'
-import { Home, BarChart3, Boxes } from 'lucide-vue-next'
+import NotificationCenter from '@/components/NotificationCenter.vue'
+import NotificationToastStack from '@/components/NotificationToastStack.vue'
+import { Home, BarChart3, Boxes, Bell } from 'lucide-vue-next'
 
 const route = useRoute()
 const router = useRouter()
@@ -296,9 +356,33 @@ const menuOpen = ref(false)
 const mobileMenuOpen = ref(false)
 
 const auth = useAuthStore()
+const notification = useNotificationStore()
 const idleTimeoutMs = 10 * 60 * 1000
 const lastActivity = ref(Date.now())
 let idleTimer = null
+
+const notificationHiddenRoutes = new Set(['stats', 'gestion'])
+const showNotificationSystem = computed(
+  () =>
+    !!auth.token?.value &&
+    !isAuthRoute.value &&
+    !notificationHiddenRoutes.has(String(route.name || '')),
+)
+const unreadBadge = computed(() =>
+  notification.unreadCount.value > 99 ? '99+' : String(notification.unreadCount.value),
+)
+const notificationButtonExpanded = ref(false)
+const notificationButtonClass = computed(() => {
+  const expanded = notificationButtonExpanded.value
+  if (isStatsLight.value) {
+    return expanded
+      ? 'bg-white/90 border-slate-300 text-slate-900 px-3.5 py-2'
+      : 'bg-white/84 border-slate-300 text-slate-900 p-2'
+  }
+  return expanded
+    ? 'bg-slate-900/88 border-slate-600 text-slate-100 px-3.5 py-2'
+    : 'bg-slate-900/80 border-slate-600 text-slate-100 p-2'
+})
 
 const currentUser = computed(() => {
   const u = auth.user
@@ -390,13 +474,72 @@ const detachScroll = () => {
   }
 }
 
+const markNotificationRead = async (notificationId) => {
+  try {
+    await notification.markAsRead(notificationId)
+  } catch (e) {
+    console.warn('notification mark-read failed', e)
+  }
+}
+
+const markAllNotificationsRead = async () => {
+  try {
+    await notification.markAllAsRead()
+  } catch (e) {
+    console.warn('notification read-all failed', e)
+  }
+}
+
+const dismissNotification = async (notificationId) => {
+  try {
+    await notification.dismissNotification(notificationId)
+  } catch (e) {
+    console.warn('notification dismiss failed', e)
+  }
+}
+
+const openNotificationTarget = async (notificationItem) => {
+  if (!notificationItem) return
+  if (notificationItem.id) {
+    await markNotificationRead(notificationItem.id)
+  }
+  if (notificationItem.ctaRoute) {
+    notification.closeCenter()
+    const isStockNotification =
+      notificationItem.entityType === 'STOCK_ITEM' && Number.isFinite(Number(notificationItem.entityId))
+    if (isStockNotification && notificationItem.ctaRoute === '/gestion') {
+      router
+        .push({
+          path: '/gestion',
+          query: {
+            openItemId: String(notificationItem.entityId),
+            source: 'notification',
+          },
+        })
+        .catch(() => {})
+      return
+    }
+    router.push(notificationItem.ctaRoute).catch(() => {})
+  }
+}
+
 const onWindowClick = (e) => {
   if (e.target.closest('header')) return
+  if (
+    notification.centerOpen.value &&
+    !e.target.closest('.notification-center-root') &&
+    !e.target.closest('.notification-trigger')
+  ) {
+    notification.closeCenter()
+  }
   closeMenus()
 }
 
 const onKeyDown = (e) => {
-  if (e.key === 'Escape') closeMenus()
+  if (e.key === 'Escape') {
+    closeMenus()
+    notification.closeCenter()
+  }
 }
 
 onMounted(() => {
@@ -404,6 +547,11 @@ onMounted(() => {
   window.addEventListener('keydown', onKeyDown)
   attachScroll()
   startIdleWatch()
+  if (showNotificationSystem.value) {
+    notification.init().catch((e) => {
+      console.warn('notification init failed', e)
+    })
+  }
 })
 
 onBeforeUnmount(() => {
@@ -411,6 +559,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeyDown)
   detachScroll()
   stopIdleWatch()
+  notification.teardown({ clearState: true })
 })
 
 watch(
@@ -425,6 +574,7 @@ watch(
   () => route.fullPath,
   async () => {
     closeMenus()
+    notification.closeCenter()
     detachScroll()
     await nextTick()
     attachScroll()
@@ -437,6 +587,35 @@ watch(
   () => {
     startIdleWatch()
   },
+)
+
+watch(
+  () => showNotificationSystem.value,
+  (visible) => {
+    if (visible) return
+    notification.closeCenter()
+    notificationButtonExpanded.value = false
+  },
+)
+
+watch(
+  () => [auth.token?.value, isAuthRoute.value],
+  ([token, authRoute]) => {
+    if (!token) {
+      notification.teardown({ clearState: true })
+      return
+    }
+
+    if (authRoute) {
+      notification.teardown()
+      return
+    }
+
+    notification.init().catch((e) => {
+      console.warn('notification init failed', e)
+    })
+  },
+  { immediate: true },
 )
 
 const goToAuth = (mode) => {

@@ -67,7 +67,16 @@ public interface SnkVenteRepository extends JpaRepository<SnkVente, Integer> {
   List<SnkVente> findByUser_IdOrderByDateAchatDesc(Long userId, Pageable pageable);
 
   // Trouver des dernier ajout 
-List<SnkVente> findByUser_IdOrderByCreatedAtDesc(Long userId, Pageable pageable);
+  List<SnkVente> findByUser_IdOrderByCreatedAtDesc(Long userId, Pageable pageable);
+
+  @Query("""
+      select v
+      from SnkVente v
+      where v.user.id = :userId
+        and v.dateVente is null
+        and (v.dateAchat is not null or v.createdAt is not null)
+      """)
+  List<SnkVente> findInStockCandidatesByUserId(@Param("userId") Long userId);
 
 
 

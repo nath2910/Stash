@@ -123,6 +123,7 @@
 
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/store/authStore'
 import SnkVenteServices from '@/services/SnkVenteServices.js'
 import StockSummaryRow from '@/components/gestion/GestionRésumeStock.vue'
@@ -144,9 +145,12 @@ const venteToEdit = ref(null)
 
 const showDeleteModal = ref(false)
 const deleteMode = ref('name') // 'name' | 'bulk'
+const pendingOpenItemId = ref(null)
 
 const { user } = useAuthStore()
 const currentUser = user
+const route = useRoute()
+const router = useRouter()
 
 const chargerVentes = async () => {
   if (!currentUser.value) {
@@ -158,6 +162,7 @@ const chargerVentes = async () => {
   try {
     const { data } = await SnkVenteServices.getSnkVente()
     snkVentes.value = Array.isArray(data) ? data : []
+    tryOpenPendingItem()
   } catch (e) {
     console.error('Erreur chargement ventes', e)
     snkVentes.value = []
@@ -237,4 +242,48 @@ const handleDeleted = (ids) => {
 const reloadVentes = async () => {
   await chargerVentes()
 }
+
+const parseOpenItemIdFromQuery = () => {
+  const raw = route.query?.openItemId
+  const value = Array.isArray(raw) ? raw[0] : raw
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+const clearOpenItemQuery = () => {
+  if (!('openItemId' in route.query) && !('source' in route.query)) return
+  const nextQuery = { ...route.query }
+  delete nextQuery.openItemId
+  delete nextQuery.source
+  router.replace({ query: nextQuery }).catch(() => {})
+}
+
+const tryOpenPendingItem = () => {
+  const targetId = pendingOpenItemId.value
+  if (!targetId) return
+
+  if (showEditModal.value && Number(venteToEdit.value?.id) === targetId) {
+    pendingOpenItemId.value = null
+    clearOpenItemQuery()
+    return
+  }
+
+  const targetItem = snkVentes.value.find((v) => Number(v.id) === targetId)
+  if (!targetItem) return
+
+  searchTerm.value = ''
+  selectedIds.value = [targetItem.id]
+  openEditModal(targetItem)
+  pendingOpenItemId.value = null
+  clearOpenItemQuery()
+}
+
+watch(
+  () => route.query.openItemId,
+  () => {
+    pendingOpenItemId.value = parseOpenItemIdFromQuery()
+    tryOpenPendingItem()
+  },
+  { immediate: true },
+)
 </script>
