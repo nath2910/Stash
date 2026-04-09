@@ -209,6 +209,119 @@ body.canvas-resize-cursor--nesw {
   height: 1px;
 }
 
+.drag-assist-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.drag-assist-line {
+  position: absolute;
+  pointer-events: none;
+}
+
+.drag-assist-line--vertical {
+  width: 1px;
+}
+
+.drag-assist-line--horizontal {
+  height: 1px;
+}
+
+.drag-assist-line--edge {
+  background: rgba(129, 140, 248, 0.7);
+  box-shadow:
+    0 0 0 1px rgba(99, 102, 241, 0.16),
+    0 0 10px rgba(99, 102, 241, 0.2);
+}
+
+.drag-assist-line--center {
+  background: rgba(56, 189, 248, 0.88);
+  box-shadow:
+    0 0 0 1px rgba(14, 165, 233, 0.16),
+    0 0 12px rgba(56, 189, 248, 0.24);
+}
+
+.drag-assist-line.is-board {
+  opacity: 0.7;
+}
+
+.drag-assist-gap {
+  position: absolute;
+  pointer-events: none;
+  color: rgba(226, 232, 240, 0.94);
+}
+
+.drag-assist-gap--horizontal {
+  height: 1px;
+  background: rgba(148, 163, 184, 0.64);
+}
+
+.drag-assist-gap--vertical {
+  width: 1px;
+  background: rgba(148, 163, 184, 0.64);
+}
+
+.drag-assist-gap::before,
+.drag-assist-gap::after {
+  content: '';
+  position: absolute;
+  border-radius: 999px;
+  background: rgba(226, 232, 240, 0.78);
+}
+
+.drag-assist-gap--horizontal::before,
+.drag-assist-gap--horizontal::after {
+  top: -3px;
+  width: 1px;
+  height: 7px;
+}
+
+.drag-assist-gap--horizontal::before {
+  left: 0;
+}
+
+.drag-assist-gap--horizontal::after {
+  right: 0;
+}
+
+.drag-assist-gap--vertical::before,
+.drag-assist-gap--vertical::after {
+  left: -3px;
+  width: 7px;
+  height: 1px;
+}
+
+.drag-assist-gap--vertical::before {
+  top: 0;
+}
+
+.drag-assist-gap--vertical::after {
+  bottom: 0;
+}
+
+.drag-assist-gap__label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(15, 23, 42, 0.88);
+  color: rgba(226, 232, 240, 0.95);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.drag-assist-gap--vertical .drag-assist-gap__label {
+  transform: translate(-50%, -50%) rotate(-90deg);
+}
+
 .marquee-selection {
   position: absolute;
   z-index: 4;
@@ -999,7 +1112,10 @@ body.canvas-resize-cursor--nesw {
   line-height: 1;
   display: grid;
   place-items: center;
-  transition: background 130ms ease, border-color 130ms ease, transform 130ms ease;
+  transition:
+    background 130ms ease,
+    border-color 130ms ease,
+    transform 130ms ease;
 }
 .profile-header__close:hover {
   border-color: rgba(96, 165, 250, 0.58);
@@ -1068,7 +1184,10 @@ body.canvas-resize-cursor--nesw {
   font-weight: 600;
   padding: 0 12px;
   outline: none;
-  transition: border-color 130ms ease, box-shadow 130ms ease, background 130ms ease;
+  transition:
+    border-color 130ms ease,
+    box-shadow 130ms ease,
+    background 130ms ease;
 }
 .profile-input::placeholder {
   color: #64748b;
@@ -1097,7 +1216,10 @@ body.canvas-resize-cursor--nesw {
   color: rgba(241, 245, 249, 0.94);
   font-size: 0.95rem;
   font-weight: 700;
-  transition: transform 130ms ease, border-color 130ms ease, background 130ms ease;
+  transition:
+    transform 130ms ease,
+    border-color 130ms ease,
+    background 130ms ease;
 }
 .profile-btn:hover {
   border-color: rgba(148, 163, 184, 0.56);
@@ -1153,8 +1275,10 @@ body.canvas-resize-cursor--nesw {
 
 .canvas-root.theme-light .board {
   background:
-    radial-gradient(circle at 1px 1px, rgba(37, 99, 235, 0.12) 1px, transparent 1.7px) 0 0 / 28px 28px,
-    radial-gradient(circle at 1px 1px, rgba(100, 116, 139, 0.08) 1px, transparent 1.8px) 0 0 / 8px 8px,
+    radial-gradient(circle at 1px 1px, rgba(37, 99, 235, 0.12) 1px, transparent 1.7px) 0 0 / 28px
+      28px,
+    radial-gradient(circle at 1px 1px, rgba(100, 116, 139, 0.08) 1px, transparent 1.8px) 0 0 / 8px
+      8px,
     linear-gradient(180deg, #f7fbff 0%, #eaf2fc 100%);
 }
 
@@ -1163,6 +1287,40 @@ body.canvas-resize-cursor--nesw {
   background:
     linear-gradient(transparent 23px, rgba(100, 116, 139, 0.12) 24px) 0 0 / 24px 24px,
     linear-gradient(90deg, transparent 23px, rgba(100, 116, 139, 0.12) 24px) 0 0 / 24px 24px;
+}
+
+.canvas-root.theme-light .drag-assist-line--edge {
+  background: rgba(79, 70, 229, 0.78);
+  box-shadow:
+    0 0 0 1px rgba(99, 102, 241, 0.16),
+    0 0 10px rgba(99, 102, 241, 0.2);
+}
+
+.canvas-root.theme-light .drag-assist-line--center {
+  background: rgba(2, 132, 199, 0.86);
+  box-shadow:
+    0 0 0 1px rgba(14, 165, 233, 0.16),
+    0 0 12px rgba(56, 189, 248, 0.2);
+}
+
+.canvas-root.theme-light .drag-assist-gap {
+  color: rgba(15, 23, 42, 0.9);
+}
+
+.canvas-root.theme-light .drag-assist-gap--horizontal,
+.canvas-root.theme-light .drag-assist-gap--vertical {
+  background: rgba(100, 116, 139, 0.56);
+}
+
+.canvas-root.theme-light .drag-assist-gap::before,
+.canvas-root.theme-light .drag-assist-gap::after {
+  background: rgba(51, 65, 85, 0.7);
+}
+
+.canvas-root.theme-light .drag-assist-gap__label {
+  border-color: rgba(148, 163, 184, 0.42);
+  background: rgba(255, 255, 255, 0.95);
+  color: rgba(15, 23, 42, 0.9);
 }
 
 .canvas-root.theme-light .date-panel,

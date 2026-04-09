@@ -67,6 +67,32 @@
         :style="{ top: `${snapGuides.y}px` }"
         aria-hidden="true"
       ></div>
+      <div
+        v-if="dragAssistLines.length || dragAssistGaps.length"
+        class="drag-assist-overlay"
+        aria-hidden="true"
+      >
+        <div
+          v-for="line in dragAssistLines"
+          :key="line.id"
+          class="drag-assist-line"
+          :class="[
+            `drag-assist-line--${line.orientation}`,
+            `drag-assist-line--${line.kind}`,
+            { 'is-board': line.source === 'board' },
+          ]"
+          :style="dragAssistLineStyle(line)"
+        ></div>
+        <div
+          v-for="gap in dragAssistGaps"
+          :key="gap.id"
+          class="drag-assist-gap"
+          :class="`drag-assist-gap--${gap.orientation}`"
+          :style="dragAssistGapStyle(gap)"
+        >
+          <span class="drag-assist-gap__label">{{ gap.label }}</span>
+        </div>
+      </div>
       <div ref="boardEl" class="board">
         <div
           v-if="marqueeSelectionStyle"
@@ -232,7 +258,13 @@
     </div>
 
     <teleport to="body">
-      <div v-if="shortcutHelpOpen" class="shortcut-modal" :class="{ 'theme-light': themeMode === 'light' }" role="dialog" aria-modal="true">
+      <div
+        v-if="shortcutHelpOpen"
+        class="shortcut-modal"
+        :class="{ 'theme-light': themeMode === 'light' }"
+        role="dialog"
+        aria-modal="true"
+      >
         <div class="shortcut-backdrop" @click="shortcutHelpOpen = false"></div>
         <div class="shortcut-panel" @click.stop>
           <div class="shortcut-head">
@@ -240,7 +272,12 @@
               <div class="shortcut-kicker">Navigation</div>
               <h3 class="shortcut-title">Raccourcis canvas</h3>
             </div>
-            <button type="button" class="shortcut-close" aria-label="Fermer" @click="shortcutHelpOpen = false">
+            <button
+              type="button"
+              class="shortcut-close"
+              aria-label="Fermer"
+              @click="shortcutHelpOpen = false"
+            >
               <span class="close-x" aria-hidden="true"></span>
             </button>
           </div>
@@ -264,19 +301,36 @@
     </teleport>
 
     <teleport to="body">
-      <div v-if="profileEditorOpen" class="profile-modal" :class="{ 'theme-light': themeMode === 'light' }" role="dialog" aria-modal="true">
+      <div
+        v-if="profileEditorOpen"
+        class="profile-modal"
+        :class="{ 'theme-light': themeMode === 'light' }"
+        role="dialog"
+        aria-modal="true"
+      >
         <div class="profile-backdrop" @click="closeProfileEditor"></div>
         <div class="profile-panel" @click.stop>
           <div class="profile-header">
             <div class="profile-header__copy">
               <div class="profile-header__title">Renommer les profils</div>
-              <p class="profile-header__subtitle">Definis des noms clairs et une couleur facile a reconnaitre.</p>
+              <p class="profile-header__subtitle">
+                Definis des noms clairs et une couleur facile a reconnaitre.
+              </p>
             </div>
-            <button class="profile-header__close" type="button" aria-label="Fermer" @click="closeProfileEditor">x</button>
+            <button
+              class="profile-header__close"
+              type="button"
+              aria-label="Fermer"
+              @click="closeProfileEditor"
+            >
+              x
+            </button>
           </div>
 
           <div class="profile-grid">
-            <div class="profile-help">Ces noms apparaissent dans le selecteur en bas du canvas.</div>
+            <div class="profile-help">
+              Ces noms apparaissent dans le selecteur en bas du canvas.
+            </div>
 
             <section class="profile-card">
               <div class="profile-head">
@@ -287,7 +341,11 @@
                 </div>
               </div>
               <div class="profile-row">
-                <input v-model="profileDraft.p1" class="profile-input" placeholder="Nom du profil" />
+                <input
+                  v-model="profileDraft.p1"
+                  class="profile-input"
+                  placeholder="Nom du profil"
+                />
                 <input v-model="profileDraft.p1Color" type="color" class="color-swatch is-round" />
               </div>
             </section>
@@ -301,7 +359,11 @@
                 </div>
               </div>
               <div class="profile-row">
-                <input v-model="profileDraft.p2" class="profile-input" placeholder="Nom du profil" />
+                <input
+                  v-model="profileDraft.p2"
+                  class="profile-input"
+                  placeholder="Nom du profil"
+                />
                 <input v-model="profileDraft.p2Color" type="color" class="color-swatch is-round" />
               </div>
             </section>
@@ -315,15 +377,27 @@
                 </div>
               </div>
               <div class="profile-row">
-                <input v-model="profileDraft.p3" class="profile-input" placeholder="Nom du profil" />
+                <input
+                  v-model="profileDraft.p3"
+                  class="profile-input"
+                  placeholder="Nom du profil"
+                />
                 <input v-model="profileDraft.p3Color" type="color" class="color-swatch is-round" />
               </div>
             </section>
           </div>
 
           <div class="profile-footer">
-            <button type="button" class="profile-btn" @click.stop="closeProfileEditor">Annuler</button>
-            <button type="button" class="profile-btn profile-btn--primary" @click.stop="saveProfileEditor">Enregistrer</button>
+            <button type="button" class="profile-btn" @click.stop="closeProfileEditor">
+              Annuler
+            </button>
+            <button
+              type="button"
+              class="profile-btn profile-btn--primary"
+              @click.stop="saveProfileEditor"
+            >
+              Enregistrer
+            </button>
           </div>
         </div>
       </div>
@@ -337,12 +411,29 @@ import CanvasDock from './canvas/CanvasDock.vue'
 import WidgetFrame from './canvas/WidgetFrame.vue'
 import { useCanvasCamera } from './canvas/useCanvaCamera'
 import { useCanvasShortcuts } from './canvas/useCanvasShortcuts'
-import { Paintbrush, CalendarRange, Minus, Plus, LocateFixed, Lock, LockOpen, PlusSquare, ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import {
+  Paintbrush,
+  CalendarRange,
+  Minus,
+  Plus,
+  LocateFixed,
+  Lock,
+  LockOpen,
+  PlusSquare,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-vue-next'
 
 import CompactDateInput from '@/components/ui/CompactDateInput.vue'
 import WidgetPalette from './WidgetPalette.vue'
 import WidgetSettingsModal from './WidgetSettingsModal.vue'
-import { WIDGET_DEFS, cloneWidgetProps, getCategoryColor, getWidgetDef, newWidget } from './widgetRegistry'
+import {
+  WIDGET_DEFS,
+  cloneWidgetProps,
+  getCategoryColor,
+  getWidgetDef,
+  newWidget,
+} from './widgetRegistry'
 import { getWidgetPaletteMeta } from './palette/widgetPaletteMeta'
 import { useTheme } from '@/composables/useTheme'
 import { useAuthStore } from '@/store/authStore'
@@ -396,11 +487,21 @@ const PROFILES = [
 ]
 const COMPACT_BREAKPOINT = 1100
 const activeProfile = ref('p1')
-const layoutBundle = ref<LayoutBundle>({ version: 1, activeProfile: 'p1', profiles: {}, ranges: {} })
+const layoutBundle = ref<LayoutBundle>({
+  version: 1,
+  activeProfile: 'p1',
+  profiles: {},
+  ranges: {},
+})
 const profileNames = ref({ ...DEFAULT_PROFILE_NAMES })
 const profileColors = ref({ ...PROFILE_COLORS })
 const profileEditorOpen = ref(false)
-const profileDraft = ref({ ...DEFAULT_PROFILE_NAMES, p1Color: PROFILE_COLORS.p1, p2Color: PROFILE_COLORS.p2, p3Color: PROFILE_COLORS.p3 })
+const profileDraft = ref({
+  ...DEFAULT_PROFILE_NAMES,
+  p1Color: PROFILE_COLORS.p1,
+  p2Color: PROFILE_COLORS.p2,
+  p3Color: PROFILE_COLORS.p3,
+})
 
 const minDate = ref('')
 const maxDate = ref('')
@@ -426,8 +527,7 @@ const editMode = ref(true)
 
 function loadEditMode() {
   const raw = localStorage.getItem(editKey.value)
-  const compactDefault =
-    typeof window !== 'undefined' && window.innerWidth < COMPACT_BREAKPOINT
+  const compactDefault = typeof window !== 'undefined' && window.innerWidth < COMPACT_BREAKPOINT
   editMode.value = raw ? raw === 'true' : !compactDefault
 }
 loadEditMode()
@@ -491,8 +591,12 @@ const rangeKey = (profileId: string) => `${RANGE_KEY_PREFIX}_${userId.value}_${p
 
 function normalizeProfileRange(raw: unknown): ProfileRange | null {
   if (!raw || typeof raw !== 'object') return null
-  const fromVal = typeof (raw as { from?: unknown }).from === 'string' ? String((raw as { from?: string }).from) : ''
-  const toVal = typeof (raw as { to?: unknown }).to === 'string' ? String((raw as { to?: string }).to) : ''
+  const fromVal =
+    typeof (raw as { from?: unknown }).from === 'string'
+      ? String((raw as { from?: string }).from)
+      : ''
+  const toVal =
+    typeof (raw as { to?: unknown }).to === 'string' ? String((raw as { to?: string }).to) : ''
   if (!fromVal || !toVal) return null
   return fromVal <= toVal ? { from: fromVal, to: toVal } : { from: toVal, to: fromVal }
 }
@@ -642,6 +746,10 @@ const BOARD_H = 6000
 const NON_TEXT_MAX_SCALE = 2.4
 const SNAP_DIST = 8
 const GRID_SNAP_DIST = 6
+const DRAG_ASSIST_GUIDE_PAD = GRID * 4
+const DRAG_ASSIST_GAP_MIN = 4
+const DRAG_ASSIST_GAP_MAX = GRID * 18
+const DRAG_ASSIST_MIN_OVERLAP = GRID
 
 const clamp = (n: number, a: number, b: number) => Math.max(a, Math.min(b, n))
 const snap = (n: number) => Math.round(n / GRID) * GRID
@@ -718,7 +826,10 @@ const TEXT_FONT_STACKS: Record<string, string> = {
 }
 
 function textWidgetFontFamily(widget: Widget) {
-  return TEXT_FONT_STACKS[String(widget.props?.fontFamily ?? 'open-sans')] ?? TEXT_FONT_STACKS['open-sans']
+  return (
+    TEXT_FONT_STACKS[String(widget.props?.fontFamily ?? 'open-sans')] ??
+    TEXT_FONT_STACKS['open-sans']
+  )
 }
 
 function textWidgetFontBounds(widget: Widget) {
@@ -801,7 +912,10 @@ function estimateTextWidgetSize(
   const normalized = String(widget.props?.content ?? widget.title ?? '').replace(/\r\n?/g, '\n')
   const content = normalized.length ? normalized : widget.title || 'Texte'
   const lines = content.split('\n')
-  const longestLine = lines.reduce((longest, line) => (line.length > longest.length ? line : longest), lines[0] ?? content)
+  const longestLine = lines.reduce(
+    (longest, line) => (line.length > longest.length ? line : longest),
+    lines[0] ?? content,
+  )
   const measureCanvas = typeof document !== 'undefined' ? document.createElement('canvas') : null
   const ctx = measureCanvas?.getContext?.('2d') ?? null
   const widthHint = Math.max(options.targetWidth ?? widget.w ?? 0, 0)
@@ -831,13 +945,17 @@ function estimateTextWidgetSize(
     if (ctx) {
       ctx.font = `${widget.props?.italic ? 'italic ' : ''}${fontWeight} ${fontPx}px ${textWidgetFontFamily(widget)}`
     }
-    const measuredLine = (line: string) => (ctx ? ctx.measureText(line || ' ').width : Math.max(line.length, 1) * fontPx * 0.62)
+    const measuredLine = (line: string) =>
+      ctx ? ctx.measureText(line || ' ').width : Math.max(line.length, 1) * fontPx * 0.62
     const measured = measuredLine(longestLine)
     const width = lockWidth
       ? clamp(Math.ceil(widthHint || measured + padX + 2), minWidth, 2600)
       : clamp(Math.ceil(measured + padX + 2), minWidth, Math.max(widthHint || 0, 2600))
     const usableWidth = Math.max(width - padX, 1)
-    const visualLines = lines.reduce((count, line) => count + Math.max(1, Math.ceil(measuredLine(line) / usableWidth)), 0)
+    const visualLines = lines.reduce(
+      (count, line) => count + Math.max(1, Math.ceil(measuredLine(line) / usableWidth)),
+      0,
+    )
     const lineHeightPx = fontPx * titleLineHeightFactor(widget)
     const height = clamp(
       Math.ceil(visualLines * lineHeightPx + padY + 2),
@@ -960,7 +1078,9 @@ function fitTextWidgetToRenderedContent(
   try {
     const range = document.createRange()
     range.selectNodeContents(textNode)
-    const lineRects = Array.from(range.getClientRects()).filter((rect) => rect.width > 0 || rect.height > 0)
+    const lineRects = Array.from(range.getClientRects()).filter(
+      (rect) => rect.width > 0 || rect.height > 0,
+    )
     if (lineRects.length) {
       const top = Math.min(...lineRects.map((rect) => rect.top))
       const bottom = Math.max(...lineRects.map((rect) => rect.bottom))
@@ -991,7 +1111,11 @@ function fitTextWidgetToRenderedContent(
     const titleWidth = Math.ceil(headerTitle?.getBoundingClientRect().width ?? 0)
     const actionsWidth = Math.ceil(headerActions?.getBoundingClientRect().width ?? 0)
     headerWidth = Math.ceil(
-      headerPadLeft + titleWidth + (actionsWidth > 0 ? headerGap + actionsWidth : 0) + headerPadRight + 2,
+      headerPadLeft +
+        titleWidth +
+        (actionsWidth > 0 ? headerGap + actionsWidth : 0) +
+        headerPadRight +
+        2,
     )
     headerHeight = Math.ceil(header.getBoundingClientRect().height)
   }
@@ -1018,7 +1142,8 @@ function fitTextWidgetAfterRender(
   nextTick(() => {
     const run = () => {
       requestAnimationFrame(() => {
-        const boardWidgetEl = boardEl.value?.querySelector<HTMLElement>(`.widget[data-id="${widget.id}"]`) ?? null
+        const boardWidgetEl =
+          boardEl.value?.querySelector<HTMLElement>(`.widget[data-id="${widget.id}"]`) ?? null
         const liveEl = widgetEls.get(widget.id) ?? el ?? boardWidgetEl
         fitTextWidgetToRenderedContent(widget, liveEl, options)
       })
@@ -1119,8 +1244,7 @@ function normalizeLayout(raw: unknown): Widget[] | null {
       deathPile: 'Death pile',
       topProfitDrivers: 'Top profit (marques/cat)',
     }
-    const nextTitle =
-      typeof (item as any)?.title === 'string' ? (item as any).title : def.title
+    const nextTitle = typeof (item as any)?.title === 'string' ? (item as any).title : def.title
     const normalizedTitle =
       legacyTitles[def.type] && nextTitle === legacyTitles[def.type] ? def.title : nextTitle
 
@@ -1236,7 +1360,14 @@ function normalizeBundle(raw: unknown): LayoutBundle {
     }
   }
 
-  return { version: 1, activeProfile: 'p1', profiles: {}, profileNames: {}, profileColors: {}, ranges: {} }
+  return {
+    version: 1,
+    activeProfile: 'p1',
+    profiles: {},
+    profileNames: {},
+    profileColors: {},
+    ranges: {},
+  }
 }
 
 function pickProfileId(id?: string) {
@@ -1453,7 +1584,7 @@ watch(
   () => widgets.value.map((widget) => widget.id).join('|'),
   () => {
     pruneWidgetStyleCache()
-  }
+  },
 )
 
 /* ===== Widget registry ===== */
@@ -1597,6 +1728,40 @@ const marqueeSelectionStyle = computed(() => {
     height: `${height}px`,
   }
 })
+
+function dragAssistLineStyle(line: DragAssistLine) {
+  if (line.orientation === 'vertical') {
+    const top = Math.min(line.start, line.end)
+    return {
+      left: `${line.position}px`,
+      top: `${top}px`,
+      height: `${Math.max(1, Math.abs(line.end - line.start))}px`,
+    }
+  }
+  const left = Math.min(line.start, line.end)
+  return {
+    left: `${left}px`,
+    top: `${line.position}px`,
+    width: `${Math.max(1, Math.abs(line.end - line.start))}px`,
+  }
+}
+
+function dragAssistGapStyle(gap: DragAssistGap) {
+  if (gap.orientation === 'horizontal') {
+    const left = Math.min(gap.start, gap.end)
+    return {
+      left: `${left}px`,
+      top: `${gap.cross}px`,
+      width: `${Math.max(1, Math.abs(gap.end - gap.start))}px`,
+    }
+  }
+  const top = Math.min(gap.start, gap.end)
+  return {
+    left: `${gap.cross}px`,
+    top: `${top}px`,
+    height: `${Math.max(1, Math.abs(gap.end - gap.start))}px`,
+  }
+}
 
 function liveWidgetRect(widget: Widget) {
   const groupMember = activeGroupResizeState?.members.find((member) => member.id === widget.id)
@@ -1789,7 +1954,7 @@ function widgetCategoryRange(w: Widget) {
   const useGlobal = w.props?.useGlobalRange !== false
   if (def?.dateMode === 'asOf') {
     const base = useGlobal
-      ? (to.value || from.value)
+      ? to.value || from.value
       : (w.props?.asOf ?? w.props?.to ?? w.props?.from ?? to.value ?? from.value)
     const baseStr = typeof base === 'string' ? base : ''
     return { from: baseStr, to: baseStr }
@@ -1817,17 +1982,12 @@ const settingsTitle = computed(() => settingsWidget.value?.title ?? 'Reglages')
 const SIMPLE_TEXT_SETTINGS = new Set(['content', 'fontSize', 'align', 'color'])
 const SIMPLE_COMMON_HIDDEN_SETTINGS = new Set(['types'])
 
-function simplifySettingsFields(
-  widget: Widget | null,
-  fields: Array<Record<string, unknown>>,
-) {
+function simplifySettingsFields(widget: Widget | null, fields: Array<Record<string, unknown>>) {
   if (!widget) return fields
   if (isTextWidget(widget)) {
     return fields.filter((field) => SIMPLE_TEXT_SETTINGS.has(String(field?.key ?? '')))
   }
-  return fields.filter(
-    (field) => !SIMPLE_COMMON_HIDDEN_SETTINGS.has(String(field?.key ?? '')),
-  )
+  return fields.filter((field) => !SIMPLE_COMMON_HIDDEN_SETTINGS.has(String(field?.key ?? '')))
 }
 
 const settingsFields = computed(() => {
@@ -2084,10 +2244,7 @@ function patchTouchesTextLayout(patch: Record<string, unknown>) {
   return Object.keys(patch).some((key) => TEXT_LAYOUT_KEYS.has(key))
 }
 
-function textLayoutChanged(
-  prev: Record<string, unknown>,
-  next: Record<string, unknown>,
-) {
+function textLayoutChanged(prev: Record<string, unknown>, next: Record<string, unknown>) {
   for (const key of TEXT_LAYOUT_KEYS) {
     if (prev[key] !== next[key]) return true
   }
@@ -2147,10 +2304,8 @@ function applySettings(newModel: Record<string, unknown>) {
       delete next.from
       delete next.to
     } else {
-      const localFromVal =
-        typeof next.from === 'string' && next.from ? next.from : localFrom.value
-      const localToVal =
-        typeof next.to === 'string' && next.to ? next.to : localTo.value
+      const localFromVal = typeof next.from === 'string' && next.from ? next.from : localFrom.value
+      const localToVal = typeof next.to === 'string' && next.to ? next.to : localTo.value
       next.from = clampDate(localFromVal)
       next.to = clampDate(localToVal)
       if (typeof next.from === 'string' && typeof next.to === 'string' && next.from > next.to) {
@@ -2372,6 +2527,32 @@ function zoomToFitContent() {
 
 /* ===== Drag ===== */
 const widgetEls = new Map<string, HTMLElement>()
+type SnapAnchor = 'start' | 'center' | 'end'
+type SnapAxis = 'x' | 'y'
+type ViewProjection = {
+  offsetX: number
+  offsetY: number
+  scaleX: number
+  scaleY: number
+}
+type DragAssistLine = {
+  id: string
+  orientation: 'horizontal' | 'vertical'
+  kind: 'edge' | 'center'
+  source: 'board' | 'widget'
+  position: number
+  start: number
+  end: number
+}
+type DragAssistGap = {
+  id: string
+  orientation: 'horizontal' | 'vertical'
+  start: number
+  end: number
+  cross: number
+  label: string
+}
+
 type DragState = {
   x: number
   y: number
@@ -2384,6 +2565,7 @@ type DragState = {
   xTargets: SnapTarget[]
   yTargets: SnapTarget[]
   isText: boolean
+  projection: ViewProjection | null
 }
 const dragStates = new Map<string, DragState>()
 let activeDragId: string | null = null
@@ -2392,6 +2574,8 @@ let dragPointerMoveRaf: number | null = null
 let queuedDragPointerEvent: PointerEvent | null = null
 let zTop = 10
 const snapGuides = ref<{ x: number | null; y: number | null }>({ x: null, y: null })
+const dragAssistLines = ref<DragAssistLine[]>([])
+const dragAssistGaps = ref<DragAssistGap[]>([])
 const interactionTick = ref(0)
 
 type ResizeState = {
@@ -2507,12 +2691,7 @@ function widgetIntersectsVisibleRect(
   w: Widget,
   rect: { left: number; top: number; right: number; bottom: number },
 ) {
-  return !(
-    w.x > rect.right ||
-    w.x + w.w < rect.left ||
-    w.y > rect.bottom ||
-    w.y + w.h < rect.top
-  )
+  return !(w.x > rect.right || w.x + w.w < rect.left || w.y > rect.bottom || w.y + w.h < rect.top)
 }
 
 const visibleWidgets = computed(() => {
@@ -2600,10 +2779,305 @@ function setSnapGuides(x: number | null, y: number | null) {
 type SnapTarget = {
   value: number
   guide: number
+  source: 'board' | 'widget'
+  anchor: SnapAnchor
+  widgetId?: string
+  spanStart?: number
+  spanEnd?: number
+  crossCenter?: number
+}
+
+type SnapOriginResult = {
+  value: number
+  guide: number | null
+  target: SnapTarget | null
+  anchor: SnapAnchor | null
 }
 
 function shouldUseSmartSnap(event: PointerEvent) {
   return !(event.ctrlKey || event.metaKey)
+}
+
+function roundAssistCoord(value: number) {
+  return Math.round(value * 10) / 10
+}
+
+function sameDragAssistLines(a: DragAssistLine[], b: DragAssistLine[]) {
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i += 1) {
+    const left = a[i]
+    const right = b[i]
+    if (
+      left.id !== right.id ||
+      left.orientation !== right.orientation ||
+      left.kind !== right.kind ||
+      left.source !== right.source ||
+      left.position !== right.position ||
+      left.start !== right.start ||
+      left.end !== right.end
+    ) {
+      return false
+    }
+  }
+  return true
+}
+
+function sameDragAssistGaps(a: DragAssistGap[], b: DragAssistGap[]) {
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i += 1) {
+    const left = a[i]
+    const right = b[i]
+    if (
+      left.id !== right.id ||
+      left.orientation !== right.orientation ||
+      left.start !== right.start ||
+      left.end !== right.end ||
+      left.cross !== right.cross ||
+      left.label !== right.label
+    ) {
+      return false
+    }
+  }
+  return true
+}
+
+function setDragAssist(lines: DragAssistLine[], gaps: DragAssistGap[]) {
+  if (
+    sameDragAssistLines(lines, dragAssistLines.value) &&
+    sameDragAssistGaps(gaps, dragAssistGaps.value)
+  ) {
+    return
+  }
+  dragAssistLines.value = lines
+  dragAssistGaps.value = gaps
+}
+
+function clearDragAssist() {
+  if (!dragAssistLines.value.length && !dragAssistGaps.value.length) return
+  dragAssistLines.value = []
+  dragAssistGaps.value = []
+}
+
+function getViewportProjection(): ViewProjection | null {
+  const vp = viewportEl.value
+  const board = boardEl.value
+  if (!vp || !board) return null
+
+  const vpRect = vp.getBoundingClientRect()
+  const boardRect = board.getBoundingClientRect()
+  if (vpRect.width <= 0 || vpRect.height <= 0) return null
+
+  const scaleX = boardRect.width / BOARD_W
+  const scaleY = boardRect.height / BOARD_H
+  if (!Number.isFinite(scaleX) || !Number.isFinite(scaleY) || scaleX <= 0 || scaleY <= 0) {
+    return null
+  }
+
+  return {
+    offsetX: boardRect.left - vpRect.left,
+    offsetY: boardRect.top - vpRect.top,
+    scaleX,
+    scaleY,
+  }
+}
+
+function boardToViewportX(value: number, projection: ViewProjection) {
+  return roundAssistCoord(projection.offsetX + value * projection.scaleX)
+}
+
+function boardToViewportY(value: number, projection: ViewProjection) {
+  return roundAssistCoord(projection.offsetY + value * projection.scaleY)
+}
+
+function snapAnchorOffset(size: number, anchor: SnapAnchor) {
+  if (anchor === 'center') return size / 2
+  if (anchor === 'end') return size
+  return 0
+}
+
+function overlapLength(aStart: number, aEnd: number, bStart: number, bEnd: number) {
+  return Math.min(aEnd, bEnd) - Math.max(aStart, bStart)
+}
+
+function buildAlignmentAssistLine(
+  axis: SnapAxis,
+  rect: { x: number; y: number; w: number; h: number },
+  match: SnapOriginResult,
+  projection: ViewProjection,
+): DragAssistLine | null {
+  if (!match.target || !match.anchor || match.guide === null) return null
+
+  const activeAnchorValue =
+    axis === 'x'
+      ? rect.x + snapAnchorOffset(rect.w, match.anchor)
+      : rect.y + snapAnchorOffset(rect.h, match.anchor)
+  if (Math.abs(activeAnchorValue - match.target.value) > SNAP_DIST + 0.75) return null
+
+  const crossRectStart = axis === 'x' ? rect.y : rect.x
+  const crossRectEnd = axis === 'x' ? rect.y + rect.h : rect.x + rect.w
+  const crossLimit = axis === 'x' ? BOARD_H : BOARD_W
+  const targetStart =
+    match.target.source === 'board' ? crossRectStart : (match.target.spanStart ?? crossRectStart)
+  const targetEnd =
+    match.target.source === 'board' ? crossRectEnd : (match.target.spanEnd ?? crossRectEnd)
+  const lineStartBoard = clamp(
+    Math.min(crossRectStart, targetStart) - DRAG_ASSIST_GUIDE_PAD,
+    0,
+    crossLimit,
+  )
+  const lineEndBoard = clamp(
+    Math.max(crossRectEnd, targetEnd) + DRAG_ASSIST_GUIDE_PAD,
+    0,
+    crossLimit,
+  )
+  if (lineEndBoard - lineStartBoard < 1) return null
+
+  const kind: DragAssistLine['kind'] =
+    match.anchor === 'center' || match.target.anchor === 'center' ? 'center' : 'edge'
+
+  if (axis === 'x') {
+    return {
+      id: `x-${match.target.source}-${match.target.widgetId ?? 'board'}-${match.target.anchor}-${match.anchor}`,
+      orientation: 'vertical',
+      kind,
+      source: match.target.source,
+      position: boardToViewportX(match.guide, projection),
+      start: boardToViewportY(lineStartBoard, projection),
+      end: boardToViewportY(lineEndBoard, projection),
+    }
+  }
+
+  return {
+    id: `y-${match.target.source}-${match.target.widgetId ?? 'board'}-${match.target.anchor}-${match.anchor}`,
+    orientation: 'horizontal',
+    kind,
+    source: match.target.source,
+    position: boardToViewportY(match.guide, projection),
+    start: boardToViewportX(lineStartBoard, projection),
+    end: boardToViewportX(lineEndBoard, projection),
+  }
+}
+
+type GapAssistCandidate = {
+  distance: number
+  overlap: number
+  gap: DragAssistGap
+}
+
+function pickGapCandidate(current: GapAssistCandidate | null, candidate: GapAssistCandidate) {
+  if (!current) return candidate
+  if (candidate.distance < current.distance) return candidate
+  if (candidate.distance === current.distance && candidate.overlap > current.overlap) {
+    return candidate
+  }
+  return current
+}
+
+function collectNearestGapAssist(
+  activeId: string,
+  rect: { x: number; y: number; w: number; h: number },
+  projection: ViewProjection,
+) {
+  let bestHorizontal: GapAssistCandidate | null = null
+  let bestVertical: GapAssistCandidate | null = null
+
+  for (const other of widgets.value) {
+    if (other.id === activeId) continue
+
+    const overlapY = overlapLength(rect.y, rect.y + rect.h, other.y, other.y + other.h)
+    if (overlapY >= DRAG_ASSIST_MIN_OVERLAP) {
+      let startBoard = 0
+      let endBoard = 0
+      if (other.x + other.w <= rect.x) {
+        startBoard = other.x + other.w
+        endBoard = rect.x
+      } else if (rect.x + rect.w <= other.x) {
+        startBoard = rect.x + rect.w
+        endBoard = other.x
+      }
+
+      const distance = Math.abs(endBoard - startBoard)
+      if (distance >= DRAG_ASSIST_GAP_MIN && distance <= DRAG_ASSIST_GAP_MAX) {
+        const overlapStart = Math.max(rect.y, other.y)
+        const overlapEnd = Math.min(rect.y + rect.h, other.y + other.h)
+        const crossBoard = (overlapStart + overlapEnd) / 2
+        bestHorizontal = pickGapCandidate(bestHorizontal, {
+          distance,
+          overlap: overlapY,
+          gap: {
+            id: `gap-h-${other.id}`,
+            orientation: 'horizontal',
+            start: boardToViewportX(startBoard, projection),
+            end: boardToViewportX(endBoard, projection),
+            cross: boardToViewportY(crossBoard, projection),
+            label: `${Math.round(distance)} px`,
+          },
+        })
+      }
+    }
+
+    const overlapX = overlapLength(rect.x, rect.x + rect.w, other.x, other.x + other.w)
+    if (overlapX >= DRAG_ASSIST_MIN_OVERLAP) {
+      let startBoard = 0
+      let endBoard = 0
+      if (other.y + other.h <= rect.y) {
+        startBoard = other.y + other.h
+        endBoard = rect.y
+      } else if (rect.y + rect.h <= other.y) {
+        startBoard = rect.y + rect.h
+        endBoard = other.y
+      }
+
+      const distance = Math.abs(endBoard - startBoard)
+      if (distance >= DRAG_ASSIST_GAP_MIN && distance <= DRAG_ASSIST_GAP_MAX) {
+        const overlapStart = Math.max(rect.x, other.x)
+        const overlapEnd = Math.min(rect.x + rect.w, other.x + other.w)
+        const crossBoard = (overlapStart + overlapEnd) / 2
+        bestVertical = pickGapCandidate(bestVertical, {
+          distance,
+          overlap: overlapX,
+          gap: {
+            id: `gap-v-${other.id}`,
+            orientation: 'vertical',
+            start: boardToViewportY(startBoard, projection),
+            end: boardToViewportY(endBoard, projection),
+            cross: boardToViewportX(crossBoard, projection),
+            label: `${Math.round(distance)} px`,
+          },
+        })
+      }
+    }
+  }
+
+  const out: DragAssistGap[] = []
+  if (bestHorizontal) out.push(bestHorizontal.gap)
+  if (bestVertical) out.push(bestVertical.gap)
+  return out
+}
+
+function updateDragAssist(state: DragState, snapX: SnapOriginResult, snapY: SnapOriginResult) {
+  const projection = state.projection ?? getViewportProjection()
+  if (!projection) {
+    clearDragAssist()
+    return
+  }
+  state.projection = projection
+
+  const rect = {
+    x: state.x,
+    y: state.y,
+    w: state.widget.w,
+    h: state.widget.h,
+  }
+
+  const lines: DragAssistLine[] = []
+  const verticalLine = buildAlignmentAssistLine('x', rect, snapX, projection)
+  if (verticalLine) lines.push(verticalLine)
+  const horizontalLine = buildAlignmentAssistLine('y', rect, snapY, projection)
+  if (horizontalLine) lines.push(horizontalLine)
+
+  const gaps = collectNearestGapAssist(state.widget.id, rect, projection)
+  setDragAssist(lines, gaps)
 }
 
 function axisSign(dir: ResizeDir, positive: 'e' | 's', negative: 'w' | 'n') {
@@ -2614,55 +3088,143 @@ function axisSign(dir: ResizeDir, positive: 'e' | 's', negative: 'w' | 'n') {
 
 function collectAxisTargets(activeId: string, axis: 'x' | 'y'): SnapTarget[] {
   const limit = axis === 'x' ? BOARD_W : BOARD_H
+  const crossLimit = axis === 'x' ? BOARD_H : BOARD_W
   const targets: SnapTarget[] = [
-    { value: 0, guide: 0 },
-    { value: limit / 2, guide: limit / 2 },
-    { value: limit, guide: limit },
+    {
+      value: 0,
+      guide: 0,
+      source: 'board',
+      anchor: 'start',
+      spanStart: 0,
+      spanEnd: crossLimit,
+      crossCenter: crossLimit / 2,
+    },
+    {
+      value: limit / 2,
+      guide: limit / 2,
+      source: 'board',
+      anchor: 'center',
+      spanStart: 0,
+      spanEnd: crossLimit,
+      crossCenter: crossLimit / 2,
+    },
+    {
+      value: limit,
+      guide: limit,
+      source: 'board',
+      anchor: 'end',
+      spanStart: 0,
+      spanEnd: crossLimit,
+      crossCenter: crossLimit / 2,
+    },
   ]
 
   for (const other of widgets.value) {
     if (other.id === activeId) continue
     const start = axis === 'x' ? other.x : other.y
     const size = axis === 'x' ? other.w : other.h
+    const spanStart = axis === 'x' ? other.y : other.x
+    const spanEnd = spanStart + (axis === 'x' ? other.h : other.w)
+    const crossCenter = (spanStart + spanEnd) / 2
     targets.push(
-      { value: start, guide: start },
-      { value: start + size / 2, guide: start + size / 2 },
-      { value: start + size, guide: start + size },
+      {
+        value: start,
+        guide: start,
+        source: 'widget',
+        anchor: 'start',
+        widgetId: other.id,
+        spanStart,
+        spanEnd,
+        crossCenter,
+      },
+      {
+        value: start + size / 2,
+        guide: start + size / 2,
+        source: 'widget',
+        anchor: 'center',
+        widgetId: other.id,
+        spanStart,
+        spanEnd,
+        crossCenter,
+      },
+      {
+        value: start + size,
+        guide: start + size,
+        source: 'widget',
+        anchor: 'end',
+        widgetId: other.id,
+        spanStart,
+        spanEnd,
+        crossCenter,
+      },
     )
   }
 
   return targets
 }
 
-function snapOriginToTargets(origin: number, size: number, targets: SnapTarget[], enabled: boolean) {
-  if (!enabled) return { value: origin, guide: null as number | null }
+function snapOriginToTargets(
+  origin: number,
+  size: number,
+  targets: SnapTarget[],
+  enabled: boolean,
+  activeCrossCenter: number,
+): SnapOriginResult {
+  if (!enabled) return { value: origin, guide: null, target: null, anchor: null }
 
-  const anchors = [0, size / 2, size]
+  const anchors: Array<{ value: number; anchor: SnapAnchor }> = [
+    { value: 0, anchor: 'start' },
+    { value: size / 2, anchor: 'center' },
+    { value: size, anchor: 'end' },
+  ]
   let bestValue = origin
   let bestGuide: number | null = null
+  let bestTarget: SnapTarget | null = null
+  let bestAnchor: SnapAnchor | null = null
   let bestDiff = SNAP_DIST + 1
+  let bestTargetPriority = Number.POSITIVE_INFINITY
+  let bestCrossDistance = Number.POSITIVE_INFINITY
 
   for (const anchor of anchors) {
     for (const target of targets) {
-      const diff = Math.abs(origin + anchor - target.value)
-      if (diff < bestDiff) {
+      const diff = Math.abs(origin + anchor.value - target.value)
+      const targetPriority = target.source === 'widget' ? 0 : 1
+      const targetCross =
+        Number.isFinite(target.crossCenter) && Number.isFinite(activeCrossCenter)
+          ? Math.abs((target.crossCenter as number) - activeCrossCenter)
+          : Number.POSITIVE_INFINITY
+      const hasSameDiff = Math.abs(diff - bestDiff) < 0.001
+      const isBetter =
+        diff < bestDiff ||
+        (hasSameDiff && targetPriority < bestTargetPriority) ||
+        (hasSameDiff && targetPriority === bestTargetPriority && targetCross < bestCrossDistance)
+      if (isBetter) {
         bestDiff = diff
-        bestValue = target.value - anchor
+        bestValue = target.value - anchor.value
         bestGuide = target.guide
+        bestTarget = target
+        bestAnchor = anchor.anchor
+        bestTargetPriority = targetPriority
+        bestCrossDistance = targetCross
       }
     }
   }
 
   if (bestDiff <= SNAP_DIST) {
-    return { value: bestValue, guide: bestGuide }
+    return {
+      value: bestValue,
+      guide: bestGuide,
+      target: bestTarget,
+      anchor: bestAnchor,
+    }
   }
 
   const gridValue = snap(origin)
   if (Math.abs(gridValue - origin) <= GRID_SNAP_DIST) {
-    return { value: gridValue, guide: gridValue }
+    return { value: gridValue, guide: gridValue, target: null, anchor: null }
   }
 
-  return { value: origin, guide: null as number | null }
+  return { value: origin, guide: null, target: null, anchor: null }
 }
 
 function snapEdgeToTargets(edge: number, targets: SnapTarget[], enabled: boolean) {
@@ -2803,6 +3365,8 @@ function startDrag(id: string, event: PointerEvent) {
   if (!editMode.value) return
   if (spacePanActive.value) return
   if (marqueeSelection.value) return
+  setSnapGuides(null, null)
+  clearDragAssist()
   const additive = event.shiftKey || event.ctrlKey || event.metaKey
   if (additive) {
     return
@@ -2851,6 +3415,7 @@ function startDrag(id: string, event: PointerEvent) {
   bumpInteractionTick()
 
   const s = Number(camera.scale.value || 1)
+  const projection = getViewportProjection()
   for (const dragId of dragIds) {
     const dragWidget = getWidgetById(dragId)
     if (!dragWidget) continue
@@ -2869,6 +3434,7 @@ function startDrag(id: string, event: PointerEvent) {
       xTargets: collectAxisTargets(dragId, 'x'),
       yTargets: collectAxisTargets(dragId, 'y'),
       isText,
+      projection,
     })
     dragEl?.classList.add('is-dragging')
   }
@@ -2922,6 +3488,7 @@ function applyGlobalPointerMove(event: PointerEvent) {
       scheduleDragApply(dragState)
     }
     setSnapGuides(null, null)
+    clearDragAssist()
     return
   }
 
@@ -2929,18 +3496,8 @@ function applyGlobalPointerMove(event: PointerEvent) {
   state.y += dy / state.scale
 
   const smartSnap = state.isText ? false : shouldUseSmartSnap(event)
-  const nextX = snapOriginToTargets(
-    state.x,
-    w.w,
-    state.xTargets,
-    smartSnap,
-  )
-  const nextY = snapOriginToTargets(
-    state.y,
-    w.h,
-    state.yTargets,
-    smartSnap,
-  )
+  const nextX = snapOriginToTargets(state.x, w.w, state.xTargets, smartSnap, state.y + w.h / 2)
+  const nextY = snapOriginToTargets(state.y, w.h, state.yTargets, smartSnap, state.x + w.w / 2)
   state.x = nextX.value
   state.y = nextY.value
 
@@ -2948,7 +3505,12 @@ function applyGlobalPointerMove(event: PointerEvent) {
   state.x = clamped.x
   state.y = clamped.y
 
-  setSnapGuides(smartSnap ? nextX.guide : null, smartSnap ? nextY.guide : null)
+  setSnapGuides(null, null)
+  if (smartSnap) {
+    updateDragAssist(state, nextX, nextY)
+  } else {
+    clearDragAssist()
+  }
 
   scheduleDragApply(state)
 }
@@ -2984,6 +3546,7 @@ function finishDrag(id: string) {
 
   if (!state || !w) {
     clearDragState(id)
+    clearDragAssist()
     setCanvasPanEnabled(true)
     activeDragId = null
     return
@@ -3000,6 +3563,7 @@ function finishDrag(id: string) {
   if (el) applyWidgetDOM(el, w)
 
   setSnapGuides(null, null)
+  clearDragAssist()
 
   clearDragState(id)
   setCanvasPanEnabled(true)
@@ -3039,6 +3603,7 @@ function finishDragGroup(ids: string[]) {
   }
 
   setSnapGuides(null, null)
+  clearDragAssist()
   setCanvasPanEnabled(true)
   scheduleSave()
   activeDragId = null
@@ -3053,9 +3618,14 @@ function onGlobalPointerUp() {
   window.removeEventListener('pointermove', onGlobalPointerMove)
   flushQueuedDragPointerMove()
   const ids = activeDragIds.length ? [...activeDragIds] : activeDragId ? [activeDragId] : []
-  if (!ids.length) return
+  if (!ids.length) {
+    setSnapGuides(null, null)
+    clearDragAssist()
+    return
+  }
   if (!ids.some((id) => dragStates.has(id))) {
     setSnapGuides(null, null)
+    clearDragAssist()
     activeDragId = null
     activeDragIds = []
     setCanvasPanEnabled(true)
@@ -3446,10 +4016,7 @@ function startTextScale(id: string, event: PointerEvent) {
 
   const bounds = textWidgetFontBounds(w)
   const baseScale = clamp(
-    Number(
-      w.props?.fontSize ??
-        bounds.fallback,
-    ) || bounds.fallback,
+    Number(w.props?.fontSize ?? bounds.fallback) || bounds.fallback,
     bounds.min,
     bounds.max,
   )
@@ -3603,7 +4170,11 @@ function applyResizePointerMove(event: PointerEvent) {
     const outwardY = ySign * dy
     const dominant = Math.abs(outwardX) >= Math.abs(outwardY) ? outwardX : outwardY
     const delta = dominant * (fromCenter ? 2 : 1)
-    const minUniformScale = Math.max(minW / Math.max(state.originW, 1), minH / Math.max(state.originH, 1), 0.01)
+    const minUniformScale = Math.max(
+      minW / Math.max(state.originW, 1),
+      minH / Math.max(state.originH, 1),
+      0.01,
+    )
     const maxUniformScaleByWidget = Math.min(
       stateMaxW / Math.max(state.originW, 1),
       stateMaxH / Math.max(state.originH, 1),
@@ -3615,16 +4186,25 @@ function applyResizePointerMove(event: PointerEvent) {
     if (fromCenter) {
       const maxW = Math.max(2, 2 * Math.min(state.originCenterX, BOARD_W - state.originCenterX))
       const maxH = Math.max(2, 2 * Math.min(state.originCenterY, BOARD_H - state.originCenterY))
-      maxUniformScale = Math.min(maxW / Math.max(state.originW, 1), maxH / Math.max(state.originH, 1))
+      maxUniformScale = Math.min(
+        maxW / Math.max(state.originW, 1),
+        maxH / Math.max(state.originH, 1),
+      )
     } else {
       if (xSign > 0) {
-        maxUniformScale = Math.min(maxUniformScale, (BOARD_W - state.originX) / Math.max(state.originW, 1))
+        maxUniformScale = Math.min(
+          maxUniformScale,
+          (BOARD_W - state.originX) / Math.max(state.originW, 1),
+        )
       } else if (xSign < 0) {
         const rightAnchor = state.originX + state.originW
         maxUniformScale = Math.min(maxUniformScale, rightAnchor / Math.max(state.originW, 1))
       }
       if (ySign > 0) {
-        maxUniformScale = Math.min(maxUniformScale, (BOARD_H - state.originY) / Math.max(state.originH, 1))
+        maxUniformScale = Math.min(
+          maxUniformScale,
+          (BOARD_H - state.originY) / Math.max(state.originH, 1),
+        )
       } else if (ySign < 0) {
         const bottomAnchor = state.originY + state.originH
         maxUniformScale = Math.min(maxUniformScale, bottomAnchor / Math.max(state.originH, 1))
@@ -3768,7 +4348,9 @@ function finishResize(id: string) {
     return
   }
 
-  const cornerResize = (state.dir.includes('e') || state.dir.includes('w')) && (state.dir.includes('n') || state.dir.includes('s'))
+  const cornerResize =
+    (state.dir.includes('e') || state.dir.includes('w')) &&
+    (state.dir.includes('n') || state.dir.includes('s'))
   const fineSnap = true
   const snappedW = clamp(fineSnap ? Math.round(state.w) : snap(state.w), state.minW, state.maxW)
   const snappedH = clamp(fineSnap ? Math.round(state.h) : snap(state.h), state.minH, state.maxH)
@@ -3814,11 +4396,7 @@ function applyTextScaleStep(state: TextScaleState) {
   }
 
   const bounds = textWidgetFontBounds(w)
-  const nextScale = clamp(
-    state.appliedScale + state.pendingDelta,
-    bounds.min,
-    bounds.max,
-  )
+  const nextScale = clamp(state.appliedScale + state.pendingDelta, bounds.min, bounds.max)
   state.pendingDelta = 0
   state.appliedScale = nextScale
 
@@ -3951,6 +4529,7 @@ function detachAllInteract() {
   activeTextWidgetId.value = null
   clearSelection()
   setSnapGuides(null, null)
+  clearDragAssist()
   clearGlobalResizeCursor()
   setCanvasPanEnabled(true)
 }
@@ -4040,12 +4619,8 @@ async function loadCategories(fromVal?: string, toVal?: string) {
   try {
     const res = await StatsServices.categories(fromVal, toVal)
     const raw = Array.isArray(res?.data) ? res.data : []
-    const cleaned = raw
-      .map((v) => String(v ?? '').trim())
-      .filter((v) => v.length > 0)
-    const unique = Array.from(
-      new Map(cleaned.map((v) => [v.toLowerCase(), v])).values(),
-    )
+    const cleaned = raw.map((v) => String(v ?? '').trim()).filter((v) => v.length > 0)
+    const unique = Array.from(new Map(cleaned.map((v) => [v.toLowerCase(), v])).values())
     if (unique.length) {
       settingsCategories.value = unique
       categoriesCache.set(key, unique)
@@ -4053,9 +4628,7 @@ async function loadCategories(fromVal?: string, toVal?: string) {
     }
     const fallback = await StatsServices.categories()
     const fallbackRaw = Array.isArray(fallback?.data) ? fallback.data : []
-    const fallbackClean = fallbackRaw
-      .map((v) => String(v ?? '').trim())
-      .filter((v) => v.length > 0)
+    const fallbackClean = fallbackRaw.map((v) => String(v ?? '').trim()).filter((v) => v.length > 0)
     const fallbackUnique = Array.from(
       new Map(fallbackClean.map((v) => [v.toLowerCase(), v])).values(),
     )
@@ -4160,7 +4733,11 @@ function duplicateWidget(id: string) {
     z: ++zTop,
   }
 
-  const placed = placeWidget(duplicate, duplicate.x + duplicate.w / 2, duplicate.y + duplicate.h / 2)
+  const placed = placeWidget(
+    duplicate,
+    duplicate.x + duplicate.w / 2,
+    duplicate.y + duplicate.h / 2,
+  )
   duplicate.x = placed.x
   duplicate.y = placed.y
   clampWidget(duplicate)
@@ -4176,7 +4753,6 @@ function duplicateWidget(id: string) {
   }
   scheduleSave()
 }
-
 
 function resetLayout() {
   if (!editMode.value) return
@@ -4262,7 +4838,9 @@ function autoResize(id: string, height: number) {
   if (!w) return
   if (!Number.isFinite(height)) return
   const isSingleResizeActive = activeResizeId === id && resizeStates.has(id)
-  const isGroupResizeActive = Boolean(activeGroupResizeState?.members.some((member) => member.id === id))
+  const isGroupResizeActive = Boolean(
+    activeGroupResizeState?.members.some((member) => member.id === id),
+  )
   const isTextScaleActive = activeTextScaleState?.widgetId === id
   if (isSingleResizeActive || isGroupResizeActive || isTextScaleActive) return
   const minSize = minSizeFor(w)
@@ -4322,7 +4900,9 @@ onMounted(async () => {
       scheduleVisibleRectUpdate()
     }
     board.addEventListener('panzoomchange', onPanzoomChange as EventListener)
-    onBeforeUnmount(() => board.removeEventListener('panzoomchange', onPanzoomChange as EventListener))
+    onBeforeUnmount(() =>
+      board.removeEventListener('panzoomchange', onPanzoomChange as EventListener),
+    )
   }
   scheduleVisibleRectUpdate()
 
@@ -4429,8 +5009,6 @@ function saveProfileEditor() {
   saveBundleNow(false)
   profileEditorOpen.value = false
 }
-
 </script>
 
 <style scoped src="./StatsCanvas.css"></style>
-
