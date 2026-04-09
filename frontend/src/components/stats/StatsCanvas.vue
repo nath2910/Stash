@@ -746,6 +746,7 @@ const BOARD_H = 6000
 const NON_TEXT_MAX_SCALE = 2.4
 const SNAP_DIST = 8
 const GRID_SNAP_DIST = 6
+const SIZE_SNAP_DIST = 10
 const DRAG_ASSIST_GUIDE_PAD = GRID * 4
 const DRAG_ASSIST_GAP_MIN = 4
 const DRAG_ASSIST_GAP_MAX = GRID * 18
@@ -2598,13 +2599,17 @@ type ResizeState = {
   raf: number | null
   widget: Widget
   el: HTMLElement
+  metricsEl: HTMLElement | null
   xTargets: SnapTarget[]
   yTargets: SnapTarget[]
+  widthTargets: number[]
+  heightTargets: number[]
   minW: number
   minH: number
   maxW: number
   maxH: number
   isText: boolean
+  previewFontSize: number | null
 }
 const resizeStates = new Map<string, ResizeState>()
 let activeResizeId: string | null = null
@@ -2616,6 +2621,7 @@ type GroupResizeMember = {
   id: string
   widget: Widget
   el: HTMLElement | null
+  metricsEl: HTMLElement | null
   originX: number
   originY: number
   originW: number
@@ -2628,6 +2634,7 @@ type GroupResizeMember = {
   y: number
   w: number
   h: number
+  previewFontSize: number | null
 }
 
 type GroupResizeState = {
@@ -2735,15 +2742,35 @@ function setWidgetRef(id: string, c: any) {
     const resizeState = resizeStates.get(id)
     if (resizeState) {
       resizeState.el = nextEl
+      resizeState.metricsEl = readResizeMetricsEl(nextEl)
       nextEl.classList.add('is-resizing')
-      applyWidgetDOMRect(nextEl, resizeState.x, resizeState.y, resizeState.w, resizeState.h)
+      applyWidgetResizePreview(
+        nextEl,
+        resizeState.originW,
+        resizeState.originH,
+        resizeState.x,
+        resizeState.y,
+        resizeState.w,
+        resizeState.h,
+      )
+      updateResizeMetricsText(resizeState.metricsEl, resizeState.w, resizeState.h)
     }
 
     const groupMember = activeGroupResizeState?.members.find((member) => member.id === id)
     if (groupMember) {
       groupMember.el = nextEl
+      groupMember.metricsEl = readResizeMetricsEl(nextEl)
       nextEl.classList.add('is-resizing')
-      applyWidgetDOMRect(nextEl, groupMember.x, groupMember.y, groupMember.w, groupMember.h)
+      applyWidgetResizePreview(
+        nextEl,
+        groupMember.originW,
+        groupMember.originH,
+        groupMember.x,
+        groupMember.y,
+        groupMember.w,
+        groupMember.h,
+      )
+      updateResizeMetricsText(groupMember.metricsEl, groupMember.w, groupMember.h)
     }
   }
 }
@@ -2762,6 +2789,35 @@ function applyWidgetDOMRect(el: HTMLElement, x: number, y: number, w: number, h:
   el.style.width = `${w}px`
   el.style.height = `${h}px`
   el.style.transform = `translate3d(${x}px, ${y}px, 0)`
+}
+
+function applyWidgetResizePreview(
+  el: HTMLElement,
+  originW: number,
+  originH: number,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+) {
+  const safeOriginW = Math.max(originW, 1)
+  const safeOriginH = Math.max(originH, 1)
+  const scaleX = clamp(w / safeOriginW, 0.01, 24)
+  const scaleY = clamp(h / safeOriginH, 0.01, 24)
+  el.style.width = `${safeOriginW}px`
+  el.style.height = `${safeOriginH}px`
+  el.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${scaleX}, ${scaleY})`
+}
+
+function readResizeMetricsEl(el: HTMLElement | null) {
+  if (!el) return null
+  return el.querySelector('.resize-metrics') as HTMLElement | null
+}
+
+function updateResizeMetricsText(el: HTMLElement | null, w: number, h: number) {
+  if (!el) return
+  const next = `${Math.round(w)} x ${Math.round(h)}`
+  if (el.textContent !== next) el.textContent = next
 }
 
 function clampWidgetPosition(x: number, y: number, w: Widget) {
@@ -3163,6 +3219,17 @@ function collectAxisTargets(activeId: string, axis: 'x' | 'y'): SnapTarget[] {
   return targets
 }
 
+function collectSizeTargets(activeId: string, axis: 'w' | 'h') {
+  const out: number[] = []
+  for (const other of widgets.value) {
+    if (other.id === activeId) continue
+    const size = axis === 'w' ? other.w : other.h
+    if (!Number.isFinite(size) || size <= 0) continue
+    out.push(Math.round(size))
+  }
+  return Array.from(new Set(out)).sort((a, b) => a - b)
+}
+
 function snapOriginToTargets(
   origin: number,
   size: number,
@@ -3254,6 +3321,31 @@ function snapEdgeToTargets(edge: number, targets: SnapTarget[], enabled: boolean
   return { value: edge, guide: null as number | null }
 }
 
+function snapSizeToTargets(value: number, targets: number[], enabled: boolean) {
+  if (!enabled || !targets.length) return { value, snapped: false }
+
+  let best = value
+  let bestDiff = SIZE_SNAP_DIST + 1
+  for (const target of targets) {
+    const diff = Math.abs(value - target)
+    if (diff < bestDiff) {
+      best = target
+      bestDiff = diff
+    }
+  }
+
+  if (bestDiff <= SIZE_SNAP_DIST) {
+    return { value: best, snapped: true }
+  }
+
+  const gridValue = snap(value)
+  if (Math.abs(gridValue - value) <= GRID_SNAP_DIST) {
+    return { value: gridValue, snapped: true }
+  }
+
+  return { value, snapped: false }
+}
+
 function rectsOverlap(
   a: { x: number; y: number; w: number; h: number },
   b: { x: number; y: number; w: number; h: number },
@@ -3320,6 +3412,7 @@ function clearResizeState(id: string) {
   const state = resizeStates.get(id)
   if (!state) return
   if (state.raf) cancelAnimationFrame(state.raf)
+  applyWidgetDOM(state.el, state.widget)
   resizeStates.delete(id)
 }
 
@@ -3329,6 +3422,7 @@ function clearGroupResizeState() {
   if (state.raf) cancelAnimationFrame(state.raf)
   for (const member of state.members) {
     member.el?.classList.remove('is-resizing')
+    if (member.el) applyWidgetDOM(member.el, member.widget)
   }
   activeGroupResizeState = null
   bumpInteractionTick()
@@ -3340,7 +3434,16 @@ function scheduleGroupResizeApply(state: GroupResizeState) {
     state.raf = null
     for (const member of state.members) {
       if (!member.el) continue
-      applyWidgetDOMRect(member.el, member.x, member.y, member.w, member.h)
+      applyWidgetResizePreview(
+        member.el,
+        member.originW,
+        member.originH,
+        member.x,
+        member.y,
+        member.w,
+        member.h,
+      )
+      updateResizeMetricsText(member.metricsEl, member.w, member.h)
     }
     bumpInteractionTick()
   })
@@ -3357,7 +3460,16 @@ function scheduleResizeApply(state: ResizeState) {
   if (state.raf) return
   state.raf = requestAnimationFrame(() => {
     state.raf = null
-    applyWidgetDOMRect(state.el, state.x, state.y, state.w, state.h)
+    applyWidgetResizePreview(
+      state.el,
+      state.originW,
+      state.originH,
+      state.x,
+      state.y,
+      state.w,
+      state.h,
+    )
+    updateResizeMetricsText(state.metricsEl, state.w, state.h)
   })
 }
 
@@ -3663,6 +3775,7 @@ function startGroupResize(ids: string[], dir: ResizeDir, event: PointerEvent) {
       id: memberId,
       widget,
       el,
+      metricsEl: readResizeMetricsEl(el),
       originX: widget.x,
       originY: widget.y,
       originW: widget.w,
@@ -3675,6 +3788,7 @@ function startGroupResize(ids: string[], dir: ResizeDir, event: PointerEvent) {
       y: widget.y,
       w: widget.w,
       h: widget.h,
+      previewFontSize: null,
     }
     members.push(member)
     minX = Math.min(minX, member.originX)
@@ -3719,6 +3833,7 @@ function startGroupResize(ids: string[], dir: ResizeDir, event: PointerEvent) {
   for (const member of members) {
     member.widget.z = ++zTop
     member.el?.classList.add('is-resizing')
+    updateResizeMetricsText(member.metricsEl, member.w, member.h)
   }
 
   return true
@@ -3864,24 +3979,16 @@ function applyGroupResizeStep(event: PointerEvent) {
     member.y = top + relY * nextH
     member.w = Math.max(member.minW, relW * nextW)
     member.h = Math.max(member.minH, relH * nextH)
-    member.widget.x = member.x
-    member.widget.y = member.y
-    member.widget.w = member.w
-    member.widget.h = member.h
 
     if (member.isText) {
       const bounds = textWidgetFontBounds(member.widget)
-      const nextFontSize = clamp(
+      member.previewFontSize = clamp(
         Math.round(member.originFontSize * fontScale),
         bounds.min,
         bounds.max,
       )
-      if (Number(member.widget.props?.fontSize) !== nextFontSize) {
-        member.widget.props = {
-          ...(member.widget.props ?? {}),
-          fontSize: nextFontSize,
-        }
-      }
+    } else {
+      member.previewFontSize = null
     }
   }
 
@@ -3892,6 +3999,9 @@ function applyGroupResizeStep(event: PointerEvent) {
 function finishGroupResize() {
   const state = activeGroupResizeState
   if (!state) return
+  const cornerResize =
+    (state.dir.includes('e') || state.dir.includes('w')) &&
+    (state.dir.includes('n') || state.dir.includes('s'))
 
   if (state.raf) {
     cancelAnimationFrame(state.raf)
@@ -3901,12 +4011,36 @@ function finishGroupResize() {
   for (const member of state.members) {
     member.el?.classList.remove('is-resizing')
     const fineSnap = true
-    member.widget.x = clamp(fineSnap ? Math.round(member.x) : snap(member.x), 0, BOARD_W - member.w)
-    member.widget.y = clamp(fineSnap ? Math.round(member.y) : snap(member.y), 0, BOARD_H - member.h)
-    member.widget.w = clamp(fineSnap ? Math.round(member.w) : snap(member.w), member.minW, BOARD_W)
-    member.widget.h = clamp(fineSnap ? Math.round(member.h) : snap(member.h), member.minH, BOARD_H)
+    const snappedW = clamp(
+      fineSnap ? Math.round(member.w) : snap(member.w),
+      member.minW,
+      BOARD_W,
+    )
+    const snappedH = clamp(
+      fineSnap ? Math.round(member.h) : snap(member.h),
+      member.minH,
+      BOARD_H,
+    )
+    member.widget.x = clamp(fineSnap ? Math.round(member.x) : snap(member.x), 0, BOARD_W - snappedW)
+    member.widget.y = clamp(fineSnap ? Math.round(member.y) : snap(member.y), 0, BOARD_H - snappedH)
+    member.widget.w = snappedW
+    member.widget.h = snappedH
+    if (member.isText && member.previewFontSize != null) {
+      if (Number(member.widget.props?.fontSize) !== member.previewFontSize) {
+        member.widget.props = {
+          ...(member.widget.props ?? {}),
+          fontSize: member.previewFontSize,
+        }
+      }
+    }
     clampWidget(member.widget)
     if (member.el) applyWidgetDOM(member.el, member.widget)
+    if (member.isText) {
+      const preserveMode: 'resize' | 'scale' = cornerResize ? 'scale' : 'resize'
+      fitTextWidgetAfterRender(member.widget, widgetEls.get(member.id) ?? member.el ?? null, {
+        preserveWidth: shouldPreserveTextWidth(member.widget, preserveMode),
+      })
+    }
   }
 
   activeGroupResizeState = null
@@ -3987,16 +4121,24 @@ function startResize(id: string, dir: ResizeDir, event: PointerEvent) {
     raf: null,
     widget: w,
     el,
+    metricsEl: readResizeMetricsEl(el),
     xTargets: collectAxisTargets(id, 'x'),
     yTargets: collectAxisTargets(id, 'y'),
+    widthTargets: collectSizeTargets(id, 'w'),
+    heightTargets: collectSizeTargets(id, 'h'),
     minW: minSize.w,
     minH: minSize.h,
     maxW: maxSize.w,
     maxH: maxSize.h,
     isText,
+    previewFontSize: null,
   })
 
   el.classList.add('is-resizing')
+  const resizeState = resizeStates.get(id)
+  if (resizeState) {
+    updateResizeMetricsText(resizeState.metricsEl, resizeState.w, resizeState.h)
+  }
   setGlobalResizeCursor(dir)
   setCanvasPanEnabled(false)
 
@@ -4062,106 +4204,161 @@ function applyResizePointerMove(event: PointerEvent) {
   const fromCenter = event.altKey
 
   if (state.isText) {
+    const smartSnap = shouldUseSmartSnap(event) && !fromCenter
+    let guideX: number | null = null
+    let guideY: number | null = null
+    let nextW = state.originW
+    let nextH = state.originH
+
     if (cornerResize) {
       const outwardX = xSign * dx
       const outwardY = ySign * dy
       const dominant = Math.abs(outwardX) >= Math.abs(outwardY) ? outwardX : outwardY
       const delta = dominant * (fromCenter ? 2 : 1)
+      const minUniformScale = Math.max(
+        minW / Math.max(state.originW, 1),
+        minH / Math.max(state.originH, 1),
+        0.01,
+      )
+      const maxUniformScaleByWidget = Math.min(
+        stateMaxW / Math.max(state.originW, 1),
+        stateMaxH / Math.max(state.originH, 1),
+      )
+      const rawUniformScale = (state.originW + delta) / Math.max(state.originW, 1)
+      let uniformScale = Math.max(rawUniformScale, minUniformScale)
 
-      const widthScale = clamp((state.originW + delta) / Math.max(state.originW, 1), 0.2, 4)
+      let maxUniformScale = Infinity
+      if (fromCenter) {
+        const maxW = Math.max(2, 2 * Math.min(state.originCenterX, BOARD_W - state.originCenterX))
+        const maxH = Math.max(2, 2 * Math.min(state.originCenterY, BOARD_H - state.originCenterY))
+        maxUniformScale = Math.min(
+          maxW / Math.max(state.originW, 1),
+          maxH / Math.max(state.originH, 1),
+        )
+      } else {
+        if (xSign > 0) {
+          maxUniformScale = Math.min(
+            maxUniformScale,
+            (BOARD_W - state.originX) / Math.max(state.originW, 1),
+          )
+        } else if (xSign < 0) {
+          const rightAnchor = state.originX + state.originW
+          maxUniformScale = Math.min(maxUniformScale, rightAnchor / Math.max(state.originW, 1))
+        }
+        if (ySign > 0) {
+          maxUniformScale = Math.min(
+            maxUniformScale,
+            (BOARD_H - state.originY) / Math.max(state.originH, 1),
+          )
+        } else if (ySign < 0) {
+          const bottomAnchor = state.originY + state.originH
+          maxUniformScale = Math.min(maxUniformScale, bottomAnchor / Math.max(state.originH, 1))
+        }
+      }
+
+      if (Number.isFinite(maxUniformScale)) {
+        uniformScale = Math.min(uniformScale, Math.max(maxUniformScale, minUniformScale))
+      }
+      uniformScale = Math.min(uniformScale, Math.max(maxUniformScaleByWidget, minUniformScale))
+
+      nextW = clamp(state.originW * uniformScale, minW, stateMaxW)
+      nextH = clamp(state.originH * uniformScale, minH, stateMaxH)
       const bounds = textWidgetFontBounds(w)
-      const nextFontSize = clamp(
-        Math.round(state.originFontSize * widthScale),
+      state.previewFontSize = clamp(
+        Math.round(state.originFontSize * uniformScale),
         bounds.min,
         bounds.max,
       )
-
-      if (Number(w.props?.fontSize) !== nextFontSize) {
-        w.props = {
-          ...(w.props ?? {}),
-          fontSize: nextFontSize,
-        }
+    } else {
+      if (xSign !== 0) {
+        nextW = state.originW + dx * xSign * (fromCenter ? 2 : 1)
       }
-
-      const measured = estimateTextWidgetSize(w, {
-        targetWidth: state.originW,
-        targetHeight: state.originH,
-        lockWidth: true,
-      })
-      const nextW = clamp(state.originW, state.minW, stateMaxW)
-      const nextH = clamp(measured.h, state.minH, stateMaxH)
-
-      state.x = clamp(state.originX, 0, BOARD_W - nextW)
-      state.y = clamp(state.originY, 0, BOARD_H - nextH)
-      state.w = nextW
-      state.h = nextH
-
-      setSnapGuides(null, null)
-      scheduleResizeApply(state)
-      return
+      if (ySign !== 0) {
+        nextH = state.originH + dy * ySign * (fromCenter ? 2 : 1)
+      }
+      nextW = clamp(nextW, minW, stateMaxW)
+      nextH = clamp(nextH, minH, stateMaxH)
+      state.previewFontSize = null
     }
 
-    const horizontalSign = xSign === 0 ? 1 : xSign
-    const widthDelta = dx * horizontalSign * (fromCenter ? 2 : 1)
-    let nextW = clamp(state.originW + widthDelta, state.minW, stateMaxW)
-
-    let left = fromCenter ? state.originCenterX - nextW / 2 : state.originX
-    let right = fromCenter ? state.originCenterX + nextW / 2 : state.originX + state.originW
-
-    if (!fromCenter) {
-      if (horizontalSign > 0) {
-        left = state.originX
-        right = left + nextW
+    let nextX = state.originX
+    let nextY = state.originY
+    if (fromCenter) {
+      nextX = clamp(state.originCenterX - nextW / 2, 0, BOARD_W - nextW)
+      nextY = clamp(state.originCenterY - nextH / 2, 0, BOARD_H - nextH)
+    } else {
+      if (xSign > 0) {
+        nextX = clamp(state.originX, 0, BOARD_W - nextW)
+      } else if (xSign < 0) {
+        const rightAnchor = state.originX + state.originW
+        nextX = clamp(rightAnchor - nextW, 0, BOARD_W - nextW)
       } else {
-        right = state.originX + state.originW
-        left = right - nextW
+        nextX = clamp(state.originX, 0, BOARD_W - nextW)
+      }
+
+      if (ySign > 0) {
+        nextY = clamp(state.originY, 0, BOARD_H - nextH)
+      } else if (ySign < 0) {
+        const bottomAnchor = state.originY + state.originH
+        nextY = clamp(bottomAnchor - nextH, 0, BOARD_H - nextH)
+      } else {
+        nextY = clamp(state.originY, 0, BOARD_H - nextH)
       }
     }
 
-    let guideX: number | null = null
-    if (!fromCenter) {
-      if (horizontalSign > 0) {
-        const snappedRight = snapEdgeToTargets(right, state.xTargets, false)
-        if (snappedRight.value - left >= state.minW) {
-          right = snappedRight.value
+    if (smartSnap && !cornerResize) {
+      if (xSign > 0) {
+        const left = nextX
+        const right = nextX + nextW
+        const snappedRight = snapEdgeToTargets(right, state.xTargets, true)
+        if (snappedRight.guide !== null && snappedRight.value - left >= minW) {
+          nextW = clamp(snappedRight.value - left, minW, stateMaxW)
           guideX = snappedRight.guide
         }
-      } else {
-        const snappedLeft = snapEdgeToTargets(left, state.xTargets, false)
-        if (right - snappedLeft.value >= state.minW) {
-          left = snappedLeft.value
+      } else if (xSign < 0) {
+        const right = nextX + nextW
+        const snappedLeft = snapEdgeToTargets(nextX, state.xTargets, true)
+        if (snappedLeft.guide !== null && right - snappedLeft.value >= minW) {
+          nextX = clamp(snappedLeft.value, 0, right - minW)
+          nextW = clamp(right - nextX, minW, stateMaxW)
           guideX = snappedLeft.guide
         }
       }
+
+      if (ySign > 0) {
+        const top = nextY
+        const bottom = nextY + nextH
+        const snappedBottom = snapEdgeToTargets(bottom, state.yTargets, true)
+        if (snappedBottom.guide !== null && snappedBottom.value - top >= minH) {
+          nextH = clamp(snappedBottom.value - top, minH, stateMaxH)
+          guideY = snappedBottom.guide
+        }
+      } else if (ySign < 0) {
+        const bottom = nextY + nextH
+        const snappedTop = snapEdgeToTargets(nextY, state.yTargets, true)
+        if (snappedTop.guide !== null && bottom - snappedTop.value >= minH) {
+          nextY = clamp(snappedTop.value, 0, bottom - minH)
+          nextH = clamp(bottom - nextY, minH, stateMaxH)
+          guideY = snappedTop.guide
+        }
+      }
     }
 
-    nextW = clamp(right - left, state.minW, stateMaxW)
-    const measured = estimateTextWidgetSize(w, {
-      targetWidth: nextW,
-      targetHeight: state.originH,
-      lockWidth: true,
-    })
-    const nextH = clamp(measured.h, state.minH, stateMaxH)
-
-    let nextX = fromCenter
-      ? clamp(state.originCenterX - nextW / 2, 0, BOARD_W - nextW)
-      : horizontalSign > 0
-        ? clamp(state.originX, 0, BOARD_W - nextW)
-        : clamp(state.originX + state.originW - nextW, 0, BOARD_W - nextW)
-
-    const nextY = clamp(state.originY, 0, BOARD_H - nextH)
-    if (!Number.isFinite(nextX)) nextX = clamp(state.originX, 0, BOARD_W - nextW)
+    nextW = clamp(nextW, minW, stateMaxW)
+    nextH = clamp(nextH, minH, stateMaxH)
+    nextX = clamp(nextX, 0, BOARD_W - nextW)
+    nextY = clamp(nextY, 0, BOARD_H - nextH)
 
     state.x = nextX
     state.y = nextY
     state.w = nextW
     state.h = nextH
-
-    setSnapGuides(fromCenter ? null : guideX, null)
+    setSnapGuides(smartSnap ? guideX : null, smartSnap ? guideY : null)
     scheduleResizeApply(state)
     return
   }
 
+  state.previewFontSize = null
   let nextW = state.originW
   let nextH = state.originH
 
@@ -4232,7 +4429,7 @@ function applyResizePointerMove(event: PointerEvent) {
 
   let nextX = state.originX
   let nextY = state.originY
-  const smartSnap = shouldUseSmartSnap(event) && !fromCenter && !cornerResize
+  const smartSnap = shouldUseSmartSnap(event) && !fromCenter
   let guideX: number | null = null
   let guideY: number | null = null
 
@@ -4293,6 +4490,29 @@ function applyResizePointerMove(event: PointerEvent) {
         nextY = clamp(snappedTop.value, 0, bottom - minH)
         nextH = clamp(bottom - nextY, minH, stateMaxH)
         guideY = snappedTop.guide
+      }
+    }
+
+    if (!cornerResize) {
+      if (xSign !== 0) {
+        const rightAnchor = nextX + nextW
+        const sizeSnapX = snapSizeToTargets(nextW, state.widthTargets, true)
+        if (sizeSnapX.snapped) {
+          nextW = clamp(sizeSnapX.value, minW, stateMaxW)
+          if (xSign < 0) {
+            nextX = clamp(rightAnchor - nextW, 0, BOARD_W - nextW)
+          }
+        }
+      }
+      if (ySign !== 0) {
+        const bottomAnchor = nextY + nextH
+        const sizeSnapY = snapSizeToTargets(nextH, state.heightTargets, true)
+        if (sizeSnapY.snapped) {
+          nextH = clamp(sizeSnapY.value, minH, stateMaxH)
+          if (ySign < 0) {
+            nextY = clamp(bottomAnchor - nextH, 0, BOARD_H - nextH)
+          }
+        }
       }
     }
 
@@ -4371,6 +4591,12 @@ function finishResize(id: string) {
   activeResizeId = null
 
   if (state.isText) {
+    if (state.previewFontSize != null && Number(w.props?.fontSize) !== state.previewFontSize) {
+      w.props = {
+        ...(w.props ?? {}),
+        fontSize: state.previewFontSize,
+      }
+    }
     const preserveMode: 'resize' | 'scale' = cornerResize ? 'scale' : 'resize'
     fitTextWidgetAfterRender(w, widgetEls.get(id) ?? el ?? null, {
       preserveWidth: shouldPreserveTextWidth(w, preserveMode),
@@ -4517,6 +4743,11 @@ function detachAllInteract() {
     if (!el || !el.classList) return
     el.classList.remove('is-dragging')
     el.classList.remove('is-resizing')
+    const id = String(el.dataset.id ?? '')
+    if (id) {
+      const widget = getWidgetById(id)
+      if (widget) applyWidgetDOM(el, widget)
+    }
   })
   dragStates.clear()
   activeDragId = null

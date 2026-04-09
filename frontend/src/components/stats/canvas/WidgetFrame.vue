@@ -1050,11 +1050,35 @@ let widgetSizeRaf: number | null = null
 let widgetSizeRo: ResizeObserver | null = null
 let mo: MutationObserver | null = null
 let ro: ResizeObserver | null = null
+let postInteractionRaf: number | null = null
+
+function isInteractionLocked() {
+  const el = root.value
+  if (!el) return false
+  return el.classList.contains('is-resizing') || el.classList.contains('is-dragging')
+}
+
+function schedulePostInteractionRefresh() {
+  if (postInteractionRaf) return
+  postInteractionRaf = requestAnimationFrame(() => {
+    postInteractionRaf = null
+    if (isInteractionLocked()) {
+      schedulePostInteractionRefresh()
+      return
+    }
+    scheduleWidgetSizeMeasure()
+    scheduleAutoResize()
+  })
+}
 
 function clearWidgetSizeObserver() {
   if (widgetSizeRaf) {
     cancelAnimationFrame(widgetSizeRaf)
     widgetSizeRaf = null
+  }
+  if (postInteractionRaf) {
+    cancelAnimationFrame(postInteractionRaf)
+    postInteractionRaf = null
   }
   if (widgetSizeRo) {
     widgetSizeRo.disconnect()
@@ -1076,6 +1100,10 @@ function applyLiveRenderSize(width: number, height: number) {
 }
 
 function measureWidgetSize() {
+  if (isInteractionLocked()) {
+    schedulePostInteractionRefresh()
+    return
+  }
   const el = root.value
   if (!el) return
   const width = Number(el.offsetWidth)
@@ -1098,7 +1126,13 @@ function ensureWidgetSizeObserver() {
     scheduleWidgetSizeMeasure()
     return
   }
-  widgetSizeRo = new ResizeObserver(() => scheduleWidgetSizeMeasure())
+  widgetSizeRo = new ResizeObserver(() => {
+    if (isInteractionLocked()) {
+      schedulePostInteractionRefresh()
+      return
+    }
+    scheduleWidgetSizeMeasure()
+  })
   widgetSizeRo.observe(root.value)
   scheduleWidgetSizeMeasure()
 }
@@ -1116,6 +1150,10 @@ function clearAutoResizeObservers() {
 
 function scheduleAutoResize() {
   if (!shouldAutoHeight.value) return
+  if (isInteractionLocked()) {
+    schedulePostInteractionRefresh()
+    return
+  }
   if (resizeRaf) return
   resizeRaf = requestAnimationFrame(() => {
     resizeRaf = null
@@ -1205,6 +1243,7 @@ watch(compactActions, (compact) => {
 
 onBeforeUnmount(() => {
   if (resizeRaf) cancelAnimationFrame(resizeRaf)
+  if (postInteractionRaf) cancelAnimationFrame(postInteractionRaf)
   clearWidgetSizeObserver()
   clearAutoResizeObservers()
   window.removeEventListener('keydown', onKeydown)
@@ -1256,6 +1295,7 @@ function onRootKeydown(event: KeyboardEvent) {
   contain: layout paint;
   touch-action: none;
   outline: none;
+  transform-origin: top left;
 }
 .widget[data-edit='true'] {
   contain: layout;
@@ -1686,7 +1726,14 @@ function onRootKeydown(event: KeyboardEvent) {
 }
 .widget.is-resizing {
   box-shadow: 0 5px 16px rgba(2, 6, 23, 0.24);
-  will-change: transform, width, height;
+  will-change: transform;
+}
+.widget.is-resizing .widget__surface {
+  outline: 1px solid rgba(129, 140, 248, 0.82);
+  outline-offset: -1px;
+}
+.widget.is-resizing .widget__content-inner {
+  pointer-events: none;
 }
 .widget:hover {
   box-shadow: 0 6px 18px rgba(2, 6, 23, 0.24);
