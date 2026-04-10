@@ -29,7 +29,12 @@
         <div class="tp-legend">
           <div v-if="!items.length" class="tp-empty">Aucune donnee sur la periode.</div>
           <div v-else class="tp-list">
-            <div v-for="row in rows" :key="row.label" class="tp-row">
+            <div
+              v-for="row in rows"
+              :key="row.label"
+              class="tp-row"
+              :title="`${row.label} - ${row.pct}% - ${row.valueText}`"
+            >
               <span class="tp-dot" :style="{ background: row.color }"></span>
               <span class="tp-name">{{ row.label }}</span>
               <span class="tp-metric">
@@ -48,7 +53,12 @@
         <div class="tp-legend">
           <div v-if="!items.length" class="tp-empty">Aucune donnee sur la periode.</div>
           <div v-else class="tp-list">
-            <div v-for="row in rows" :key="row.label" class="tp-row">
+            <div
+              v-for="row in rows"
+              :key="row.label"
+              class="tp-row"
+              :title="`${row.label} - ${row.pct}% - ${row.valueText}`"
+            >
               <span class="tp-dot" :style="{ background: row.color }"></span>
               <span class="tp-name">{{ row.label }}</span>
               <span class="tp-metric">
@@ -244,7 +254,9 @@ const option = computed(() => {
   }
 
   if (props.view === 'heatmap') {
-    const maxVal = values.reduce((m, v) => Math.max(m, Number(v || 0)), 0)
+    const stackRows = rows.value.filter((row) => row.value > 0)
+    const totalValue = total.value > 0 ? total.value : 1
+
     return {
       backgroundColor: 'transparent',
       tooltip: {
@@ -252,17 +264,25 @@ const option = computed(() => {
         confine: true,
         transitionDuration: 0,
         formatter: (p) => {
-          const v = Array.isArray(p?.value) ? p.value[2] : p?.value
-          return `${p?.name ?? ''}<br/>${formatEUR(v)}`
+          const row = rows.value.find((entry) => entry.label === p?.seriesName)
+          if (!row) return ''
+          return `${row.label}<br/>${row.valueText} - ${row.pct}%`
         },
       },
-      grid: { left: 60, right: 16, top: 16, bottom: 30, containLabel: true },
+      grid: { left: 14, right: 14, top: 8, bottom: 28, containLabel: true },
       xAxis: {
-        type: 'category',
-        data: labels,
-        axisLabel: { color: '#E5E7EB', fontSize: 10, interval: 0 },
+        type: 'value',
+        min: 0,
+        max: totalValue,
+        splitNumber: 4,
+        axisLabel: {
+          color: '#94A3B8',
+          fontSize: 10,
+          formatter: (v) => `${Math.round((v / totalValue) * 100)}%`,
+        },
         axisLine: { lineStyle: { color: '#334155' } },
-        axisTick: { show: false },
+        axisTick: { show: false, alignWithLabel: true },
+        splitLine: { lineStyle: { color: 'rgba(148,163,184,0.12)' } },
       },
       yAxis: {
         type: 'category',
@@ -271,26 +291,40 @@ const option = computed(() => {
         axisLine: { lineStyle: { color: '#334155' } },
         axisTick: { show: false },
       },
-      visualMap: {
-        min: 0,
-        max: maxVal || 1,
-        show: false,
-        inRange: { color: ['#1E293B', '#7C3AED', '#F59E0B'] },
-      },
-      series: [
-        {
-          type: 'heatmap',
-          data: labels.map((_, i) => [i, 0, values[i] ?? 0]),
-          itemStyle: { borderColor: 'rgba(255,255,255,0.08)', borderWidth: 1 },
-          label: {
-            show: true,
-            color: '#E2E8F0',
-            fontSize: 10,
-            formatter: (p) => formatEUR(p.value?.[2] ?? 0, { compact: true }),
+      series: stackRows.map((row, index) => {
+        const isFirst = index === 0
+        const isLast = index === stackRows.length - 1
+        return {
+          type: 'bar',
+          stack: 'profit-share',
+          name: row.label,
+          barWidth: denseMode.value ? 28 : 34,
+          data: [row.value],
+          itemStyle: {
+            color: row.color,
+            borderColor: 'rgba(2,6,23,0.9)',
+            borderWidth: 1.5,
+            borderRadius: [
+              isLast ? 10 : 0,
+              isLast ? 10 : 0,
+              isFirst ? 10 : 0,
+              isFirst ? 10 : 0,
+            ],
           },
-          emphasis: { disabled: true },
-        },
-      ],
+          label: {
+            show: row.pct >= 12,
+            position: 'inside',
+            color: 'rgba(2,6,23,0.82)',
+            fontWeight: 700,
+            fontSize: denseMode.value ? 9 : 10,
+            formatter: () => `${row.valueText}`,
+          },
+          emphasis: {
+            focus: 'series',
+            itemStyle: { opacity: 0.92 },
+          },
+        }
+      }),
     }
   }
 
@@ -411,6 +445,13 @@ const toLabel = computed(() =>
   border-radius: 12px;
   background: rgba(15, 23, 42, 0.45);
   border: 1px solid rgba(255, 255, 255, 0.06);
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease;
+}
+.tp-row:hover {
+  background: rgba(30, 41, 59, 0.7);
+  border-color: rgba(148, 163, 184, 0.24);
 }
 .tp-dot {
   width: 8px;
