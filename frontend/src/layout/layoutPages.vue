@@ -8,7 +8,7 @@
     <template v-if="!isAuthRoute">
       <!-- Header for stats: simple bar -->
       <header class="fixed top-4 left-0 right-0 z-50 pointer-events-none">
-        <div class="layout-shell-row h-14 flex items-center justify-between pointer-events-none">
+        <div class="layout-shell-row layout-shell-row--header h-14 flex items-center justify-between pointer-events-none">
           <!-- Left spacer / burger -->
           <div class="flex items-center pointer-events-auto">
             <button
@@ -131,7 +131,7 @@
         <!-- Mobile menu -->
         <div
           v-if="showPrimaryNav && mobileMenuOpen"
-          class="md:hidden layout-shell-row pb-3 pointer-events-auto"
+          class="md:hidden layout-shell-row layout-shell-row--header pb-3 pointer-events-auto"
           @click.stop
         >
           <div class="mt-2 rounded-2xl border backdrop-blur p-2 bg-gray-900/70 border-white/10">
@@ -668,6 +668,11 @@ body,
   width: min(100%, var(--layout-shell-max-width, 1536px));
   margin-inline: auto;
   padding-inline: var(--layout-shell-gutter, clamp(16px, 2.2vw, 32px));
+}
+
+.layout-shell-row--header {
+  width: 100%;
+  max-width: none;
 }
 
 .layout-fullbleed {
