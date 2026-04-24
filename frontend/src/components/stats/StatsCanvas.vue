@@ -8,7 +8,7 @@
   >
     <teleport to="body">
       <div
-        v-if="templatePickerOpen && !templateActive"
+        v-if="templatePickerOpen"
         class="template-picker-modal"
         role="dialog"
         aria-modal="true"
@@ -212,53 +212,6 @@
       </article>
     </div>
 
-    <div
-      v-if="isCompact && !paletteOpen && !fullscreenActive"
-      class="mobile-toolbar"
-      role="toolbar"
-      aria-label="Outils mobile"
-    >
-      <button
-        type="button"
-        class="mobile-toolbtn"
-        :class="{ 'is-active': railDatePickerOpen }"
-        @click.stop="toggleRailDatePicker"
-        aria-label="Afficher la periode"
-      >
-        <CalendarRange class="h-4 w-4" />
-      </button>
-      <button type="button" class="mobile-toolbtn" @click.stop="zoomOut" aria-label="Dezoomer">
-        <Minus class="h-4 w-4" />
-      </button>
-      <button type="button" class="mobile-toolbtn mobile-toolbtn--scale" @click.stop="resetZoom">
-        {{ Math.round(scale * 100) }}%
-      </button>
-      <button type="button" class="mobile-toolbtn" @click.stop="zoomIn" aria-label="Zoomer">
-        <Plus class="h-4 w-4" />
-      </button>
-      <button type="button" class="mobile-toolbtn" @click.stop="centerView" aria-label="Centrer">
-        <LocateFixed class="h-4 w-4" />
-      </button>
-      <button
-        type="button"
-        class="mobile-toolbtn"
-        :class="{ 'is-active': editMode }"
-        @click.stop="toggleEditMode"
-        :aria-label="editMode ? 'Desactiver edition' : 'Activer edition'"
-      >
-        <component :is="editMode ? LockOpen : Lock" class="h-4 w-4" />
-      </button>
-      <button
-        type="button"
-        class="mobile-toolbtn mobile-toolbtn--accent"
-        :disabled="!editMode"
-        @click.stop="paletteOpen = true"
-        aria-label="Ajouter un widget"
-      >
-        <PlusSquare class="h-4 w-4" />
-      </button>
-    </div>
-
     <!-- Palette -->
     <WidgetPalette
       :open="paletteOpen"
@@ -350,12 +303,23 @@
         </button>
         <button
           type="button"
+          class="template-rail__meta-btn"
+          :class="{ 'is-active': templatePickerOpen }"
+          :data-tooltip="'Templates'"
+          title="Choisir un template"
+          aria-label="Choisir un template"
+          @click.stop="openTemplatePicker"
+        >
+          <LayoutTemplate class="h-4 w-4" />
+        </button>
+        <button
+          type="button"
           class="template-rail__meta-btn template-rail__meta-btn--accent"
-          :disabled="!editMode || templateActive"
+          :disabled="templateActive"
           :data-tooltip="'Ajouter widget'"
           title="Ajouter un widget"
           aria-label="Ajouter un widget"
-          @click.stop="paletteOpen = true"
+          @click.stop="openWidgetPaletteFromRail"
         >
           <PlusSquare class="h-4 w-4" />
         </button>
@@ -572,14 +536,10 @@ import {
   BarChart3,
   Boxes,
   CalendarRange,
+  LayoutTemplate,
   Paintbrush,
   LayoutGrid,
-  Minus,
-  Plus,
-  LocateFixed,
   Target,
-  Lock,
-  LockOpen,
   PlusSquare,
 } from 'lucide-vue-next'
 
@@ -738,11 +698,23 @@ function toggleThemeMode() {
 }
 
 function openTemplatePicker() {
+  closeRailDatePicker()
+  paletteOpen.value = false
   templatePickerOpen.value = true
 }
 
 function closeTemplatePicker() {
   templatePickerOpen.value = false
+}
+
+function openWidgetPaletteFromRail() {
+  if (templateActive.value) return
+  if (!editMode.value) {
+    editMode.value = true
+    persistEditMode()
+  }
+  closeRailDatePicker()
+  paletteOpen.value = true
 }
 
 function applyTemplate(kind: TemplateKind) {
