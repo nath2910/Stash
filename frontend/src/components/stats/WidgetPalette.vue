@@ -198,8 +198,8 @@ const emit = defineEmits<{
 const FORM_OPTIONS = {
   number: {
     key: 'number',
-    label: 'Chiffre',
-    hint: 'KPI compact',
+    label: 'KPI',
+    hint: 'Vue compacte',
     icon: Hash,
     color: '#2563eb',
   },
@@ -226,8 +226,8 @@ const FORM_OPTIONS = {
   },
   line: {
     key: 'line',
-    label: 'Graphe',
-    hint: 'Courbe temporelle',
+    label: 'Courbe',
+    hint: 'Tendance temporelle',
     icon: LineChart,
     color: '#0f766e',
   },

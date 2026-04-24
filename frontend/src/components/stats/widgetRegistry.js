@@ -11,6 +11,10 @@ import {
   Activity,
   Trophy,
   StickyNote,
+  Target,
+  Radar,
+  Bell,
+  ListChecks,
 } from 'lucide-vue-next'
 
 // src/components/stats/widgets/widgetRegistry.js
@@ -29,6 +33,14 @@ import ActiveListingsWidget from './widgets/ActiveListingsWidget.vue'
 import TopProfitDriversWidget from './widgets/TopProfitDriversWidget.vue'
 import AspWidget from './widgets/AspWidget.vue'
 import CashFlowWidget from './widgets/CashFlowWidget.vue'
+import GoalProgressWidget from './widgets/GoalProgressWidget.vue'
+import VarianceToTargetWidget from './widgets/VarianceToTargetWidget.vue'
+import PeriodComparisonWidget from './widgets/PeriodComparisonWidget.vue'
+import ProfitBridgeWidget from './widgets/ProfitBridgeWidget.vue'
+import AlertFeedWidget from './widgets/AlertFeedWidget.vue'
+import ActionChecklistWidget from './widgets/ActionChecklistWidget.vue'
+import MomentumWidget from './widgets/MomentumWidget.vue'
+import RiskHeatWidget from './widgets/RiskHeatWidget.vue'
 
 import BrandsWidget from './widgets/BrandsWidget.vue'
 import TopSalesWidget from './widgets/TopSalesWidget.vue'
@@ -41,6 +53,7 @@ export const CATEGORY_COLORS = {
   Finance: { color: '#22c55e', glow: 'rgba(34, 197, 94, 0.2)' },
   Stock: { color: '#38bdf8', glow: 'rgba(56, 189, 248, 0.2)' },
   Performance: { color: '#f59e0b', glow: 'rgba(245, 158, 11, 0.22)' },
+  Decision: { color: '#14b8a6', glow: 'rgba(20, 184, 166, 0.22)' },
   Bonus: { color: '#ec4899', glow: 'rgba(236, 72, 153, 0.22)' },
   Autres: { color: '#94a3b8', glow: 'rgba(148, 163, 184, 0.2)' },
 }
@@ -141,14 +154,63 @@ export const WIDGET_DEFS = [
     type: 'netProfit',
     title: 'Bénéfice net',
     category: 'Finance',
-    help: 'Profit total sur la période',
+    help: 'Vue KPI ou courbe du bénéfice net',
     icon: TrendingUp,
     component: NetProfitWidget,
-    forms: ['number'],
-    defaultSize: { w: 520, h: 260 },
-    minSize: { w: 380, h: 210 },
-    defaultProps: { bucket: 'week', autoHeight: false, categories: [], types: [] },
-    settings: [],
+    forms: ['number', 'line'],
+    defaultSize: { w: 660, h: 380 },
+    minSize: { w: 380, h: 300 },
+    defaultProps: {
+      view: 'line',
+      bucket: 'week',
+      showComparison: true,
+      showArea: true,
+      smoothLine: true,
+      showSalesKpi: true,
+      showAvgProfitPerSale: true,
+      showNetMargin: true,
+      showBestPeriod: true,
+      secondaryLimit: 4,
+      autoHeight: false,
+      categories: [],
+      types: [],
+    },
+    settings: [
+      {
+        key: 'view',
+        label: 'Vue',
+        type: 'select',
+        options: [
+          { label: 'KPI', value: 'number' },
+          { label: 'Courbe', value: 'line' },
+        ],
+      },
+      {
+        key: 'bucket',
+        label: 'Granularite',
+        type: 'select',
+        options: [
+          { label: 'Jour', value: 'day' },
+          { label: 'Semaine', value: 'week' },
+          { label: 'Mois', value: 'month' },
+        ],
+      },
+      { key: 'showComparison', label: 'Afficher comparaison', type: 'toggle' },
+      { key: 'showArea', label: 'Afficher zone sous courbe', type: 'toggle' },
+      { key: 'smoothLine', label: 'Courbe lissée', type: 'toggle' },
+      { key: 'showSalesKpi', label: 'Afficher KPI ventes', type: 'toggle' },
+      { key: 'showAvgProfitPerSale', label: 'Afficher bénéfice moyen / vente', type: 'toggle' },
+      { key: 'showNetMargin', label: 'Afficher marge nette', type: 'toggle' },
+      { key: 'showBestPeriod', label: 'Afficher meilleure période', type: 'toggle' },
+      {
+        key: 'secondaryLimit',
+        label: 'Nombre max de sous-KPI',
+        type: 'number',
+        min: 1,
+        max: 4,
+        step: 1,
+      },
+    ],
     categoryFilter: true,
   },
   {
@@ -276,8 +338,8 @@ export const WIDGET_DEFS = [
     icon: Trophy,
     component: TopProfitDriversWidget,
     forms: ['bars', 'pie', 'treemap', 'heatmap'],
-    defaultSize: { w: 720, h: 360 },
-    minSize: { w: 520, h: 300 },
+    defaultSize: { w: 1020, h: 660 },
+    minSize: { w: 520, h: 340 },
     defaultProps: { top: 8, autoHeight: true, view: 'bars', categories: [], types: [] },
     settings: [
       {
@@ -321,6 +383,223 @@ export const WIDGET_DEFS = [
     categoryFilter: true,
   },
 
+  // 🧭 Decision
+  {
+    type: 'goalProgress',
+    title: 'Goal progress',
+    category: 'Decision',
+    help: 'Progression vers un objectif',
+    icon: Target,
+    component: GoalProgressWidget,
+    forms: ['target'],
+    defaultSize: { w: 760, h: 340 },
+    minSize: { w: 460, h: 260 },
+    defaultProps: {
+      metric: 'netProfit',
+      target: 12000,
+      unit: 'EUR',
+      bucket: 'week',
+      categories: [],
+      types: [],
+    },
+    settings: [
+      {
+        key: 'metric',
+        label: 'Metric',
+        type: 'select',
+        options: [
+          { label: 'Profit', value: 'netProfit' },
+          { label: 'CA', value: 'grossRevenue' },
+          { label: 'Cash', value: 'cashAvailable' },
+          { label: 'Marge', value: 'avgMargin' },
+          { label: 'ROI', value: 'roi' },
+          { label: 'Ecoulement', value: 'sellThrough' },
+        ],
+      },
+      { key: 'target', label: 'Objectif', type: 'number', min: 0, max: 9_999_999, step: 1 },
+      {
+        key: 'unit',
+        label: 'Unite',
+        type: 'select',
+        options: [
+          { label: 'EUR', value: 'EUR' },
+          { label: '%', value: '%' },
+        ],
+      },
+    ],
+    categoryFilter: true,
+  },
+  {
+    type: 'varianceToTarget',
+    title: 'Variance to target',
+    category: 'Decision',
+    help: 'Ecart par rapport a la cible',
+    icon: Radar,
+    component: VarianceToTargetWidget,
+    forms: ['number'],
+    defaultSize: { w: 760, h: 340 },
+    minSize: { w: 460, h: 260 },
+    defaultProps: {
+      metric: 'grossRevenue',
+      target: 42000,
+      unit: 'EUR',
+      bucket: 'week',
+      categories: [],
+      types: [],
+    },
+    settings: [
+      {
+        key: 'metric',
+        label: 'Metric',
+        type: 'select',
+        options: [
+          { label: 'Profit', value: 'netProfit' },
+          { label: 'CA', value: 'grossRevenue' },
+          { label: 'Cash', value: 'cashAvailable' },
+          { label: 'Marge', value: 'avgMargin' },
+          { label: 'ROI', value: 'roi' },
+          { label: 'Ecoulement', value: 'sellThrough' },
+        ],
+      },
+      { key: 'target', label: 'Objectif', type: 'number', min: 0, max: 9_999_999, step: 1 },
+      {
+        key: 'unit',
+        label: 'Unite',
+        type: 'select',
+        options: [
+          { label: 'EUR', value: 'EUR' },
+          { label: '%', value: '%' },
+        ],
+      },
+    ],
+    categoryFilter: true,
+  },
+  {
+    type: 'periodComparison',
+    title: 'Period comparison',
+    category: 'Decision',
+    help: 'Comparer deux periodes',
+    icon: GitCompareArrows,
+    component: PeriodComparisonWidget,
+    forms: ['bars'],
+    defaultSize: { w: 980, h: 420 },
+    minSize: { w: 620, h: 300 },
+    defaultProps: {
+      metric: 'netProfit',
+      bucket: 'week',
+      categories: [],
+      types: [],
+    },
+    settings: [
+      {
+        key: 'metric',
+        label: 'Metric',
+        type: 'select',
+        options: [
+          { label: 'Profit', value: 'netProfit' },
+          { label: 'CA', value: 'grossRevenue' },
+          { label: 'Marge', value: 'avgMargin' },
+          { label: 'ROI', value: 'roi' },
+          { label: 'Ecoulement', value: 'sellThrough' },
+        ],
+      },
+      {
+        key: 'bucket',
+        label: 'Granularite',
+        type: 'select',
+        options: [
+          { label: 'Jour', value: 'day' },
+          { label: 'Semaine', value: 'week' },
+          { label: 'Mois', value: 'month' },
+        ],
+      },
+    ],
+    categoryFilter: true,
+  },
+  {
+    type: 'profitBridge',
+    title: 'Profit bridge',
+    category: 'Decision',
+    help: 'Bridge de contribution au profit',
+    icon: LineChart,
+    component: ProfitBridgeWidget,
+    forms: ['bars'],
+    defaultSize: { w: 1080, h: 470 },
+    minSize: { w: 700, h: 320 },
+    defaultProps: { categories: [], types: [] },
+    settings: [],
+    categoryFilter: true,
+  },
+  {
+    type: 'alertFeed',
+    title: 'Alert feed',
+    category: 'Decision',
+    help: 'Flux d alertes prioritaires',
+    icon: Bell,
+    component: AlertFeedWidget,
+    forms: ['number'],
+    defaultSize: { w: 1080, h: 390 },
+    minSize: { w: 620, h: 300 },
+    defaultProps: { maxItems: 8, categories: [], types: [] },
+    settings: [{ key: 'maxItems', label: 'Max alertes', type: 'number', min: 3, max: 15, step: 1 }],
+    categoryFilter: true,
+  },
+  {
+    type: 'actionChecklist',
+    title: 'Action checklist',
+    category: 'Decision',
+    help: 'Plan d execution actionnable',
+    icon: ListChecks,
+    component: ActionChecklistWidget,
+    forms: ['number'],
+    defaultSize: { w: 1180, h: 390 },
+    minSize: { w: 760, h: 300 },
+    defaultProps: { categories: [], types: [] },
+    settings: [],
+    categoryFilter: true,
+  },
+  {
+    type: 'momentum',
+    title: 'Momentum',
+    category: 'Decision',
+    help: 'Indice d acceleration',
+    icon: TrendingUp,
+    component: MomentumWidget,
+    forms: ['line'],
+    defaultSize: { w: 780, h: 340 },
+    minSize: { w: 500, h: 280 },
+    defaultProps: { metric: 'netProfit', bucket: 'week', categories: [], types: [] },
+    settings: [
+      {
+        key: 'metric',
+        label: 'Metric',
+        type: 'select',
+        options: [
+          { label: 'Profit', value: 'netProfit' },
+          { label: 'CA', value: 'grossRevenue' },
+          { label: 'ROI', value: 'roi' },
+          { label: 'Marge', value: 'avgMargin' },
+          { label: 'Ecoulement', value: 'sellThrough' },
+        ],
+      },
+    ],
+    categoryFilter: true,
+  },
+  {
+    type: 'riskHeat',
+    title: 'Risk heat',
+    category: 'Decision',
+    help: 'Carte de concentration des risques',
+    icon: BarChart3,
+    component: RiskHeatWidget,
+    forms: ['heatmap'],
+    defaultSize: { w: 720, h: 360 },
+    minSize: { w: 520, h: 300 },
+    defaultProps: { categories: [], types: [] },
+    settings: [],
+    categoryFilter: true,
+  },
+
   // Bonus (si tu veux garder)
   {
     type: 'brands',
@@ -331,8 +610,8 @@ export const WIDGET_DEFS = [
     component: BrandsWidget,
     forms: ['bars', 'treemap', 'heatmap'],
     defaultSize: { w: 720, h: 420 },
-    minSize: { w: 520, h: 320 },
-    defaultProps: { top: 8, autoHeight: false, view: 'bars', categories: [], types: [] },
+    minSize: { w: 500, h: 220 },
+    defaultProps: { top: 8, autoHeight: true, view: 'bars', categories: [], types: [] },
     settings: [
       {
         key: 'top',
@@ -343,6 +622,7 @@ export const WIDGET_DEFS = [
         step: 1,
         help: 'Entre 1 et 15',
       },
+      { key: 'autoHeight', label: 'Hauteur automatique', type: 'toggle' },
     ],
     categoryFilter: true,
   },

@@ -1,11 +1,11 @@
 <template>
   <div
-    class="widget-card h-full"
-    :class="[surfaceClass, { 'is-narrow': isNarrow, 'is-tiny': isTiny }]"
+    class="widget-card"
+    :class="[surfaceClass, { 'is-narrow': isNarrow, 'is-tiny': isTiny, 'is-auto': autoHeight }]"
     :style="cardStyle"
   >
     <div class="widget-card__zoom">
-      <div class="widget-card__head">
+      <div v-if="!hideHeader" class="widget-card__head">
         <div class="widget-card__titlewrap min-w-0">
           <p v-if="subtitle" class="widget-card__subtitle truncate">{{ subtitle }}</p>
           <p class="widget-card__title truncate">{{ title }}</p>
@@ -17,7 +17,7 @@
         </div>
       </div>
 
-      <div class="widget-card__content">
+      <div class="widget-card__content" :class="{ 'widget-card__content--headless': hideHeader }">
         <div v-if="loading" class="h-full flex items-center justify-center">
           <div class="animate-pulse widget-card__status">Chargement...</div>
         </div>
@@ -42,8 +42,10 @@ const props = defineProps({
   subtitle: { type: String, default: '' },
   accent: { type: String, default: '#38BDF8' },
   surface: { type: String, default: 'generic' },
+  hideHeader: { type: Boolean, default: false },
   loading: { type: Boolean, default: false },
   error: { type: String, default: '' },
+  autoHeight: { type: Boolean, default: false },
   widgetWidth: { type: Number, default: 520 },
   widgetHeight: { type: Number, default: 240 },
   widgetBaseWidth: { type: Number, default: 0 },
@@ -89,17 +91,17 @@ const cardStyle = computed(() => {
 <style scoped>
 .widget-card {
   position: relative;
+  height: 100%;
   overflow: hidden;
   border-radius: var(--widget-card-radius);
-  border: none;
-  background:
-    linear-gradient(180deg, rgba(10, 15, 28, 0.95), rgba(7, 12, 22, 0.97)),
-    radial-gradient(
-      circle at 100% 0%,
-      color-mix(in srgb, var(--widget-card-accent) 11%, transparent),
-      transparent 52%
-    );
-  box-shadow: 0 6px 14px rgba(2, 6, 23, 0.18);
+  border: 1px solid color-mix(in srgb, var(--template-surface-line, rgba(148, 163, 184, 0.22)) 90%, transparent);
+  background: var(--template-surface-card, linear-gradient(180deg, rgba(10, 15, 28, 0.95), rgba(7, 12, 22, 0.97)));
+  box-shadow:
+    var(--template-shadow-card, 0 8px 16px rgba(2, 6, 23, 0.16)),
+    var(--template-shadow-card-inset, inset 0 1px 0 rgba(255, 255, 255, 0.04));
+}
+.widget-card.is-auto {
+  height: auto;
 }
 
 .widget-card--kpi,
@@ -108,13 +110,7 @@ const cardStyle = computed(() => {
 .widget-card--ranking,
 .widget-card--utility,
 .widget-card--generic {
-  background:
-    linear-gradient(180deg, rgba(10, 15, 28, 0.95), rgba(7, 12, 22, 0.97)),
-    radial-gradient(
-      circle at 100% 0%,
-      color-mix(in srgb, var(--widget-card-accent) 11%, transparent),
-      transparent 52%
-    );
+  background: linear-gradient(180deg, rgba(10, 15, 28, 0.95), rgba(7, 12, 22, 0.97));
 }
 
 .widget-card__zoom {
@@ -125,15 +121,18 @@ const cardStyle = computed(() => {
   box-sizing: border-box;
   padding: var(--widget-card-padding);
 }
+.widget-card.is-auto .widget-card__zoom {
+  height: auto;
+}
 
 .widget-card__head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
-  margin-bottom: 12px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+  margin-bottom: 10px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid color-mix(in srgb, var(--template-surface-line, rgba(148, 163, 184, 0.18)) 90%, transparent);
 }
 
 .widget-card__titlewrap {
@@ -152,6 +151,13 @@ const cardStyle = computed(() => {
   min-width: 0;
   min-height: 0;
 }
+.widget-card.is-auto .widget-card__content {
+  flex: 0 0 auto;
+}
+
+.widget-card__content--headless {
+  padding-top: 0;
+}
 
 .widget-card__slot {
   width: 100%;
@@ -161,18 +167,25 @@ const cardStyle = computed(() => {
   overflow: auto;
   padding-right: 2px;
 }
+.widget-card.is-auto .widget-card__slot {
+  height: auto;
+  overflow: visible;
+}
 
 .widget-card__subtitle {
   font-size: var(--widget-card-subtitle-size);
-  color: rgba(203, 213, 225, 0.76);
-  letter-spacing: 0.02em;
+  color: var(--template-text-muted, rgba(203, 213, 225, 0.78));
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-weight: 700;
 }
 
 .widget-card__title {
   font-size: var(--widget-card-title-size);
   line-height: 1.14;
-  font-weight: 650;
-  color: rgba(248, 250, 252, 0.98);
+  font-weight: 720;
+  color: var(--template-text, rgba(248, 250, 252, 0.98));
+  font-family: var(--template-title-font, "Inter", sans-serif);
 }
 
 .widget-card__dot {
@@ -185,7 +198,7 @@ const cardStyle = computed(() => {
 
 .widget-card__status {
   font-size: var(--widget-card-status-size);
-  color: rgba(203, 213, 225, 0.78);
+  color: var(--template-text-muted, rgba(203, 213, 225, 0.78));
 }
 
 .widget-card__status--error {

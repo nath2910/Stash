@@ -74,7 +74,7 @@ public interface SnkVenteRepository extends JpaRepository<SnkVente, Integer> {
       from SnkVente v
       where v.user.id = :userId
         and v.dateVente is null
-        and (v.dateAchat is not null or v.createdAt is not null)
+        and v.dateAchat is not null
       """)
   List<SnkVente> findInStockCandidatesByUserId(@Param("userId") Long userId);
 
@@ -780,6 +780,7 @@ List<LabelValueRow> topCategoriesProfit(@Param("userId") Long userId,
       WHEN lower(t.nom_item) LIKE '%adidas%' THEN 'Adidas'
       WHEN lower(t.nom_item) LIKE '%jordan%' THEN 'Jordan'
       WHEN lower(t.nom_item) LIKE '%pokemon%' THEN 'Pokemon'
+      WHEN trim(COALESCE(t.categorie, '')) <> '' THEN trim(t.categorie)
       ELSE 'Autre'
     END AS label,
     COUNT(*) AS nb
@@ -794,6 +795,7 @@ List<LabelValueRow> topCategoriesProfit(@Param("userId") Long userId,
       WHEN lower(t.nom_item) LIKE '%adidas%' THEN 'Adidas'
       WHEN lower(t.nom_item) LIKE '%jordan%' THEN 'Jordan'
       WHEN lower(t.nom_item) LIKE '%pokemon%' THEN 'Pokemon'
+      WHEN trim(COALESCE(t.categorie, '')) <> '' THEN trim(t.categorie)
       ELSE 'Autre'
     END
   ORDER BY nb DESC

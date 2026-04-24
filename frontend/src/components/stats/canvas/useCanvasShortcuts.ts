@@ -2,6 +2,7 @@ import { ref, type Ref } from 'vue'
 
 type UseCanvasShortcutsArgs = {
   editMode: Ref<boolean>
+  templateActive: Ref<boolean>
   fullscreenActive: Ref<boolean>
   paletteOpen: Ref<boolean>
   settingsOpen: Ref<boolean>
@@ -36,6 +37,7 @@ export function useCanvasShortcuts(args: UseCanvasShortcutsArgs) {
     const active =
       enabled &&
       args.editMode.value &&
+      !args.templateActive.value &&
       !args.fullscreenActive.value &&
       !args.paletteOpen.value &&
       !args.settingsOpen.value &&
@@ -52,6 +54,7 @@ export function useCanvasShortcuts(args: UseCanvasShortcutsArgs) {
   }
 
   function onCanvasKeyDown(event: KeyboardEvent) {
+    if (args.templateActive.value) return
     const key = event.key
 
     if (key === 'Escape') {

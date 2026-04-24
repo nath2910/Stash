@@ -14,6 +14,7 @@ const props = defineProps({
   size: { type: String, default: 'lg' }, // sm | md | lg | xl
   align: { type: String, default: 'left' }, // left | center | right
   valign: { type: String, default: 'center' }, // start | center | end
+  autoHeight: { type: Boolean, default: true },
   fontFamily: { type: String, default: 'open-sans' },
   fontSize: { type: Number, default: 52 },
   color: { type: String, default: '#ffffff' },
@@ -44,7 +45,12 @@ const containerStyle = computed(() => {
     props.valign === 'start' ? 'flex-start' : props.valign === 'end' ? 'flex-end' : 'center'
   const alignItems =
     props.align === 'center' ? 'center' : props.align === 'right' ? 'flex-end' : 'flex-start'
-  return { justifyContent, alignItems, flexDirection: 'column' }
+  return {
+    justifyContent,
+    alignItems,
+    flexDirection: 'column',
+    minHeight: props.autoHeight === false ? '100%' : '0',
+  }
 })
 
 const titleStyle = computed(() => {
@@ -82,7 +88,7 @@ const titleStyle = computed(() => {
 .text-title-shell {
   width: 100%;
   height: auto;
-  min-height: 100%;
+  min-height: 0;
   max-width: 100%;
   overflow: hidden;
   display: flex;

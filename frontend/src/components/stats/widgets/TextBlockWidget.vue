@@ -14,6 +14,7 @@ const props = defineProps({
   size: { type: String, default: 'md' }, // sm | md | lg | xl
   align: { type: String, default: 'left' }, // left | center | right
   valign: { type: String, default: 'start' }, // start | center | end
+  autoHeight: { type: Boolean, default: true },
   fontFamily: { type: String, default: 'open-sans' },
   fontSize: { type: Number, default: 17 },
   color: { type: String, default: '#e2e8f0' },
@@ -42,7 +43,11 @@ const FONT_FAMILIES = {
 const containerStyle = computed(() => {
   const justifyContent =
     props.valign === 'center' ? 'center' : props.valign === 'end' ? 'flex-end' : 'flex-start'
-  return { justifyContent, flexDirection: 'column' }
+  return {
+    justifyContent,
+    flexDirection: 'column',
+    minHeight: props.autoHeight === false ? '100%' : '0',
+  }
 })
 
 const textStyle = computed(() => {
@@ -80,7 +85,7 @@ const textStyle = computed(() => {
 .text-block-shell {
   width: 100%;
   height: auto;
-  min-height: 100%;
+  min-height: 0;
   max-width: 100%;
   overflow: hidden;
   display: flex;

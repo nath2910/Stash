@@ -1,286 +1,207 @@
-﻿<template>
-  <div class="relative h-full w-full overflow-hidden rounded-2xl text-slate-100">
-    <template v-if="dataState === 'ready'">
-      <div
-        class="relative z-10 grid h-full min-h-0 px-4 pb-3"
-        :style="{
-          paddingTop: `${topInset}px`,
-          gridTemplateRows: showFooter ? 'auto minmax(0,1fr) auto' : 'auto minmax(0,1fr)',
-        }"
-      >
-        <header class="min-w-0">
-          <p
-            class="font-semibold uppercase tracking-[0.16em] text-white/58"
-            :class="periodLabelClass"
-          >
-            Période
-          </p>
+<template>
+  <WidgetCard
+    title="Benefice net"
+    subtitle="Suivi de rentabilite"
+    :hide-header="true"
+    :accent="accent"
+    :surface="isLineView ? 'trend' : 'kpi'"
+    :loading="loading"
+    :error="error"
+    :widget-width="props.widgetWidth"
+    :widget-height="props.widgetHeight"
+    :widget-base-width="props.widgetBaseWidth"
+    :widget-base-height="props.widgetBaseHeight"
+  >
+    <div ref="contentEl" class="npw-root">
+      <template v-if="dataState === 'ready'">
+        <NetProfitTrendWidget
+          v-if="isLineView"
+          :metrics="metrics"
+          :period-text="periodText"
+          :bucket="activeBucket"
+          :layout="layout"
+          :show-comparison="props.showComparison"
+          :show-area="props.showArea"
+          :smooth-line="props.smoothLine"
+        />
+        <NetProfitKpiWidget
+          v-else
+          :metrics="metrics"
+          :period-text="periodText"
+          :bucket="activeBucket"
+          :layout="layout"
+          :show-comparison="props.showComparison"
+          :show-sales-kpi="props.showSalesKpi"
+          :show-avg-profit-per-sale="props.showAvgProfitPerSale"
+          :show-net-margin="props.showNetMargin"
+          :show-best-period="props.showBestPeriod"
+          :secondary-limit="props.secondaryLimit"
+        />
+      </template>
 
-          <p
-            class="mt-1 truncate font-semibold tabular-nums text-white/96"
-            :class="periodValueClass"
-          >
-            {{ periodText }}
-          </p>
-        </header>
-
-        <section class="grid min-h-0" :class="[mainGridClass, mainSpacingClass]">
-          <div class="min-w-0 flex min-h-0 flex-col justify-start">
-            <p
-              class="font-semibold uppercase tracking-[0.16em] text-white/60"
-              :class="kpiLabelClass"
-            >
-              Bénéfice net
-            </p>
-
-            <div class="mt-2 min-w-0">
-              <p
-                class="min-w-0 max-w-full font-semibold leading-[0.96] tabular-nums tracking-[-0.05em]"
-                :style="valueStyle"
-              >
-                {{ valueText }}
-              </p>
-
-              <p
-                v-if="showDelta"
-                class="mt-2 font-semibold tabular-nums"
-                :class="deltaValueClass"
-                :style="{ color: deltaColor }"
-              >
-                {{ deltaValueText }}
-                <span class="text-white/64">({{ deltaPctText }})</span>
-              </p>
-            </div>
-
-            <div v-if="showInlineMeta" class="mt-3 flex flex-wrap gap-2">
-              <div class="rounded-xl border border-white/8 bg-white/[0.035] px-2.5 py-1.5">
-                <p class="text-[9px] font-semibold uppercase tracking-[0.14em] text-white/52">
-                  Pic
-                </p>
-                <p class="mt-0.5 text-[12px] font-semibold tabular-nums text-white/88">
-                  {{ maxValueText }}
-                </p>
-              </div>
-
-              <div class="rounded-xl border border-white/8 bg-white/[0.035] px-2.5 py-1.5">
-                <p class="text-[9px] font-semibold uppercase tracking-[0.14em] text-white/52">
-                  Marge
-                </p>
-                <p class="mt-0.5 text-[12px] font-semibold tabular-nums text-white/88">
-                  {{ marginText }}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <aside
-            v-if="showSpark"
-            class="min-w-0 rounded-2xl border border-white/8 bg-white/[0.035] px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
-          >
-            <div
-              class="mb-2 flex items-center justify-between gap-2 text-[10px] uppercase tracking-[0.12em] text-white/56"
-            >
-              <span class="truncate">{{ sparkTitle }}</span>
-
-              <span
-                class="shrink-0 font-semibold normal-case tracking-normal"
-                :class="trendValueClass"
-                :style="{ color: palette.secondaryMetric }"
-              >
-                {{ latestPointText }}
-              </span>
-            </div>
-
-            <svg
-              class="h-12 w-full"
-              viewBox="0 0 176 56"
-              role="img"
-              :aria-label="`Tendance bénéfice net (${bucketLabel})`"
-            >
-              <defs>
-                <linearGradient :id="areaGradientId" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" :stop-color="palette.line" stop-opacity="0.24" />
-                  <stop offset="100%" :stop-color="palette.line" stop-opacity="0" />
-                </linearGradient>
-              </defs>
-
-              <path
-                v-if="sparkGeometry.areaPath"
-                :d="sparkGeometry.areaPath"
-                :fill="`url(#${areaGradientId})`"
-              />
-
-              <path
-                v-if="sparkGeometry.linePath"
-                :d="sparkGeometry.linePath"
-                :stroke="palette.line"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                fill="none"
-              />
-
-              <circle
-                v-if="sparkGeometry.lastPoint"
-                :cx="sparkGeometry.lastPoint[0]"
-                :cy="sparkGeometry.lastPoint[1]"
-                r="2.25"
-                :fill="palette.line"
-              />
-            </svg>
-          </aside>
-        </section>
-
-        <footer v-if="showFooter" class="mt-3 grid gap-2.5" :class="footerGridClass">
-          <article
-            class="rounded-2xl border border-white/8 bg-white/[0.035] px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
-          >
-            <p
-              class="font-semibold uppercase tracking-[0.14em] text-white/54"
-              :class="footerLabelClass"
-            >
-              Pic
-            </p>
-
-            <p
-              class="mt-1 font-semibold tabular-nums"
-              :class="footerValueClass"
-              :style="{ color: palette.secondaryMetric }"
-            >
-              {{ maxValueText }}
-            </p>
-
-            <p
-              v-if="showFooterSub"
-              class="mt-0.5 truncate font-medium text-white/72"
-              :class="footerSubClass"
-            >
-              {{ maxDateText }}
-            </p>
-          </article>
-
-          <article
-            class="rounded-2xl border border-white/8 bg-white/[0.035] px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
-          >
-            <p
-              class="font-semibold uppercase tracking-[0.14em] text-white/54"
-              :class="footerLabelClass"
-            >
-              Marge nette
-            </p>
-
-            <p
-              class="mt-1 font-semibold tabular-nums"
-              :class="footerValueClass"
-              :style="{ color: palette.secondaryMetric }"
-            >
-              {{ marginText }}
-            </p>
-
-            <p
-              v-if="showFooterSub"
-              class="mt-0.5 font-medium text-white/72"
-              :class="footerSubClass"
-            >
-              sur la période
-            </p>
-          </article>
-        </footer>
+      <div v-else-if="dataState === 'empty'" class="npw-state">
+        <p class="npw-state__title">Aucune donnee exploitable</p>
+        <p class="npw-state__copy">Aucune vente nette sur la periode selectionnee.</p>
       </div>
-    </template>
 
-    <template v-else-if="dataState === 'loading'">
-      <div class="relative z-10 flex h-full flex-col justify-center gap-3 px-4 py-3">
-        <div class="h-2 w-28 animate-pulse rounded-full bg-white/15"></div>
-        <div class="h-9 w-40 animate-pulse rounded-md bg-white/16"></div>
-        <div class="h-2 w-44 animate-pulse rounded-full bg-white/12"></div>
+      <div v-else class="npw-state">
+        <p class="npw-state__title">Periode invalide</p>
+        <p class="npw-state__copy">Selectionne une plage de dates valide.</p>
       </div>
-    </template>
-
-    <template v-else-if="dataState === 'empty'">
-      <div class="relative z-10 grid h-full place-content-center gap-1 px-4 py-3 text-center">
-        <p class="text-[14px] font-medium text-white/90">Aucun résultat exploitable</p>
-        <p class="text-[11px] text-white/58">Aucune vente nette sur la période.</p>
-      </div>
-    </template>
-
-    <template v-else-if="dataState === 'error'">
-      <div class="relative z-10 grid h-full place-content-center gap-1 px-4 py-3 text-center">
-        <p class="text-[14px] font-medium text-rose-100/95">Erreur de chargement</p>
-        <p class="text-[11px] text-white/58">{{ error }}</p>
-      </div>
-    </template>
-
-    <template v-else>
-      <div class="relative z-10 grid h-full place-content-center gap-1 px-4 py-3 text-center">
-        <p class="text-[14px] font-medium text-white/90">Aucune donnée</p>
-        <p class="text-[11px] text-white/58">Sélectionnez une période valide.</p>
-      </div>
-    </template>
-  </div>
+    </div>
+  </WidgetCard>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import StatsServices from '@/services/StatsServices'
-import { normalizeKpi, normalizeSeries, prevPeriod } from '@/services/statsAdapters'
-import { formatDateFR, formatEUR, formatPct } from '@/utils/formatters'
+import { normalizeKpi, normalizeSeries, normalizeSummary, prevPeriod } from '@/services/statsAdapters'
+import { formatDateFR } from '@/utils/formatters'
+import WidgetCard from './_parts/WidgetCard.vue'
+import NetProfitKpiWidget from './NetProfitKpiWidget.vue'
+import NetProfitTrendWidget from './NetProfitTrendWidget.vue'
 
 type Bucket = 'day' | 'week' | 'month' | string
-type Tone = 'positive' | 'neutral' | 'negative'
-type DataState = 'loading' | 'ready' | 'empty' | 'no-data' | 'error'
 
-interface WidgetProps {
-  from?: string
-  to?: string
-  bucket?: Bucket
-  categories?: string[]
-  types?: string[]
-  widgetWidth?: number
-  widgetHeight?: number
-  widgetBaseWidth?: number
-  widgetBaseHeight?: number
-  canvasEditMode?: boolean
-}
+type DataState = 'ready' | 'empty' | 'no-data'
 
-interface KpiValue {
-  value: number
-  deltaPct: number | null
-}
+type LayoutMode = 'compact' | 'medium' | 'large'
 
 interface SeriesPoint {
   date: string
   value: number
 }
 
+interface NetProfitMetrics {
+  value: number
+  previousValue: number
+  deltaValue: number
+  deltaPct: number | null
+  series: SeriesPoint[]
+  bestPoint: SeriesPoint | null
+  lastPoint: SeriesPoint | null
+  salesCount: number | null
+  avgProfitPerSale: number | null
+  marginPct: number | null
+}
+
+interface WidgetProps {
+  from?: string
+  to?: string
+  view?: 'number' | 'line' | string
+  bucket?: Bucket
+  categories?: string[]
+  types?: string[]
+  showComparison?: boolean
+  showArea?: boolean
+  smoothLine?: boolean
+  showSalesKpi?: boolean
+  showAvgProfitPerSale?: boolean
+  showNetMargin?: boolean
+  showBestPeriod?: boolean
+  secondaryLimit?: number
+  widgetWidth?: number
+  widgetHeight?: number
+  widgetBaseWidth?: number
+  widgetBaseHeight?: number
+  widgetRenderWidth?: number
+  widgetRenderHeight?: number
+}
+
+interface LayoutInfo {
+  width: number
+  height: number
+  mode: LayoutMode
+  tiny: boolean
+}
+
 const props = withDefaults(defineProps<WidgetProps>(), {
   from: '',
   to: '',
+  view: 'line',
   bucket: 'week',
   categories: () => [],
   types: () => [],
-  widgetWidth: 520,
-  widgetHeight: 240,
-  widgetBaseWidth: 520,
-  widgetBaseHeight: 240,
-  canvasEditMode: false,
+  showComparison: true,
+  showArea: true,
+  smoothLine: true,
+  showSalesKpi: true,
+  showAvgProfitPerSale: true,
+  showNetMargin: true,
+  showBestPeriod: true,
+  secondaryLimit: 4,
+  widgetWidth: 760,
+  widgetHeight: 500,
+  widgetBaseWidth: 0,
+  widgetBaseHeight: 0,
+  widgetRenderWidth: 0,
+  widgetRenderHeight: 0,
 })
 
 const EPS = 0.0001
-const areaGradientId = `np-area-${Math.random().toString(36).slice(2, 9)}`
-
 const loading = ref(false)
 const error = ref('')
-const kpi = ref<KpiValue>({ value: 0, deltaPct: null })
-const previousValue = ref(0)
-const series = ref<SeriesPoint[]>([])
-const marginRaw = ref<number | null>(null)
 
+const currentValue = ref(0)
+const previousValue = ref(0)
+const serverDeltaPct = ref<number | null>(null)
+const rawSeries = ref<SeriesPoint[]>([])
+const summaryRaw = ref<ReturnType<typeof normalizeSummary> | null>(null)
+
+const contentEl = ref<HTMLElement | null>(null)
+const observedWidth = ref(0)
+const observedHeight = ref(0)
+let resizeObserver: ResizeObserver | null = null
 let req = 0
 
-function clamp(value: number, min: number, max: number) {
-  return Math.min(Math.max(value, min), max)
+const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value))
+
+function sanitizeBucket(value: Bucket): 'day' | 'week' | 'month' {
+  const raw = String(value ?? '').trim()
+  if (raw === 'day' || raw === 'week' || raw === 'month') return raw
+  return 'week'
 }
+
+function sanitizeView(value: string) {
+  return value === 'number' ? 'number' : 'line'
+}
+
+function connectResizeObserver() {
+  if (resizeObserver) {
+    resizeObserver.disconnect()
+    resizeObserver = null
+  }
+
+  if (typeof ResizeObserver === 'undefined' || !contentEl.value) return
+
+  resizeObserver = new ResizeObserver((entries) => {
+    const entry = entries[0]
+    if (!entry) return
+    const nextWidth = Math.max(0, Math.round(entry.contentRect.width))
+    const nextHeight = Math.max(0, Math.round(entry.contentRect.height))
+    observedWidth.value = nextWidth
+    observedHeight.value = nextHeight
+  })
+
+  resizeObserver.observe(contentEl.value)
+}
+
+onMounted(async () => {
+  await nextTick()
+  connectResizeObserver()
+  await load()
+})
+
+onBeforeUnmount(() => {
+  if (resizeObserver) {
+    resizeObserver.disconnect()
+    resizeObserver = null
+  }
+})
+
+watch(contentEl, () => {
+  connectResizeObserver()
+})
 
 const hasValidRange = computed(
   () =>
@@ -288,20 +209,20 @@ const hasValidRange = computed(
     /^\d{4}-\d{2}-\d{2}$/.test(String(props.to ?? '')),
 )
 
-function resetData() {
-  kpi.value = { value: 0, deltaPct: null }
-  previousValue.value = 0
-  series.value = []
-  marginRaw.value = null
-}
+const activeBucket = computed(() => sanitizeBucket(props.bucket))
+const isLineView = computed(() => sanitizeView(String(props.view ?? 'line')) === 'line')
 
 async function load() {
   const id = ++req
 
   if (!hasValidRange.value) {
-    resetData()
-    error.value = ''
     loading.value = false
+    error.value = ''
+    currentValue.value = 0
+    previousValue.value = 0
+    serverDeltaPct.value = null
+    rawSeries.value = []
+    summaryRaw.value = null
     return
   }
 
@@ -311,14 +232,14 @@ async function load() {
   try {
     const { from: prevFrom, to: prevTo } = prevPeriod(props.from, props.to)
 
-    const [kNow, kPrev, s, summary] = await Promise.all([
+    const [kpiNowRes, kpiPrevRes, seriesRes, summaryRes] = await Promise.all([
       StatsServices.kpi('netProfit', props.from, props.to, props.categories, props.types),
       StatsServices.kpi('netProfit', prevFrom, prevTo, props.categories, props.types),
       StatsServices.series(
         'netProfit',
         props.from,
         props.to,
-        props.bucket,
+        activeBucket.value,
         props.categories,
         props.types,
       ),
@@ -327,284 +248,199 @@ async function load() {
 
     if (id !== req) return
 
-    const prevKpi = normalizeKpi(kPrev.data)
+    const nowKpi = normalizeKpi(kpiNowRes?.data)
+    const prevKpi = normalizeKpi(kpiPrevRes?.data)
 
-    kpi.value = normalizeKpi(kNow.data)
+    currentValue.value = Number(nowKpi.value ?? 0)
     previousValue.value = Number(prevKpi.value ?? 0)
-    series.value = normalizeSeries(s.data)
-    marginRaw.value = summary?.data?.profitMargin == null ? null : Number(summary.data.profitMargin)
+    serverDeltaPct.value = nowKpi.deltaPct == null ? null : Number(nowKpi.deltaPct)
+    rawSeries.value = normalizeSeries(seriesRes?.data)
+    summaryRaw.value =
+      summaryRes?.data && typeof summaryRes.data === 'object'
+        ? normalizeSummary(summaryRes.data)
+        : null
   } catch (e: unknown) {
     if (id !== req) return
-
     const err = e as { response?: { data?: { message?: string } }; message?: string }
-
-    error.value =
-      err?.response?.data?.message ?? err?.message ?? 'Impossible de charger les données.'
+    error.value = err?.response?.data?.message ?? err?.message ?? 'Impossible de charger les donnees.'
   } finally {
     if (id === req) loading.value = false
   }
 }
 
-onMounted(load)
-
 const filtersKey = computed(() => `${props.categories.join('|')}::${props.types.join('|')}`)
+watch(() => [props.from, props.to, activeBucket.value, filtersKey.value], load)
 
-watch(() => [props.from, props.to, props.bucket, filtersKey.value], load)
+const renderWidth = computed(() => {
+  const fromObserver = Number(observedWidth.value)
+  if (Number.isFinite(fromObserver) && fromObserver > 0) return fromObserver
+  const fromRender = Number(props.widgetRenderWidth ?? 0)
+  if (Number.isFinite(fromRender) && fromRender > 0) return fromRender
+  return Math.max(Number(props.widgetWidth ?? 700), 1)
+})
 
-const currentValue = computed(() => Number(kpi.value.value ?? 0))
-const deltaValue = computed(() => currentValue.value - Number(previousValue.value ?? 0))
+const renderHeight = computed(() => {
+  const fromObserver = Number(observedHeight.value)
+  if (Number.isFinite(fromObserver) && fromObserver > 0) return fromObserver
+  const fromRender = Number(props.widgetRenderHeight ?? 0)
+  if (Number.isFinite(fromRender) && fromRender > 0) return fromRender
+  return Math.max(Number(props.widgetHeight ?? 320), 1)
+})
 
+const layout = computed<LayoutInfo>(() => {
+  const width = clamp(Math.round(renderWidth.value), 1, 5000)
+  const height = clamp(Math.round(renderHeight.value), 1, 5000)
+
+  let mode: LayoutMode = 'medium'
+  if (width >= 760 && height >= 300) mode = 'large'
+  else if (width < 520 || height < 230) mode = 'compact'
+
+  return {
+    width,
+    height,
+    mode,
+    tiny: width < 430 || height < 190,
+  }
+})
+
+const deltaValue = computed(() => currentValue.value - previousValue.value)
 const deltaPct = computed<number | null>(() => {
-  const prevAbs = Math.abs(Number(previousValue.value ?? 0))
-
+  const prevAbs = Math.abs(previousValue.value)
   if (prevAbs < EPS) {
     if (Math.abs(currentValue.value) < EPS) return 0
-    return kpi.value.deltaPct == null ? null : Number(kpi.value.deltaPct)
+    return serverDeltaPct.value
   }
-
   return (deltaValue.value / prevAbs) * 100
 })
 
-const tone = computed<Tone>(() => {
-  if (currentValue.value > EPS) return 'positive'
-  if (currentValue.value < -EPS) return 'negative'
-  return 'neutral'
+const salesCount = computed<number | null>(() => {
+  const raw = Number(summaryRaw.value?.itemsVendues)
+  if (!Number.isFinite(raw)) return null
+  return raw
 })
 
-const dataState = computed<DataState>(() => {
-  if (loading.value) return 'loading'
-  if (error.value) return 'error'
-  if (!hasValidRange.value) return 'no-data'
-
-  const hasSeries = series.value.length > 0
-  const hasMain = Math.abs(currentValue.value) >= EPS
-  const hasPrev = Math.abs(Number(previousValue.value ?? 0)) >= EPS
-
-  if (!hasSeries && !hasMain && !hasPrev) return 'empty'
-  return 'ready'
-})
-
-const palette = computed(() => {
-  if (tone.value === 'positive') {
-    return {
-      line: '#D9E7DE',
-      primaryMetric: 'rgba(219, 255, 239, 0.98)',
-      secondaryMetric: 'rgba(194, 244, 219, 0.96)',
-    }
-  }
-
-  if (tone.value === 'negative') {
-    return {
-      line: '#E6DADF',
-      primaryMetric: 'rgba(255, 220, 231, 0.98)',
-      secondaryMetric: 'rgba(244, 198, 213, 0.96)',
-    }
-  }
-
-  return {
-    line: '#E0E5EC',
-    primaryMetric: 'rgba(225, 236, 255, 0.98)',
-    secondaryMetric: 'rgba(199, 218, 246, 0.96)',
-  }
-})
-
-const maxPoint = computed<SeriesPoint | null>(() => {
-  if (!series.value.length) return null
-  return series.value.reduce(
-    (best, point) => (point.value > best.value ? point : best),
-    series.value[0],
-  )
-})
-
-const latestPoint = computed<SeriesPoint | null>(() => {
-  if (!series.value.length) return null
-  return series.value[series.value.length - 1]
+const avgProfitPerSale = computed<number | null>(() => {
+  if (salesCount.value == null || salesCount.value <= 0) return null
+  return currentValue.value / salesCount.value
 })
 
 const marginPct = computed<number | null>(() => {
-  const raw = Number(marginRaw.value)
+  const raw = Number(summaryRaw.value?.profitMargin)
   if (!Number.isFinite(raw)) return null
   return Math.abs(raw) <= 1 ? raw * 100 : raw
 })
 
-const sparkValues = computed(() => series.value.slice(-24).map((point) => Number(point.value ?? 0)))
+const trendSeries = computed<SeriesPoint[]>(() => {
+  const clean = rawSeries.value.filter((point) => Number.isFinite(Number(point.value)))
+  if (clean.length >= 2) return clean
 
-const sparkGeometry = computed(() => {
-  const width = 176
-  const height = 56
-  const pad = 6
-  const values = sparkValues.value
+  const fromDate = String(props.from ?? '').trim()
+  const toDate = String(props.to ?? '').trim() || fromDate
 
-  if (!values.length) {
-    return { linePath: '', areaPath: '', lastPoint: null as [number, number] | null }
+  if (clean.length === 1) {
+    const only = clean[0]
+    return [
+      { date: fromDate || only.date, value: previousValue.value },
+      { date: toDate || only.date, value: Number(only.value ?? currentValue.value) },
+    ]
   }
 
-  if (values.length === 1) {
-    const y = Math.round(height / 2)
-    const linePath = `M${pad},${y} L${width - pad},${y}`
-    const areaPath = `M${pad},${height - pad} L${pad},${y} L${width - pad},${y} L${width - pad},${height - pad} Z`
-    return { linePath, areaPath, lastPoint: [width - pad, y] as [number, number] }
+  if (fromDate && toDate && (Math.abs(previousValue.value) > EPS || Math.abs(currentValue.value) > EPS)) {
+    return [
+      { date: fromDate, value: previousValue.value },
+      { date: toDate, value: currentValue.value },
+    ]
   }
 
-  const min = Math.min(...values)
-  const max = Math.max(...values)
-  const range = max - min || 1
-  const step = (width - pad * 2) / (values.length - 1)
-
-  const points = values.map((value, index) => {
-    const x = pad + index * step
-    const y = pad + ((max - value) / range) * (height - pad * 2)
-    return [Number(x.toFixed(2)), Number(y.toFixed(2))] as [number, number]
-  })
-
-  const linePath = points
-    .map((point, index) => `${index ? 'L' : 'M'}${point[0]},${point[1]}`)
-    .join(' ')
-
-  const first = points[0]
-  const last = points[points.length - 1]
-  const areaPath = `${linePath} L${last[0]},${height - pad} L${first[0]},${height - pad} Z`
-
-  return { linePath, areaPath, lastPoint: last }
+  return clean
 })
 
-const bucketLabel = computed(() => {
-  if (props.bucket === 'day') return 'jour'
-  if (props.bucket === 'month') return 'mois'
-  return 'semaine'
+const bestPoint = computed<SeriesPoint | null>(() => {
+  if (!trendSeries.value.length) return null
+  return trendSeries.value.reduce((best, point) => (point.value > best.value ? point : best), trendSeries.value[0])
 })
 
-const topInset = computed(() => (props.canvasEditMode ? 0 : 12))
-const layoutWidth = computed(() => Math.max(0, Number(props.widgetWidth ?? 520) - 24))
-const layoutHeight = computed(
-  () => Math.max(0, Number(props.widgetHeight ?? 240) - topInset.value - 16),
-)
-
-const showDelta = computed(() => layoutHeight.value >= 170)
-
-const showSpark = computed(() => {
-  if (sparkValues.value.length < 2) return false
-  return layoutWidth.value >= 520 && layoutHeight.value >= 165
+const lastPoint = computed<SeriesPoint | null>(() => {
+  if (!trendSeries.value.length) return null
+  return trendSeries.value[trendSeries.value.length - 1]
 })
 
-const showFooter = computed(() => layoutWidth.value >= 520 && layoutHeight.value >= 240)
-const showFooterSub = computed(() => layoutHeight.value >= 275)
-const showInlineMeta = computed(() => !showFooter.value && layoutHeight.value >= 180)
+const metrics = computed<NetProfitMetrics>(() => ({
+  value: currentValue.value,
+  previousValue: previousValue.value,
+  deltaValue: deltaValue.value,
+  deltaPct: deltaPct.value,
+  series: trendSeries.value,
+  bestPoint: bestPoint.value,
+  lastPoint: lastPoint.value,
+  salesCount: salesCount.value,
+  avgProfitPerSale: avgProfitPerSale.value,
+  marginPct: marginPct.value,
+}))
 
-const mainSpacingClass = computed(() =>
-  layoutHeight.value < 185 ? 'mt-2 gap-2.5' : 'mt-3 gap-3.5',
-)
-
-const mainGridClass = computed(() => {
-  if (showSpark.value && layoutWidth.value >= 700) {
-    return 'grid-cols-[minmax(0,1fr)_200px] items-end'
-  }
-
-  return 'grid-cols-1 items-start'
+const hasSignal = computed(() => {
+  if (Math.abs(currentValue.value) > EPS || Math.abs(previousValue.value) > EPS) return true
+  if (trendSeries.value.length > 0) return true
+  if (salesCount.value != null && salesCount.value > 0) return true
+  return false
 })
 
-const footerGridClass = computed(() => (layoutWidth.value < 620 ? 'grid-cols-1' : 'grid-cols-2'))
-
-const valueStyle = computed(() => {
-  const sizeByWidth = layoutWidth.value * 0.11
-  const sizeByHeight = showFooter.value
-    ? layoutHeight.value * 0.18
-    : showSpark.value
-      ? layoutHeight.value * 0.22
-      : layoutHeight.value * 0.24
-  const valueLen = formatEUR(currentValue.value, { compact: true, digits: 0 })
-    .replace(/\s+/g, '')
-    .length
-  const lengthScale = valueLen >= 13 ? 0.72 : valueLen >= 11 ? 0.8 : valueLen >= 9 ? 0.9 : 1
-  const size = clamp(Math.min(sizeByWidth, sizeByHeight) * lengthScale, 22, 54)
-
-  return {
-    fontSize: `${Math.round(size)}px`,
-    color: palette.value.primaryMetric,
-    textShadow: '0 10px 22px rgba(6, 10, 18, 0.34)',
-  }
-})
-
-const sparkTitle = computed(() => {
-  if (props.bucket === 'day') return 'Tendance jour'
-  if (props.bucket === 'month') return 'Tendance mois'
-  return layoutWidth.value < 620 ? 'Tendance sem.' : 'Tendance semaine'
+const dataState = computed<DataState>(() => {
+  if (!hasValidRange.value) return 'no-data'
+  if (!hasSignal.value) return 'empty'
+  return 'ready'
 })
 
 const periodText = computed(() => {
-  const shortYear = layoutWidth.value < 560 || layoutHeight.value < 170
-
+  const shortYear = layout.value.mode === 'compact'
   const fromLabel = formatDateFR(props.from, {
     day: '2-digit',
     month: 'short',
     year: shortYear ? '2-digit' : 'numeric',
   })
-
   const toLabel = formatDateFR(props.to, {
     day: '2-digit',
     month: 'short',
     year: shortYear ? '2-digit' : 'numeric',
   })
-
   return `${fromLabel} au ${toLabel}`
 })
 
-const valueText = computed(() =>
-  formatEUR(currentValue.value, {
-    compact: true,
-    digits: 0,
-  }),
-)
+const accent = computed(() => {
+  if (metrics.value.value > EPS) return '#00d26a'
+  if (metrics.value.value < -EPS) return '#e11d48'
+  return '#2563eb'
+})
+</script>
 
-function signedCurrency(value: number) {
-  const sign = value > 0 ? '+' : ''
-  return `${sign}${formatEUR(value, { compact: true, digits: 1 })}`
+<style scoped>
+.npw-root {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
-const deltaValueText = computed(() => signedCurrency(deltaValue.value))
+.npw-state {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  place-content: center;
+  gap: 4px;
+  text-align: center;
+  padding: 10px;
+}
 
-const deltaPctText = computed(() => {
-  if (deltaPct.value == null || !Number.isFinite(deltaPct.value)) return 'n/d'
-  const sign = deltaPct.value > 0 ? '+' : ''
-  return `${sign}${deltaPct.value.toFixed(1)}%`
-})
+.npw-state__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 650;
+  color: rgba(241, 245, 249, 0.96);
+}
 
-const deltaColor = computed(() => {
-  if (
-    deltaPct.value == null ||
-    !Number.isFinite(deltaPct.value) ||
-    Math.abs(deltaPct.value) < EPS
-  ) {
-    return 'rgba(240, 244, 252, 0.92)'
-  }
-
-  return deltaPct.value > 0 ? 'rgba(216, 244, 231, 0.97)' : 'rgba(248, 220, 227, 0.97)'
-})
-
-const maxValueText = computed(() =>
-  maxPoint.value ? formatEUR(maxPoint.value.value, { compact: true, digits: 1 }) : '--',
-)
-
-const maxDateText = computed(() =>
-  maxPoint.value
-    ? formatDateFR(maxPoint.value.date, { day: '2-digit', month: 'short', year: 'numeric' })
-    : 'aucun pic',
-)
-
-const latestPointText = computed(() =>
-  latestPoint.value ? formatEUR(latestPoint.value.value, { compact: true, digits: 1 }) : '--',
-)
-
-const marginText = computed(() =>
-  marginPct.value == null ? 'n/d' : formatPct(marginPct.value, { digits: 1 }),
-)
-
-const periodLabelClass = computed(() => 'text-[10px]')
-const periodValueClass = computed(() => (layoutWidth.value < 560 ? 'text-[13px]' : 'text-[16px]'))
-const kpiLabelClass = computed(() => (layoutWidth.value < 560 ? 'text-[10px]' : 'text-[11px]'))
-const deltaValueClass = computed(() => (layoutWidth.value < 560 ? 'text-[11px]' : 'text-[13px]'))
-const trendValueClass = computed(() => (layoutWidth.value < 720 ? 'text-[12px]' : 'text-[13px]'))
-const footerLabelClass = computed(() => (layoutWidth.value < 560 ? 'text-[10px]' : 'text-[11px]'))
-const footerValueClass = computed(() => (layoutWidth.value < 560 ? 'text-[15px]' : 'text-[18px]'))
-const footerSubClass = computed(() => (layoutWidth.value < 560 ? 'text-[10px]' : 'text-[11px]'))
-</script>
+.npw-state__copy {
+  margin: 0;
+  font-size: 12px;
+  color: rgba(148, 163, 184, 0.88);
+}
+</style>

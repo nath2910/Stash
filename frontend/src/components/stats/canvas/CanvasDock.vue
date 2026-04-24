@@ -32,14 +32,12 @@
 
         <button
           type="button"
-          class="dock-btn dock-btn--accent"
-          :disabled="!editMode"
-          :class="{ disabled: !editMode }"
-          @click="$emit('openPalette')"
-          title="Ajouter un bloc"
+          class="dock-btn"
+          @click="$emit('openTemplates')"
+          title="Ouvrir les templates"
         >
-          <PlusSquare class="w-5 h-5" />
-          <span>Ajouter</span>
+          <LayoutTemplate class="w-5 h-5" />
+          <span>Templates</span>
         </button>
 
         <button
@@ -98,7 +96,19 @@
 
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { Plus, Minus, PlusSquare, LocateFixed, RotateCcw, X, Lock, LockOpen, Sun, Moon } from 'lucide-vue-next'
+import {
+  Plus,
+  Minus,
+  PlusSquare,
+  LocateFixed,
+  RotateCcw,
+  X,
+  Lock,
+  LockOpen,
+  Sun,
+  Moon,
+  LayoutTemplate,
+} from 'lucide-vue-next'
 
 const props = defineProps<{
   editMode: boolean
@@ -111,6 +121,7 @@ defineEmits<{
   (e: 'toggleEdit'): void
   (e: 'toggleTheme'): void
   (e: 'openPalette'): void
+  (e: 'openTemplates'): void
   (e: 'zoomIn'): void
   (e: 'zoomOut'): void
   (e: 'resetZoom'): void

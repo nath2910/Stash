@@ -7,12 +7,18 @@
     <!-- Header -->
     <template v-if="!isAuthRoute">
       <!-- Header for stats: simple bar -->
-      <header class="fixed top-4 left-0 right-0 z-50 pointer-events-none">
-        <div class="layout-shell-row layout-shell-row--header h-14 flex items-center justify-between pointer-events-none">
+      <header
+        class="fixed left-0 right-0 z-50 pointer-events-none"
+        :class="isStats ? 'top-2' : 'top-4'"
+      >
+        <div
+          class="layout-shell-row layout-shell-row--header flex items-center justify-between pointer-events-none"
+          :class="isStats ? 'h-11' : 'h-14'"
+        >
           <!-- Left spacer / burger -->
           <div class="flex items-center pointer-events-auto">
             <button
-              v-if="showPrimaryNav"
+              v-if="showHeaderNav"
               type="button"
               class="md:hidden text-gray-300 hover:text-white p-2 rounded-xl hover:bg-white/5 transition"
               @click.stop="toggleMobileMenu"
@@ -41,7 +47,7 @@
 
           <!-- Center nav -->
           <nav
-            v-if="showPrimaryNav"
+            v-if="showHeaderNav"
             v-motion
             :initial="false"
             :variants="navVariants"
@@ -71,7 +77,7 @@
           </nav>
 
           <!-- Right user menu -->
-          <div class="flex items-center justify-end pointer-events-auto">
+          <div v-if="showHeaderUserMenu" class="flex items-center justify-end pointer-events-auto">
             <div class="relative" @click.stop>
               <button
                 type="button"
@@ -130,7 +136,7 @@
 
         <!-- Mobile menu -->
         <div
-          v-if="showPrimaryNav && mobileMenuOpen"
+          v-if="showHeaderNav && mobileMenuOpen"
           class="md:hidden layout-shell-row layout-shell-row--header pb-3 pointer-events-auto"
           @click.stop
         >
@@ -305,10 +311,14 @@ const isAuthRoute = computed(() =>
   ].includes(route.name),
 )
 const showPrimaryNav = computed(() => !isAuthRoute.value && route.meta.hidePrimaryNav !== true)
+const statsTemplateModeActive = ref(false)
+const showHeaderNav = computed(() => showPrimaryNav.value && !isStats.value)
+const showHeaderUserMenu = computed(() => !isStats.value)
 const fullBleedHeaderOffsetClass = computed(() => {
   const needsOffset = route.meta.fullBleed === true && route.meta.allowScroll === true && !isAuthRoute.value
   if (!needsOffset) return ''
-  return showPrimaryNav.value ? 'layout-fullbleed--with-header' : 'layout-fullbleed--with-header-compact'
+  if (showHeaderNav.value && isStats.value) return 'layout-fullbleed--with-header-stats'
+  return showHeaderNav.value ? 'layout-fullbleed--with-header' : 'layout-fullbleed--with-header-compact'
 })
 
 const navSpring = {
@@ -383,6 +393,15 @@ const notificationButtonClass = computed(() => {
     ? 'bg-slate-900/88 border-slate-600 text-slate-100 px-3.5 py-2'
     : 'bg-slate-900/80 border-slate-600 text-slate-100 p-2'
 })
+
+const onStatsTemplateModeChange = (event) => {
+  const active = Boolean(event?.detail?.active)
+  statsTemplateModeActive.value = active
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('snk:stats-template-mode', onStatsTemplateModeChange)
+}
 
 const currentUser = computed(() => {
   const u = auth.user
@@ -557,6 +576,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener('click', onWindowClick)
   window.removeEventListener('keydown', onKeyDown)
+  window.removeEventListener('snk:stats-template-mode', onStatsTemplateModeChange)
   detachScroll()
   stopIdleWatch()
   notification.teardown({ clearState: true })
@@ -573,6 +593,7 @@ watch(
 watch(
   () => route.fullPath,
   async () => {
+    if (route.path !== '/stats') statsTemplateModeActive.value = false
     closeMenus()
     notification.closeCenter()
     detachScroll()
@@ -685,6 +706,10 @@ body,
   padding-top: calc(72px + env(safe-area-inset-top, 0px));
 }
 
+.layout-fullbleed--with-header-stats {
+  padding-top: calc(46px + env(safe-area-inset-top, 0px));
+}
+
 .layout-fullbleed--with-header-compact {
   padding-top: calc(24px + env(safe-area-inset-top, 0px));
 }
@@ -719,6 +744,10 @@ body,
 @media (max-width: 767px) {
   .layout-fullbleed--with-header {
     padding-top: calc(66px + env(safe-area-inset-top, 0px));
+  }
+
+  .layout-fullbleed--with-header-stats {
+    padding-top: calc(44px + env(safe-area-inset-top, 0px));
   }
 
   .layout-fullbleed--with-header-compact {

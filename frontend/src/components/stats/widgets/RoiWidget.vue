@@ -545,7 +545,6 @@ const roiVars = computed(() => {
   grid-template-rows: auto 1fr;
   gap: clamp(8px, calc(var(--roi-panel-pad) * 0.58), 12px);
 }
-
 .roi-breakdown-head {
   display: flex;
   justify-content: space-between;

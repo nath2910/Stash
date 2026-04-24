@@ -6,6 +6,7 @@
     surface="distribution"
     :loading="loading"
     :error="error"
+    :auto-height="props.autoHeight"
     :widget-width="props.widgetWidth"
     :widget-height="props.widgetHeight"
     :widget-base-width="props.widgetBaseWidth"
@@ -78,6 +79,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import StatsServices from '@/services/StatsServices'
 import { normalizeRank } from '@/services/statsAdapters'
 import { formatDateFR, formatEUR } from '@/utils/formatters'
+import { getBrandColor } from '@/components/stats/brandColors'
 import WidgetCard from './_parts/WidgetCard.vue'
 
 const props = defineProps({
@@ -85,6 +87,7 @@ const props = defineProps({
   to: String,
   top: { type: Number, default: 8 },
   view: { type: String, default: 'bars' },
+  autoHeight: { type: Boolean, default: true },
   widgetWidth: { type: Number, default: 720 },
   widgetHeight: { type: Number, default: 360 },
   widgetBaseWidth: { type: Number, default: 0 },
@@ -126,26 +129,7 @@ async function load() {
 onMounted(load)
 watch(() => [props.from, props.to, props.top, props.categories, props.types], load)
 
-const PALETTE = [
-  '#22C55E',
-  '#3B82F6',
-  '#F59E0B',
-  '#A855F7',
-  '#EF4444',
-  '#14B8A6',
-  '#F97316',
-  '#84CC16',
-  '#06B6D4',
-  '#E11D48',
-  '#8B5CF6',
-  '#10B981',
-]
-
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
-
-function pickColorByIndex(index) {
-  return PALETTE[index % PALETTE.length]
-}
 
 const layoutWidth = computed(() => {
   return Math.max(Number(props.widgetWidth ?? 0), 1)
@@ -170,16 +154,18 @@ const chartHeight = computed(() => {
     return clamp(available, 140, 280)
   }
 
-  const count = Math.max(2, items.value.length)
-  const base = 110
-  const per = denseMode.value ? 20 : 26
-  return clamp(Math.min(available, base + count * per), 120, 280)
+  // Bars: keep extra vertical breathing so rows never look compressed.
+  const count = Math.max(1, items.value.length)
+  const base = denseMode.value ? 96 : 112
+  const per = denseMode.value ? 24 : 30
+  const target = base + count * per
+  return clamp(Math.min(available, target), 168, 360)
 })
 const chartStyle = computed(() => ({ height: `${chartHeight.value}px`, minHeight: '0px' }))
 
 const total = computed(() => items.value.reduce((acc, i) => acc + Number(i.value ?? 0), 0))
 const rows = computed(() =>
-  items.value.map((i, index) => {
+  items.value.map((i) => {
     const value = Number(i.value ?? 0)
     const pct = total.value > 0 ? Math.round((value / total.value) * 100) : 0
     return {
@@ -187,7 +173,7 @@ const rows = computed(() =>
       value,
       pct,
       valueText: formatEUR(value, { compact: true }),
-      color: pickColorByIndex(index),
+      color: getBrandColor(i.label),
     }
   }),
 )
@@ -334,7 +320,7 @@ const option = computed(() => {
       trigger: 'axis',
       valueFormatter: (v) => formatEUR(v),
     },
-    grid: { left: 90, right: 20, top: 6, bottom: 6, containLabel: true },
+    grid: { left: 90, right: 20, top: 6, bottom: 18, containLabel: true },
     xAxis: {
       type: 'value',
       axisLabel: { color: '#9CA3AF', fontSize: 10 },
@@ -416,8 +402,9 @@ const toLabel = computed(() =>
 .tp-stack {
   min-height: 0;
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
-  gap: 8px;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px;
+  align-content: start;
 }
 .tp-chart {
   width: 100%;
@@ -427,6 +414,10 @@ const toLabel = computed(() =>
   margin-top: 0;
   min-height: 0;
   overflow: hidden;
+}
+.tp-stack .tp-legend {
+  padding-top: 8px;
+  border-top: 1px solid rgba(148, 163, 184, 0.16);
 }
 .tp-list {
   min-height: 0;

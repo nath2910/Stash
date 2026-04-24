@@ -47,4 +47,40 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
         and n.isRead = false
       """)
   int markAllRead(@Param("userId") Long userId, @Param("readAt") OffsetDateTime readAt);
+
+  @Modifying
+  @Query(value = """
+      delete from public.notifications n
+      where n.user_id = :userId
+        and n.type = 'STOCK_AGING'
+        and n.entity_type = 'STOCK_ITEM'
+        and (
+          n.entity_id is null
+          or not exists (
+            select 1
+            from public.tableauventes v
+            where v.id = n.entity_id
+              and v.user_id = :userId
+              and v.date_achat is not null
+          )
+        )
+      """, nativeQuery = true)
+  int deleteInvalidStockAgingNotificationsForUser(@Param("userId") Long userId);
+
+  @Modifying
+  @Query(value = """
+      delete from public.notifications n
+      where n.user_id = :userId
+        and n.type = 'STOCK_AGING'
+        and n.entity_type = 'STOCK_ITEM'
+        and n.entity_id = :entityId
+        and n.milestone_key like concat(:milestonePrefix, '%')
+        and n.milestone_key <> :keepMilestoneKey
+      """, nativeQuery = true)
+  int deleteStockAgingMilestoneVariants(
+      @Param("userId") Long userId,
+      @Param("entityId") Long entityId,
+      @Param("milestonePrefix") String milestonePrefix,
+      @Param("keepMilestoneKey") String keepMilestoneKey
+  );
 }

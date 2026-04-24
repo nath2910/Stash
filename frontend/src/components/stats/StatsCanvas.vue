@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div
     class="canvas-root"
     :class="{ 'is-space-pan': spacePanActive, 'theme-light': themeMode === 'light' }"
@@ -6,54 +6,49 @@
     @pointerdown="onCanvasPointerDown"
     @contextmenu="onCanvasContextMenu"
   >
-    <CanvasDock
-      v-show="!fullscreenActive && !isCompact && !paletteOpen"
-      :edit-mode="editMode"
-      :scale="scale"
-      :palette-open="paletteOpen"
-      :theme-mode="themeMode"
-      @toggleEdit="toggleEditMode"
-      @toggleTheme="toggleThemeMode"
-      @openPalette="paletteOpen = true"
-      @zoomIn="zoomIn"
-      @zoomOut="zoomOut"
-      @resetZoom="resetZoom"
-      @centerView="centerView"
-      @resetLayout="resetLayout"
-    />
-
-    <!-- Canvas -->
-    <div ref="viewportEl" class="viewport">
+    <teleport to="body">
       <div
-        class="date-panel"
-        :class="{ 'date-panel--compact': isCompact }"
-        v-show="!paletteOpen && !fullscreenActive && (!isCompact || datePanelOpen)"
+        v-if="templatePickerOpen && !templateActive"
+        class="template-picker-modal"
+        role="dialog"
+        aria-modal="true"
       >
-        <div class="date-title">Periode</div>
-        <div class="date-row">
-          <CompactDateInput
-            label="Du"
-            :model-value="localFrom"
-            :min-date="minDate"
-            :max-date="maxDate"
-            :light="themeMode === 'light'"
-            @update:modelValue="setFrom"
-          />
-          <CompactDateInput
-            label="Au"
-            :model-value="localTo"
-            :min-date="minDate"
-            :max-date="maxDate"
-            :light="themeMode === 'light'"
-            @update:modelValue="setTo"
-          />
-        </div>
-        <div class="date-actions">
-          <button type="button" class="date-chip" @click="preset('month')">Mois</button>
-          <button type="button" class="date-chip" @click="preset('ytd')">YTD</button>
-          <button type="button" class="date-chip" @click="preset('year')">Annee</button>
+        <div class="template-picker-backdrop" @click="closeTemplatePicker"></div>
+        <div class="template-picker-panel" @click.stop>
+          <div class="template-picker-head">
+            <div>
+              <div class="template-picker-kicker">Mode template</div>
+              <h3 class="template-picker-title">Selectionne ton template</h3>
+            </div>
+            <button
+              type="button"
+              class="template-picker-close"
+              aria-label="Fermer"
+              @click="closeTemplatePicker"
+            >
+              x
+            </button>
+          </div>
+
+          <button
+            v-for="item in templatePickerItems"
+            :key="item.kind"
+            type="button"
+            class="template-picker-card"
+            @click="applyTemplate(item.kind)"
+          >
+            <div class="template-picker-card__badge">{{ item.badge }}</div>
+            <div class="template-picker-card__title">{{ item.title }}</div>
+            <p class="template-picker-card__desc">{{ item.description }}</p>
+            <span class="template-picker-card__cta">Appliquer</span>
+          </button>
         </div>
       </div>
+    </teleport>
+
+    <!-- Canvas -->
+    <template v-if="!templateActive">
+      <div ref="viewportEl" class="viewport">
       <div v-if="editMode" class="edit-grid" aria-hidden="true"></div>
       <div
         v-if="snapGuides.x !== null"
@@ -151,6 +146,73 @@
     </div>
 
     <div
+      v-if="showCanvasEmptyGuide"
+      class="canvas-empty-guide"
+      role="region"
+      aria-label="Guide de demarrage du canvas"
+      @pointerdown.stop
+    >
+      <div class="canvas-empty-guide__glow" aria-hidden="true"></div>
+      <article class="canvas-empty-guide__card">
+        <div class="canvas-empty-guide__kicker">Canvas libre</div>
+        <h2 class="canvas-empty-guide__title">Ton dashboard est pret a etre construit</h2>
+        <p class="canvas-empty-guide__lead">
+          Commence par ajouter tes widgets, ajuste ta periode, puis organise la feuille comme un vrai
+          board de pilotage.
+        </p>
+
+        <div class="canvas-empty-guide__steps">
+          <div class="canvas-empty-guide-step">
+            <span class="canvas-empty-guide-step__icon">
+              <LayoutGrid class="h-4 w-4" />
+            </span>
+            <div class="canvas-empty-guide-step__content">
+              <strong>1. Ajoute tes blocs clefs</strong>
+              <p>CA, profit, top ventes, stock: assemble tes KPI en quelques clics.</p>
+            </div>
+          </div>
+          <div class="canvas-empty-guide-step">
+            <span class="canvas-empty-guide-step__icon">
+              <CalendarRange class="h-4 w-4" />
+            </span>
+            <div class="canvas-empty-guide-step__content">
+              <strong>2. Regle ta plage de dates</strong>
+              <p>Utilise la barre laterale pour passer de la vue jour au suivi mensuel.</p>
+            </div>
+          </div>
+          <div class="canvas-empty-guide-step">
+            <span class="canvas-empty-guide-step__icon">
+              <Target class="h-4 w-4" />
+            </span>
+            <div class="canvas-empty-guide-step__content">
+              <strong>3. Cadre ton espace d'analyse</strong>
+              <p>Centre, zoome, puis aligne tes widgets pour une lecture rapide et propre.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="canvas-empty-guide__actions">
+          <button
+            type="button"
+            class="canvas-empty-guide__btn canvas-empty-guide__btn--primary"
+            @click.stop="onEmptyGuideAddWidget"
+          >
+            <PlusSquare class="h-4 w-4" />
+            <span>{{ emptyGuidePrimaryActionLabel }}</span>
+          </button>
+          <button type="button" class="canvas-empty-guide__btn" @click.stop="onEmptyGuideOpenTemplate">
+            <BarChart3 class="h-4 w-4" />
+            <span>Tester un template</span>
+          </button>
+        </div>
+
+        <p class="canvas-empty-guide__hint">
+          Astuce: maintiens <kbd>Espace</kbd> pour te deplacer, utilise la molette pour zoomer.
+        </p>
+      </article>
+    </div>
+
+    <div
       v-if="isCompact && !paletteOpen && !fullscreenActive"
       class="mobile-toolbar"
       role="toolbar"
@@ -159,8 +221,8 @@
       <button
         type="button"
         class="mobile-toolbtn"
-        :class="{ 'is-active': datePanelOpen }"
-        @click.stop="datePanelOpen = !datePanelOpen"
+        :class="{ 'is-active': railDatePickerOpen }"
+        @click.stop="toggleRailDatePicker"
         aria-label="Afficher la periode"
       >
         <CalendarRange class="h-4 w-4" />
@@ -220,42 +282,134 @@
     <Transition name="save-toast">
       <div v-if="showSaveToast" class="save-toast" role="status">Layout enregistre</div>
     </Transition>
+    </template>
+    <div v-else class="template-mode">
+      <YearlyOverviewTemplate
+        v-if="templateKind === 'yearly-overview'"
+        v-bind="templateSharedView"
+        @year-change="onTemplateYearChange"
+        @month-select="setTemplateMonth"
+        @chart-hover="onTemplateChartHover"
+        @chart-clear="clearTemplateChartHover"
+      />
+      <MonthlyFocusTemplate
+        v-else
+        v-bind="templateSharedView"
+        @year-change="onTemplateYearChange"
+        @month-select="setTemplateMonth"
+        @chart-hover="onTemplateChartHover"
+        @chart-clear="clearTemplateChartHover"
+      />
+    </div>
 
-    <div
-      v-show="!paletteOpen && !fullscreenActive"
-      class="profile-switcher"
-      :class="{ 'is-collapsed': isCompact && !profileSwitcherExpanded }"
-      role="group"
-      aria-label="Profils"
+    <aside
+      v-show="!fullscreenActive"
+      class="template-rail stats-rail"
+      aria-label="Navigation stats"
+      @pointerdown.stop
     >
-      <template v-if="!isCompact || profileSwitcherExpanded">
+      <button
+        type="button"
+        class="template-rail__user"
+        :data-tooltip="'Profil'"
+        :title="'Mon compte'"
+        aria-label="Mon compte"
+        @click="goTemplateAccount"
+      >
+        {{ templateUserInitials }}
+      </button>
+
+      <nav class="template-rail__nav" aria-label="Navigation principale">
+        <button
+          v-for="item in templateNavItems"
+          :key="item.key"
+          type="button"
+          class="template-rail__nav-btn"
+          :class="{ 'is-active': templateRouteActive(item.path) }"
+          :data-tooltip="item.label"
+          :title="item.label"
+          :aria-label="item.label"
+          @click="goTemplateRoute(item.path)"
+        >
+          <component :is="item.icon" class="h-4 w-4" />
+        </button>
+      </nav>
+
+      <div class="template-rail__meta">
+        <button
+          ref="railDateButtonRef"
+          type="button"
+          class="template-rail__meta-btn"
+          :class="{ 'is-active': railDatePickerOpen }"
+          :data-tooltip="'Periode'"
+          title="Periode"
+          aria-label="Periode"
+          @click.stop="toggleRailDatePicker"
+        >
+          <CalendarRange class="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          class="template-rail__meta-btn template-rail__meta-btn--accent"
+          :disabled="!editMode || templateActive"
+          :data-tooltip="'Ajouter widget'"
+          title="Ajouter un widget"
+          aria-label="Ajouter un widget"
+          @click.stop="paletteOpen = true"
+        >
+          <PlusSquare class="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          class="template-rail__meta-btn"
+          :data-tooltip="'Personnaliser profils'"
+          title="Personnaliser les profils"
+          aria-label="Personnaliser les profils"
+          @click.stop="openProfileEditor"
+        >
+          <Paintbrush class="h-4 w-4" />
+        </button>
+      </div>
+
+      <div class="template-rail__profiles" role="group" aria-label="Profils">
         <button
           v-for="p in PROFILES"
-          :key="p.id"
+          :key="`rail-${p.id}`"
           type="button"
-          class="profile-pill"
+          class="template-rail__profile-btn"
           :class="{ 'is-active': activeProfile === p.id }"
+          :data-tooltip="profileNames[p.id] ?? p.label"
+          :title="profileNames[p.id] ?? p.label"
+          :aria-label="profileNames[p.id] ?? p.label"
           @click="switchProfile(p.id)"
         >
-          <span class="profile-dot" :style="{ background: profileColors[p.id] ?? p.color }"></span>
-          <span class="profile-label">{{ profileNames[p.id] ?? p.label }}</span>
+          <span
+            class="template-rail__profile-dot"
+            :style="{ background: profileColors[p.id] ?? p.color }"
+          ></span>
         </button>
-        <button type="button" class="profile-edit" @click="openProfileEditor">
-          <Paintbrush class="w-4 h-4" />
-        </button>
-      </template>
+      </div>
 
-      <button
-        v-if="isCompact"
-        type="button"
-        class="profile-toggle"
-        :aria-expanded="profileSwitcherExpanded"
-        :aria-label="profileSwitcherExpanded ? 'Replier les profils' : 'Deplier les profils'"
-        @click.stop="toggleProfileSwitcher"
-      >
-        <component :is="profileSwitcherExpanded ? ChevronLeft : ChevronRight" class="h-3.5 w-3.5" />
-      </button>
-    </div>
+      <div v-if="railDatePickerOpen" ref="railDatePanelRef" class="template-rail-date-popover" @click.stop>
+        <div class="template-rail-date-popover__title">Periode</div>
+        <div class="template-rail-date-popover__inputs">
+          <label class="template-rail-date-field">
+            <span>Du</span>
+            <input :value="localFrom" type="date" :min="minDate" :max="maxDate" @input="onRailFromInput" />
+          </label>
+          <label class="template-rail-date-field">
+            <span>Au</span>
+            <input :value="localTo" type="date" :min="minDate" :max="maxDate" @input="onRailToInput" />
+          </label>
+        </div>
+        <div class="template-rail-date-popover__quick">
+          <button type="button" class="template-rail-date-chip" @click="applyQuickPreset('today')">Auj.</button>
+          <button type="button" class="template-rail-date-chip" @click="applyQuickPreset('month')">Mois</button>
+          <button type="button" class="template-rail-date-chip" @click="applyQuickPreset('ytd')">YTD</button>
+          <button type="button" class="template-rail-date-chip" @click="applyQuickPreset('year')">Annee</button>
+        </div>
+      </div>
+    </aside>
 
     <teleport to="body">
       <div
@@ -329,7 +483,7 @@
 
           <div class="profile-grid">
             <div class="profile-help">
-              Ces noms apparaissent dans le selecteur en bas du canvas.
+              Ces noms apparaissent dans la barre laterale.
             </div>
 
             <section class="profile-card">
@@ -407,24 +561,28 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, toRefs, watch } from 'vue'
-import CanvasDock from './canvas/CanvasDock.vue'
+import { useRoute, useRouter } from 'vue-router'
 import WidgetFrame from './canvas/WidgetFrame.vue'
+import YearlyOverviewTemplate from './template-mode/templates/yearly-overview/YearlyOverviewTemplate.vue'
+import MonthlyFocusTemplate from './template-mode/templates/monthly-focus/MonthlyFocusTemplate.vue'
 import { useCanvasCamera } from './canvas/useCanvaCamera'
 import { useCanvasShortcuts } from './canvas/useCanvasShortcuts'
 import {
-  Paintbrush,
+  Home,
+  BarChart3,
+  Boxes,
   CalendarRange,
+  Paintbrush,
+  LayoutGrid,
   Minus,
   Plus,
   LocateFixed,
+  Target,
   Lock,
   LockOpen,
   PlusSquare,
-  ChevronLeft,
-  ChevronRight,
 } from 'lucide-vue-next'
 
-import CompactDateInput from '@/components/ui/CompactDateInput.vue'
 import WidgetPalette from './WidgetPalette.vue'
 import WidgetSettingsModal from './WidgetSettingsModal.vue'
 import {
@@ -437,7 +595,14 @@ import {
 import { getWidgetPaletteMeta } from './palette/widgetPaletteMeta'
 import { useTheme } from '@/composables/useTheme'
 import { useAuthStore } from '@/store/authStore'
-import StatsServices from '@/services/StatsServices'
+import { useTemplateDashboard } from './template-mode/useTemplateDashboard'
+import {
+  DEFAULT_TEMPLATE_KIND,
+  isTemplateKind,
+  type TemplateKind,
+  type TemplatePickerItem,
+  type TemplateSharedViewProps,
+} from './template-mode/templates/templateViewTypes'
 
 type Widget = {
   id: string
@@ -462,6 +627,8 @@ type LayoutBundle = {
   profileNames?: Record<string, string>
   profileColors?: Record<string, string>
   ranges?: Record<string, ProfileRange>
+  templateModes?: Record<string, boolean>
+  templateKinds?: Record<string, TemplateKind>
 }
 
 /* props/emit */
@@ -473,6 +640,8 @@ const emit = defineEmits(['update:from', 'update:to'])
 const { from, to } = toRefs(props)
 
 const { user } = useAuthStore()
+const route = useRoute()
+const router = useRouter()
 const { theme, toggleTheme } = useTheme()
 const themeMode = computed(() => (theme.value === 'light' ? 'light' : 'dark'))
 // Chaque utilisateur a une cle de layout isolee; guest reste en stockage local.
@@ -492,6 +661,8 @@ const layoutBundle = ref<LayoutBundle>({
   activeProfile: 'p1',
   profiles: {},
   ranges: {},
+  templateModes: {},
+  templateKinds: {},
 })
 const profileNames = ref({ ...DEFAULT_PROFILE_NAMES })
 const profileColors = ref({ ...PROFILE_COLORS })
@@ -502,6 +673,28 @@ const profileDraft = ref({
   p2Color: PROFILE_COLORS.p2,
   p3Color: PROFILE_COLORS.p3,
 })
+const templatePickerOpen = ref(false)
+const templateActive = ref(false)
+const templateKind = ref<TemplateKind>(DEFAULT_TEMPLATE_KIND)
+const templateNavItems = [
+  { key: 'home', label: 'Accueil', path: '/', icon: Home },
+  { key: 'stats', label: 'Stats', path: '/stats', icon: BarChart3 },
+  { key: 'gestion', label: 'Gestion', path: '/gestion', icon: Boxes },
+]
+const templatePickerItems: TemplatePickerItem[] = [
+  {
+    kind: 'yearly-overview',
+    badge: 'Template systeme',
+    title: 'Power BI fixe',
+    description: 'Vue globale annuelle avec synthese multi-periodes.',
+  },
+  {
+    kind: 'monthly-focus',
+    badge: 'Template systeme',
+    title: 'Focus mensuel',
+    description: 'Dashboard mensuel avec KPIs inventes, rythme et projection.',
+  },
+]
 
 const minDate = ref('')
 const maxDate = ref('')
@@ -544,6 +737,32 @@ function toggleThemeMode() {
   toggleTheme()
 }
 
+function openTemplatePicker() {
+  templatePickerOpen.value = true
+}
+
+function closeTemplatePicker() {
+  templatePickerOpen.value = false
+}
+
+function applyTemplate(kind: TemplateKind) {
+  templateActive.value = true
+  templateKind.value = kind
+  layoutBundle.value.templateModes = { ...(layoutBundle.value.templateModes ?? {}) }
+  layoutBundle.value.templateModes[activeProfile.value] = true
+  layoutBundle.value.templateKinds = { ...(layoutBundle.value.templateKinds ?? {}) }
+  layoutBundle.value.templateKinds[activeProfile.value] = kind
+  templatePickerOpen.value = false
+  paletteOpen.value = false
+  closeSettings()
+  profileEditorOpen.value = false
+  shortcutHelpOpen.value = false
+  fullscreenActive.value = false
+  setSpacePanState(false)
+  syncPanzoomExclude(false)
+  saveBundleNow(false)
+}
+
 /* ===== Dates (local + safe sync) ===== */
 const localFrom = ref(from.value)
 const localTo = ref(to.value)
@@ -584,6 +803,106 @@ function clampDate(v: string) {
   if (maxDate.value && out > maxDate.value) out = maxDate.value
   return out
 }
+function templateRouteActive(path: string) {
+  return path === '/' ? route.path === '/' : route.path.startsWith(path)
+}
+
+function goTemplateRoute(path: string) {
+  if (templateRouteActive(path)) return
+  router.push(path)
+}
+
+function goTemplateAccount() {
+  router.push('/compte')
+}
+
+const {
+  templateDeltaPct,
+  templateSeries,
+  templateProfitSeries,
+  templateSummary,
+  templateTotalNumber,
+  templateMainDataState,
+  templateMiniDataState,
+  templateCadenceText,
+  templateTotalText,
+  templateUserInitials,
+  templateSelectedYear,
+  templateYearOptions,
+  templateMonthChips,
+  templatePieSlices,
+  templatePieChartStyle,
+  templateSuccessRateText,
+  templateGaugeDasharray,
+  templateChartGridLines,
+  templateProfitStartLabel,
+  templateProfitEndLabel,
+  templateEmptyTitle,
+  templateKpiCards,
+  templateQuickFacts,
+  templateBrandsRows,
+  templateTopSalesRows,
+  templateMainHover,
+  templateMiniHover,
+  templateMainChartLinePath,
+  templateMiniChartLinePath,
+  templateMainChartAreaPath,
+  templateMiniChartAreaPath,
+  templateMainLastPointCoord,
+  templateMiniLastPointCoord,
+  onTemplateChartHover,
+  clearTemplateChartHover,
+  setTemplateMonth,
+  onTemplateYearChange,
+} = useTemplateDashboard({
+  templateActive,
+  localFrom,
+  localTo,
+  minDate,
+  maxDate,
+  user,
+  emitRangeUpdate: (nextFrom: string, nextTo: string) => {
+    emit('update:from', nextFrom)
+    emit('update:to', nextTo)
+  },
+})
+
+const templateSharedView = computed<TemplateSharedViewProps>(() => ({
+  selectedYear: templateSelectedYear.value,
+  yearOptions: templateYearOptions.value,
+  monthChips: templateMonthChips.value,
+  pieChartStyle: templatePieChartStyle.value,
+  pieSlices: templatePieSlices.value,
+  kpiCards: templateKpiCards.value,
+  quickFacts: templateQuickFacts.value,
+  brandsRows: templateBrandsRows.value,
+  topSalesRows: templateTopSalesRows.value,
+  cadenceText: templateCadenceText.value,
+  totalText: templateTotalText.value,
+  mainDataState: templateMainDataState.value,
+  miniDataState: templateMiniDataState.value,
+  chartGridLines: templateChartGridLines.value,
+  mainChartAreaPath: templateMainChartAreaPath.value,
+  mainChartLinePath: templateMainChartLinePath.value,
+  miniChartAreaPath: templateMiniChartAreaPath.value,
+  miniChartLinePath: templateMiniChartLinePath.value,
+  mainLastPointCoord: templateMainLastPointCoord.value,
+  miniLastPointCoord: templateMiniLastPointCoord.value,
+  mainHover: templateMainHover.value,
+  miniHover: templateMiniHover.value,
+  profitStartLabel: templateProfitStartLabel.value,
+  profitEndLabel: templateProfitEndLabel.value,
+  emptyTitle: templateEmptyTitle.value,
+  gaugeDasharray: templateGaugeDasharray.value,
+  successRateText: templateSuccessRateText.value,
+  series: templateSeries.value,
+  profitSeries: templateProfitSeries.value,
+  summary: templateSummary.value,
+  totalNumber: templateTotalNumber.value,
+  deltaPct: templateDeltaPct.value,
+  localFrom: localFrom.value,
+  localTo: localTo.value,
+}))
 
 /* ===== Range persist per profile ===== */
 const RANGE_KEY_PREFIX = 'snk_stats_range_v1'
@@ -640,7 +959,7 @@ function saveRangeForProfile(
   }
 }
 
-function preset(kind: 'month' | 'ytd' | 'year') {
+function preset(kind: 'today' | 'month' | 'ytd' | 'year') {
   /**
    * 1) On se met sur "aujourd'hui" a 00:00 (heure locale)
    *    -> evite les decalages quand on formate en YYYY-MM-DD
@@ -721,13 +1040,20 @@ function preset(kind: 'month' | 'ytd' | 'year') {
    * - ytd   : du 1er janvier (annee courante) a aujourd'hui
    * - year  : 1 an glissant en arriere depuis aujourd'hui
    */
-  if (kind === 'month') {
+  if (kind === 'today') {
+    applyRange(today, today)
+  } else if (kind === 'month') {
     applyRange(subMonthsClamp(today, 1), today)
   } else if (kind === 'ytd') {
     applyRange(new Date(today.getFullYear(), 0, 1), today)
   } else {
     applyRange(subYearsClamp(today, 1), today)
   }
+}
+
+function applyQuickPreset(kind: 'today' | 'month' | 'ytd' | 'year') {
+  preset(kind)
+  closeRailDatePicker()
 }
 
 watch(
@@ -1201,30 +1527,9 @@ function loadLayout(key: string): unknown | null {
   }
 }
 
-// Widget d'accueil par defaut quand aucun layout n'existe.
+// Canvas vide par defaut: l'accompagnement est gere par l'empty-state visuel.
 const defaultLayout = (): Widget[] => {
-  const def = getWidgetDef('textBlock')
-  if (!def) return []
-
-  const w: Widget = {
-    id: 'textBlock_welcome',
-    type: def.type,
-    title: def.title,
-    x: (BOARD_W - def.defaultSize.w) / 2,
-    y: (BOARD_H - def.defaultSize.h) / 2,
-    w: def.defaultSize.w,
-    h: def.defaultSize.h,
-    props: {
-      ...cloneWidgetProps(def.defaultProps),
-      content:
-        'Bienvenue sur ton espace stats. Ajoute des widgets depuis la palette pour composer ton dashboard.',
-      align: 'center',
-    },
-  }
-
-  fitWidgetToContent(w)
-  clampWidget(w)
-  return [w]
+  return []
 }
 
 function normalizeLayout(raw: unknown): Widget[] | null {
@@ -1316,12 +1621,8 @@ function normalizeLayout(raw: unknown): Widget[] | null {
     list.push(w)
   }
 
-  if (list.length === 1 && list[0].id === 'textBlock_welcome') {
-    const w = list[0]
-    w.x = (BOARD_W - w.w) / 2
-    w.y = (BOARD_H - w.h) / 2
-    clampWidget(w)
-  }
+  // Migration douce: l'ancien widget de bienvenue est remplace par le nouvel empty-state.
+  if (list.length === 1 && list[0].id === 'textBlock_welcome') return []
 
   return list
 }
@@ -1338,6 +1639,24 @@ function normalizeBundle(raw: unknown): LayoutBundle {
     return map
   }
 
+  const normalizeTemplateModes = (modes: unknown): Record<string, boolean> => {
+    if (!modes || typeof modes !== 'object' || Array.isArray(modes)) return {}
+    const map: Record<string, boolean> = {}
+    for (const [profileId, value] of Object.entries(modes as Record<string, unknown>)) {
+      map[pickProfileId(profileId)] = value === true
+    }
+    return map
+  }
+
+  const normalizeTemplateKinds = (kinds: unknown): Record<string, TemplateKind> => {
+    if (!kinds || typeof kinds !== 'object' || Array.isArray(kinds)) return {}
+    const map: Record<string, TemplateKind> = {}
+    for (const [profileId, value] of Object.entries(kinds as Record<string, unknown>)) {
+      map[pickProfileId(profileId)] = isTemplateKind(value) ? value : DEFAULT_TEMPLATE_KIND
+    }
+    return map
+  }
+
   if (raw && typeof raw === 'object' && !Array.isArray(raw) && (raw as any).profiles) {
     const obj = raw as LayoutBundle
     return {
@@ -1347,6 +1666,8 @@ function normalizeBundle(raw: unknown): LayoutBundle {
       profileNames: obj.profileNames ?? {},
       profileColors: obj.profileColors ?? {},
       ranges: normalizeRanges((obj as any).ranges),
+      templateModes: normalizeTemplateModes((obj as any).templateModes),
+      templateKinds: normalizeTemplateKinds((obj as any).templateKinds),
     }
   }
 
@@ -1358,6 +1679,8 @@ function normalizeBundle(raw: unknown): LayoutBundle {
       profileNames: {},
       profileColors: {},
       ranges: {},
+      templateModes: {},
+      templateKinds: {},
     }
   }
 
@@ -1368,6 +1691,8 @@ function normalizeBundle(raw: unknown): LayoutBundle {
     profileNames: {},
     profileColors: {},
     ranges: {},
+    templateModes: {},
+    templateKinds: {},
   }
 }
 
@@ -1379,6 +1704,12 @@ function applyProfileLayout(bundle: LayoutBundle, profileId: string) {
   const picked = pickProfileId(profileId)
   activeProfile.value = picked
   bundle.activeProfile = picked
+  bundle.templateModes = bundle.templateModes ?? {}
+  bundle.templateKinds = bundle.templateKinds ?? {}
+  templateActive.value = bundle.templateModes[picked] === true
+  templateKind.value = isTemplateKind(bundle.templateKinds[picked])
+    ? bundle.templateKinds[picked]
+    : DEFAULT_TEMPLATE_KIND
   const raw = bundle.profiles?.[picked]
   profileNames.value = { ...DEFAULT_PROFILE_NAMES, ...(bundle.profileNames ?? {}) }
   profileColors.value = { ...PROFILE_COLORS, ...(bundle.profileColors ?? {}) }
@@ -1479,6 +1810,10 @@ function saveBundleNow(showToast = false) {
   const bundle = layoutBundle.value
   bundle.activeProfile = activeProfile.value
   bundle.profiles = bundle.profiles ?? {}
+  bundle.templateModes = { ...(bundle.templateModes ?? {}) }
+  bundle.templateModes[activeProfile.value] = templateActive.value
+  bundle.templateKinds = { ...(bundle.templateKinds ?? {}) }
+  bundle.templateKinds[activeProfile.value] = templateKind.value
   saveRangeForProfile(activeProfile.value, from.value, to.value, { persistLocal: false })
   bundle.profiles[activeProfile.value] = serializeWidgets()
   bundle.profileNames = { ...profileNames.value }
@@ -1591,6 +1926,35 @@ watch(
 /* ===== Widget registry ===== */
 const paletteOpen = ref(false)
 const fullscreenActive = ref(false)
+const isCanvasEffectivelyEmpty = computed(
+  () => widgets.value.length === 0 || (widgets.value.length === 1 && widgets.value[0]?.id === 'textBlock_welcome'),
+)
+const showCanvasEmptyGuide = computed(
+  () =>
+    !templateActive.value &&
+    isCanvasEffectivelyEmpty.value &&
+    !fullscreenActive.value &&
+    !paletteOpen.value &&
+    !settingsOpen.value &&
+    !profileEditorOpen.value &&
+    !shortcutHelpOpen.value,
+)
+const emptyGuidePrimaryActionLabel = computed(() =>
+  editMode.value ? 'Ajouter un widget' : 'Activer edition + ajouter un widget',
+)
+
+function onEmptyGuideAddWidget() {
+  if (!editMode.value) {
+    editMode.value = true
+    persistEditMode()
+  }
+  paletteOpen.value = true
+}
+
+function onEmptyGuideOpenTemplate() {
+  openTemplatePicker()
+}
+
 const PALETTE_ORDER = ['Texte', 'Finance', 'Stock', 'Performance', 'Bonus']
 const paletteGroups = computed(() => {
   const grouped = new Map<string, Array<Record<string, unknown>>>()
@@ -2098,6 +2462,7 @@ const {
   onVisibilityChange,
 } = useCanvasShortcuts({
   editMode,
+  templateActive,
   fullscreenActive,
   paletteOpen,
   settingsOpen,
@@ -2114,6 +2479,7 @@ const {
 })
 
 function onCanvasPointerDown(e: PointerEvent) {
+  if (templateActive.value) return
   if (!editMode.value) return
   if (spacePanActive.value) return
   const isPrimary = e.button === 0
@@ -2214,6 +2580,7 @@ function onCanvasPointerDown(e: PointerEvent) {
 }
 
 function onCanvasContextMenu(event: MouseEvent) {
+  if (templateActive.value) return
   if (!editMode.value) return
   const target = event.target as HTMLElement | null
   if (!target?.closest('.board')) return
@@ -2367,8 +2734,9 @@ const camera = useCanvasCamera(viewportEl, boardEl, {
 
 const scale = computed(() => camera.scale.value)
 const isCompact = ref(false)
-const datePanelOpen = ref(true)
-const profileSwitcherExpanded = ref(true)
+const railDatePickerOpen = ref(false)
+const railDateButtonRef = ref<HTMLElement | null>(null)
+const railDatePanelRef = ref<HTMLElement | null>(null)
 const visibleRect = ref<{ left: number; top: number; right: number; bottom: number } | null>(null)
 let visibleRectRaf: number | null = null
 const cameraInteracting = ref(false)
@@ -2438,8 +2806,34 @@ function normalizeVisibleTextWidgets(preserveWidth = true) {
   }
 }
 
-function toggleProfileSwitcher() {
-  profileSwitcherExpanded.value = !profileSwitcherExpanded.value
+function toggleRailDatePicker() {
+  railDatePickerOpen.value = !railDatePickerOpen.value
+}
+
+function closeRailDatePicker() {
+  railDatePickerOpen.value = false
+}
+
+function onRailFromInput(event: Event) {
+  const value = (event.target as HTMLInputElement | null)?.value ?? ''
+  setFrom(value)
+}
+
+function onRailToInput(event: Event) {
+  const value = (event.target as HTMLInputElement | null)?.value ?? ''
+  setTo(value)
+}
+
+function onRailDateGlobalPointerDown(event: PointerEvent) {
+  if (!railDatePickerOpen.value) return
+  const path = (event.composedPath?.() ?? []) as EventTarget[]
+  if (railDatePanelRef.value && path.includes(railDatePanelRef.value)) return
+  if (railDateButtonRef.value && path.includes(railDateButtonRef.value)) return
+  closeRailDatePicker()
+}
+
+function onRailDateGlobalKeyDown(event: KeyboardEvent) {
+  if (event.key === 'Escape') closeRailDatePicker()
 }
 
 function fitToWidgets(padding = 120, animate = true) {
@@ -4796,6 +5190,7 @@ watch(
   ([palette, settings, profileEditor, shortcutOpen]) => {
     if (palette || settings || profileEditor || shortcutOpen) {
       setSpacePanState(false)
+      closeRailDatePicker()
     }
   },
 )
@@ -5083,6 +5478,7 @@ function autoResize(id: string, height: number) {
 }
 
 function onSelectionKeyDown(event: KeyboardEvent) {
+  if (templateActive.value) return
   if (!editMode.value) return
   const target = event.target as HTMLElement | null
   if (target?.closest('input, textarea, select, [contenteditable="true"]')) return
@@ -5109,18 +5505,39 @@ function onSelectionKeyDown(event: KeyboardEvent) {
 
 /* ===== Lifecycle ===== */
 onMounted(async () => {
-  // init camera + centre quand la vue est prete
-  camera.init(() => {
-    centerView()
-    syncPanzoomExclude(shouldUsePanzoomExclude())
-    if (window.innerWidth < COMPACT_BREAKPOINT) zoomToFitContent()
-    scheduleVisibleRectUpdate()
+  const initCanvasCamera = () => {
+    camera.init(() => {
+      centerView()
+      setCanvasPanEnabled(true)
+      syncPanzoomExclude(shouldUsePanzoomExclude())
+      if (window.innerWidth < COMPACT_BREAKPOINT) zoomToFitContent()
+      scheduleVisibleRectUpdate()
+    })
+  }
+
+  // init camera + centre quand la vue est prete (seulement en mode canvas)
+  if (!templateActive.value) {
+    initCanvasCamera()
+  }
+
+  watch(templateActive, async (active, previous) => {
+    if (active === previous) return
+    closeRailDatePicker()
+    if (active) {
+      setSpacePanState(false)
+      camera.destroy()
+      return
+    }
+    await nextTick()
+    initCanvasCamera()
   })
 
   window.addEventListener('keydown', onCanvasKeyDown, { capture: true })
   window.addEventListener('keydown', onSelectionKeyDown, { capture: true })
   window.addEventListener('keyup', onCanvasKeyUp, { capture: true })
   window.addEventListener('blur', onWindowBlur)
+  window.addEventListener('pointerdown', onRailDateGlobalPointerDown)
+  window.addEventListener('keydown', onRailDateGlobalKeyDown)
   document.addEventListener('visibilitychange', onVisibilityChange)
 
   await nextTick()
@@ -5159,8 +5576,6 @@ onMounted(async () => {
     const wasCompact = isCompact.value
     if (compact !== isCompact.value) {
       isCompact.value = compact
-      datePanelOpen.value = !compact
-      profileSwitcherExpanded.value = !compact
     }
     if (!wasCompact && compact) zoomToFitContent()
     scheduleVisibleRectUpdate()
@@ -5171,6 +5586,11 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  window.dispatchEvent(
+    new CustomEvent('snk:stats-template-mode', {
+      detail: { active: false },
+    }),
+  )
   setSpacePanState(false)
   clearVisibleRectRaf()
   clearCameraInteractionTimer()
@@ -5178,6 +5598,8 @@ onBeforeUnmount(() => {
   window.removeEventListener('keydown', onSelectionKeyDown, true)
   window.removeEventListener('keyup', onCanvasKeyUp, true)
   window.removeEventListener('blur', onWindowBlur)
+  window.removeEventListener('pointerdown', onRailDateGlobalPointerDown)
+  window.removeEventListener('keydown', onRailDateGlobalKeyDown)
   document.removeEventListener('visibilitychange', onVisibilityChange)
   clearPendingSaves()
   if (toastTimer) {
@@ -5190,6 +5612,7 @@ onBeforeUnmount(() => {
 })
 
 function switchProfile(profileId: string) {
+  closeRailDatePicker()
   const next = pickProfileId(profileId)
   if (next === activeProfile.value) return
   saveRangeForProfile(activeProfile.value, from.value, to.value)
@@ -5203,7 +5626,6 @@ function switchProfile(profileId: string) {
     emit('update:from', nextRange.from)
     emit('update:to', nextRange.to)
   }
-  if (isCompact.value) profileSwitcherExpanded.value = false
   nextTick(() => {
     normalizeVisibleTextWidgets(true)
     widgets.value.forEach((w) => clampWidget(w))
@@ -5213,6 +5635,7 @@ function switchProfile(profileId: string) {
 }
 
 function openProfileEditor() {
+  closeRailDatePicker()
   profileDraft.value = {
     ...profileNames.value,
     p1Color: profileColors.value.p1 ?? PROFILE_COLORS.p1,
@@ -5221,6 +5644,7 @@ function openProfileEditor() {
   }
   profileEditorOpen.value = true
 }
+
 function closeProfileEditor() {
   profileEditorOpen.value = false
 }
@@ -5242,4 +5666,5 @@ function saveProfileEditor() {
 }
 </script>
 
-<style scoped src="./StatsCanvas.css"></style>
+<style src="./StatsCanvas.css"></style>
+

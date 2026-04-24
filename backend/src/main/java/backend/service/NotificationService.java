@@ -198,6 +198,8 @@ public class NotificationService {
   }
 
   private int generateStockAgingNotifications(User user, LocalDate today) {
+    notificationRepository.deleteInvalidStockAgingNotificationsForUser(user.getId());
+
     List<SnkVente> inStockItems = snkVenteRepository.findInStockCandidatesByUserId(user.getId());
     if (inStockItems.isEmpty()) {
       return 0;
@@ -209,18 +211,31 @@ public class NotificationService {
         .toList();
 
     for (SnkVente item : ordered) {
+      if (item.getId() == null) {
+        continue;
+      }
       LocalDate referenceDate = resolveStockReferenceDate(item);
       if (referenceDate == null || referenceDate.isAfter(today)) {
         continue;
       }
 
       long monthsInStock = ChronoUnit.MONTHS.between(referenceDate, today);
+      Long itemEntityId = item.getId().longValue();
       for (int milestone : STOCK_MILESTONES_MONTHS) {
+        String milestonePrefix = "STOCK_" + milestone + "M_ITEM_" + item.getId();
+        String milestoneKey = milestonePrefix + "_ACHAT_" + referenceDate;
+
+        notificationRepository.deleteStockAgingMilestoneVariants(
+            user.getId(),
+            itemEntityId,
+            milestonePrefix,
+            milestoneKey
+        );
+
         if (monthsInStock < milestone) {
           continue;
         }
 
-        String milestoneKey = "STOCK_" + milestone + "M_ITEM_" + item.getId();
         String itemName = (item.getNomItem() == null || item.getNomItem().isBlank())
             ? "Un item de votre stock"
             : item.getNomItem();
@@ -234,7 +249,7 @@ public class NotificationService {
             NotificationType.STOCK_AGING,
             NotificationSeverity.INFO,
             NotificationEntityType.STOCK_ITEM,
-            item.getId() != null ? item.getId().longValue() : null,
+            itemEntityId,
             milestoneKey,
             title,
             message,
@@ -248,16 +263,7 @@ public class NotificationService {
   }
 
   private LocalDate resolveStockReferenceDate(SnkVente item) {
-    if (item.getDateAchat() != null) {
-      return item.getDateAchat();
-    }
-
-    if (item.getCreatedAt() != null) {
-      // Hypothese metier: si date d'achat absente, on utilise created_at comme date d'entree en stock.
-      return item.getCreatedAt().atOffset(ZoneOffset.UTC).toLocalDate();
-    }
-
-    return null;
+    return item.getDateAchat();
   }
 
   private int createNotificationIfAbsent(

@@ -20,8 +20,7 @@ const themeMode = computed(() => (theme.value === 'light' ? 'light' : 'dark'))
   position: relative;
   width: 100%;
   height: 100%;
-  min-height: 100svh;
-  min-height: 100dvh;
+  min-height: 0;
   overflow: hidden;
   background: #060a12;
 }

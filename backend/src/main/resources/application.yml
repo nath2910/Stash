@@ -52,7 +52,11 @@ spring:
             client-name: Discord
         provider:
           google:
-            issuer-uri: https://accounts.google.com
+            authorization-uri: https://accounts.google.com/o/oauth2/v2/auth
+            token-uri: https://oauth2.googleapis.com/token
+            user-info-uri: https://openidconnect.googleapis.com/v1/userinfo
+            user-name-attribute: sub
+            jwk-set-uri: https://www.googleapis.com/oauth2/v3/certs
           discord:
             authorization-uri: https://discord.com/api/oauth2/authorize
             token-uri: https://discord.com/api/oauth2/token
@@ -127,7 +131,11 @@ spring:
             client-name: Discord
         provider:
           google:
-            issuer-uri: https://accounts.google.com
+            authorization-uri: https://accounts.google.com/o/oauth2/v2/auth
+            token-uri: https://oauth2.googleapis.com/token
+            user-info-uri: https://openidconnect.googleapis.com/v1/userinfo
+            user-name-attribute: sub
+            jwk-set-uri: https://www.googleapis.com/oauth2/v3/certs
           discord:
             authorization-uri: https://discord.com/api/oauth2/authorize
             token-uri: https://discord.com/api/oauth2/token
@@ -189,7 +197,11 @@ spring:
             client-name: Discord
         provider:
           google:
-            issuer-uri: https://accounts.google.com
+            authorization-uri: https://accounts.google.com/o/oauth2/v2/auth
+            token-uri: https://oauth2.googleapis.com/token
+            user-info-uri: https://openidconnect.googleapis.com/v1/userinfo
+            user-name-attribute: sub
+            jwk-set-uri: https://www.googleapis.com/oauth2/v3/certs
           discord:
             authorization-uri: https://discord.com/api/oauth2/authorize
             token-uri: https://discord.com/api/oauth2/token
