@@ -366,10 +366,331 @@ body.canvas-resize-cursor--nesw {
   box-shadow: none;
   padding: 4px calc(8px + var(--template-rail-width) + var(--template-rail-gap)) 10px 8px;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   gap: 6px;
   align-content: start;
   overflow: hidden;
+}
+
+.template-page--yearly-overview {
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 6px;
+}
+
+.template-page--yearly-overview .template-dashboard-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.35fr);
+  grid-template-rows: auto auto auto;
+  align-items: start;
+}
+
+.template-page--yearly-overview .template-right-stack {
+  grid-column: 1 / span 2;
+}
+
+.template-page--yearly-overview .template-left-stack {
+  grid-column: 3;
+}
+
+.template-page--yearly-overview .template-right-stack .template-kpi-band {
+  height: auto;
+  min-height: 0;
+  align-content: start;
+}
+
+.template-page--yearly-overview .template-right-stack .template-kpi-row {
+  height: auto;
+  min-height: 0;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(64px, auto));
+  grid-auto-rows: minmax(64px, auto);
+  align-content: start;
+}
+
+.template-page--yearly-overview .template-kpi-card {
+  padding: 7px 11px;
+  min-height: 0;
+  gap: 4px;
+}
+
+.template-page--yearly-overview .template-kpi-card__label {
+  font-size: clamp(0.54rem, 0.65vw, 0.7rem);
+  letter-spacing: 0.1em;
+}
+
+.template-page--yearly-overview .template-kpi-card__value {
+  font-size: clamp(1.08rem, 1.42vw, 1.56rem);
+  line-height: 1.1;
+}
+
+.template-page--yearly-overview .template-panel--pie {
+  width: 100%;
+}
+
+.template-page--yearly-overview .template-panel--sales {
+  min-height: clamp(320px, 40vh, 520px);
+}
+
+.template-page--yearly-overview .template-bottom-info,
+.template-page--yearly-overview .template-bottom-charts {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.template-page--yearly-overview .template-bottom-info > *,
+.template-page--yearly-overview .template-bottom-charts > * {
+  flex: 1 1 0;
+  min-width: 0;
+  height: auto;
+}
+
+.template-page--yearly-overview .template-bottom-info,
+.template-page--yearly-overview .template-bottom-charts {
+  align-items: start;
+}
+
+.template-page--yearly-overview .template-bottom-info > .template-panel {
+  height: auto;
+}
+
+.template-page--yearly-overview .template-bottom-charts .template-panel--trend,
+.template-page--yearly-overview .template-bottom-charts .template-kpi-trend,
+.template-page--yearly-overview .template-bottom-charts .template-panel--success-right {
+  height: auto;
+}
+
+.template-page--yearly-overview .template-bottom-charts .template-panel--trend,
+.template-page--yearly-overview .template-bottom-charts .template-kpi-trend {
+  flex: 1.18 1 0;
+  min-height: clamp(460px, 54vh, 700px);
+}
+
+.template-page--yearly-overview .template-bottom-charts .template-chart-shell,
+.template-page--yearly-overview .template-bottom-charts .template-kpi-trend__chart {
+  min-height: clamp(360px, 46vh, 560px);
+}
+
+.template-page--yearly-overview .template-bottom-charts .template-panel--success-right {
+  flex: 0.72 1 0;
+  min-height: clamp(184px, 24vh, 280px);
+  max-width: clamp(230px, 23vw, 340px);
+  padding: 10px 10px 6px;
+  grid-template-rows: 22px auto minmax(0, 1fr);
+}
+
+.template-page--yearly-overview .template-bottom-charts .template-panel--success-right .template-success-note p {
+  font-size: clamp(0.72rem, 1.1vh, 0.84rem);
+}
+
+.template-page--yearly-overview .template-bottom-charts .template-panel--success-right .template-success-note strong {
+  font-size: clamp(1.02rem, 1.45vh, 1.14rem);
+}
+
+.template-page--yearly-overview .template-bottom-charts .template-panel--success-right .template-gauge {
+  min-height: clamp(100px, 13vh, 144px);
+  max-height: clamp(108px, 15vh, 162px);
+}
+
+.template-page--yearly-overview .template-bottom-charts .template-panel--success-right .template-gauge-value {
+  font-size: clamp(18px, 2.3vh, 26px);
+}
+
+.template-page--yearly-overview .template-pie-layout {
+  grid-template-columns: minmax(112px, 132px) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.template-page--yearly-overview .template-pie-chart {
+  width: min(100%, 132px);
+}
+
+.template-overview-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid #9bb8de;
+  background:
+    linear-gradient(130deg, #f8fbff 0%, #eaf2ff 52%, #ebf7f2 100%),
+    radial-gradient(circle at 88% 12%, rgba(37, 99, 235, 0.18), transparent 46%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.72),
+    0 8px 22px rgba(37, 70, 118, 0.08);
+}
+
+.template-overview-hero__copy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.template-overview-hero__kicker {
+  margin: 0;
+  color: #2d5f96;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-weight: 760;
+}
+
+.template-overview-hero__title {
+  margin: 0;
+  color: #123d6d;
+  font-size: clamp(1rem, 1.3vw, 1.24rem);
+  line-height: 1.15;
+  font-weight: 780;
+}
+
+.template-overview-hero__subtitle {
+  margin: 0;
+  color: #4b6f96;
+  font-size: 0.68rem;
+  line-height: 1.25;
+}
+
+.template-page--yearly-overview .template-panel,
+.template-page--yearly-overview .template-kpi-trend {
+  background: linear-gradient(180deg, #fdfefe 0%, #eef4ff 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(144, 172, 206, 0.95),
+    0 6px 16px rgba(29, 69, 121, 0.08);
+}
+
+.template-page--yearly-overview .template-panel__title {
+  color: #275989;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.template-page--yearly-overview .template-panel__title::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #1d7ed8, #22c55e);
+}
+
+.template-page--yearly-overview .template-graph-title,
+.template-page--yearly-overview .template-kpi-trend__title {
+  color: #114678;
+  font-weight: 760;
+}
+
+.template-page--yearly-overview .template-graph-subtitle,
+.template-page--yearly-overview .template-kpi-trend__subtitle {
+  color: #456b95;
+}
+
+.template-page--yearly-overview .template-kpi-card {
+  background: linear-gradient(180deg, rgba(243, 248, 255, 0.95), rgba(232, 241, 254, 0.95));
+  border-right-color: rgba(145, 174, 208, 0.95);
+  border-top-color: rgba(145, 174, 208, 0.95);
+  border-bottom-color: rgba(145, 174, 208, 0.95);
+}
+
+.template-page--yearly-overview .template-kpi-card__label {
+  color: #3f6996;
+}
+
+.template-page--yearly-overview .template-kpi-card__value {
+  color: #0f4478;
+}
+
+.template-page--yearly-overview .template-kpi-card__value.is-positive {
+  color: #00a86b;
+  text-shadow: 0 0 8px rgba(0, 168, 107, 0.2);
+}
+
+.template-page--yearly-overview .template-kpi-card__value.is-negative {
+  color: #b42318;
+}
+
+.template-page--yearly-overview .template-pie-label {
+  color: #294f79;
+}
+
+.template-page--yearly-overview .template-pie-value {
+  color: #114678;
+}
+
+.template-page--yearly-overview .template-chart-shell,
+.template-page--yearly-overview .template-kpi-trend__chart {
+  background: linear-gradient(180deg, #f2f7ff 0%, #e4eeff 100%);
+  box-shadow: inset 0 0 0 1px rgba(171, 197, 227, 0.95);
+}
+
+.template-page--yearly-overview .template-chart-grid,
+.template-page--yearly-overview .template-kpi-trend__grid {
+  stroke: rgba(103, 133, 171, 0.46);
+}
+
+.template-page--yearly-overview .template-chart-line {
+  stroke: #0b6fd9;
+  stroke-width: 2.7;
+  filter: drop-shadow(0 0 4px rgba(11, 111, 217, 0.3));
+}
+
+.template-page--yearly-overview .template-chart-dot {
+  fill: #0b6fd9;
+}
+
+.template-page--yearly-overview .template-chart-hover-dot {
+  fill: #0ea5e9;
+}
+
+.template-page--yearly-overview .template-kpi-trend__area {
+  fill: rgba(37, 99, 235, 0.18);
+}
+
+.template-page--yearly-overview .template-kpi-trend__line {
+  stroke: #2563eb;
+  stroke-width: 2.55;
+}
+
+.template-page--yearly-overview .template-kpi-trend__dot {
+  fill: #2563eb;
+}
+
+.template-page--yearly-overview .template-success-note {
+  color: #3d638c;
+}
+
+.template-page--yearly-overview .template-success-note strong,
+.template-page--yearly-overview .template-gauge-value {
+  color: #0f4478;
+}
+
+.template-page--yearly-overview .template-gauge-track {
+  stroke: #cadcf1;
+}
+
+.template-page--yearly-overview .template-gauge-fill {
+  stroke: #0b6fd9;
+}
+
+.template-page--yearly-overview .template-table th {
+  background: linear-gradient(180deg, #e7f1ff 0%, #dceafe 100%);
+  color: #346190;
+}
+
+.template-page--yearly-overview .template-table td {
+  border-bottom-color: rgba(183, 205, 230, 0.85);
+  color: #204a74;
+}
+
+.template-page--yearly-overview .template-table .is-number {
+  color: #0f4478;
+}
+
+.template-page--yearly-overview .template-fact__label {
+  color: #4a6f96;
+}
+
+.template-page--yearly-overview .template-fact__value {
+  color: #114678;
 }
 
 .template-page > section {
@@ -508,7 +829,7 @@ body.canvas-resize-cursor--nesw {
 .template-rail__nav-btn.is-active {
   border-color: #65b39e;
   background: #ddf5ec;
-  color: #1f8c6b;
+  color: #00a86b;
 }
 
 .template-rail__meta {
@@ -958,7 +1279,8 @@ body.canvas-resize-cursor--nesw {
 }
 
 .template-kpi-card__value.is-positive {
-  color: #0f766e;
+  color: #00a86b;
+  text-shadow: 0 0 8px rgba(0, 168, 107, 0.2);
 }
 
 .template-kpi-card__value.is-negative {
@@ -1389,12 +1711,17 @@ body.canvas-resize-cursor--nesw {
 }
 
 .template-bottom-charts .template-panel--success-right {
-  grid-template-rows: 22px minmax(84px, auto) minmax(0, 1fr);
-  padding-top: 8px;
+  grid-template-rows: 24px minmax(100px, auto) minmax(0, 1fr);
+  padding: 12px 12px 8px;
   align-self: end;
   height: 84%;
   min-height: 130px;
   max-height: 250px;
+}
+
+.template-page--yearly-overview .template-bottom-charts .template-panel--success-right {
+  align-self: start;
+  height: auto;
 }
 
 .template-bottom-charts .template-panel--success-right .template-panel__title {
@@ -1406,7 +1733,7 @@ body.canvas-resize-cursor--nesw {
 
 .template-bottom-charts .template-panel--success-right .template-success-top {
   grid-template-columns: 1fr;
-  gap: 4px;
+  gap: 8px;
   align-items: start;
   min-height: 0;
 }
@@ -1414,8 +1741,9 @@ body.canvas-resize-cursor--nesw {
 .template-bottom-charts .template-panel--success-right .template-success-note {
   align-content: start;
   justify-items: start;
-  gap: 3px;
+  gap: 6px;
   min-width: 0;
+  padding: 2px 2px 0;
 }
 
 .template-bottom-charts .template-panel--success-right .template-donut {
@@ -1439,15 +1767,17 @@ body.canvas-resize-cursor--nesw {
 
 .template-bottom-charts .template-panel--success-right .template-gauge-wrap {
   grid-template-rows: minmax(0, 1fr) auto;
-  gap: 4px;
+  gap: 6px;
+  align-content: center;
 }
 
 .template-bottom-charts .template-panel--success-right .template-gauge {
-  max-height: clamp(112px, 17vh, 188px);
+  min-height: clamp(140px, 20vh, 220px);
+  max-height: clamp(140px, 22vh, 228px);
 }
 
 .template-bottom-charts .template-panel--success-right .template-gauge-value {
-  font-size: clamp(18px, 2.5vh, 28px);
+  font-size: clamp(24px, 3.4vh, 36px);
 }
 
 .template-bottom-charts .template-panel--success-right .template-gauge-labels {
@@ -1467,6 +1797,28 @@ body.canvas-resize-cursor--nesw {
 .template-chart-grid {
   stroke: rgba(118, 145, 178, 0.62);
   stroke-width: 1;
+}
+
+.template-chart-axis {
+  stroke: rgba(49, 87, 129, 0.82);
+  stroke-width: 0.95;
+}
+
+.template-chart-axis-tick {
+  stroke: rgba(49, 87, 129, 0.78);
+  stroke-width: 0.85;
+}
+
+.template-chart-axis-label {
+  fill: #335f8c;
+  font-size: 12px;
+  font-weight: 620;
+  letter-spacing: 0.01em;
+}
+
+.template-chart-axis-label--x {
+  fill: #3f6f9d;
+  font-size: 11px;
 }
 
 .template-chart-area {
@@ -1711,16 +2063,14 @@ body.canvas-resize-cursor--nesw {
   min-height: 0;
   overflow: auto;
   scrollbar-gutter: stable;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 .template-table-wrap::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-.template-table-wrap::-webkit-scrollbar-thumb {
-  background: #b4c8df;
-  border-radius: 999px;
+  width: 0;
+  height: 0;
+  display: none;
 }
 
 .template-table th,
@@ -1759,6 +2109,110 @@ body.canvas-resize-cursor--nesw {
   text-align: right;
   color: #15375f;
   font-weight: 700;
+}
+
+/* High-impact color pass: make key info pop across templates */
+.template-panel__title {
+  color: #2f669b;
+  font-weight: 760;
+}
+
+.template-graph-title,
+.template-kpi-trend__title {
+  color: #0f4f88;
+  font-weight: 760;
+}
+
+.template-graph-subtitle,
+.template-kpi-trend__subtitle {
+  color: #4f759c;
+}
+
+.template-kpi-card__value {
+  color: #0f4f8f;
+}
+
+.template-kpi-card__value.is-positive {
+  color: #00c27a;
+  text-shadow: 0 0 9px rgba(0, 194, 122, 0.2);
+}
+
+.template-kpi-card__value.is-negative {
+  color: #e11d48;
+  text-shadow: 0 0 8px rgba(225, 29, 72, 0.18);
+}
+
+.template-fact__value {
+  color: #0f5a9f;
+  font-weight: 760;
+}
+
+.template-table th {
+  color: #3c6994;
+  background: linear-gradient(180deg, #edf5ff 0%, #e0edff 100%);
+}
+
+.template-table .is-number {
+  color: #0f5a9f;
+  font-weight: 760;
+}
+
+.template-chart-line {
+  stroke: #0b7cff;
+  stroke-width: 2.55;
+  filter: drop-shadow(0 0 4px rgba(11, 124, 255, 0.28));
+}
+
+.template-kpi-trend__line {
+  stroke: #1d72ff;
+  stroke-width: 2.55;
+}
+
+.template-chart-dot {
+  fill: #0b7cff;
+}
+
+.template-kpi-trend__dot {
+  fill: #1d72ff;
+}
+
+.template-chart-hover-dot {
+  fill: #00b7ff;
+  stroke-width: 2.4;
+}
+
+.template-chart-tooltip {
+  border-color: rgba(95, 143, 201, 0.9);
+  box-shadow: 0 10px 24px rgba(23, 58, 99, 0.24);
+}
+
+.template-chart-tooltip strong {
+  color: #0f4f88;
+}
+
+.template-chart-meta {
+  color: #3f6f9d;
+  font-weight: 650;
+}
+
+.template-success-note strong,
+.template-gauge-value {
+  color: #0f5a9f;
+}
+
+.template-gauge-fill {
+  stroke: #0b7cff;
+}
+
+.template-rail__meta-btn--accent {
+  border-color: #5f8ff0;
+  background: linear-gradient(180deg, #e3eeff 0%, #d8e7ff 100%);
+  color: #1d4f88;
+}
+
+.template-rail__profile-btn.is-active {
+  border-color: #5f8ff0;
+  box-shadow: inset 0 0 0 2px rgba(95, 143, 240, 0.2);
 }
 
 .template-panel--table .truncate {
@@ -1816,12 +2270,21 @@ body.canvas-resize-cursor--nesw {
   .template-dashboard-grid {
     grid-template-columns: var(--template-right-col-width) minmax(0, 1fr);
   }
+
+  .template-overview-hero {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 1080px) {
   .template-dashboard-grid {
     grid-template-columns: 1fr;
     grid-template-rows: auto auto auto auto;
+  }
+
+  .template-page--yearly-overview .template-right-stack,
+  .template-page--yearly-overview .template-left-stack {
+    grid-column: auto;
   }
 
   .template-right-stack {
@@ -1865,6 +2328,21 @@ body.canvas-resize-cursor--nesw {
     width: 100%;
     height: 100%;
     align-self: stretch;
+  }
+
+  .template-page--yearly-overview .template-bottom-info,
+  .template-page--yearly-overview .template-bottom-charts {
+    flex-wrap: wrap;
+  }
+
+  .template-page--yearly-overview .template-bottom-info > *,
+  .template-page--yearly-overview .template-bottom-charts > * {
+    flex: 1 1 calc(50% - 3px);
+  }
+
+  .template-page--yearly-overview .template-bottom-charts .template-panel--success-right {
+    flex-basis: 100%;
+    max-width: none;
   }
 }
 
@@ -1922,7 +2400,8 @@ body.canvas-resize-cursor--nesw {
   }
 
   .template-bottom-charts .template-panel--success-right .template-gauge {
-    max-height: clamp(104px, 15vh, 156px);
+    min-height: clamp(120px, 17vh, 170px);
+    max-height: clamp(120px, 18vh, 180px);
   }
 
   .template-panel--trend {
@@ -2026,6 +2505,16 @@ body.canvas-resize-cursor--nesw {
     overflow: auto;
   }
 
+  .template-overview-hero {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .template-overview-hero__title {
+    font-size: clamp(0.94rem, 4.4vw, 1.08rem);
+  }
+
   .template-month-strip {
     grid-template-columns: 1fr;
     padding: 0;
@@ -2116,6 +2605,15 @@ body.canvas-resize-cursor--nesw {
   .template-table th,
   .template-table td {
     font-size: 0.78rem;
+  }
+
+  .template-page--yearly-overview .template-bottom-info > *,
+  .template-page--yearly-overview .template-bottom-charts > * {
+    flex: 1 1 100%;
+  }
+
+  .template-page--yearly-overview .template-bottom-charts .template-panel--success-right {
+    max-width: none;
   }
 }
 

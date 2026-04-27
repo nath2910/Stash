@@ -1,43 +1,27 @@
 <template>
-  <section class="template-page">
-    <section class="template-month-strip" aria-label="Mois">
-      <div class="template-year-box">
-        <label class="template-year-box__label" for="template-year-select">Annee</label>
-        <select
-          id="template-year-select"
-          class="template-year-box__select"
-          :value="props.selectedYear"
-          @change="emit('year-change', $event)"
-        >
-          <option v-for="year in props.yearOptions" :key="`template-year-${year}`" :value="year">
-            {{ year }}
-          </option>
-        </select>
+  <section class="template-page template-page--yearly-overview">
+    <header class="template-overview-hero" aria-label="Synthese annuelle">
+      <div class="template-overview-hero__copy">
+        <p class="template-overview-hero__kicker">Dashboard annuel</p>
+        <h2 class="template-overview-hero__title">Vue generale {{ props.selectedYear }}</h2>
+        <p class="template-overview-hero__subtitle">
+          Vision globale des performances, de la rentabilite et des signaux business clefs.
+        </p>
       </div>
-      <div class="template-month-strip__main">
-        <div class="template-month-strip__label">Mois</div>
-        <div class="template-month-strip__grid">
-          <button
-            v-for="month in props.monthChips"
-            :key="`month-${month.index}`"
-            type="button"
-            class="template-month-chip"
-            :class="{
-              'is-active': month.active,
-              'is-available': month.available,
-              'is-unavailable': !month.available,
-            }"
-            :disabled="!month.available"
-            title="Clic: 1 mois | Ctrl/Cmd+clic: plusieurs mois"
-            @click="month.available && emit('month-select', month.index, $event)"
-          >
-            {{ month.label }}
-          </button>
-        </div>
-      </div>
-    </section>
+    </header>
 
     <section class="template-dashboard-grid">
+      <section class="template-right-stack">
+        <section class="template-kpi-band">
+          <div class="template-kpi-row">
+            <article v-for="kpi in props.kpiCards" :key="kpi.key" class="template-kpi-card">
+              <p class="template-kpi-card__label">{{ kpi.label }}</p>
+              <p class="template-kpi-card__value" :class="kpi.tone">{{ kpi.value }}</p>
+            </article>
+          </div>
+        </section>
+      </section>
+
       <section class="template-left-stack">
         <article class="template-panel template-panel--pie">
           <div class="template-graph-head">
@@ -55,17 +39,6 @@
             </ul>
           </div>
         </article>
-      </section>
-
-      <section class="template-right-stack">
-        <section class="template-kpi-band">
-          <div class="template-kpi-row">
-            <article v-for="kpi in props.kpiCards" :key="kpi.key" class="template-kpi-card">
-              <p class="template-kpi-card__label">{{ kpi.label }}</p>
-              <p class="template-kpi-card__value" :class="kpi.tone">{{ kpi.value }}</p>
-            </article>
-          </div>
-        </section>
       </section>
 
       <section class="template-bottom-info">
@@ -141,7 +114,7 @@
               v-if="props.mainDataState === 'ready'"
               class="template-chart-svg"
               :viewBox="`0 0 ${TEMPLATE_CHART_W} ${TEMPLATE_CHART_H}`"
-              preserveAspectRatio="xMidYMid meet"
+              preserveAspectRatio="none"
               role="img"
               aria-label="Courbe de benefice"
               @mousemove="emit('chart-hover', $event, 'main')"
@@ -154,6 +127,20 @@
                 </linearGradient>
               </defs>
               <line
+                class="template-chart-axis template-chart-axis--x"
+                :x1="chartLeft"
+                :y1="chartBottom"
+                :x2="chartRight"
+                :y2="chartBottom"
+              />
+              <line
+                class="template-chart-axis template-chart-axis--y"
+                :x1="chartLeft"
+                :y1="TEMPLATE_CHART_PAD_Y"
+                :x2="chartLeft"
+                :y2="chartBottom"
+              />
+              <line
                 v-for="lineY in props.chartGridLines"
                 :key="`grid-${lineY}`"
                 class="template-chart-grid"
@@ -162,6 +149,42 @@
                 :x2="TEMPLATE_CHART_W - TEMPLATE_CHART_PAD_X"
                 :y2="lineY"
               />
+              <line
+                v-for="lineY in props.chartGridLines"
+                :key="`axis-main-tick-${lineY}`"
+                class="template-chart-axis-tick"
+                :x1="chartLeft"
+                :y1="lineY"
+                :x2="chartLeft - 7"
+                :y2="lineY"
+              />
+              <line class="template-chart-axis-tick" :x1="chartLeft" :y1="chartBottom" :x2="chartLeft" :y2="chartBottom + 6" />
+              <line
+                class="template-chart-axis-tick"
+                :x1="chartMidX"
+                :y1="chartBottom"
+                :x2="chartMidX"
+                :y2="chartBottom + 6"
+              />
+              <line class="template-chart-axis-tick" :x1="chartRight" :y1="chartBottom" :x2="chartRight" :y2="chartBottom + 6" />
+              <text class="template-chart-axis-label" :x="chartLeft - 10" :y="props.chartGridLines[0] + 4" text-anchor="end">
+                {{ mainAxisLabels.top }}
+              </text>
+              <text class="template-chart-axis-label" :x="chartLeft - 10" :y="props.chartGridLines[1] + 4" text-anchor="end">
+                {{ mainAxisLabels.mid }}
+              </text>
+              <text class="template-chart-axis-label" :x="chartLeft - 10" :y="props.chartGridLines[2] + 4" text-anchor="end">
+                {{ mainAxisLabels.bottom }}
+              </text>
+              <text class="template-chart-axis-label template-chart-axis-label--x" :x="chartLeft" :y="chartBottom + 18" text-anchor="start">
+                {{ mainXAxisStart }}
+              </text>
+              <text class="template-chart-axis-label template-chart-axis-label--x" :x="chartMidX" :y="chartBottom + 18" text-anchor="middle">
+                {{ mainXAxisMid }}
+              </text>
+              <text class="template-chart-axis-label template-chart-axis-label--x" :x="chartRight" :y="chartBottom + 18" text-anchor="end">
+                {{ mainXAxisEnd }}
+              </text>
               <path class="template-chart-area" :d="props.mainChartAreaPath" />
               <path class="template-chart-line" :d="props.mainChartLinePath" />
               <circle
@@ -207,12 +230,26 @@
               v-if="props.miniDataState === 'ready'"
               class="template-kpi-trend__svg"
               :viewBox="`0 0 ${TEMPLATE_CHART_W} ${TEMPLATE_CHART_H}`"
-              preserveAspectRatio="xMidYMid meet"
+              preserveAspectRatio="none"
               role="img"
               aria-label="Mini courbe de tendance"
               @mousemove="emit('chart-hover', $event, 'mini')"
               @mouseleave="emit('chart-clear', 'mini')"
             >
+              <line
+                class="template-chart-axis template-chart-axis--x"
+                :x1="chartLeft"
+                :y1="chartBottom"
+                :x2="chartRight"
+                :y2="chartBottom"
+              />
+              <line
+                class="template-chart-axis template-chart-axis--y"
+                :x1="chartLeft"
+                :y1="TEMPLATE_CHART_PAD_Y"
+                :x2="chartLeft"
+                :y2="chartBottom"
+              />
               <line
                 v-for="lineY in props.chartGridLines"
                 :key="`kpi-trend-grid-${lineY}`"
@@ -222,6 +259,42 @@
                 :x2="TEMPLATE_CHART_W - TEMPLATE_CHART_PAD_X"
                 :y2="lineY"
               />
+              <line
+                v-for="lineY in props.chartGridLines"
+                :key="`axis-mini-tick-${lineY}`"
+                class="template-chart-axis-tick"
+                :x1="chartLeft"
+                :y1="lineY"
+                :x2="chartLeft - 7"
+                :y2="lineY"
+              />
+              <line class="template-chart-axis-tick" :x1="chartLeft" :y1="chartBottom" :x2="chartLeft" :y2="chartBottom + 6" />
+              <line
+                class="template-chart-axis-tick"
+                :x1="chartMidX"
+                :y1="chartBottom"
+                :x2="chartMidX"
+                :y2="chartBottom + 6"
+              />
+              <line class="template-chart-axis-tick" :x1="chartRight" :y1="chartBottom" :x2="chartRight" :y2="chartBottom + 6" />
+              <text class="template-chart-axis-label" :x="chartLeft - 10" :y="props.chartGridLines[0] + 4" text-anchor="end">
+                {{ miniAxisLabels.top }}
+              </text>
+              <text class="template-chart-axis-label" :x="chartLeft - 10" :y="props.chartGridLines[1] + 4" text-anchor="end">
+                {{ miniAxisLabels.mid }}
+              </text>
+              <text class="template-chart-axis-label" :x="chartLeft - 10" :y="props.chartGridLines[2] + 4" text-anchor="end">
+                {{ miniAxisLabels.bottom }}
+              </text>
+              <text class="template-chart-axis-label template-chart-axis-label--x" :x="chartLeft" :y="chartBottom + 18" text-anchor="start">
+                {{ miniXAxisStart }}
+              </text>
+              <text class="template-chart-axis-label template-chart-axis-label--x" :x="chartMidX" :y="chartBottom + 18" text-anchor="middle">
+                {{ miniXAxisMid }}
+              </text>
+              <text class="template-chart-axis-label template-chart-axis-label--x" :x="chartRight" :y="chartBottom + 18" text-anchor="end">
+                {{ miniXAxisEnd }}
+              </text>
               <path class="template-kpi-trend__area" :d="props.miniChartAreaPath" />
               <path class="template-kpi-trend__line" :d="props.miniChartLinePath" />
               <circle
@@ -288,8 +361,9 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { formatEUR, formatNumber } from '@/utils/formatters'
-import { TEMPLATE_CHART_H, TEMPLATE_CHART_PAD_X, TEMPLATE_CHART_W } from '../../templateModeEngine'
+import { TEMPLATE_CHART_H, TEMPLATE_CHART_PAD_X, TEMPLATE_CHART_PAD_Y, TEMPLATE_CHART_W } from '../../templateModeEngine'
 import type { TemplateChartTarget, TemplateSharedViewProps } from '../templateViewTypes'
 
 const props = defineProps<TemplateSharedViewProps>()
@@ -300,4 +374,52 @@ const emit = defineEmits<{
   (e: 'chart-hover', event: MouseEvent, target: TemplateChartTarget): void
   (e: 'chart-clear', target: TemplateChartTarget): void
 }>()
+
+const chartLeft = TEMPLATE_CHART_PAD_X
+const chartRight = TEMPLATE_CHART_W - TEMPLATE_CHART_PAD_X
+const chartBottom = TEMPLATE_CHART_H - TEMPLATE_CHART_PAD_Y
+const chartMidX = TEMPLATE_CHART_W / 2
+
+function formatAxisDate(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value ?? ''))) return '--'
+  const date = new Date(`${value}T00:00:00`)
+  if (Number.isNaN(date.getTime())) return '--'
+  return date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
+}
+
+function buildYAxisLabels(values: number[]) {
+  if (!values.length) return { top: '--', mid: '--', bottom: '--' }
+  const min = Math.min(...values)
+  const max = Math.max(...values)
+  const mid = (min + max) / 2
+  return {
+    top: formatEUR(max, { compact: true }),
+    mid: formatEUR(mid, { compact: true }),
+    bottom: formatEUR(min, { compact: true }),
+  }
+}
+
+function buildXAxisLabels(points: Array<{ date: string }>) {
+  if (!points.length) return { start: '--', mid: '--', end: '--' }
+  const midIndex = Math.floor((points.length - 1) / 2)
+  return {
+    start: formatAxisDate(points[0]?.date ?? ''),
+    mid: formatAxisDate(points[midIndex]?.date ?? ''),
+    end: formatAxisDate(points[points.length - 1]?.date ?? ''),
+  }
+}
+
+const mainAxisLabels = computed(() => buildYAxisLabels((props.profitSeries ?? []).map((point) => Number(point.value || 0))))
+const miniAxisLabels = computed(() => buildYAxisLabels((props.series ?? []).map((point) => Number(point.value || 0))))
+
+const mainXAxisLabels = computed(() => buildXAxisLabels(props.profitSeries ?? []))
+const miniXAxisLabels = computed(() => buildXAxisLabels(props.series ?? []))
+
+const mainXAxisStart = computed(() => mainXAxisLabels.value.start)
+const mainXAxisMid = computed(() => mainXAxisLabels.value.mid)
+const mainXAxisEnd = computed(() => mainXAxisLabels.value.end)
+
+const miniXAxisStart = computed(() => miniXAxisLabels.value.start)
+const miniXAxisMid = computed(() => miniXAxisLabels.value.mid)
+const miniXAxisEnd = computed(() => miniXAxisLabels.value.end)
 </script>

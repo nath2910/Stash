@@ -1,42 +1,5 @@
 <template>
   <section class="template-page template-page--monthly-focus">
-    <section class="template-month-strip" aria-label="Mois">
-      <div class="template-year-box">
-        <label class="template-year-box__label" for="template-year-select-monthly">Annee</label>
-        <select
-          id="template-year-select-monthly"
-          class="template-year-box__select"
-          :value="props.selectedYear"
-          @change="emit('year-change', $event)"
-        >
-          <option v-for="year in props.yearOptions" :key="`template-monthly-year-${year}`" :value="year">
-            {{ year }}
-          </option>
-        </select>
-      </div>
-      <div class="template-month-strip__main">
-        <div class="template-month-strip__label">Focus mois</div>
-        <div class="template-month-strip__grid">
-          <button
-            v-for="month in props.monthChips"
-            :key="`monthly-month-${month.index}`"
-            type="button"
-            class="template-month-chip"
-            :class="{
-              'is-active': month.active,
-              'is-available': month.available,
-              'is-unavailable': !month.available,
-            }"
-            :disabled="!month.available"
-            title="Clic: 1 mois | Ctrl/Cmd+clic: plusieurs mois"
-            @click="month.available && emit('month-select', month.index, $event)"
-          >
-            {{ month.label }}
-          </button>
-        </div>
-      </div>
-    </section>
-
     <section class="template-dashboard-grid">
       <section class="template-left-stack">
         <article class="template-panel template-panel--pie">
