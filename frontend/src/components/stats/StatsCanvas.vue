@@ -243,6 +243,8 @@
     <div v-else class="template-mode">
       <AnnualDashboardTemplate
         v-if="activeTemplateId === ANNUAL_DASHBOARD_TEMPLATE_ID"
+        :initial-state="annualDashboardTemplateState"
+        @state-change="onTemplateStateChange"
       />
       <TemplateEmptyLayout v-else @back="removeActiveTemplate" />
     </div>
@@ -585,6 +587,12 @@ type ResizeDir = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw'
 
 type ProfileRange = { from: string; to: string }
 
+type ProfileTemplateState = {
+  active?: boolean
+  templateId?: string
+  state?: Record<string, unknown>
+}
+
 type TemplatePickerItem = {
   id: string
   badge: string
@@ -599,6 +607,7 @@ type LayoutBundle = {
   profileNames?: Record<string, string>
   profileColors?: Record<string, string>
   ranges?: Record<string, ProfileRange>
+  profileTemplates?: Record<string, ProfileTemplateState>
 }
 
 /* props/emit */
@@ -627,10 +636,11 @@ const PROFILES = [
 const COMPACT_BREAKPOINT = 1100
 const activeProfile = ref('p1')
 const layoutBundle = ref<LayoutBundle>({
-  version: 1,
+  version: 2,
   activeProfile: 'p1',
   profiles: {},
   ranges: {},
+  profileTemplates: {},
 })
 const profileNames = ref({ ...DEFAULT_PROFILE_NAMES })
 const profileColors = ref({ ...PROFILE_COLORS })
@@ -645,6 +655,7 @@ const templatePickerOpen = ref(false)
 const templateActive = ref(false)
 const ANNUAL_DASHBOARD_TEMPLATE_ID = 'annual-dashboard'
 const activeTemplateId = ref('')
+const activeTemplateState = ref<Record<string, unknown>>({})
 const templateNavItems = [
   { key: 'home', label: 'Accueil', path: '/', icon: Home },
   { key: 'stats', label: 'Stats', path: '/stats', icon: BarChart3 },
@@ -658,6 +669,9 @@ const templatePickerItems: TemplatePickerItem[] = [
     description: 'CA, profit, achats, stock et meilleurs produits sur une annee complete.',
   },
 ]
+const annualDashboardTemplateState = computed(() =>
+  activeTemplateId.value === ANNUAL_DASHBOARD_TEMPLATE_ID ? activeTemplateState.value : {},
+)
 const minDate = ref('')
 const maxDate = ref('')
 const settingsCategories = ref<string[]>([])
@@ -724,9 +738,56 @@ function dispatchTemplateMode(active: boolean) {
   )
 }
 
+function sanitizeTemplateId(id?: unknown) {
+  const value = typeof id === 'string' ? id : ''
+  return templatePickerItems.some((item) => item.id === value) ? value : ''
+}
+
+function sanitizeTemplateRuntimeState(raw: unknown): Record<string, unknown> {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {}
+  return { ...(raw as Record<string, unknown>) }
+}
+
+function getProfileTemplateState(bundle: LayoutBundle, profileId: string): ProfileTemplateState | null {
+  const picked = pickProfileId(profileId)
+  const saved = bundle.profileTemplates?.[picked]
+  if (!saved?.active) return null
+  const templateId = sanitizeTemplateId(saved.templateId)
+  if (!templateId) return null
+  return {
+    active: true,
+    templateId,
+    state: sanitizeTemplateRuntimeState(saved.state),
+  }
+}
+
+function writeActiveProfileTemplateState(bundle: LayoutBundle) {
+  const picked = pickProfileId(activeProfile.value)
+  bundle.profileTemplates = bundle.profileTemplates ?? {}
+  const templateId = sanitizeTemplateId(activeTemplateId.value)
+  if (templateActive.value && templateId) {
+    bundle.profileTemplates[picked] = {
+      active: true,
+      templateId,
+      state: sanitizeTemplateRuntimeState(activeTemplateState.value),
+    }
+    return
+  }
+  delete bundle.profileTemplates[picked]
+}
+
+function onTemplateStateChange(state: unknown) {
+  if (!templateActive.value || !activeTemplateId.value) return
+  activeTemplateState.value = sanitizeTemplateRuntimeState(state)
+  scheduleSave()
+}
+
 function applyTemplate(item?: TemplatePickerItem) {
   const id = item?.id ?? ANNUAL_DASHBOARD_TEMPLATE_ID
+  const previousTemplateId = activeTemplateId.value
+  const previousState = previousTemplateId === id ? activeTemplateState.value : {}
   activeTemplateId.value = id
+  activeTemplateState.value = sanitizeTemplateRuntimeState(previousState)
   templateActive.value = true
   templatePickerOpen.value = false
   paletteOpen.value = false
@@ -734,6 +795,7 @@ function applyTemplate(item?: TemplatePickerItem) {
   setSpacePanState(false)
   syncPanzoomExclude(false)
   dispatchTemplateMode(true)
+  saveBundleNow(false)
 }
 
 function removeActiveTemplate() {
@@ -749,6 +811,7 @@ function removeActiveTemplate() {
   syncPanzoomExclude(false)
   templateActive.value = false
   activeTemplateId.value = ''
+  activeTemplateState.value = {}
   dispatchTemplateMode(false)
   saveBundleNow(false)
 }
@@ -1530,37 +1593,56 @@ function normalizeBundle(raw: unknown): LayoutBundle {
     }
     return map
   }
+  const normalizeProfileTemplates = (templates: unknown): Record<string, ProfileTemplateState> => {
+    if (!templates || typeof templates !== 'object' || Array.isArray(templates)) return {}
+    const map: Record<string, ProfileTemplateState> = {}
+    for (const [profileId, value] of Object.entries(templates as Record<string, unknown>)) {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) continue
+      const source = value as Record<string, unknown>
+      const templateId = sanitizeTemplateId(source.templateId)
+      if (source.active !== true || !templateId) continue
+      map[pickProfileId(profileId)] = {
+        active: true,
+        templateId,
+        state: sanitizeTemplateRuntimeState(source.state),
+      }
+    }
+    return map
+  }
 
   if (raw && typeof raw === 'object' && !Array.isArray(raw) && (raw as any).profiles) {
     const obj = raw as LayoutBundle
     return {
-      version: Number(obj.version || 1),
+      version: Math.max(2, Number(obj.version || 1)),
       activeProfile: typeof obj.activeProfile === 'string' ? obj.activeProfile : 'p1',
       profiles: obj.profiles ?? {},
       profileNames: obj.profileNames ?? {},
       profileColors: obj.profileColors ?? {},
       ranges: normalizeRanges((obj as any).ranges),
+      profileTemplates: normalizeProfileTemplates((obj as any).profileTemplates),
     }
   }
 
   if (Array.isArray(raw)) {
     return {
-      version: 1,
+      version: 2,
       activeProfile: 'p1',
       profiles: { p1: raw },
       profileNames: {},
       profileColors: {},
       ranges: {},
+      profileTemplates: {},
     }
   }
 
   return {
-    version: 1,
+    version: 2,
     activeProfile: 'p1',
     profiles: {},
     profileNames: {},
     profileColors: {},
     ranges: {},
+    profileTemplates: {},
   }
 }
 
@@ -1568,18 +1650,20 @@ function pickProfileId(id?: string) {
   return PROFILES.some((p) => p.id === id) ? (id as string) : 'p1'
 }
 
-function applyProfileLayout(
-  bundle: LayoutBundle,
-  profileId: string,
-  options: { resetTemplate?: boolean } = {},
-) {
+function applyProfileLayout(bundle: LayoutBundle, profileId: string) {
   const picked = pickProfileId(profileId)
-  const resetTemplate = options.resetTemplate !== false
   activeProfile.value = picked
   bundle.activeProfile = picked
-  if (resetTemplate) {
+  const templateState = getProfileTemplateState(bundle, picked)
+  if (templateState?.templateId) {
+    activeTemplateId.value = templateState.templateId
+    activeTemplateState.value = sanitizeTemplateRuntimeState(templateState.state)
+    templateActive.value = true
+    dispatchTemplateMode(true)
+  } else {
     templateActive.value = false
     activeTemplateId.value = ''
+    activeTemplateState.value = {}
     dispatchTemplateMode(false)
   }
   const raw = bundle.profiles?.[picked]
@@ -1685,14 +1769,16 @@ function saveBundleNow(showToast = false) {
   bundle.profiles = bundle.profiles ?? {}
   saveRangeForProfile(activeProfile.value, from.value, to.value, { persistLocal: false })
   bundle.profiles[activeProfile.value] = serializeWidgets()
+  writeActiveProfileTemplateState(bundle)
   bundle.profileNames = { ...profileNames.value }
   bundle.profileColors = { ...profileColors.value }
   bundle.ranges = { ...(bundle.ranges ?? {}) }
 
   const storageKey = userId.value === 'guest' ? STORAGE_KEY_PREFIX : layoutKey.value
-  localStorage.setItem(storageKey, JSON.stringify(bundle))
+  const snapshot = JSON.parse(JSON.stringify(bundle))
+  localStorage.setItem(storageKey, JSON.stringify(snapshot))
   if (showToast) showSavedToast()
-  scheduleRemoteSave()
+  scheduleRemoteSave(snapshot)
 }
 
 function saveLayoutNow(showToast = false) {
@@ -5075,8 +5161,10 @@ watch(
     applyStoredRangeForActiveProfile()
     await nextTick()
     if (String(userId.value) !== expectedUserId) return
-    widgets.value.forEach((w) => clampWidget(w))
-    centerView()
+    if (!templateActive.value) {
+      widgets.value.forEach((w) => clampWidget(w))
+      centerView()
+    }
     if (expectedUserId !== 'guest') {
       await loadLayoutFromServer(expectedUserId)
     }
@@ -5484,16 +5572,9 @@ function switchProfile(profileId: string) {
   closeRailDatePicker()
   const next = pickProfileId(profileId)
   if (next === activeProfile.value) return
-  const keepTemplateActive = templateActive.value
-  const currentTemplateId = activeTemplateId.value
   saveRangeForProfile(activeProfile.value, from.value, to.value)
   saveBundleNow(false)
-  applyProfileLayout(layoutBundle.value, next, { resetTemplate: !keepTemplateActive })
-  if (keepTemplateActive) {
-    templateActive.value = true
-    activeTemplateId.value = currentTemplateId || ANNUAL_DASHBOARD_TEMPLATE_ID
-    dispatchTemplateMode(true)
-  }
+  applyProfileLayout(layoutBundle.value, next)
   saveBundleNow(false)
   const nextRange = loadRangeForProfile(next)
   if (nextRange) {
@@ -5503,9 +5584,11 @@ function switchProfile(profileId: string) {
     emit('update:to', nextRange.to)
   }
   nextTick(() => {
-    normalizeVisibleTextWidgets(true)
-    widgets.value.forEach((w) => clampWidget(w))
-    centerView()
+    if (!templateActive.value) {
+      normalizeVisibleTextWidgets(true)
+      widgets.value.forEach((w) => clampWidget(w))
+      centerView()
+    }
     scheduleVisibleRectUpdate()
   })
 }
