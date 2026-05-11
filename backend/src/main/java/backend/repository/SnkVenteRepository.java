@@ -73,6 +73,45 @@ public interface SnkVenteRepository extends JpaRepository<SnkVente, Integer> {
       select v
       from SnkVente v
       where v.user.id = :userId
+        and v.dateVente between :start and :end
+      order by v.dateVente asc, v.id asc
+      """)
+  List<SnkVente> findSoldBetweenForAnnualDashboard(
+      @Param("userId") Long userId,
+      @Param("start") LocalDate start,
+      @Param("end") LocalDate end
+  );
+
+  @Query("""
+      select v
+      from SnkVente v
+      where v.user.id = :userId
+        and v.dateAchat between :start and :end
+      order by v.dateAchat asc, v.id asc
+      """)
+  List<SnkVente> findPurchasedBetweenForAnnualDashboard(
+      @Param("userId") Long userId,
+      @Param("start") LocalDate start,
+      @Param("end") LocalDate end
+  );
+
+  @Query("""
+      select v
+      from SnkVente v
+      where v.user.id = :userId
+        and (v.dateAchat is null or v.dateAchat <= :asOf)
+        and (v.dateVente is null or v.dateVente > :asOf)
+      order by v.dateAchat asc, v.id asc
+      """)
+  List<SnkVente> findInventoryAtForAnnualDashboard(
+      @Param("userId") Long userId,
+      @Param("asOf") LocalDate asOf
+  );
+
+  @Query("""
+      select v
+      from SnkVente v
+      where v.user.id = :userId
         and v.dateVente is null
         and v.dateAchat is not null
       """)

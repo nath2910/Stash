@@ -32,16 +32,23 @@
 
           <button
             v-for="item in templatePickerItems"
-            :key="item.kind"
+            :key="item.id"
             type="button"
             class="template-picker-card"
-            @click="applyTemplate(item.kind)"
+            @click="applyTemplate(item)"
           >
             <div class="template-picker-card__badge">{{ item.badge }}</div>
             <div class="template-picker-card__title">{{ item.title }}</div>
             <p class="template-picker-card__desc">{{ item.description }}</p>
             <span class="template-picker-card__cta">Appliquer</span>
           </button>
+
+          <div v-if="!templatePickerItems.length" class="template-picker-empty" role="status">
+            <div class="template-picker-empty__title">Aucun template disponible</div>
+            <p class="template-picker-empty__text">
+              La bibliotheque est vide et prete pour la prochaine version du module Templates.
+            </p>
+          </div>
         </div>
       </div>
     </teleport>
@@ -202,13 +209,10 @@
           </button>
           <button type="button" class="canvas-empty-guide__btn" @click.stop="onEmptyGuideOpenTemplate">
             <BarChart3 class="h-4 w-4" />
-            <span>Tester un template</span>
+            <span>Voir les templates</span>
           </button>
         </div>
 
-        <p class="canvas-empty-guide__hint">
-          Astuce: maintiens <kbd>Espace</kbd> pour te deplacer, utilise la molette pour zoomer.
-        </p>
       </article>
     </div>
 
@@ -237,22 +241,10 @@
     </Transition>
     </template>
     <div v-else class="template-mode">
-      <YearlyOverviewTemplate
-        v-if="templateKind === 'yearly-overview'"
-        v-bind="templateSharedView"
-        @year-change="onTemplateYearChange"
-        @month-select="setTemplateMonth"
-        @chart-hover="onTemplateChartHover"
-        @chart-clear="clearTemplateChartHover"
+      <AnnualDashboardTemplate
+        v-if="activeTemplateId === ANNUAL_DASHBOARD_TEMPLATE_ID"
       />
-      <MonthlyFocusTemplate
-        v-else
-        v-bind="templateSharedView"
-        @year-change="onTemplateYearChange"
-        @month-select="setTemplateMonth"
-        @chart-hover="onTemplateChartHover"
-        @chart-clear="clearTemplateChartHover"
-      />
+      <TemplateEmptyLayout v-else @back="removeActiveTemplate" />
     </div>
 
     <aside
@@ -290,6 +282,7 @@
 
       <div class="template-rail__meta">
         <button
+          v-if="!templateActive"
           ref="railDateButtonRef"
           type="button"
           class="template-rail__meta-btn"
@@ -313,9 +306,20 @@
           <LayoutTemplate class="h-4 w-4" />
         </button>
         <button
+          v-if="templateActive"
+          type="button"
+          class="template-rail__meta-btn template-rail__meta-btn--danger"
+          :data-tooltip="'Supprimer template'"
+          title="Supprimer le template actif"
+          aria-label="Supprimer le template actif"
+          @click.stop="removeActiveTemplate"
+        >
+          <Trash2 class="h-4 w-4" />
+        </button>
+        <button
+          v-if="!templateActive"
           type="button"
           class="template-rail__meta-btn template-rail__meta-btn--accent"
-          :disabled="templateActive"
           :data-tooltip="'Ajouter widget'"
           title="Ajouter un widget"
           aria-label="Ajouter un widget"
@@ -324,6 +328,7 @@
           <PlusSquare class="h-4 w-4" />
         </button>
         <button
+          v-if="!templateActive"
           type="button"
           class="template-rail__meta-btn"
           :data-tooltip="'Personnaliser profils'"
@@ -354,8 +359,14 @@
         </button>
       </div>
 
-      <div v-if="railDatePickerOpen" ref="railDatePanelRef" class="template-rail-date-popover" @click.stop>
+      <div
+        v-if="!templateActive && railDatePickerOpen"
+        ref="railDatePanelRef"
+        class="template-rail-date-popover"
+        @click.stop
+      >
         <div class="template-rail-date-popover__title">Periode</div>
+
         <div class="template-rail-date-popover__inputs">
           <label class="template-rail-date-field">
             <span>Du</span>
@@ -527,8 +538,8 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, toRefs, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import WidgetFrame from './canvas/WidgetFrame.vue'
-import YearlyOverviewTemplate from './template-mode/templates/yearly-overview/YearlyOverviewTemplate.vue'
-import MonthlyFocusTemplate from './template-mode/templates/monthly-focus/MonthlyFocusTemplate.vue'
+import TemplateEmptyLayout from './template-mode/TemplateEmptyLayout.vue'
+import AnnualDashboardTemplate from './template-mode/annual-dashboard/AnnualDashboardTemplate.vue'
 import { useCanvasCamera } from './canvas/useCanvaCamera'
 import { useCanvasShortcuts } from './canvas/useCanvasShortcuts'
 import {
@@ -541,6 +552,7 @@ import {
   LayoutGrid,
   Target,
   PlusSquare,
+  Trash2,
 } from 'lucide-vue-next'
 
 import WidgetPalette from './WidgetPalette.vue'
@@ -555,14 +567,7 @@ import {
 import { getWidgetPaletteMeta } from './palette/widgetPaletteMeta'
 import { useTheme } from '@/composables/useTheme'
 import { useAuthStore } from '@/store/authStore'
-import { useTemplateDashboard } from './template-mode/useTemplateDashboard'
-import {
-  DEFAULT_TEMPLATE_KIND,
-  isTemplateKind,
-  type TemplateKind,
-  type TemplatePickerItem,
-  type TemplateSharedViewProps,
-} from './template-mode/templates/templateViewTypes'
+import StatsServices from '@/services/StatsServices'
 
 type Widget = {
   id: string
@@ -580,6 +585,13 @@ type ResizeDir = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw'
 
 type ProfileRange = { from: string; to: string }
 
+type TemplatePickerItem = {
+  id: string
+  badge: string
+  title: string
+  description: string
+}
+
 type LayoutBundle = {
   version: number
   activeProfile?: string
@@ -587,8 +599,6 @@ type LayoutBundle = {
   profileNames?: Record<string, string>
   profileColors?: Record<string, string>
   ranges?: Record<string, ProfileRange>
-  templateModes?: Record<string, boolean>
-  templateKinds?: Record<string, TemplateKind>
 }
 
 /* props/emit */
@@ -602,7 +612,7 @@ const { from, to } = toRefs(props)
 const { user } = useAuthStore()
 const route = useRoute()
 const router = useRouter()
-const { theme, toggleTheme } = useTheme()
+const { theme } = useTheme()
 const themeMode = computed(() => (theme.value === 'light' ? 'light' : 'dark'))
 // Chaque utilisateur a une cle de layout isolee; guest reste en stockage local.
 const userId = computed(() => user.value?.id ?? 'guest')
@@ -621,8 +631,6 @@ const layoutBundle = ref<LayoutBundle>({
   activeProfile: 'p1',
   profiles: {},
   ranges: {},
-  templateModes: {},
-  templateKinds: {},
 })
 const profileNames = ref({ ...DEFAULT_PROFILE_NAMES })
 const profileColors = ref({ ...PROFILE_COLORS })
@@ -635,7 +643,8 @@ const profileDraft = ref({
 })
 const templatePickerOpen = ref(false)
 const templateActive = ref(false)
-const templateKind = ref<TemplateKind>(DEFAULT_TEMPLATE_KIND)
+const ANNUAL_DASHBOARD_TEMPLATE_ID = 'annual-dashboard'
+const activeTemplateId = ref('')
 const templateNavItems = [
   { key: 'home', label: 'Accueil', path: '/', icon: Home },
   { key: 'stats', label: 'Stats', path: '/stats', icon: BarChart3 },
@@ -643,19 +652,12 @@ const templateNavItems = [
 ]
 const templatePickerItems: TemplatePickerItem[] = [
   {
-    kind: 'yearly-overview',
-    badge: 'Template systeme',
-    title: 'Power BI fixe',
-    description: 'Vue globale annuelle avec synthese multi-periodes.',
-  },
-  {
-    kind: 'monthly-focus',
-    badge: 'Template systeme',
-    title: 'Focus mensuel',
-    description: 'Dashboard mensuel avec KPIs inventes, rythme et projection.',
+    id: ANNUAL_DASHBOARD_TEMPLATE_ID,
+    badge: 'Vue annuelle',
+    title: 'Dashboard annuel',
+    description: 'CA, profit, achats, stock et meilleurs produits sur une annee complete.',
   },
 ]
-
 const minDate = ref('')
 const maxDate = ref('')
 const settingsCategories = ref<string[]>([])
@@ -693,10 +695,6 @@ function toggleEditMode() {
   persistEditMode()
 }
 
-function toggleThemeMode() {
-  toggleTheme()
-}
-
 function openTemplatePicker() {
   closeRailDatePicker()
   paletteOpen.value = false
@@ -717,13 +715,30 @@ function openWidgetPaletteFromRail() {
   paletteOpen.value = true
 }
 
-function applyTemplate(kind: TemplateKind) {
+function dispatchTemplateMode(active: boolean) {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(
+    new CustomEvent('snk:stats-template-mode', {
+      detail: { active },
+    }),
+  )
+}
+
+function applyTemplate(item?: TemplatePickerItem) {
+  const id = item?.id ?? ANNUAL_DASHBOARD_TEMPLATE_ID
+  activeTemplateId.value = id
   templateActive.value = true
-  templateKind.value = kind
-  layoutBundle.value.templateModes = { ...(layoutBundle.value.templateModes ?? {}) }
-  layoutBundle.value.templateModes[activeProfile.value] = true
-  layoutBundle.value.templateKinds = { ...(layoutBundle.value.templateKinds ?? {}) }
-  layoutBundle.value.templateKinds[activeProfile.value] = kind
+  templatePickerOpen.value = false
+  paletteOpen.value = false
+  closeSettings()
+  setSpacePanState(false)
+  syncPanzoomExclude(false)
+  dispatchTemplateMode(true)
+}
+
+function removeActiveTemplate() {
+  if (!templateActive.value) return
+  closeRailDatePicker()
   templatePickerOpen.value = false
   paletteOpen.value = false
   closeSettings()
@@ -732,6 +747,9 @@ function applyTemplate(kind: TemplateKind) {
   fullscreenActive.value = false
   setSpacePanState(false)
   syncPanzoomExclude(false)
+  templateActive.value = false
+  activeTemplateId.value = ''
+  dispatchTemplateMode(false)
   saveBundleNow(false)
 }
 
@@ -788,93 +806,15 @@ function goTemplateAccount() {
   router.push('/compte')
 }
 
-const {
-  templateDeltaPct,
-  templateSeries,
-  templateProfitSeries,
-  templateSummary,
-  templateTotalNumber,
-  templateMainDataState,
-  templateMiniDataState,
-  templateCadenceText,
-  templateTotalText,
-  templateUserInitials,
-  templateSelectedYear,
-  templateYearOptions,
-  templateMonthChips,
-  templatePieSlices,
-  templatePieChartStyle,
-  templateSuccessRateText,
-  templateGaugeDasharray,
-  templateChartGridLines,
-  templateProfitStartLabel,
-  templateProfitEndLabel,
-  templateEmptyTitle,
-  templateKpiCards,
-  templateQuickFacts,
-  templateBrandsRows,
-  templateTopSalesRows,
-  templateMainHover,
-  templateMiniHover,
-  templateMainChartLinePath,
-  templateMiniChartLinePath,
-  templateMainChartAreaPath,
-  templateMiniChartAreaPath,
-  templateMainLastPointCoord,
-  templateMiniLastPointCoord,
-  onTemplateChartHover,
-  clearTemplateChartHover,
-  setTemplateMonth,
-  onTemplateYearChange,
-} = useTemplateDashboard({
-  templateActive,
-  localFrom,
-  localTo,
-  minDate,
-  maxDate,
-  user,
-  emitRangeUpdate: (nextFrom: string, nextTo: string) => {
-    emit('update:from', nextFrom)
-    emit('update:to', nextTo)
-  },
+const templateUserInitials = computed(() => {
+  const first = String(user.value?.firstName ?? '').trim()
+  const last = String(user.value?.lastName ?? '').trim()
+  const email = String(user.value?.email ?? '').trim()
+  const fromNames = `${first.charAt(0)}${last.charAt(0)}`.toUpperCase()
+  if (fromNames.trim()) return fromNames
+  if (email) return email.slice(0, 2).toUpperCase()
+  return 'NT'
 })
-
-const templateSharedView = computed<TemplateSharedViewProps>(() => ({
-  selectedYear: templateSelectedYear.value,
-  yearOptions: templateYearOptions.value,
-  monthChips: templateMonthChips.value,
-  pieChartStyle: templatePieChartStyle.value,
-  pieSlices: templatePieSlices.value,
-  kpiCards: templateKpiCards.value,
-  quickFacts: templateQuickFacts.value,
-  brandsRows: templateBrandsRows.value,
-  topSalesRows: templateTopSalesRows.value,
-  cadenceText: templateCadenceText.value,
-  totalText: templateTotalText.value,
-  mainDataState: templateMainDataState.value,
-  miniDataState: templateMiniDataState.value,
-  chartGridLines: templateChartGridLines.value,
-  mainChartAreaPath: templateMainChartAreaPath.value,
-  mainChartLinePath: templateMainChartLinePath.value,
-  miniChartAreaPath: templateMiniChartAreaPath.value,
-  miniChartLinePath: templateMiniChartLinePath.value,
-  mainLastPointCoord: templateMainLastPointCoord.value,
-  miniLastPointCoord: templateMiniLastPointCoord.value,
-  mainHover: templateMainHover.value,
-  miniHover: templateMiniHover.value,
-  profitStartLabel: templateProfitStartLabel.value,
-  profitEndLabel: templateProfitEndLabel.value,
-  emptyTitle: templateEmptyTitle.value,
-  gaugeDasharray: templateGaugeDasharray.value,
-  successRateText: templateSuccessRateText.value,
-  series: templateSeries.value,
-  profitSeries: templateProfitSeries.value,
-  summary: templateSummary.value,
-  totalNumber: templateTotalNumber.value,
-  deltaPct: templateDeltaPct.value,
-  localFrom: localFrom.value,
-  localTo: localTo.value,
-}))
 
 /* ===== Range persist per profile ===== */
 const RANGE_KEY_PREFIX = 'snk_stats_range_v1'
@@ -931,7 +871,56 @@ function saveRangeForProfile(
   }
 }
 
-function preset(kind: 'today' | 'month' | 'ytd' | 'year') {
+type CanvasQuickPreset = 'today' | 'month' | 'ytd' | 'year'
+
+function formatYmdLocalDate(date: Date) {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
+function clampDateForRangePreset(value: string) {
+  if (!value) return ''
+  let out = value
+  if (minDate.value && out < minDate.value) out = minDate.value
+  if (maxDate.value && out > maxDate.value) out = maxDate.value
+  return out
+}
+
+function subMonthsClamp(date: Date, months: number) {
+  const day = date.getDate()
+  const firstOfTargetMonth = new Date(date.getFullYear(), date.getMonth() - months, 1)
+  const lastDayOfTargetMonth = new Date(
+    firstOfTargetMonth.getFullYear(),
+    firstOfTargetMonth.getMonth() + 1,
+    0,
+  ).getDate()
+  const clampedDay = Math.min(day, lastDayOfTargetMonth)
+  return new Date(firstOfTargetMonth.getFullYear(), firstOfTargetMonth.getMonth(), clampedDay)
+}
+
+function subYearsClamp(date: Date, years: number) {
+  const targetYear = date.getFullYear() - years
+  const month = date.getMonth()
+  const day = date.getDate()
+  const lastDayOfTargetMonth = new Date(targetYear, month + 1, 0).getDate()
+  const clampedDay = Math.min(day, lastDayOfTargetMonth)
+  return new Date(targetYear, month, clampedDay)
+}
+
+function applyRangeFromDates(fromDate: Date, toDate: Date, closePicker = true) {
+  const nextFrom = clampDateForRangePreset(formatYmdLocalDate(fromDate))
+  const nextTo = clampDateForRangePreset(formatYmdLocalDate(toDate))
+  if (!nextFrom || !nextTo) return
+  const fromSafe = nextFrom <= nextTo ? nextFrom : nextTo
+  const toSafe = nextFrom <= nextTo ? nextTo : nextFrom
+  localFrom.value = fromSafe
+  localTo.value = toSafe
+  emit('update:from', fromSafe)
+  emit('update:to', toSafe)
+  if (closePicker) closeRailDatePicker()
+}
+
+function preset(kind: CanvasQuickPreset) {
   /**
    * 1) On se met sur "aujourd'hui" a 00:00 (heure locale)
    *    -> evite les decalages quand on formate en YYYY-MM-DD
@@ -942,88 +931,18 @@ function preset(kind: 'today' | 'month' | 'ytd' | 'year') {
   /**
    * 2) Helpers de formatage en "YYYY-MM-DD"
    */
-  const pad = (n: number) => String(n).padStart(2, '0')
-  const ymd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-
-  /**
-   * 3) Helper: "soustraire N mois" en gardant le jour si possible,
-   *    sinon on "clamp" au dernier jour du mois cible.
-   *
-   *    Exemple:
-   *    - 2026-03-31 - 1 mois => 2026-02-28 (ou 29 si bissextile)
-   */
-  const subMonthsClamp = (date: Date, months: number) => {
-    const day = date.getDate()
-
-    // On construit le 1er jour du mois cible.
-    // new Date(year, monthIndex, 1) gere automatiquement les passages d'annee.
-    const firstOfTargetMonth = new Date(date.getFullYear(), date.getMonth() - months, 1)
-
-    // Dernier jour du mois cible: jour 0 du mois suivant
-    const lastDayOfTargetMonth = new Date(
-      firstOfTargetMonth.getFullYear(),
-      firstOfTargetMonth.getMonth() + 1,
-      0,
-    ).getDate()
-
-    // Clamp du jour pour eviter que JS "deborde" sur le mois suivant
-    const clampedDay = Math.min(day, lastDayOfTargetMonth)
-
-    // Date finale (a 00:00)
-    return new Date(firstOfTargetMonth.getFullYear(), firstOfTargetMonth.getMonth(), clampedDay)
-  }
-
-  /**
-   * 4) Helper: "soustraire N annees" en gardant mois+jour si possible,
-   *    sinon clamp (cas typique: 29/02).
-   *
-   *    Exemple:
-   *    - 2024-02-29 - 1 an => 2023-02-28
-   */
-  const subYearsClamp = (date: Date, years: number) => {
-    const targetYear = date.getFullYear() - years
-    const month = date.getMonth()
-    const day = date.getDate()
-
-    // Dernier jour du mois dans l'annee cible
-    const lastDayOfTargetMonth = new Date(targetYear, month + 1, 0).getDate()
-    const clampedDay = Math.min(day, lastDayOfTargetMonth)
-
-    return new Date(targetYear, month, clampedDay)
-  }
-
-  /**
-   * 5) Applique la plage au composant + emet les events
-   */
-  const applyRange = (fromDate: Date, toDate: Date) => {
-    const fromStr = ymd(fromDate)
-    const toStr = ymd(toDate)
-
-    localFrom.value = fromStr
-    localTo.value = toStr
-
-    emit('update:from', fromStr)
-    emit('update:to', toStr)
-  }
-
-  /**
-   * 6) Presets
-   * - month : 1 mois glissant en arriere depuis aujourd'hui
-   * - ytd   : du 1er janvier (annee courante) a aujourd'hui
-   * - year  : 1 an glissant en arriere depuis aujourd'hui
-   */
   if (kind === 'today') {
-    applyRange(today, today)
+    applyRangeFromDates(today, today, false)
   } else if (kind === 'month') {
-    applyRange(subMonthsClamp(today, 1), today)
+    applyRangeFromDates(subMonthsClamp(today, 1), today, false)
   } else if (kind === 'ytd') {
-    applyRange(new Date(today.getFullYear(), 0, 1), today)
+    applyRangeFromDates(new Date(today.getFullYear(), 0, 1), today, false)
   } else {
-    applyRange(subYearsClamp(today, 1), today)
+    applyRangeFromDates(subYearsClamp(today, 1), today, false)
   }
 }
 
-function applyQuickPreset(kind: 'today' | 'month' | 'ytd' | 'year') {
+function applyQuickPreset(kind: CanvasQuickPreset) {
   preset(kind)
   closeRailDatePicker()
 }
@@ -1537,6 +1456,7 @@ function normalizeLayout(raw: unknown): Widget[] | null {
       y: Number.isFinite((item as any)?.y) ? Number((item as any).y) : 0,
       w: Number.isFinite((item as any)?.w) ? Number((item as any).w) : def.defaultSize.w,
       h: Number.isFinite((item as any)?.h) ? Number((item as any).h) : def.defaultSize.h,
+      z: Number.isFinite((item as any)?.z) ? Number((item as any).z) : list.length + 1,
       props: {
         ...cloneWidgetProps(def.defaultProps),
         ...cloneWidgetProps((item as any)?.props ?? {}),
@@ -1611,24 +1531,6 @@ function normalizeBundle(raw: unknown): LayoutBundle {
     return map
   }
 
-  const normalizeTemplateModes = (modes: unknown): Record<string, boolean> => {
-    if (!modes || typeof modes !== 'object' || Array.isArray(modes)) return {}
-    const map: Record<string, boolean> = {}
-    for (const [profileId, value] of Object.entries(modes as Record<string, unknown>)) {
-      map[pickProfileId(profileId)] = value === true
-    }
-    return map
-  }
-
-  const normalizeTemplateKinds = (kinds: unknown): Record<string, TemplateKind> => {
-    if (!kinds || typeof kinds !== 'object' || Array.isArray(kinds)) return {}
-    const map: Record<string, TemplateKind> = {}
-    for (const [profileId, value] of Object.entries(kinds as Record<string, unknown>)) {
-      map[pickProfileId(profileId)] = isTemplateKind(value) ? value : DEFAULT_TEMPLATE_KIND
-    }
-    return map
-  }
-
   if (raw && typeof raw === 'object' && !Array.isArray(raw) && (raw as any).profiles) {
     const obj = raw as LayoutBundle
     return {
@@ -1638,8 +1540,6 @@ function normalizeBundle(raw: unknown): LayoutBundle {
       profileNames: obj.profileNames ?? {},
       profileColors: obj.profileColors ?? {},
       ranges: normalizeRanges((obj as any).ranges),
-      templateModes: normalizeTemplateModes((obj as any).templateModes),
-      templateKinds: normalizeTemplateKinds((obj as any).templateKinds),
     }
   }
 
@@ -1651,8 +1551,6 @@ function normalizeBundle(raw: unknown): LayoutBundle {
       profileNames: {},
       profileColors: {},
       ranges: {},
-      templateModes: {},
-      templateKinds: {},
     }
   }
 
@@ -1663,8 +1561,6 @@ function normalizeBundle(raw: unknown): LayoutBundle {
     profileNames: {},
     profileColors: {},
     ranges: {},
-    templateModes: {},
-    templateKinds: {},
   }
 }
 
@@ -1672,16 +1568,20 @@ function pickProfileId(id?: string) {
   return PROFILES.some((p) => p.id === id) ? (id as string) : 'p1'
 }
 
-function applyProfileLayout(bundle: LayoutBundle, profileId: string) {
+function applyProfileLayout(
+  bundle: LayoutBundle,
+  profileId: string,
+  options: { resetTemplate?: boolean } = {},
+) {
   const picked = pickProfileId(profileId)
+  const resetTemplate = options.resetTemplate !== false
   activeProfile.value = picked
   bundle.activeProfile = picked
-  bundle.templateModes = bundle.templateModes ?? {}
-  bundle.templateKinds = bundle.templateKinds ?? {}
-  templateActive.value = bundle.templateModes[picked] === true
-  templateKind.value = isTemplateKind(bundle.templateKinds[picked])
-    ? bundle.templateKinds[picked]
-    : DEFAULT_TEMPLATE_KIND
+  if (resetTemplate) {
+    templateActive.value = false
+    activeTemplateId.value = ''
+    dispatchTemplateMode(false)
+  }
   const raw = bundle.profiles?.[picked]
   profileNames.value = { ...DEFAULT_PROFILE_NAMES, ...(bundle.profileNames ?? {}) }
   profileColors.value = { ...PROFILE_COLORS, ...(bundle.profileColors ?? {}) }
@@ -1766,7 +1666,7 @@ async function loadLayoutFromServer(expectedUserId = String(userId.value)) {
 }
 
 function serializeWidgets() {
-  return widgets.value.map(({ id, type, title, x, y, w, h, props }) => ({
+  return widgets.value.map(({ id, type, title, x, y, w, h, props, z }) => ({
     id,
     type,
     title,
@@ -1775,6 +1675,7 @@ function serializeWidgets() {
     w,
     h,
     props,
+    z,
   }))
 }
 
@@ -1782,10 +1683,6 @@ function saveBundleNow(showToast = false) {
   const bundle = layoutBundle.value
   bundle.activeProfile = activeProfile.value
   bundle.profiles = bundle.profiles ?? {}
-  bundle.templateModes = { ...(bundle.templateModes ?? {}) }
-  bundle.templateModes[activeProfile.value] = templateActive.value
-  bundle.templateKinds = { ...(bundle.templateKinds ?? {}) }
-  bundle.templateKinds[activeProfile.value] = templateKind.value
   saveRangeForProfile(activeProfile.value, from.value, to.value, { persistLocal: false })
   bundle.profiles[activeProfile.value] = serializeWidgets()
   bundle.profileNames = { ...profileNames.value }
@@ -1927,7 +1824,7 @@ function onEmptyGuideOpenTemplate() {
   openTemplatePicker()
 }
 
-const PALETTE_ORDER = ['Texte', 'Finance', 'Stock', 'Performance', 'Bonus']
+const PALETTE_ORDER = ['Texte', 'Finance', 'Stock', 'Performance', 'Decision', 'Bonus']
 const paletteGroups = computed(() => {
   const grouped = new Map<string, Array<Record<string, unknown>>>()
   for (const w of WIDGET_DEFS) {
@@ -5587,9 +5484,16 @@ function switchProfile(profileId: string) {
   closeRailDatePicker()
   const next = pickProfileId(profileId)
   if (next === activeProfile.value) return
+  const keepTemplateActive = templateActive.value
+  const currentTemplateId = activeTemplateId.value
   saveRangeForProfile(activeProfile.value, from.value, to.value)
   saveBundleNow(false)
-  applyProfileLayout(layoutBundle.value, next)
+  applyProfileLayout(layoutBundle.value, next, { resetTemplate: !keepTemplateActive })
+  if (keepTemplateActive) {
+    templateActive.value = true
+    activeTemplateId.value = currentTemplateId || ANNUAL_DASHBOARD_TEMPLATE_ID
+    dispatchTemplateMode(true)
+  }
   saveBundleNow(false)
   const nextRange = loadRangeForProfile(next)
   if (nextRange) {

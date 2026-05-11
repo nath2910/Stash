@@ -4,7 +4,12 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -12,6 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import backend.dto.*;
 import backend.dto.TopVenteProjection;
+import backend.entity.ItemType;
+import backend.entity.SnkVente;
 import backend.repository.SnkVenteRepository;
 
 @Service
@@ -571,6 +578,145 @@ public class StatsService {
     return repo.distinctCategories(userId);
   }
 
+  public AnnualDashboardResponse annualDashboard(Long userId, int year) {
+    LocalDate today = LocalDate.now();
+    int safeYear = Math.min(Math.max(year, 2000), 2100);
+    LocalDate start = LocalDate.of(safeYear, 1, 1);
+    LocalDate end = LocalDate.of(safeYear, 12, 31);
+    LocalDate asOf = safeYear == today.getYear() ? today : end;
+
+    List<SnkVente> sold = repo.findSoldBetweenForAnnualDashboard(userId, start, end);
+    List<SnkVente> purchased = repo.findPurchasedBetweenForAnnualDashboard(userId, start, end);
+    List<SnkVente> inventory = repo.findInventoryAtForAnnualDashboard(userId, asOf);
+
+    AnnualAccumulator[] monthly = new AnnualAccumulator[12];
+    for (int i = 0; i < monthly.length; i++) {
+      monthly[i] = new AnnualAccumulator();
+    }
+
+    AnnualAccumulator soldTotals = new AnnualAccumulator();
+    Map<String, AnnualAccumulator> categoryTotals = new LinkedHashMap<>();
+    List<String> partialReasons = new ArrayList<>();
+    long holdDaysTotal = 0;
+    long holdDaysCount = 0;
+
+    for (SnkVente item : sold) {
+      if (item.getDateVente() == null) continue;
+      int monthIndex = item.getDateVente().getMonthValue() - 1;
+      BigDecimal revenue = nz(item.getPrixResell());
+      BigDecimal purchasePrice = nz(item.getPrixRetail());
+      BigDecimal profit = revenue.subtract(purchasePrice);
+
+      soldTotals.revenue = soldTotals.revenue.add(revenue);
+      soldTotals.profit = soldTotals.profit.add(profit);
+      soldTotals.cost = soldTotals.cost.add(purchasePrice);
+      soldTotals.count += 1;
+
+      monthly[monthIndex].revenue = monthly[monthIndex].revenue.add(revenue);
+      monthly[monthIndex].profit = monthly[monthIndex].profit.add(profit);
+      monthly[monthIndex].count += 1;
+
+      AnnualAccumulator category = categoryTotals.computeIfAbsent(categoryName(item), ignored -> new AnnualAccumulator());
+      category.revenue = category.revenue.add(revenue);
+      category.profit = category.profit.add(profit);
+      category.count += 1;
+
+      if (item.getDateAchat() != null && !item.getDateAchat().isAfter(item.getDateVente())) {
+        holdDaysTotal += ChronoUnit.DAYS.between(item.getDateAchat(), item.getDateVente());
+        holdDaysCount += 1;
+      }
+
+      if (item.getPrixResell() == null) {
+        addReason(partialReasons, "Certaines ventes n'ont pas de prix de vente.");
+      }
+      if (item.getPrixRetail() == null) {
+        addReason(partialReasons, "Certains couts d'achat sont manquants.");
+      }
+      if (item.getDateAchat() == null) {
+        addReason(partialReasons, "Certaines ventes n'ont pas de date d'achat.");
+      }
+    }
+
+    BigDecimal purchaseSpend = BigDecimal.ZERO;
+    long itemsBought = 0;
+    for (SnkVente item : purchased) {
+      if (item.getDateAchat() == null) continue;
+      int monthIndex = item.getDateAchat().getMonthValue() - 1;
+      BigDecimal cost = nz(item.getPrixRetail());
+      purchaseSpend = purchaseSpend.add(cost);
+      itemsBought += 1;
+      monthly[monthIndex].purchaseSpend = monthly[monthIndex].purchaseSpend.add(cost);
+      monthly[monthIndex].itemsBought += 1;
+      if (item.getPrixRetail() == null) {
+        addReason(partialReasons, "Certains achats n'ont pas de cout renseigne.");
+      }
+    }
+
+    BigDecimal remainingStockValue = BigDecimal.ZERO;
+    for (SnkVente item : inventory) {
+      remainingStockValue = remainingStockValue.add(nz(item.getPrixRetail()));
+      if (item.getDateAchat() == null) {
+        addReason(partialReasons, "Certains articles en stock n'ont pas de date d'achat.");
+      }
+      if (item.getPrixRetail() == null) {
+        addReason(partialReasons, "Certains articles en stock n'ont pas de cout d'achat.");
+      }
+    }
+
+    BigDecimal revenue = soldTotals.revenue;
+    BigDecimal profit = soldTotals.profit;
+    long itemsSold = soldTotals.count;
+    BigDecimal soldCost = soldTotals.cost;
+    BigDecimal marginRate = divide(profit, revenue, 4);
+    BigDecimal roi = divide(profit, soldCost, 4);
+    BigDecimal averageSalePrice = itemsSold > 0
+        ? revenue.divide(BigDecimal.valueOf(itemsSold), 2, RoundingMode.HALF_UP)
+        : BigDecimal.ZERO;
+    BigDecimal averageProfit = itemsSold > 0
+        ? profit.divide(BigDecimal.valueOf(itemsSold), 2, RoundingMode.HALF_UP)
+        : BigDecimal.ZERO;
+    BigDecimal sellThroughRate = divide(
+        BigDecimal.valueOf(itemsSold),
+        BigDecimal.valueOf(itemsSold + inventory.size()),
+        4
+    );
+    BigDecimal averageHoldDays = holdDaysCount > 0
+        ? BigDecimal.valueOf(holdDaysTotal).divide(BigDecimal.valueOf(holdDaysCount), 1, RoundingMode.HALF_UP)
+        : BigDecimal.ZERO;
+
+    AnnualDashboardResponse.AnnualDashboardSummary summary =
+        new AnnualDashboardResponse.AnnualDashboardSummary(
+            money(revenue),
+            money(profit),
+            marginRate,
+            roi,
+            itemsSold,
+            averageSalePrice,
+            averageProfit,
+            money(purchaseSpend),
+            itemsBought,
+            inventory.size(),
+            money(remainingStockValue),
+            sellThroughRate,
+            averageHoldDays
+        );
+
+    boolean hasData = itemsSold > 0 || itemsBought > 0 || !inventory.isEmpty();
+
+    return new AnnualDashboardResponse(
+        safeYear,
+        asOf,
+        hasData,
+        !partialReasons.isEmpty(),
+        List.copyOf(partialReasons),
+        summary,
+        monthlyRows(monthly),
+        categoryRows(categoryTotals),
+        topProductRows(sold),
+        inventoryRows(inventory, asOf)
+    );
+  }
+
   private List<String> normalizeCategories(List<String> categories) {
     if (categories == null) return null;
     var cleaned = categories.stream()
@@ -618,5 +764,143 @@ public class StatsService {
   private BigDecimal toBigDecimal(Double value) {
     if (value == null) return BigDecimal.ZERO;
     return BigDecimal.valueOf(value).setScale(2, RoundingMode.HALF_UP);
+  }
+
+  private BigDecimal money(BigDecimal value) {
+    return nz(value).setScale(2, RoundingMode.HALF_UP);
+  }
+
+  private BigDecimal divide(BigDecimal numerator, BigDecimal denominator, int scale) {
+    BigDecimal safeDenominator = nz(denominator);
+    if (safeDenominator.compareTo(BigDecimal.ZERO) == 0) return BigDecimal.ZERO;
+    return nz(numerator).divide(safeDenominator, scale, RoundingMode.HALF_UP);
+  }
+
+  private String categoryName(SnkVente item) {
+    String category = item.getCategorie();
+    if (category != null && !category.trim().isEmpty()) {
+      return category.trim();
+    }
+    ItemType type = item.getType();
+    if (type == ItemType.POKEMON_CARD) return "Cartes";
+    if (type == ItemType.TICKET) return "Tickets";
+    if (type == ItemType.OTHER) return "Autres";
+    return "Sneakers";
+  }
+
+  private String itemName(SnkVente item) {
+    String name = item.getNomItem();
+    if (name != null && !name.trim().isEmpty()) return name.trim();
+    return "Article sans nom";
+  }
+
+  private void addReason(List<String> reasons, String reason) {
+    if (reasons.size() >= 4 || reasons.contains(reason)) return;
+    reasons.add(reason);
+  }
+
+  private List<AnnualDashboardResponse.AnnualDashboardMonth> monthlyRows(AnnualAccumulator[] monthly) {
+    List<AnnualDashboardResponse.AnnualDashboardMonth> rows = new ArrayList<>();
+    for (int i = 0; i < monthly.length; i++) {
+      AnnualAccumulator row = monthly[i];
+      rows.add(new AnnualDashboardResponse.AnnualDashboardMonth(
+          i + 1,
+          money(row.revenue),
+          money(row.profit),
+          money(row.purchaseSpend),
+          row.count,
+          row.itemsBought
+      ));
+    }
+    return rows;
+  }
+
+  private List<AnnualDashboardResponse.AnnualDashboardCategory> categoryRows(
+      Map<String, AnnualAccumulator> categoryTotals
+  ) {
+    List<Map.Entry<String, AnnualAccumulator>> sorted = categoryTotals.entrySet().stream()
+        .sorted((a, b) -> b.getValue().profit.compareTo(a.getValue().profit))
+        .toList();
+
+    List<AnnualDashboardResponse.AnnualDashboardCategory> rows = new ArrayList<>();
+    AnnualAccumulator others = new AnnualAccumulator();
+    for (int i = 0; i < sorted.size(); i++) {
+      Map.Entry<String, AnnualAccumulator> entry = sorted.get(i);
+      if (i < 5) {
+        AnnualAccumulator value = entry.getValue();
+        rows.add(new AnnualDashboardResponse.AnnualDashboardCategory(
+            entry.getKey(),
+            money(value.revenue),
+            money(value.profit),
+            value.count
+        ));
+      } else {
+        others.revenue = others.revenue.add(entry.getValue().revenue);
+        others.profit = others.profit.add(entry.getValue().profit);
+        others.count += entry.getValue().count;
+      }
+    }
+    if (others.count > 0) {
+      rows.add(new AnnualDashboardResponse.AnnualDashboardCategory(
+          "Autres",
+          money(others.revenue),
+          money(others.profit),
+          others.count
+      ));
+    }
+    return rows;
+  }
+
+  private List<AnnualDashboardResponse.AnnualDashboardProduct> topProductRows(List<SnkVente> sold) {
+    return sold.stream()
+        .filter(Objects::nonNull)
+        .sorted(Comparator.comparing((SnkVente item) -> nz(item.getPrixResell()).subtract(nz(item.getPrixRetail()))).reversed())
+        .limit(8)
+        .map(item -> {
+          BigDecimal purchasePrice = nz(item.getPrixRetail());
+          BigDecimal salePrice = nz(item.getPrixResell());
+          BigDecimal profit = salePrice.subtract(purchasePrice);
+          return new AnnualDashboardResponse.AnnualDashboardProduct(
+              item.getId(),
+              itemName(item),
+              categoryName(item),
+              money(purchasePrice),
+              money(salePrice),
+              money(profit),
+              divide(profit, purchasePrice, 4),
+              item.getDateVente()
+          );
+        })
+        .toList();
+  }
+
+  private List<AnnualDashboardResponse.AnnualDashboardInventoryItem> inventoryRows(
+      List<SnkVente> inventory,
+      LocalDate asOf
+  ) {
+    return inventory.stream()
+        .filter(Objects::nonNull)
+        .sorted(Comparator
+            .comparing((SnkVente item) -> item.getDateAchat() == null ? Long.MIN_VALUE : ChronoUnit.DAYS.between(item.getDateAchat(), asOf))
+            .reversed())
+        .limit(8)
+        .map(item -> new AnnualDashboardResponse.AnnualDashboardInventoryItem(
+            item.getId(),
+            itemName(item),
+            categoryName(item),
+            money(item.getPrixRetail()),
+            item.getDateAchat(),
+            item.getDateAchat() == null ? null : ChronoUnit.DAYS.between(item.getDateAchat(), asOf)
+        ))
+        .toList();
+  }
+
+  private static final class AnnualAccumulator {
+    private BigDecimal revenue = BigDecimal.ZERO;
+    private BigDecimal profit = BigDecimal.ZERO;
+    private BigDecimal cost = BigDecimal.ZERO;
+    private BigDecimal purchaseSpend = BigDecimal.ZERO;
+    private long count = 0;
+    private long itemsBought = 0;
   }
 }

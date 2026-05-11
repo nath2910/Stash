@@ -246,6 +246,10 @@ function categories(from, to) {
   return cachedGet('/stats/categories', params, { ttlMs: 60_000 })
 }
 
+function annualDashboard(year) {
+  return cachedGet('/stats/annual-dashboard', { year }, { ttlMs: 20_000 })
+}
+
 // Billing (backend à implémenter côté API Spring)
 function billingStatus() {
   return api.get('/billing/status')
@@ -273,6 +277,7 @@ export default {
   series,
   breakdown,
   rank,
+  annualDashboard,
   dateBounds,
   categories,
   getLayout,

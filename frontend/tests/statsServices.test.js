@@ -35,3 +35,10 @@ test('categories utilise le filtre seulement si les dates sont valides', async (
   assert.equal(call.arguments[0], '/stats/categories')
   assert.deepEqual(call.arguments[1], { params: {} })
 })
+
+test('annualDashboard envoie l annee selectionnee', async () => {
+  await StatsServices.annualDashboard(2026)
+  const call = getMock.mock.calls.at(-1)
+  assert.equal(call.arguments[0], '/stats/annual-dashboard')
+  assert.deepEqual(call.arguments[1], { params: { year: 2026 } })
+})

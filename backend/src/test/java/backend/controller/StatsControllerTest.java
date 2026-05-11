@@ -1,5 +1,6 @@
 package backend.controller;
 
+import backend.dto.AnnualDashboardResponse;
 import backend.dto.StatsSummaryResponse;
 import backend.entity.User;
 import backend.service.StatsLayoutService;
@@ -85,6 +86,41 @@ class StatsControllerTest {
         null,
         null
     );
+
+    Assertions.assertSame(response, result);
+  }
+
+  @Test
+  void annualDashboardDelegatesWithUserAndYear() {
+    AnnualDashboardResponse response = new AnnualDashboardResponse(
+        2026,
+        LocalDate.of(2026, 12, 31),
+        false,
+        false,
+        List.of(),
+        new AnnualDashboardResponse.AnnualDashboardSummary(
+            BigDecimal.ZERO,
+            BigDecimal.ZERO,
+            BigDecimal.ZERO,
+            BigDecimal.ZERO,
+            0L,
+            BigDecimal.ZERO,
+            BigDecimal.ZERO,
+            BigDecimal.ZERO,
+            0L,
+            0L,
+            BigDecimal.ZERO,
+            BigDecimal.ZERO,
+            BigDecimal.ZERO
+        ),
+        List.of(),
+        List.of(),
+        List.of(),
+        List.of()
+    );
+    Mockito.when(statsService.annualDashboard(1L, 2026)).thenReturn(response);
+
+    AnnualDashboardResponse result = controller.annualDashboard(user, 2026);
 
     Assertions.assertSame(response, result);
   }

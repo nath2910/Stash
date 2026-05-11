@@ -176,6 +176,14 @@ public class StatsController {
     return statsService.dateBounds(currentUser.getId());
   }
 
+  @GetMapping({"/annual-dashboard"})
+  public AnnualDashboardResponse annualDashboard(
+      @AuthenticationPrincipal User currentUser,
+      @RequestParam int year
+  ) {
+    return statsService.annualDashboard(currentUser.getId(), year);
+  }
+
   @GetMapping({"/layout"})
   public StatsLayoutResponse getLayout(@AuthenticationPrincipal User currentUser) {
     return new StatsLayoutResponse(statsLayoutService.getLayout(currentUser.getId()));
