@@ -4,6 +4,7 @@
     :class="{ 'is-space-pan': spacePanActive, 'theme-light': themeMode === 'light' }"
     :data-edit="editMode ? 'true' : 'false'"
     @pointerdown="onCanvasPointerDown"
+    @wheel="onRootWheel"
     @contextmenu="onCanvasContextMenu"
   >
     <teleport to="body">
@@ -263,7 +264,7 @@
         aria-label="Mon compte"
         @click="goTemplateAccount"
       >
-        {{ templateUserInitials }}
+        <span class="template-rail__user-avatar">{{ templateUserInitials }}</span>
       </button>
 
       <nav class="template-rail__nav" aria-label="Navigation principale">
@@ -780,6 +781,15 @@ function onTemplateStateChange(state: unknown) {
   if (!templateActive.value || !activeTemplateId.value) return
   activeTemplateState.value = sanitizeTemplateRuntimeState(state)
   scheduleSave()
+}
+
+function onRootWheel(event: WheelEvent) {
+  const target = event.target as HTMLElement | null
+  if (target?.closest('input, textarea, select, [contenteditable="true"]')) return
+  const mostlyHorizontal = Math.abs(event.deltaX) > Math.abs(event.deltaY) * 1.15
+  if (mostlyHorizontal && Math.abs(event.deltaX) > 8) {
+    event.preventDefault()
+  }
 }
 
 function applyTemplate(item?: TemplatePickerItem) {

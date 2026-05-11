@@ -1,23 +1,47 @@
 <template>
-  <section class="annual-dashboard" aria-label="Dashboard annuel">
+  <section class="annual-dashboard" aria-label="Dashboard annuel" @wheel="onWheel">
     <div class="annual-dashboard__inner">
       <header class="annual-header">
         <div class="annual-header__copy">
           <p class="annual-header__kicker">Template</p>
           <h1>Dashboard annuel</h1>
           <p>
-            Vue metier du {{ selectedYear }} avec ventes, profit, achats et stock immobilise.
+            Synthese {{ selectedYear }} des ventes, du profit, des achats et du stock restant.
           </p>
         </div>
 
-        <label class="annual-year">
-          <span>Annee selectionnee</span>
-          <select v-model.number="selectedYear" aria-label="Selectionner une annee">
-            <option v-for="year in yearOptions" :key="year" :value="year">
-              {{ year }}
-            </option>
-          </select>
-        </label>
+        <div class="annual-year">
+          <div class="annual-year__head">
+            <span>Annee selectionnee</span>
+            <small>Saisie libre</small>
+          </div>
+          <div class="annual-year__control">
+            <button
+              type="button"
+              aria-label="Annee precedente"
+              @click="changeYear(-1)"
+            >
+              <ChevronLeft aria-hidden="true" />
+            </button>
+            <input
+              :value="yearDraft"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              autocomplete="off"
+              aria-label="Selectionner une annee"
+              @input="onYearInput"
+              @blur="commitYear()"
+              @keydown.enter.prevent="commitYear()"
+            />
+            <button
+              type="button"
+              aria-label="Annee suivante"
+              @click="changeYear(1)"
+            >
+              <ChevronRight aria-hidden="true" />
+            </button>
+          </div>
+        </div>
       </header>
 
       <div v-if="loading && !dashboard" class="annual-state annual-state--loading" role="status">
@@ -90,14 +114,13 @@
             @pointerup="onPointerUp"
             @pointercancel="resetPointerDrag"
             @lostpointercapture="resetPointerDrag"
-            @wheel="onWheel"
           >
             <div class="annual-pages" :style="pageTrackStyle">
               <article class="annual-page annual-page--side" aria-label="Flux et mix produit">
                 <div class="annual-page__heading">
-                  <p>Vue gauche</p>
-                  <h2>Flux & mix produit</h2>
-                  <span>Ou part le cash et quelles categories portent le profit.</span>
+                  <p>Flux de tresorerie</p>
+                  <h2>Achats, ventes et categories</h2>
+                  
                 </div>
 
                 <div class="annual-page-grid annual-page-grid--two">
@@ -105,7 +128,7 @@
                     <div class="annual-panel__head">
                       <div>
                         <p>Flux de cash</p>
-                        <h2>Achats vs ventes</h2>
+                        <h2>Cash investi vs encaissé</h2>
                       </div>
                       <span>{{ formatMoney(summary.purchaseSpend) }} investis</span>
                     </div>
@@ -115,8 +138,8 @@
                   <section class="annual-panel">
                     <div class="annual-panel__head">
                       <div>
-                        <p>Mix produit</p>
-                        <h2>Profit par categorie</h2>
+                        <p>Categories</p>
+                        <h2>Contribution au profit</h2>
                       </div>
                       <span>Top {{ dashboard.topCategories.length }}</span>
                     </div>
@@ -137,14 +160,6 @@
 
               <article class="annual-page annual-page--main" aria-label="Pilotage annuel">
                 <div class="annual-main-stack">
-                  <div v-if="dashboard.partialData" class="annual-quality" role="status">
-                    <AlertTriangle class="annual-quality__icon" aria-hidden="true" />
-                    <div>
-                      <strong>Donnees partielles</strong>
-                      <p>{{ partialDataText }}</p>
-                    </div>
-                  </div>
-
                   <section class="annual-kpi-grid" aria-label="KPI annuels">
                     <AnnualKpiCard
                       v-for="card in kpiCards"
@@ -161,28 +176,39 @@
                 <section class="annual-panel annual-panel--main-chart">
                   <div class="annual-panel__head">
                     <div>
-                      <p>Performance mensuelle</p>
-                      <h2>Chiffre d'affaires et profit</h2>
+                      <p>Pilotage revendeur</p>
+                      <h2>Plan d'action</h2>
                     </div>
                     <span>{{ selectedYear }}</span>
                   </div>
-                  <VChart class="annual-chart annual-chart--main" :option="performanceOption" autoresize />
+                  <div class="annual-action-grid" aria-label="Plan d'action revendeur">
+                    <article
+                      v-for="item in resellerSignals"
+                      :key="item.title"
+                      class="annual-action-card"
+                      :class="item.tone ? `is-${item.tone}` : ''"
+                    >
+                      <span>{{ item.badge }}</span>
+                      <h3>{{ item.title }}</h3>
+                      <strong>{{ item.value }}</strong>
+                      <p>{{ item.detail }}</p>
+                    </article>
+                  </div>
                 </section>
               </article>
 
               <article class="annual-page annual-page--details" aria-label="Details metier">
                 <div class="annual-page__heading">
-                  <p>Vue droite</p>
-                  <h2>Details metier</h2>
-                  <span>Les ventes qui tirent le profit et les articles qui restent immobilises.</span>
+                  <p>Analyse operationnelle</p>
+                  <h2>Rentabilite et stock dormant</h2>
                 </div>
 
                 <section class="annual-table-grid" aria-label="Tableaux metier">
                   <article class="annual-panel annual-table-card">
                     <div class="annual-panel__head">
                       <div>
-                        <p>Rentabilite</p>
-                        <h2>Top produits</h2>
+                        <p>Meilleures ventes</p>
+                        <h2>Produits les plus rentables</h2>
                       </div>
                       <span>{{ dashboard.topProducts.length }} ventes</span>
                     </div>
@@ -223,8 +249,8 @@
                   <article class="annual-panel annual-table-card">
                     <div class="annual-panel__head">
                       <div>
-                        <p>Stock immobilise</p>
-                        <h2>Articles les plus anciens</h2>
+                        <p>Stock a surveiller</p>
+                        <h2>Articles immobilises</h2>
                       </div>
                       <span>Au {{ formatDate(dashboard.asOf) }}</span>
                     </div>
@@ -272,15 +298,14 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
-  AlertTriangle,
   BadgeEuro,
   Boxes,
   ChartNoAxesCombined,
   ChevronLeft,
   ChevronRight,
   CirclePercent,
-  PackageCheck,
   TrendingUp,
+  Wallet,
 } from 'lucide-vue-next'
 import StatsServices from '@/services/StatsServices'
 import AnnualKpiCard from './AnnualKpiCard.vue'
@@ -366,10 +391,15 @@ const emit = defineEmits<{
 const monthLabels = ['Jan', 'Fev', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aout', 'Sep', 'Oct', 'Nov', 'Dec']
 const currentYear = new Date().getFullYear()
 
-function normalizeInitialYear(value: unknown) {
+function normalizeYearValue(value: unknown, fallback = currentYear) {
+  if (typeof value === 'string' && !value.trim()) return fallback
   const year = Math.trunc(Number(value))
-  if (!Number.isFinite(year)) return currentYear
+  if (!Number.isFinite(year)) return fallback
   return Math.max(2000, Math.min(currentYear + 1, year))
+}
+
+function normalizeInitialYear(value: unknown) {
+  return normalizeYearValue(value, currentYear)
 }
 
 function normalizeInitialPage(value: unknown) {
@@ -379,6 +409,7 @@ function normalizeInitialPage(value: unknown) {
 }
 
 const selectedYear = ref(normalizeInitialYear(props.initialState?.year))
+const yearDraft = ref(String(selectedYear.value))
 const minYear = ref(currentYear - 5)
 const maxYear = ref(currentYear)
 const dashboard = ref<AnnualDashboard | null>(null)
@@ -396,9 +427,9 @@ let requestId = 0
 let lastWheelPageChangeAt = 0
 
 const pages = [
-  { key: 'flow', label: 'Flux & mix' },
+  { key: 'flow', label: 'Flux & categories' },
   { key: 'pilotage', label: 'Pilotage annuel' },
-  { key: 'details', label: 'Details metier' },
+  { key: 'details', label: 'Rentabilite & stock' },
 ]
 
 watch(
@@ -464,20 +495,53 @@ const pageTrackStyle = computed(() => ({
 }))
 const topProductsPreview = computed(() => dashboard.value?.topProducts.slice(0, 6) ?? [])
 const inventoryPreview = computed(() => dashboard.value?.inventoryAging.slice(0, 6) ?? [])
-const yearOptions = computed(() => {
-  const start = Math.max(maxYear.value, currentYear)
-  const end = Math.min(minYear.value, currentYear - 5)
-  const years: number[] = []
-  for (let year = start; year >= end; year--) {
-    years.push(year)
-  }
-  return years
-})
-const partialDataText = computed(() => {
-  const reasons = dashboard.value?.partialDataReasons ?? []
-  return reasons.length ? reasons.join(' ') : 'Certaines lignes ne permettent pas de calculer toutes les metriques.'
-})
+const resellerSignals = computed(() => {
+  const oldStock = (dashboard.value?.inventoryAging ?? []).filter((item) => Number(item.ageInDays || 0) >= 120)
+  const cashNet = summary.value.revenue - summary.value.purchaseSpend
+  const bestCategory = dashboard.value?.topCategories?.[0]
+  const holdDays = Number(summary.value.averageHoldDays || 0)
+  const rotation =
+    holdDays <= 0
+      ? { value: 'A suivre', detail: 'Ajoute les dates d achat/vente pour mesurer la rotation.', tone: 'neutral' }
+      : holdDays <= 45
+        ? { value: 'Rapide', detail: `${formatDays(holdDays)} en moyenne avant revente. Continue sur ces formats.`, tone: 'positive' }
+        : holdDays <= 120
+          ? { value: 'Correcte', detail: `${formatDays(holdDays)} en moyenne. Surveille les tailles/modeles lents.`, tone: 'neutral' }
+          : { value: 'Lente', detail: `${formatDays(holdDays)} en moyenne. Priorise les articles faciles a sortir.`, tone: 'warning' }
 
+  return [
+    {
+      badge: 'Cash',
+      title: cashNet >= 0 ? 'Cycle sain' : 'Cash sous pression',
+      value: formatMoney(cashNet),
+      detail: cashNet >= 0 ? 'Encaissements superieurs aux achats sur l annee.' : 'Achats superieurs aux ventes: reduis le stock lent.',
+      tone: cashNet >= 0 ? 'positive' : 'warning',
+    },
+    {
+      badge: 'Stock',
+      title: oldStock.length ? 'Stock dormant' : 'Stock sous controle',
+      value: oldStock.length ? `${oldStock.length} a traiter` : 'RAS',
+      detail: oldStock.length ? 'Articles a relister, remiser ou sortir en bundle.' : 'Pas d alerte agee dans les articles les plus anciens.',
+      tone: oldStock.length ? 'warning' : 'positive',
+    },
+    {
+      badge: 'Sourcing',
+      title: bestCategory?.name ? 'Categorie forte' : 'Categorie a identifier',
+      value: bestCategory?.name || 'Aucune',
+      detail: bestCategory?.name
+        ? `${formatMoney(bestCategory.profit)} de profit: a prioriser si le stock tourne.`
+        : 'Ajoute categories/marques pour voir ce qui rapporte vraiment.',
+      tone: bestCategory?.profit && bestCategory.profit > 0 ? 'positive' : 'neutral',
+    },
+    {
+      badge: 'Rotation',
+      title: 'Vitesse de revente',
+      value: rotation.value,
+      detail: rotation.detail,
+      tone: rotation.tone,
+    },
+  ]
+})
 const kpiCards = computed(() => [
   {
     label: "Chiffre d'affaires",
@@ -508,11 +572,11 @@ const kpiCards = computed(() => [
     icon: ChartNoAxesCombined,
   },
   {
-    label: 'Sell-through',
-    value: formatRatio(summary.value.sellThroughRate),
-    detail: `${formatNumber(summary.value.itemsBought)} achats sur l annee`,
-    tone: 'neutral' as const,
-    icon: PackageCheck,
+    label: 'Capital investi',
+    value: formatMoney(summary.value.purchaseSpend),
+    detail: `${formatNumber(summary.value.itemsBought)} achats de stock`,
+    tone: 'primary' as const,
+    icon: Wallet,
   },
   {
     label: 'Stock restant',
@@ -529,59 +593,6 @@ const insightItems = computed(() => [
   { label: 'Profit moyen', value: formatMoney(summary.value.averageProfit) },
   { label: 'Detention moyenne', value: formatDays(summary.value.averageHoldDays) },
 ])
-
-const performanceOption = computed(() => {
-  const rows = monthlyRows.value
-  return {
-    color: ['#5b5ce2', '#10b981'],
-    grid: { left: 8, right: 14, top: 36, bottom: 14, containLabel: true },
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: { type: 'shadow' },
-      valueFormatter: (value: number) => compactMoneyFormatter.format(Number(value ?? 0)),
-    },
-    legend: {
-      top: 0,
-      right: 4,
-      itemWidth: 10,
-      itemHeight: 10,
-      textStyle: { color: '#64748b', fontSize: 12 },
-    },
-    xAxis: {
-      type: 'category',
-      data: monthLabels,
-      axisTick: { show: false },
-      axisLine: { lineStyle: { color: '#cbd5e1' } },
-      axisLabel: { color: '#64748b', interval: 0 },
-    },
-    yAxis: {
-      type: 'value',
-      splitLine: { lineStyle: { color: 'rgba(148, 163, 184, 0.22)' } },
-      axisLabel: {
-        color: '#64748b',
-        formatter: (value: number) => compactMoneyFormatter.format(Number(value ?? 0)),
-      },
-    },
-    series: [
-      {
-        name: "Chiffre d'affaires",
-        type: 'bar',
-        barMaxWidth: 28,
-        data: rows.map((row) => row.revenue),
-        itemStyle: { borderRadius: [6, 6, 0, 0] },
-      },
-      {
-        name: 'Profit',
-        type: 'line',
-        smooth: true,
-        symbolSize: 7,
-        lineStyle: { width: 3 },
-        areaStyle: { opacity: 0.08 },
-        data: rows.map((row) => row.profit),
-      },
-    ],
-  }
-})
 
 const cashflowOption = computed(() => {
   const rows = monthlyRows.value
@@ -817,6 +828,24 @@ function goToPage(index: number) {
   activePage.value = Math.max(0, Math.min(pages.length - 1, index))
 }
 
+function commitYear(value: unknown = yearDraft.value) {
+  const next = normalizeYearValue(value, selectedYear.value)
+  selectedYear.value = next
+  yearDraft.value = String(next)
+}
+
+function changeYear(delta: number) {
+  commitYear(selectedYear.value + delta)
+}
+
+function onYearInput(event: Event) {
+  const input = event.target as HTMLInputElement | null
+  const value = String(input?.value ?? '').replace(/[^\d]/g, '').slice(0, 4)
+  yearDraft.value = value
+  if (input && input.value !== value) input.value = value
+  if (value.length === 4) commitYear(value)
+}
+
 function previousPage() {
   goToPage(activePage.value - 1)
 }
@@ -885,6 +914,7 @@ function resetPointerDrag() {
 }
 
 function onWheel(event: WheelEvent) {
+  if (!canStartPointerSlide(event.target)) return
   const delta = Math.abs(event.deltaX) >= Math.abs(event.deltaY) ? event.deltaX : event.shiftKey ? event.deltaY : 0
   const horizontalIntent = Math.abs(event.deltaX) > Math.abs(event.deltaY) * 1.15 || event.shiftKey
   if (!horizontalIntent || Math.abs(delta) < 28) return
@@ -949,6 +979,7 @@ async function loadYearBounds() {
 }
 
 watch(selectedYear, () => {
+  yearDraft.value = String(selectedYear.value)
   loadDashboard()
 })
 
@@ -970,6 +1001,8 @@ onBeforeUnmount(() => {
   min-width: 0;
   min-height: 0;
   overflow: hidden;
+  overscroll-behavior: contain;
+  overscroll-behavior-x: none;
   scrollbar-width: none;
   -ms-overflow-style: none;
   background:
@@ -989,8 +1022,8 @@ onBeforeUnmount(() => {
   min-width: 0;
   min-height: 0;
   margin: 0 auto;
-  padding: clamp(14px, 1.8vw, 24px) calc(96px + clamp(14px, 2.2vw, 28px)) clamp(16px, 2vw, 24px)
-    clamp(14px, 2.2vw, 28px);
+  padding: clamp(14px, 1.8vw, 24px) clamp(14px, 2.2vw, 28px) clamp(16px, 2vw, 24px)
+    calc(96px + clamp(14px, 2.2vw, 28px));
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
   gap: 12px;
@@ -1035,17 +1068,28 @@ onBeforeUnmount(() => {
 
 .annual-year {
   flex: 0 0 auto;
-  min-width: min(220px, 100%);
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.82);
-  box-shadow: 0 12px 28px rgba(31, 41, 55, 0.08);
-  padding: 9px 11px;
+  width: min(315px, 100%);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(247, 249, 255, 0.88)),
+    linear-gradient(135deg, rgba(91, 92, 226, 0.08), rgba(59, 130, 246, 0.05));
+  box-shadow:
+    0 14px 34px rgba(31, 41, 55, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  padding: 10px;
   display: grid;
-  gap: 6px;
+  gap: 8px;
 }
 
-.annual-year span {
+.annual-year__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.annual-year__head span {
   color: #64748b;
   font-size: 0.68rem;
   font-weight: 780;
@@ -1053,17 +1097,61 @@ onBeforeUnmount(() => {
   text-transform: uppercase;
 }
 
-.annual-year select {
+.annual-year__head small {
+  color: #5b5ce2;
+  font-size: 0.68rem;
+  font-weight: 760;
+}
+
+.annual-year__control {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 34px;
+  align-items: center;
+  gap: 6px;
+}
+
+.annual-year__control button {
+  border: 1px solid rgba(99, 102, 241, 0.22);
+  background: rgba(255, 255, 255, 0.8);
+  color: #4f46e5;
+  display: inline-grid;
+  place-items: center;
+}
+
+.annual-year__control button {
+  width: 34px;
+  height: 36px;
+  border-radius: 10px;
+}
+
+.annual-year__control button:hover {
+  border-color: rgba(79, 70, 229, 0.42);
+  background: #eef2ff;
+}
+
+.annual-year__control svg {
+  width: 16px;
+  height: 16px;
+}
+
+.annual-year__control input {
   width: 100%;
   min-width: 0;
   height: 38px;
-  border: 1px solid rgba(99, 102, 241, 0.24);
-  border-radius: 6px;
-  background: #fff;
+  border: 1px solid rgba(99, 102, 241, 0.26);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.96);
   color: #111827;
-  font-size: 0.98rem;
-  font-weight: 760;
-  padding: 0 10px;
+  font-size: 1.08rem;
+  font-weight: 820;
+  text-align: center;
+  padding: 0 8px;
+  outline: none;
+}
+
+.annual-year__control input:focus {
+  border-color: rgba(91, 92, 226, 0.58);
+  box-shadow: 0 0 0 3px rgba(91, 92, 226, 0.12);
 }
 
 .annual-page-nav {
@@ -1148,6 +1236,8 @@ onBeforeUnmount(() => {
   min-width: 0;
   min-height: 0;
   overflow: hidden;
+  overscroll-behavior: contain;
+  overscroll-behavior-x: none;
   border-radius: 10px;
   cursor: grab;
   touch-action: pan-y;
@@ -1189,6 +1279,8 @@ onBeforeUnmount(() => {
 
 .annual-page--main {
   grid-template-rows: auto minmax(0, 1fr);
+  align-content: stretch;
+  gap: 12px;
 }
 
 .annual-page--details {
@@ -1226,36 +1318,6 @@ onBeforeUnmount(() => {
   font-size: 0.86rem;
   line-height: 1.35;
   text-align: right;
-}
-
-.annual-quality {
-  border: 1px solid rgba(245, 158, 11, 0.28);
-  border-radius: 8px;
-  background: #fff7ed;
-  color: #92400e;
-  padding: 10px 12px;
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 10px;
-  align-items: start;
-}
-
-.annual-quality__icon {
-  width: 18px;
-  height: 18px;
-  margin-top: 1px;
-}
-
-.annual-quality strong {
-  display: block;
-  color: #78350f;
-  font-size: 0.88rem;
-}
-
-.annual-quality p {
-  margin: 3px 0 0;
-  font-size: 0.84rem;
-  line-height: 1.42;
 }
 
 .annual-main-stack {
@@ -1372,6 +1434,31 @@ onBeforeUnmount(() => {
   text-align: right;
 }
 
+.annual-panel--main-chart {
+  padding: 12px;
+  gap: 10px;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.annual-panel--main-chart .annual-panel__head {
+  align-items: center;
+  gap: 8px;
+}
+
+.annual-panel--main-chart .annual-panel__head p {
+  display: none;
+}
+
+.annual-panel--main-chart .annual-panel__head h2 {
+  font-size: 0.92rem;
+  line-height: 1.1;
+}
+
+.annual-panel--main-chart .annual-panel__head span {
+  padding: 4px 8px;
+  font-size: 0.68rem;
+}
+
 .annual-chart {
   width: 100%;
   height: 100%;
@@ -1379,12 +1466,97 @@ onBeforeUnmount(() => {
   min-height: 0;
 }
 
-.annual-chart--main {
-  min-height: 0;
-}
-
 .annual-chart-wrap {
   min-width: 0;
+}
+
+.annual-action-grid {
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 9px;
+}
+
+.annual-action-card {
+  min-width: 0;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(248, 250, 252, 0.9), rgba(241, 245, 249, 0.78)),
+    radial-gradient(circle at top right, rgba(99, 102, 241, 0.08), transparent 36%);
+  padding: 10px;
+  display: grid;
+  grid-template-rows: auto auto auto 1fr;
+  align-content: start;
+  gap: 6px;
+}
+
+.annual-action-card span {
+  width: fit-content;
+  min-width: 0;
+  border-radius: 999px;
+  background: rgba(99, 102, 241, 0.1);
+  color: #4f46e5;
+  padding: 3px 7px;
+  font-size: 0.58rem;
+  font-weight: 820;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.annual-action-card h3 {
+  min-width: 0;
+  margin: 0;
+  color: #64748b;
+  font-size: 0.72rem;
+  line-height: 1.15;
+  font-weight: 820;
+}
+
+.annual-action-card strong {
+  min-width: 0;
+  color: #111827;
+  font-size: clamp(1rem, 1.18vw, 1.18rem);
+  line-height: 1.05;
+  font-weight: 820;
+  overflow-wrap: anywhere;
+}
+
+.annual-action-card p {
+  min-width: 0;
+  margin: 0;
+  color: #64748b;
+  font-size: 0.68rem;
+  line-height: 1.25;
+  font-weight: 680;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.annual-action-card.is-positive strong {
+  color: #047857;
+}
+
+.annual-action-card.is-warning strong {
+  color: #b45309;
+}
+
+.annual-action-card.is-warning span {
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+}
+
+.annual-action-card.is-positive span {
+  background: rgba(16, 185, 129, 0.12);
+  color: #047857;
 }
 
 .annual-two-col {
@@ -1602,7 +1774,7 @@ onBeforeUnmount(() => {
 
 @media (max-width: 960px) {
   .annual-dashboard__inner {
-    padding-right: clamp(14px, 2.2vw, 28px);
+    padding-left: clamp(14px, 2.2vw, 28px);
     padding-bottom: 96px;
   }
 }
