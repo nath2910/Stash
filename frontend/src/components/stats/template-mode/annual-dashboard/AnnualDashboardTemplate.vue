@@ -213,7 +213,7 @@
                       <span>{{ dashboard.topProducts.length }} ventes</span>
                     </div>
 
-                    <div v-if="topProductsPreview.length" class="annual-table-scroll">
+                    <div v-if="topProductsPreview.length" ref="topProductsTableRef" class="annual-table-scroll">
                       <table class="annual-table annual-table--products">
                         <thead>
                           <tr>
@@ -228,7 +228,7 @@
                         <tbody>
                           <tr v-for="product in topProductsPreview" :key="product.id">
                             <td>
-                              <strong>{{ product.name }}</strong>
+                              <strong :title="product.name">{{ product.name }}</strong>
                               <span>{{ product.category }}</span>
                             </td>
                             <td>{{ formatDate(product.soldAt) }}</td>
@@ -255,7 +255,7 @@
                       <span>Au {{ formatDate(dashboard.asOf) }}</span>
                     </div>
 
-                    <div v-if="inventoryPreview.length" class="annual-table-scroll">
+                    <div v-if="inventoryPreview.length" ref="inventoryTableRef" class="annual-table-scroll">
                       <table class="annual-table annual-table--inventory">
                         <thead>
                           <tr>
@@ -268,7 +268,7 @@
                         <tbody>
                           <tr v-for="item in inventoryPreview" :key="item.id">
                             <td>
-                              <strong>{{ item.name }}</strong>
+                              <strong :title="item.name">{{ item.name }}</strong>
                               <span>{{ item.category }}</span>
                             </td>
                             <td>{{ formatDate(item.purchasedAt) }}</td>
@@ -296,7 +296,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
   BadgeEuro,
   Boxes,
@@ -377,7 +377,6 @@ type AnnualDashboard = {
 
 type AnnualTemplateState = {
   year?: number
-  page?: number
 }
 
 const props = defineProps<{
@@ -402,12 +401,6 @@ function normalizeInitialYear(value: unknown) {
   return normalizeYearValue(value, currentYear)
 }
 
-function normalizeInitialPage(value: unknown) {
-  const page = Math.trunc(Number(value))
-  if (!Number.isFinite(page)) return 1
-  return Math.max(0, Math.min(2, page))
-}
-
 const selectedYear = ref(normalizeInitialYear(props.initialState?.year))
 const yearDraft = ref(String(selectedYear.value))
 const minYear = ref(currentYear - 5)
@@ -415,7 +408,11 @@ const maxYear = ref(currentYear)
 const dashboard = ref<AnnualDashboard | null>(null)
 const loading = ref(false)
 const error = ref('')
-const activePage = ref(normalizeInitialPage(props.initialState?.page))
+const activePage = ref(1)
+const topProductsTableRef = ref<HTMLElement | null>(null)
+const inventoryTableRef = ref<HTMLElement | null>(null)
+const topProductsRowLimit = ref(5)
+const inventoryRowLimit = ref(5)
 const pointerDrag = ref({
   active: false,
   pointerId: -1,
@@ -425,6 +422,7 @@ const pointerDrag = ref({
 })
 let requestId = 0
 let lastWheelPageChangeAt = 0
+let detailsResizeObserver: ResizeObserver | null = null
 
 const pages = [
   { key: 'flow', label: 'Flux & categories' },
@@ -436,19 +434,17 @@ watch(
   () => props.initialState,
   (state) => {
     const nextYear = normalizeInitialYear(state?.year)
-    const nextPage = normalizeInitialPage(state?.page)
     if (selectedYear.value !== nextYear) selectedYear.value = nextYear
-    if (activePage.value !== nextPage) activePage.value = nextPage
+    if (activePage.value !== 1) activePage.value = 1
   },
   { deep: true },
 )
 
 watch(
-  [selectedYear, activePage],
+  selectedYear,
   () => {
     emit('state-change', {
       year: selectedYear.value,
-      page: activePage.value,
     })
   },
   { immediate: true },
@@ -493,8 +489,8 @@ const currentPage = computed(() => pages[activePage.value] ?? pages[1])
 const pageTrackStyle = computed(() => ({
   transform: `translate3d(-${activePage.value * 100}%, 0, 0)`,
 }))
-const topProductsPreview = computed(() => dashboard.value?.topProducts.slice(0, 6) ?? [])
-const inventoryPreview = computed(() => dashboard.value?.inventoryAging.slice(0, 6) ?? [])
+const topProductsPreview = computed(() => dashboard.value?.topProducts.slice(0, topProductsRowLimit.value) ?? [])
+const inventoryPreview = computed(() => dashboard.value?.inventoryAging.slice(0, inventoryRowLimit.value) ?? [])
 const resellerSignals = computed(() => {
   const oldStock = (dashboard.value?.inventoryAging ?? []).filter((item) => Number(item.ageInDays || 0) >= 120)
   const cashNet = summary.value.revenue - summary.value.purchaseSpend
@@ -946,6 +942,45 @@ function onKeyDown(event: KeyboardEvent) {
   }
 }
 
+function getMeasuredHeight(element: Element | null, fallback: number) {
+  if (!(element instanceof HTMLElement)) return fallback
+  const height = element.getBoundingClientRect().height
+  return height > 0 ? height : fallback
+}
+
+function computeDetailsRowLimit(container: HTMLElement | null) {
+  if (!container) return 5
+  const containerHeight = container.getBoundingClientRect().height || container.clientHeight
+  if (!containerHeight) return 5
+
+  const headerHeight = getMeasuredHeight(container.querySelector('thead'), 38)
+  const firstRowHeight = getMeasuredHeight(container.querySelector('tbody tr'), 58)
+  const availableRowsHeight = containerHeight - headerHeight - 4
+  return Math.max(3, Math.min(8, Math.floor(availableRowsHeight / firstRowHeight)))
+}
+
+function updateDetailsRowLimits() {
+  topProductsRowLimit.value = computeDetailsRowLimit(topProductsTableRef.value)
+  inventoryRowLimit.value = computeDetailsRowLimit(inventoryTableRef.value)
+}
+
+function bindDetailsResizeObserver() {
+  detailsResizeObserver?.disconnect()
+  detailsResizeObserver = null
+
+  const targets = [topProductsTableRef.value, inventoryTableRef.value].filter(Boolean) as HTMLElement[]
+  if (!targets.length) return
+
+  if (typeof ResizeObserver === 'undefined') {
+    updateDetailsRowLimits()
+    return
+  }
+
+  detailsResizeObserver = new ResizeObserver(() => updateDetailsRowLimits())
+  targets.forEach((target) => detailsResizeObserver?.observe(target))
+  updateDetailsRowLimits()
+}
+
 async function loadDashboard() {
   const id = ++requestId
   loading.value = true
@@ -983,14 +1018,21 @@ watch(selectedYear, () => {
   loadDashboard()
 })
 
+watch([topProductsTableRef, inventoryTableRef], () => {
+  nextTick(() => bindDetailsResizeObserver())
+})
+
 onMounted(async () => {
   window.addEventListener('keydown', onKeyDown)
   await loadYearBounds()
   await loadDashboard()
+  await nextTick()
+  bindDetailsResizeObserver()
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeyDown)
+  detailsResizeObserver?.disconnect()
 })
 </script>
 
@@ -1285,6 +1327,7 @@ onBeforeUnmount(() => {
 
 .annual-page--details {
   grid-template-rows: auto minmax(0, 1fr);
+  gap: 10px;
 }
 
 .annual-page__heading {
@@ -1587,11 +1630,36 @@ onBeforeUnmount(() => {
 
 .annual-table-card {
   align-content: start;
+  overflow: hidden;
+}
+
+.annual-page--details .annual-table-card {
+  padding: clamp(12px, 1.4vw, 16px);
+  gap: 9px;
+}
+
+.annual-page--details .annual-panel__head {
+  align-items: center;
+}
+
+.annual-page--details .annual-panel__head p {
+  margin-bottom: 3px;
+  font-size: 0.66rem;
+}
+
+.annual-page--details .annual-panel__head h2 {
+  font-size: clamp(0.98rem, 1.25vw, 1.16rem);
+}
+
+.annual-page--details .annual-panel__head span {
+  padding: 5px 9px;
+  font-size: 0.68rem;
 }
 
 .annual-table-scroll {
   min-width: 0;
   min-height: 0;
+  height: 100%;
   overflow: hidden;
   scrollbar-width: none;
 }
@@ -1661,6 +1729,30 @@ onBeforeUnmount(() => {
 .annual-table .is-negative {
   color: #dc2626;
   font-weight: 790;
+}
+
+.annual-page--details .annual-table th {
+  padding: 7px 6px;
+  font-size: 0.66rem;
+}
+
+.annual-page--details .annual-table td {
+  padding: 7px 6px;
+  font-size: 0.76rem;
+}
+
+.annual-page--details .annual-table strong {
+  line-height: 1.18;
+  -webkit-line-clamp: 1;
+}
+
+.annual-page--details .annual-table td span {
+  margin-top: 2px;
+  font-size: 0.7rem;
+}
+
+.annual-page--details .annual-age {
+  padding: 3px 7px;
 }
 
 .annual-age {
