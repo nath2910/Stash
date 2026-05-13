@@ -5538,7 +5538,8 @@ onMounted(async () => {
   applyStoredRangeForActiveProfile()
   normalizeVisibleTextWidgets(true)
 
-  const resizeHandler = () => {
+  let resizeRaf: number | null = null
+  const applyResize = () => {
     const compact = window.innerWidth < COMPACT_BREAKPOINT
     const wasCompact = isCompact.value
     if (compact !== isCompact.value) {
@@ -5547,9 +5548,22 @@ onMounted(async () => {
     if (!wasCompact && compact) zoomToFitContent()
     scheduleVisibleRectUpdate()
   }
+  const resizeHandler = () => {
+    if (resizeRaf != null) return
+    resizeRaf = requestAnimationFrame(() => {
+      resizeRaf = null
+      applyResize()
+    })
+  }
   resizeHandler()
   window.addEventListener('resize', resizeHandler, { passive: true })
-  onBeforeUnmount(() => window.removeEventListener('resize', resizeHandler))
+  onBeforeUnmount(() => {
+    window.removeEventListener('resize', resizeHandler)
+    if (resizeRaf != null) {
+      cancelAnimationFrame(resizeRaf)
+      resizeRaf = null
+    }
+  })
 })
 
 onBeforeUnmount(() => {

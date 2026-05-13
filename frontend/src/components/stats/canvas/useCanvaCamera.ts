@@ -20,6 +20,7 @@ export function useCanvasCamera(
   let panzoom: any = null
   let ro: ResizeObserver | null = null
   let didReady = false
+  let resizeRaf: number | null = null
   let wheelHandler: ((e: WheelEvent) => void) | null = null
   let pointerDownHandler: ((e: PointerEvent) => void) | null = null
   let pointerMoveHandler: ((e: PointerEvent) => void) | null = null
@@ -422,7 +423,7 @@ export function useCanvasCamera(
     onPanzoomChange()
 
     didReady = false
-    ro = new ResizeObserver(() => {
+    const syncViewportSize = () => {
       const r = getRects()
       if (!r) return
       if (!didReady) {
@@ -446,6 +447,14 @@ export function useCanvasCamera(
       panzoom.zoom(Math.max(currentScale, minScale), { force: true } as any)
       centerOn(center.x, center.y)
       onPanzoomChange()
+    }
+
+    ro = new ResizeObserver(() => {
+      if (resizeRaf != null) return
+      resizeRaf = requestAnimationFrame(() => {
+        resizeRaf = null
+        syncViewportSize()
+      })
     })
     ro.observe(vp)
   }
@@ -457,6 +466,10 @@ export function useCanvasCamera(
     if (ro) {
       ro.disconnect()
       ro = null
+    }
+    if (resizeRaf != null) {
+      cancelAnimationFrame(resizeRaf)
+      resizeRaf = null
     }
     if (vp && wheelHandler) vp.removeEventListener('wheel', wheelHandler)
     if (vp && pointerDownHandler) vp.removeEventListener('pointerdown', pointerDownHandler, true)

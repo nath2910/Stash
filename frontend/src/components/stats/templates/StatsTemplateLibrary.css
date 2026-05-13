@@ -4,7 +4,8 @@
   z-index: 64;
   display: grid;
   place-items: center;
-  padding: 18px;
+  padding: clamp(12px, 2.4vw, 24px);
+  min-height: 100dvh;
 }
 
 .template-library-backdrop {
@@ -17,8 +18,8 @@
 
 .template-library-shell {
   position: relative;
-  width: min(680px, 100%);
-  max-height: min(720px, calc(100dvh - 36px));
+  width: min(760px, 100%);
+  max-height: min(760px, calc(100dvh - clamp(24px, 4.8vw, 48px)));
   border-radius: 18px;
   border: 1px solid rgba(148, 163, 184, 0.44);
   background: #f8fafc;
@@ -30,7 +31,7 @@
 }
 
 .template-library-head {
-  padding: 18px 20px;
+  padding: clamp(16px, 2.4vw, 22px);
   border-bottom: 1px solid rgba(148, 163, 184, 0.34);
   display: flex;
   align-items: flex-start;
@@ -87,10 +88,11 @@
 }
 
 .template-library-list {
-  padding: 18px;
+  padding: clamp(14px, 2.2vw, 20px);
   overflow: auto;
   display: grid;
-  gap: 10px;
+  gap: clamp(10px, 1.4vw, 14px);
+  align-content: start;
 }
 
 .template-library-card {
@@ -103,6 +105,8 @@
   text-align: left;
   display: grid;
   gap: 4px;
+  min-height: clamp(72px, 10vh, 104px);
+  align-content: center;
 }
 
 .template-library-card__title {
@@ -114,4 +118,31 @@
   color: #64748b;
   font-size: 0.88rem;
   line-height: 1.4;
+}
+
+@media (min-height: 900px) {
+  .template-library-shell {
+    max-height: min(820px, calc(100dvh - 56px));
+  }
+}
+
+@media (max-width: 560px) {
+  .template-library-overlay {
+    align-items: end;
+    padding: 10px;
+  }
+
+  .template-library-shell {
+    width: 100%;
+    max-height: min(86dvh, 720px);
+    border-radius: 16px;
+  }
+
+  .template-library-head {
+    align-items: center;
+  }
+
+  .template-library-card {
+    min-height: auto;
+  }
 }

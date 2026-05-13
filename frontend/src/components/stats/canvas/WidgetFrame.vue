@@ -1289,13 +1289,16 @@ function onRootKeydown(event: KeyboardEvent) {
   position: absolute;
   border-radius: 18px;
   overflow: visible;
-  background: rgba(10, 15, 26, 0.88);
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  box-shadow: 0 4px 14px rgba(2, 6, 23, 0.18);
+  background: var(--canvas-widget-bg, rgba(10, 15, 26, 0.88));
+  border: 1px solid var(--canvas-widget-border, rgba(148, 163, 184, 0.2));
+  box-shadow: var(--canvas-widget-shadow, 0 4px 14px rgba(2, 6, 23, 0.18));
   contain: layout paint;
   touch-action: none;
   outline: none;
   transform-origin: top left;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
 }
 .widget[data-edit='true'] {
   contain: layout;
@@ -1736,7 +1739,8 @@ function onRootKeydown(event: KeyboardEvent) {
   pointer-events: none;
 }
 .widget:hover {
-  box-shadow: 0 6px 18px rgba(2, 6, 23, 0.24);
+  border-color: var(--canvas-widget-border-hover, rgba(148, 163, 184, 0.42));
+  box-shadow: var(--canvas-widget-shadow-hover, 0 6px 18px rgba(2, 6, 23, 0.24));
 }
 .widget.is-selected {
   box-shadow:
@@ -1754,8 +1758,8 @@ function onRootKeydown(event: KeyboardEvent) {
   display: flex;
   align-items: center;
   padding: 0 10px 0 12px;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
-  background: rgba(8, 13, 24, 0.78);
+  border-bottom: 1px solid var(--canvas-widget-header-border, rgba(148, 163, 184, 0.16));
+  background: var(--canvas-widget-header-bg, rgba(8, 13, 24, 0.78));
   position: relative;
   z-index: 18;
 }
@@ -1774,7 +1778,7 @@ function onRootKeydown(event: KeyboardEvent) {
   border-radius: 999px;
 }
 .title {
-  color: rgba(241, 245, 249, 0.98);
+  color: var(--canvas-widget-title, rgba(241, 245, 249, 0.98));
   font-weight: 650;
   font-size: 0.88rem;
   min-width: 0;
@@ -1968,7 +1972,11 @@ function onRootKeydown(event: KeyboardEvent) {
 }
 
 .widget__content-inner :deep([class*='border']) {
-  border-color: rgba(148, 163, 184, 0.12) !important;
+  border-color: color-mix(
+    in srgb,
+    var(--canvas-widget-border, rgba(148, 163, 184, 0.2)) 70%,
+    transparent
+  ) !important;
 }
 
 .widget__body--auto .widget__content-scale {

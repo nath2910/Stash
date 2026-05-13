@@ -423,6 +423,7 @@ const pointerDrag = ref({
 let requestId = 0
 let lastWheelPageChangeAt = 0
 let detailsResizeObserver: ResizeObserver | null = null
+let detailsResizeRaf: number | null = null
 
 const pages = [
   { key: 'flow', label: 'Flux & categories' },
@@ -964,6 +965,14 @@ function updateDetailsRowLimits() {
   inventoryRowLimit.value = computeDetailsRowLimit(inventoryTableRef.value)
 }
 
+function scheduleDetailsRowLimitUpdate() {
+  if (detailsResizeRaf != null) return
+  detailsResizeRaf = requestAnimationFrame(() => {
+    detailsResizeRaf = null
+    updateDetailsRowLimits()
+  })
+}
+
 function bindDetailsResizeObserver() {
   detailsResizeObserver?.disconnect()
   detailsResizeObserver = null
@@ -976,7 +985,7 @@ function bindDetailsResizeObserver() {
     return
   }
 
-  detailsResizeObserver = new ResizeObserver(() => updateDetailsRowLimits())
+  detailsResizeObserver = new ResizeObserver(() => scheduleDetailsRowLimitUpdate())
   targets.forEach((target) => detailsResizeObserver?.observe(target))
   updateDetailsRowLimits()
 }
@@ -1033,29 +1042,42 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeyDown)
   detailsResizeObserver?.disconnect()
+  if (detailsResizeRaf != null) {
+    cancelAnimationFrame(detailsResizeRaf)
+    detailsResizeRaf = null
+  }
 })
 </script>
 
 <style scoped>
 .annual-dashboard {
+  --annual-template-gap: clamp(10px, 1.35vh, 16px);
   width: 100%;
   height: 100%;
   min-width: 0;
   min-height: 0;
-  overflow: hidden;
+  overflow: auto;
   overscroll-behavior: contain;
   overscroll-behavior-x: none;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(91, 92, 226, 0.42) rgba(226, 232, 240, 0.72);
   background:
     linear-gradient(180deg, rgba(246, 248, 255, 0.96), rgba(236, 241, 249, 0.98)),
     radial-gradient(circle at top left, rgba(129, 140, 248, 0.14), transparent 34%);
 }
 
 .annual-dashboard::-webkit-scrollbar {
-  width: 0;
-  height: 0;
-  display: none;
+  width: 8px;
+  height: 8px;
+}
+
+.annual-dashboard::-webkit-scrollbar-track {
+  background: rgba(226, 232, 240, 0.72);
+}
+
+.annual-dashboard::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(91, 92, 226, 0.42);
 }
 
 .annual-dashboard__inner {
@@ -1068,7 +1090,8 @@ onBeforeUnmount(() => {
     calc(96px + clamp(14px, 2.2vw, 28px));
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
-  gap: 12px;
+  gap: var(--annual-template-gap);
+  align-content: stretch;
 }
 
 .annual-header {
@@ -1277,6 +1300,7 @@ onBeforeUnmount(() => {
 .annual-stage {
   min-width: 0;
   min-height: 0;
+  height: 100%;
   overflow: hidden;
   overscroll-behavior: contain;
   overscroll-behavior-x: none;
@@ -1309,6 +1333,7 @@ onBeforeUnmount(() => {
   width: 100%;
   min-width: 0;
   min-height: 0;
+  height: 100%;
   padding: 2px;
   display: grid;
   gap: 12px;
@@ -1425,6 +1450,7 @@ onBeforeUnmount(() => {
 .annual-panel {
   min-width: 0;
   min-height: 0;
+  height: 100%;
   border: 1px solid rgba(148, 163, 184, 0.28);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.9);
@@ -1511,6 +1537,8 @@ onBeforeUnmount(() => {
 
 .annual-chart-wrap {
   min-width: 0;
+  min-height: 0;
+  height: 100%;
 }
 
 .annual-action-grid {
@@ -1612,6 +1640,7 @@ onBeforeUnmount(() => {
 .annual-page-grid {
   min-width: 0;
   min-height: 0;
+  height: 100%;
   display: grid;
   gap: 14px;
 }
@@ -1623,13 +1652,14 @@ onBeforeUnmount(() => {
 .annual-table-grid {
   min-width: 0;
   min-height: 0;
+  height: 100%;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
 }
 
 .annual-table-card {
-  align-content: start;
+  align-content: stretch;
   overflow: hidden;
 }
 
@@ -1820,7 +1850,8 @@ onBeforeUnmount(() => {
 }
 
 .annual-mini-empty {
-  min-height: 220px;
+  min-height: clamp(180px, 24vh, 280px);
+  height: 100%;
   border: 1px dashed rgba(148, 163, 184, 0.34);
   border-radius: 8px;
   background: #f8fafc;
@@ -1855,6 +1886,10 @@ onBeforeUnmount(() => {
     grid-template-rows: auto minmax(0, 1fr) auto;
   }
 
+  .annual-page-grid--two {
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+  }
+
   .annual-page--details .annual-table-grid {
     grid-template-rows: repeat(2, minmax(0, 1fr));
   }
@@ -1868,6 +1903,39 @@ onBeforeUnmount(() => {
   .annual-dashboard__inner {
     padding-left: clamp(14px, 2.2vw, 28px);
     padding-bottom: 96px;
+  }
+}
+
+@media (min-width: 961px) and (min-height: 980px) {
+  .annual-dashboard__inner {
+    padding-top: clamp(18px, 2vh, 30px);
+    padding-bottom: clamp(20px, 2.2vh, 34px);
+  }
+
+  .annual-stage {
+    min-height: min(920px, calc(100dvh - 210px));
+  }
+}
+
+@media (min-width: 961px) and (max-height: 760px) {
+  .annual-dashboard__inner {
+    --annual-template-gap: 8px;
+    padding-top: 10px;
+    padding-bottom: 12px;
+  }
+
+  .annual-header p {
+    margin-top: 5px;
+    font-size: 0.86rem;
+  }
+
+  .annual-year {
+    padding: 8px;
+    gap: 6px;
+  }
+
+  .annual-page-nav {
+    padding-block: 5px;
   }
 }
 

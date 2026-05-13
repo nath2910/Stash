@@ -120,9 +120,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import Papa from 'papaparse'
-import * as XLSX from 'xlsx'
+import { computed, onBeforeUnmount, ref } from 'vue'
 import SnkVenteServices from '@/services/SnkVenteServices.js'
 import { METADATA_FIELDS, typeLabel } from '@/constants/itemTypes'
 
@@ -253,6 +251,20 @@ const progress = ref(0)
 const successMsg = ref('')
 const errorMsg = ref('')
 let progressTimer: number | null = null
+let progressResetTimer: number | null = null
+let papaModulePromise: Promise<typeof import('papaparse')> | null = null
+let xlsxModulePromise: Promise<typeof import('xlsx')> | null = null
+
+async function loadPapa() {
+  papaModulePromise ??= import('papaparse')
+  const module = await papaModulePromise
+  return module.default
+}
+
+async function loadXlsx() {
+  xlsxModulePromise ??= import('xlsx')
+  return xlsxModulePromise
+}
 
 const prettySize = computed(() => {
   const f = selectedFile.value
@@ -293,9 +305,14 @@ function stopProgress(finalValue = 100) {
     window.clearInterval(progressTimer)
     progressTimer = null
   }
+  if (progressResetTimer) {
+    window.clearTimeout(progressResetTimer)
+    progressResetTimer = null
+  }
   progress.value = finalValue
-  setTimeout(() => {
+  progressResetTimer = window.setTimeout(() => {
     progress.value = 0
+    progressResetTimer = null
   }, 600)
 }
 
@@ -350,11 +367,11 @@ function toNumberSmart(v: unknown) {
 }
 
 function excelSerialToIso(value: number) {
-  // Excel's day 1 = 1899-12-31, but there is an extra fake 1900 leap day; XLSX handles it via SSF
-  const parsed = XLSX.SSF.parse_date_code(value)
-  if (!parsed || !parsed.y || !parsed.m || !parsed.d) return null
+  if (!Number.isFinite(value)) return null
+  const date = new Date(Math.round((value - 25569) * 86400 * 1000))
+  if (Number.isNaN(date.getTime())) return null
   const pad = (n: number) => String(n).padStart(2, '0')
-  return `${parsed.y}-${pad(parsed.m)}-${pad(parsed.d)}`
+  return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`
 }
 
 function parseDateSmart(v: unknown) {
@@ -471,6 +488,7 @@ function extractTableFrom2D(rows2D: any[][]): ParsedTable {
 }
 
 async function parseExcel(file: File): Promise<ParsedTable> {
+  const XLSX = await loadXlsx()
   const buffer = await file.arrayBuffer()
   const workbook = XLSX.read(buffer, { type: 'array' })
   const sheetNameWithData =
@@ -490,6 +508,7 @@ async function parseExcel(file: File): Promise<ParsedTable> {
 }
 
 async function parseCsv(file: File): Promise<ParsedTable> {
+  const Papa = await loadPapa()
   const attempt = (delimiter?: string) =>
     new Promise<{ headers: string[]; rows: CsvRow[] }>((resolve) => {
       Papa.parse<CsvRow>(file, {
@@ -696,6 +715,17 @@ async function importNow() {
     if (fileInput.value) fileInput.value.value = ''
   }
 }
+
+onBeforeUnmount(() => {
+  if (progressTimer) {
+    window.clearInterval(progressTimer)
+    progressTimer = null
+  }
+  if (progressResetTimer) {
+    window.clearTimeout(progressResetTimer)
+    progressResetTimer = null
+  }
+})
 </script>
 
 <style scoped>

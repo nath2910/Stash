@@ -110,7 +110,7 @@ const cardStyle = computed(() => {
 .widget-card--ranking,
 .widget-card--utility,
 .widget-card--generic {
-  background: linear-gradient(180deg, rgba(10, 15, 28, 0.95), rgba(7, 12, 22, 0.97));
+  background: var(--template-surface-card, linear-gradient(180deg, rgba(10, 15, 28, 0.95), rgba(7, 12, 22, 0.97)));
 }
 
 .widget-card__zoom {

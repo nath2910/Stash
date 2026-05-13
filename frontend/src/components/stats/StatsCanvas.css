@@ -1,5 +1,23 @@
 .canvas-root {
-  --bg: #060a12;
+  --bg: #0a101d;
+  --canvas-board-base: #0b1220;
+  --canvas-board-surface: #0f1829;
+  --canvas-board-grid: rgba(176, 190, 215, 0.075);
+  --canvas-board-grid-strong: rgba(139, 92, 246, 0.095);
+  --canvas-widget-bg: linear-gradient(180deg, rgba(20, 29, 48, 0.97), rgba(12, 18, 34, 0.98));
+  --canvas-widget-border: rgba(167, 139, 250, 0.24);
+  --canvas-widget-border-hover: rgba(196, 181, 253, 0.42);
+  --canvas-widget-header-bg: rgba(15, 23, 42, 0.82);
+  --canvas-widget-header-border: rgba(196, 181, 253, 0.14);
+  --canvas-widget-title: rgba(248, 250, 252, 0.98);
+  --canvas-widget-shadow: 0 16px 42px rgba(2, 6, 23, 0.32), 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+  --canvas-widget-shadow-hover: 0 18px 48px rgba(2, 6, 23, 0.38), 0 0 0 1px rgba(196, 181, 253, 0.08);
+  --template-surface-card: linear-gradient(180deg, rgba(22, 32, 54, 0.97), rgba(13, 20, 38, 0.98));
+  --template-surface-line: rgba(167, 139, 250, 0.28);
+  --template-shadow-card: 0 14px 34px rgba(2, 6, 23, 0.26);
+  --template-shadow-card-inset: inset 0 1px 0 rgba(255, 255, 255, 0.055);
+  --template-text: rgba(248, 250, 252, 0.99);
+  --template-text-muted: rgba(203, 213, 225, 0.84);
   --stats-top-gap: max(16px, env(safe-area-inset-top, 0px) + 10px);
   --stats-side-gap: var(--app-edge-gap, clamp(10px, 2.8vw, 18px));
   --stats-bottom-gap: max(16px, env(safe-area-inset-bottom, 0px) + 10px);
@@ -61,11 +79,13 @@ body.canvas-resize-cursor--nesw {
   position: relative;
   z-index: 1;
   background:
-    linear-gradient(180deg, rgba(5, 10, 20, 0.98) 0%, rgba(4, 8, 16, 0.98) 100%),
-    radial-gradient(circle at 16% -12%, rgba(56, 189, 248, 0.08), transparent 38%),
-    radial-gradient(circle at 88% -20%, rgba(59, 130, 246, 0.08), transparent 34%),
-    linear-gradient(rgba(148, 163, 184, 0.045) 1px, transparent 1px) 0 0 / 32px 32px,
-    linear-gradient(90deg, rgba(148, 163, 184, 0.045) 1px, transparent 1px) 0 0 / 32px 32px;
+    linear-gradient(var(--canvas-board-grid) 1px, transparent 1px) 0 0 / 32px 32px,
+    linear-gradient(90deg, var(--canvas-board-grid) 1px, transparent 1px) 0 0 / 32px 32px,
+    linear-gradient(var(--canvas-board-grid-strong) 1px, transparent 1px) 0 0 / 160px 160px,
+    linear-gradient(90deg, var(--canvas-board-grid-strong) 1px, transparent 1px) 0 0 / 160px 160px,
+    radial-gradient(circle at 18% -8%, rgba(124, 58, 237, 0.16), transparent 34%),
+    radial-gradient(circle at 82% -16%, rgba(56, 189, 248, 0.11), transparent 34%),
+    linear-gradient(180deg, var(--canvas-board-surface) 0%, var(--canvas-board-base) 100%);
 }
 
 .board::before,
@@ -246,6 +266,7 @@ body.canvas-resize-cursor--nesw {
   top: 50%;
   left: 50%;
   width: min(460px, calc(100vw - 28px));
+  max-height: min(720px, calc(100dvh - 28px));
   transform: translate(-50%, -50%);
   border-radius: 20px;
   border: 1px solid rgba(148, 163, 184, 0.34);
@@ -254,6 +275,8 @@ body.canvas-resize-cursor--nesw {
   padding: 18px;
   display: grid;
   gap: 14px;
+  overflow: auto;
+  overscroll-behavior: contain;
 }
 
 .template-picker-head {
@@ -2512,6 +2535,20 @@ body.canvas-resize-cursor--nesw {
 
 .canvas-root.theme-light {
   --bg: #edf3fb;
+  --canvas-widget-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 247, 255, 0.97));
+  --canvas-widget-border: rgba(100, 116, 139, 0.26);
+  --canvas-widget-border-hover: rgba(79, 70, 229, 0.32);
+  --canvas-widget-header-bg: rgba(248, 250, 252, 0.9);
+  --canvas-widget-header-border: rgba(100, 116, 139, 0.2);
+  --canvas-widget-title: #0f172a;
+  --canvas-widget-shadow: 0 14px 34px rgba(15, 23, 42, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.62);
+  --canvas-widget-shadow-hover: 0 18px 42px rgba(15, 23, 42, 0.16), 0 0 0 1px rgba(79, 70, 229, 0.08);
+  --template-surface-card: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 247, 255, 0.96));
+  --template-surface-line: rgba(100, 116, 139, 0.28);
+  --template-shadow-card: 0 14px 34px rgba(15, 23, 42, 0.12);
+  --template-shadow-card-inset: inset 0 1px 0 rgba(255, 255, 255, 0.68);
+  --template-text: #0f172a;
+  --template-text-muted: #475569;
   color: #000;
 }
 
