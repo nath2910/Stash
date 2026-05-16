@@ -51,18 +51,14 @@
 ## 4) Zone critique #4 - Mapping metriques frontend/backend
 
 ### Observation
-Certains widgets frontend semblent appeler des metrics non mappees explicitement en backend actuel:
-1. `OpexWidget` -> `breakdown('opex')`.
-2. `PlatformSplitWidget` -> `breakdown('platformSplit')`.
-3. `ReturnRateWidget` -> `series('returnRate')`.
+Les widgets legacy qui appelaient des metrics non mappees explicitement ont ete retires du runtime frontend.
 
 ### Incertitude explicite
-Sans endpoint ou switch metrique correspondant, ces widgets peuvent renvoyer vide.
-A confirmer avec tests runtime et historique produit.
+Les metrics backend correspondantes ne sont pas exposees par l'UI actuelle. Toute reintroduction doit passer par un mapping backend confirme et un enregistrement explicite dans `widgetRegistry.js`.
 
 ### Actions
-1. Verifier usage reel en prod.
-2. Soit implementer backend manquant, soit retirer widgets legacy.
+1. Ne pas reintroduire de widget sans endpoint teste.
+2. Ajouter tests widget/service avant tout retour de ces metrics.
 
 ---
 
@@ -100,16 +96,16 @@ Plusieurs fichiers contiennent caracteres FR mal encodes.
 
 ---
 
-## 7) Zone legacy potentielle - `StatBase.vue`
+## 7) Zone legacy potentielle - layout stats
 
 ### Observation
-Composant stats ancien encore present, avec references de cles layout historiques.
+Les composants stats legacy non references ont ete supprimes. Des cles layout historiques restent presentes pour migration douce.
 
 ### Risque
 - confusion pour nouveau developpeur.
 
 ### Action
-Documenter comme legacy ou supprimer apres verification d'usage.
+Conserver les migrations de layout tant que des utilisateurs peuvent avoir des layouts anciens en localStorage.
 
 ---
 

@@ -11,9 +11,8 @@
     :widget-base-width="widgetBaseWidth"
     :widget-base-height="widgetBaseHeight"
   >
-    <div class="chart-card h-full flex flex-col gap-2">
-      <VChart class="chart-card__chart w-full flex-1" :style="chartStyle" :option="responsiveOption" autoresize />
-      <slot />
+    <div class="chart-card">
+      <VChart class="chart-card__chart" :option="responsiveOption" autoresize />
     </div>
   </WidgetCard>
 </template>
@@ -107,20 +106,17 @@ const responsiveOption = computed(() => {
   }
 })
 
-const chartStyle = computed(() => {
-  const minHeight = clamp(Math.round(props.widgetHeight * 0.5), 160, 340)
-  return {
-    minHeight: `${minHeight}px`,
-  }
-})
 </script>
 
 <style scoped>
 .chart-card {
+  height: 100%;
   min-height: 0;
 }
 
 .chart-card__chart {
+  width: 100%;
+  height: 100%;
   min-height: 0;
 }
 </style>

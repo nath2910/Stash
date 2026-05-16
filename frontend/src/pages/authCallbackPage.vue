@@ -2,7 +2,7 @@
 import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/store/authStore.js'
-import api from '@/services/api.js'
+import AuthService from '@/services/AuthService.js'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -27,7 +27,7 @@ onMounted(async () => {
   window.history.replaceState({}, document.title, window.location.pathname)
 
   try {
-    const { data: me } = await api.get('/auth/me')
+    const me = await AuthService.me()
     auth.setAuth({ user: me, token })
   } catch (e) {
     console.error('Erreur /auth/me apres SSO', e)

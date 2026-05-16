@@ -114,9 +114,6 @@ Concentre logique pure (testable) de recherche/navigation palette.
 - carte widget clickable.
 - detecte visibilite via `IntersectionObserver` (optimisation preview).
 
-### `WidgetPaletteFilterChips.vue`
-- chips selection categorie et data type.
-
 ### `WidgetPaletteSearchBar.vue`
 - input recherche + clear.
 

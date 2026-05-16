@@ -313,17 +313,17 @@ const roiVars = computed(() => {
 
 <style scoped>
 .roi-root {
-  --roi-bg: rgba(15, 23, 42, 0.54);
+  --roi-bg: rgba(248, 250, 252, 0.86);
   --roi-border: rgba(148, 163, 184, 0.24);
-  --roi-text-main: rgba(248, 250, 252, 0.98);
-  --roi-text-soft: rgba(203, 213, 225, 0.88);
-  --roi-text-muted: rgba(148, 163, 184, 0.9);
-  --roi-positive: rgba(74, 222, 128, 1);
-  --roi-positive-soft: rgba(22, 163, 74, 0.22);
-  --roi-negative: rgba(251, 113, 133, 0.98);
-  --roi-negative-soft: rgba(190, 24, 93, 0.2);
-  --roi-neutral: rgba(148, 163, 184, 0.98);
-  --roi-neutral-soft: rgba(100, 116, 139, 0.24);
+  --roi-text-main: #111827;
+  --roi-text-soft: #475569;
+  --roi-text-muted: #64748b;
+  --roi-positive: #047857;
+  --roi-positive-soft: rgba(209, 250, 229, 0.72);
+  --roi-negative: #be123c;
+  --roi-negative-soft: rgba(255, 228, 230, 0.74);
+  --roi-neutral: #64748b;
+  --roi-neutral-soft: rgba(241, 245, 249, 0.92);
 
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -341,14 +341,14 @@ const roiVars = computed(() => {
   padding: 3px 10px;
   border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.26);
-  background: rgba(15, 23, 42, 0.56);
-  color: rgba(226, 232, 240, 0.9);
+  background: rgba(248, 250, 252, 0.86);
+  color: #334155;
 }
 
 .roi-header-period__icon {
   width: 12px;
   height: 12px;
-  color: rgba(148, 163, 184, 0.9);
+  color: #64748b;
   flex: 0 0 auto;
 }
 
@@ -374,8 +374,9 @@ const roiVars = computed(() => {
   min-height: 0;
   border-radius: var(--roi-panel-radius);
   border: 1px solid var(--roi-border);
-  background: linear-gradient(160deg, rgba(15, 23, 42, 0.68), var(--roi-bg));
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.94), var(--roi-bg));
   padding: var(--roi-panel-pad);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
   animation: roi-fade 180ms ease-out both;
 }
 
@@ -418,19 +419,19 @@ const roiVars = computed(() => {
 .roi-state-chip.is-up {
   border-color: color-mix(in srgb, var(--roi-positive) 46%, transparent);
   background: var(--roi-positive-soft);
-  color: rgba(187, 247, 208, 0.98);
+  color: var(--roi-positive);
 }
 
 .roi-state-chip.is-down {
   border-color: color-mix(in srgb, var(--roi-negative) 46%, transparent);
   background: var(--roi-negative-soft);
-  color: rgba(254, 205, 211, 0.98);
+  color: var(--roi-negative);
 }
 
 .roi-state-chip.is-neutral {
   border-color: color-mix(in srgb, var(--roi-neutral) 40%, transparent);
   background: var(--roi-neutral-soft);
-  color: rgba(226, 232, 240, 0.96);
+  color: var(--roi-neutral);
 }
 
 .roi-state-icon {
@@ -443,7 +444,7 @@ const roiVars = computed(() => {
   margin: 0;
   font-size: var(--roi-kpi-size);
   line-height: 1;
-  letter-spacing: -0.04em;
+  letter-spacing: 0;
   font-weight: 760;
   color: var(--roi-text-main);
   font-variant-numeric: tabular-nums;
@@ -464,15 +465,15 @@ const roiVars = computed(() => {
 }
 
 .roi-delta-row.is-up .roi-delta-value {
-  color: rgba(134, 239, 172, 0.98);
+  color: var(--roi-positive);
 }
 
 .roi-delta-row.is-down .roi-delta-value {
-  color: rgba(253, 164, 175, 0.98);
+  color: var(--roi-negative);
 }
 
 .roi-delta-row.is-neutral .roi-delta-value {
-  color: rgba(203, 213, 225, 0.96);
+  color: var(--roi-neutral);
 }
 
 .roi-delta-note {
@@ -482,12 +483,12 @@ const roiVars = computed(() => {
 
 .roi-tile--goal.is-ok {
   border-color: color-mix(in srgb, var(--roi-positive) 38%, var(--roi-border));
-  background: linear-gradient(160deg, rgba(20, 83, 45, 0.24), rgba(15, 23, 42, 0.56));
+  background: linear-gradient(160deg, rgba(236, 253, 245, 0.96), rgba(255, 255, 255, 0.86));
 }
 
 .roi-tile--goal.is-risk {
   border-color: color-mix(in srgb, var(--roi-negative) 34%, var(--roi-border));
-  background: linear-gradient(160deg, rgba(136, 19, 55, 0.2), rgba(15, 23, 42, 0.56));
+  background: linear-gradient(160deg, rgba(255, 241, 242, 0.96), rgba(255, 255, 255, 0.86));
 }
 
 .roi-goal-head {
@@ -522,7 +523,7 @@ const roiVars = computed(() => {
   height: clamp(8px, calc(var(--roi-bar-height) + 1px), 16px);
   border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.28);
-  background: rgba(30, 41, 59, 0.82);
+  background: rgba(226, 232, 240, 0.82);
   overflow: hidden;
 }
 
@@ -575,16 +576,16 @@ const roiVars = computed(() => {
   padding: clamp(6px, calc(var(--roi-panel-pad) * 0.36), 9px);
   display: grid;
   gap: clamp(4px, calc(var(--roi-panel-pad) * 0.3), 7px);
-  background: rgba(15, 23, 42, 0.38);
+  background: rgba(248, 250, 252, 0.82);
   animation: roi-fade 180ms ease-out both;
 }
 
 .roi-list-item.is-up {
-  border-color: rgba(74, 222, 128, 0.3);
+  border-color: rgba(4, 120, 87, 0.22);
 }
 
 .roi-list-item.is-down {
-  border-color: rgba(251, 113, 133, 0.28);
+  border-color: rgba(190, 18, 60, 0.2);
 }
 
 .roi-list-item.is-neutral {
@@ -624,7 +625,7 @@ const roiVars = computed(() => {
   height: var(--roi-bar-height);
   border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.25);
-  background: rgba(30, 41, 59, 0.82);
+  background: rgba(226, 232, 240, 0.82);
   overflow: hidden;
 }
 

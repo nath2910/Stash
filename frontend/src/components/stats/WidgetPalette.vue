@@ -50,7 +50,7 @@
                 <header class="palette-head">
                   <div>
                     <DialogTitle class="palette-title">Bibliotheque widgets</DialogTitle>
-                    <p class="palette-subtitle">Recherche un widget puis ajoute-le en un clic.</p>
+                    <p class="palette-subtitle">Choisis une metrique, son affichage, puis sa variante.</p>
                   </div>
                   <button class="palette-close" type="button" aria-label="Fermer la palette" @click="emit('close')">
                     <X :size="16" aria-hidden="true" />
@@ -144,22 +144,56 @@
         <div class="form-shell" @click.stop>
           <header class="form-head">
             <div>
-              <div class="form-kicker">Affichage</div>
-              <h3 class="form-title">Choisir une vue</h3>
-              <p class="form-subtitle">{{ pendingWidget?.title }} existe en plusieurs representations.</p>
+              <div class="form-kicker">Composer le widget</div>
+              <h3 class="form-title">{{ pendingWidget?.title }}</h3>
+              <p class="form-subtitle">{{ chooserStepText }}</p>
             </div>
             <button class="palette-close" type="button" aria-label="Fermer" @click="closeFormPicker">
               <X :size="16" aria-hidden="true" />
             </button>
           </header>
 
+          <div v-if="formList.length > 1" class="form-display-row" role="tablist" aria-label="Types d'affichage">
+            <button
+              v-for="display in formList"
+              :key="display.key"
+              type="button"
+              class="form-display"
+              :class="{ 'is-active': activeDisplay?.key === display.key }"
+              :style="{ '--display-color': displayColor(display.key) }"
+              role="tab"
+              :aria-selected="activeDisplay?.key === display.key"
+              @click="activeDisplayKey = display.key"
+            >
+              <component :is="displayIcon(display.key)" :size="16" aria-hidden="true" />
+              <span>{{ display.label }}</span>
+            </button>
+          </div>
+
+          <div class="form-variant-head">
+            <span>{{ activeDisplay?.label ?? 'Affichage' }}</span>
+            <small>{{ activeDisplay?.hint }}</small>
+          </div>
+
           <div class="form-grid">
-            <button v-for="form in formList" :key="form.key" type="button" class="form-card" @click="selectForm(form.key)">
-              <component :is="form.icon" :size="18" class="form-card__icon" :style="{ color: form.color }" />
+            <button
+              v-for="variant in activeVariants"
+              :key="variant.key"
+              type="button"
+              class="form-card"
+              @click="selectVariant(variant)"
+            >
+              <component
+                :is="displayIcon(activeDisplay?.key ?? 'number')"
+                :size="18"
+                class="form-card__icon"
+                :style="{ color: displayColor(activeDisplay?.key ?? 'number') }"
+              />
               <div class="form-card__body">
-                <div class="form-card__title">{{ form.label }}</div>
-                <div class="form-card__hint">{{ form.hint }}</div>
+                <div class="form-card__title">{{ variant.label }}</div>
+                <div class="form-card__hint">{{ variant.hint ?? activeDisplay?.hint }}</div>
               </div>
+              <span v-if="variant.badge" class="form-card__badge">{{ variant.badge }}</span>
             </button>
           </div>
         </div>
@@ -171,11 +205,11 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { Dialog, DialogPanel, DialogTitle, TransitionChild, TransitionRoot } from '@headlessui/vue'
-import { BarChart3, Hash, LineChart, PieChart, Target, X } from 'lucide-vue-next'
+import { BarChart3, Hash, LayoutList, LineChart, PieChart, Target, X } from 'lucide-vue-next'
 import WidgetPaletteSearchBar from './palette/WidgetPaletteSearchBar.vue'
 import WidgetPaletteCard from './palette/WidgetPaletteCard.vue'
 import { filterPaletteGroups, flattenPalette, moveGridIndexByKey, resolveGridColumns } from './palette/paletteUtils'
-import type { WidgetPaletteGroup, WidgetPaletteItem } from './palette/types'
+import type { WidgetDisplayGroup, WidgetPaletteGroup, WidgetPaletteItem, WidgetVariantOption } from './palette/types'
 
 const props = withDefaults(
   defineProps<{
@@ -192,7 +226,10 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   (event: 'close'): void
-  (event: 'add', payload: string | { type: string; view?: string }): void
+  (
+    event: 'add',
+    payload: string | { type: string; view?: string; props?: Record<string, unknown>; title?: string },
+  ): void
 }>()
 
 const FORM_OPTIONS = {
@@ -260,9 +297,9 @@ const optimisticWidgetType = ref<string | null>(null)
 
 const formOpen = ref(false)
 const pendingWidget = ref<WidgetPaletteItem | null>(null)
+const activeDisplayKey = ref('')
 
 let searchTimer: ReturnType<typeof window.setTimeout> | null = null
-let addTimer: number | null = null
 let optimisticTimer: ReturnType<typeof window.setTimeout> | null = null
 
 const normalizedGroups = computed<WidgetPaletteGroup[]>(() =>
@@ -304,9 +341,24 @@ const totalWidgets = computed(() =>
 const visibleWidgetsCount = computed(() => flatVisibleItems.value.length)
 
 const formList = computed(() => {
-  const forms = pendingWidget.value?.forms ?? []
-  if (!forms.length) return []
-  return forms.map((key) => FORM_OPTIONS[key as keyof typeof FORM_OPTIONS] ?? FORM_OPTIONS.number)
+  return resolveSelection(pendingWidget.value)
+})
+
+const activeDisplay = computed(() => {
+  const groups = formList.value
+  if (!groups.length) return null
+  return groups.find((group) => group.key === activeDisplayKey.value) ?? groups[0]
+})
+
+const activeVariants = computed(() => activeDisplay.value?.variants ?? [])
+
+const chooserStepText = computed(() => {
+  const groups = formList.value.length
+  const variants = activeVariants.value.length
+  if (groups > 1 && variants > 1) return 'Choisis un affichage puis une variante fiable.'
+  if (groups > 1) return 'Choisis la representation adaptee a ta metrique.'
+  if (variants > 1) return 'Choisis la variante a placer sur le canvas.'
+  return 'Confirme le widget a ajouter au canvas.'
 })
 
 watch(
@@ -351,6 +403,7 @@ watch(flatVisibleItems, (items) => {
 function closeFormPicker() {
   formOpen.value = false
   pendingWidget.value = null
+  activeDisplayKey.value = ''
 }
 
 function setOptimistic(type: string | null) {
@@ -362,13 +415,62 @@ function setOptimistic(type: string | null) {
   }, 550)
 }
 
-function queueAdd(payload: string | { type: string; view?: string }) {
+function queueAdd(payload: string | { type: string; view?: string; props?: Record<string, unknown>; title?: string }) {
+  emit('add', payload)
   emit('close')
-  if (addTimer) window.cancelAnimationFrame(addTimer)
-  addTimer = window.requestAnimationFrame(() => {
-    emit('add', payload)
-    addTimer = null
-  })
+}
+
+function resolveSelection(widget: WidgetPaletteItem | null): WidgetDisplayGroup[] {
+  if (!widget) return []
+  if (widget.selection?.length) {
+    return widget.selection
+      .map((group) => ({
+        ...group,
+        variants: (group.variants ?? []).filter((variant) => variant?.key && variant?.label),
+      }))
+      .filter((group) => group.variants.length > 0)
+  }
+
+  const forms = widget.forms ?? []
+  return forms
+    .filter((key) => String(key || '').trim().length > 0)
+    .map((key) => {
+      const option = FORM_OPTIONS[key as keyof typeof FORM_OPTIONS] ?? FORM_OPTIONS.number
+      return {
+        key,
+        label: option.label,
+        hint: option.hint,
+        variants: [
+          {
+            key,
+            label: option.label,
+            hint: option.hint,
+            view: key,
+            props: { view: key },
+          },
+        ],
+      }
+    })
+}
+
+function countSelectionVariants(groups: WidgetDisplayGroup[]) {
+  return groups.reduce((sum, group) => sum + (group.variants?.length ?? 0), 0)
+}
+
+function displayIcon(key: string) {
+  if (key === 'number' || key === 'target') return key === 'target' ? Target : Hash
+  if (key === 'line') return LineChart
+  if (key === 'pie') return PieChart
+  if (key === 'list' || key === 'text') return LayoutList
+  return BarChart3
+}
+
+function displayColor(key: string) {
+  const option = FORM_OPTIONS[key as keyof typeof FORM_OPTIONS]
+  if (option?.color) return option.color
+  if (key === 'list') return '#14b8a6'
+  if (key === 'text') return '#8b5cf6'
+  return '#5b5ce2'
 }
 
 function onWidgetClick(widget: WidgetPaletteItem) {
@@ -377,7 +479,15 @@ function onWidgetClick(widget: WidgetPaletteItem) {
   activeWidgetType.value = widget.type
   setOptimistic(widget.type)
 
-  if (widget.formPicker === false || (widget.forms?.length ?? 0) <= 1) {
+  const selection = resolveSelection(widget)
+  const variantCount = countSelectionVariants(selection)
+
+  if (widget.formPicker === false || variantCount <= 1) {
+    const variant = selection[0]?.variants?.[0]
+    if (variant) {
+      queueAdd(buildVariantPayload(widget, variant))
+      return
+    }
     queueAdd(widget.type)
     return
   }
@@ -385,7 +495,9 @@ function onWidgetClick(widget: WidgetPaletteItem) {
   pendingWidget.value = {
     ...widget,
     forms: widget.forms?.length ? [...widget.forms] : ['number'],
+    selection,
   }
+  activeDisplayKey.value = selection[0]?.key ?? ''
   formOpen.value = true
 }
 
@@ -408,9 +520,22 @@ function onCategorySelect(value: string) {
   })
 }
 
-function selectForm(key: string) {
+function buildVariantPayload(widget: WidgetPaletteItem, variant: WidgetVariantOption) {
+  const props = {
+    ...(variant.props ?? {}),
+  }
+  if (variant.view) props.view = variant.view
+  return {
+    type: widget.type,
+    view: variant.view,
+    props,
+    title: variant.widgetTitle ?? variant.label,
+  }
+}
+
+function selectVariant(variant: WidgetVariantOption) {
   if (!pendingWidget.value) return
-  const payload = { type: pendingWidget.value.type, view: key }
+  const payload = buildVariantPayload(pendingWidget.value, variant)
   closeFormPicker()
   queueAdd(payload)
 }
@@ -496,7 +621,6 @@ function onDialogKeydown(event: KeyboardEvent) {
 onBeforeUnmount(() => {
   if (searchTimer) window.clearTimeout(searchTimer)
   if (optimisticTimer) window.clearTimeout(optimisticTimer)
-  if (addTimer) window.cancelAnimationFrame(addTimer)
 })
 </script>
 
@@ -509,12 +633,14 @@ onBeforeUnmount(() => {
   height: calc(100dvh - 50px);
   overflow: hidden;
   border-radius: 18px;
-  border: 1px solid rgba(100, 116, 139, 0.46);
+  border: 1px solid rgba(113, 151, 195, 0.42);
   background:
-    linear-gradient(180deg, #c8d3e4, #bcc9dc),
-    radial-gradient(circle at 100% 0, rgba(59, 130, 246, 0.12), transparent 40%);
+    linear-gradient(180deg, rgba(247, 251, 255, 0.98), rgba(232, 240, 251, 0.98)),
+    radial-gradient(circle at 100% 0, rgba(91, 92, 226, 0.1), transparent 40%);
   color: #0f172a;
-  box-shadow: 0 24px 52px rgba(2, 6, 23, 0.4);
+  box-shadow:
+    0 24px 52px rgba(2, 6, 23, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.78);
 }
 
 .palette-stage {
@@ -553,13 +679,13 @@ onBeforeUnmount(() => {
   gap: 8px;
   padding: 12px;
   border-radius: 16px;
-  border: 1px solid rgba(100, 116, 139, 0.42);
+  border: 1px solid rgba(148, 163, 184, 0.3);
   background:
-    linear-gradient(180deg, rgba(30, 41, 59, 0.86), rgba(15, 23, 42, 0.84)),
-    radial-gradient(circle at 0 0, rgba(59, 130, 246, 0.24), transparent 52%);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(241, 247, 255, 0.88)),
+    radial-gradient(circle at 0 0, rgba(91, 92, 226, 0.1), transparent 52%);
   box-shadow:
-    0 16px 36px rgba(2, 6, 23, 0.46),
-    0 1px 0 rgba(255, 255, 255, 0.08) inset;
+    0 14px 30px rgba(31, 41, 55, 0.1),
+    0 1px 0 rgba(255, 255, 255, 0.78) inset;
 }
 
 .palette-float-side__label {
@@ -567,7 +693,7 @@ onBeforeUnmount(() => {
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: rgba(203, 213, 225, 0.95);
+  color: #64748b;
   padding: 2px 2px 6px;
   grid-column: 1 / -1;
 }
@@ -580,9 +706,9 @@ onBeforeUnmount(() => {
   min-height: 36px;
   padding: 0 10px;
   border-radius: 11px;
-  border: 1px solid rgba(100, 116, 139, 0.65);
-  background: rgba(30, 41, 59, 0.66);
-  color: #e2e8f0;
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  background: rgba(255, 255, 255, 0.7);
+  color: #334155;
   font-size: 14px;
   font-weight: 600;
   text-align: left;
@@ -590,15 +716,15 @@ onBeforeUnmount(() => {
 }
 
 .palette-float-side__item:hover {
-  border-color: rgba(96, 165, 250, 0.7);
-  background: rgba(30, 58, 138, 0.36);
+  border-color: rgba(91, 92, 226, 0.32);
+  background: rgba(238, 242, 255, 0.74);
   transform: translateX(1px);
 }
 
 .palette-float-side__item.is-active {
-  border-color: rgba(96, 165, 250, 0.92);
-  background: rgba(37, 99, 235, 0.45);
-  color: #eff6ff;
+  border-color: rgba(91, 92, 226, 0.42);
+  background: rgba(238, 242, 255, 0.9);
+  color: #111827;
 }
 
 .palette-float-side__dot {
@@ -623,8 +749,8 @@ onBeforeUnmount(() => {
   justify-content: center;
   font-size: 11px;
   font-weight: 700;
-  color: rgba(226, 232, 240, 0.92);
-  background: rgba(15, 23, 42, 0.46);
+  color: #334155;
+  background: rgba(226, 232, 240, 0.78);
 }
 
 .palette-head {
@@ -632,8 +758,8 @@ onBeforeUnmount(() => {
   align-items: flex-start;
   gap: 12px;
   padding: 18px 20px 14px;
-  border-bottom: 1px solid rgba(100, 116, 139, 0.46);
-  background: rgba(214, 224, 237, 0.64);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(255, 255, 255, 0.62);
 }
 
 .palette-title {
@@ -673,9 +799,9 @@ onBeforeUnmount(() => {
   display: grid;
   gap: 10px;
   padding: 12px 14px 10px;
-  border-bottom: 1px solid rgba(100, 116, 139, 0.38);
-  background: rgba(203, 213, 225, 0.58);
-  backdrop-filter: blur(4px);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.24);
+  background: rgba(241, 247, 255, 0.84);
+  backdrop-filter: blur(8px);
 }
 
 .palette-body {
@@ -774,10 +900,10 @@ onBeforeUnmount(() => {
   gap: 10px;
   flex-wrap: wrap;
   padding: 9px 14px 12px;
-  border-top: 1px solid rgba(100, 116, 139, 0.46);
+  border-top: 1px solid rgba(148, 163, 184, 0.26);
   font-size: 12px;
   color: #475569;
-  background: rgba(203, 213, 225, 0.56);
+  background: rgba(241, 247, 255, 0.78);
 }
 
 .form-overlay {
@@ -797,11 +923,15 @@ onBeforeUnmount(() => {
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  width: min(680px, calc(100vw - 24px));
+  width: min(740px, calc(100vw - 24px));
   border-radius: 18px;
-  border: 1px solid rgba(148, 163, 184, 0.3);
-  background: #f8fafc;
-  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.32);
+  border: 1px solid rgba(148, 163, 184, 0.36);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(244, 248, 253, 0.98)),
+    radial-gradient(circle at 100% 0, rgba(91, 92, 226, 0.1), transparent 42%);
+  box-shadow:
+    0 24px 58px rgba(15, 23, 42, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.76);
   padding: 16px;
 }
 
@@ -832,27 +962,94 @@ onBeforeUnmount(() => {
   color: #64748b;
 }
 
-.form-grid {
+.form-display-row {
   margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.form-display {
+  min-height: 38px;
+  border-radius: 11px;
+  border: 1px solid rgba(148, 163, 184, 0.34);
+  background: rgba(255, 255, 255, 0.74);
+  color: #475569;
+  padding: 0 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 760;
+  transition: border-color 130ms ease, background 130ms ease, color 130ms ease;
+}
+
+.form-display:hover,
+.form-display.is-active {
+  border-color: color-mix(in srgb, var(--display-color) 42%, rgba(148, 163, 184, 0.34));
+  background: color-mix(in srgb, var(--display-color) 11%, #fff);
+  color: #111827;
+}
+
+.form-variant-head {
+  margin-top: 14px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+}
+
+.form-variant-head span {
+  color: #111827;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.form-variant-head small {
+  color: #64748b;
+  font-size: 0.74rem;
+  font-weight: 650;
+  text-align: right;
+}
+
+.form-grid {
+  margin-top: 10px;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 
 .form-card {
+  position: relative;
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 10px;
   align-items: center;
-  border: 1px solid rgba(203, 213, 225, 0.86);
+  min-height: 74px;
+  border: 1px solid rgba(148, 163, 184, 0.32);
   border-radius: 12px;
-  background: #ffffff;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 250, 252, 0.9)),
+    radial-gradient(circle at 100% 0, rgba(91, 92, 226, 0.06), transparent 42%);
   padding: 12px;
   text-align: left;
+  transition: border-color 130ms ease, box-shadow 130ms ease, transform 130ms ease;
 }
 
 .form-card:hover {
-  border-color: rgba(59, 130, 246, 0.42);
+  border-color: rgba(91, 92, 226, 0.36);
+  box-shadow: 0 12px 26px rgba(31, 41, 55, 0.1);
+  transform: translateY(-1px);
+}
+
+.form-card__icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  padding: 8px;
+  background: rgba(238, 242, 255, 0.82);
 }
 
 .form-card__title {
@@ -865,6 +1062,20 @@ onBeforeUnmount(() => {
   margin-top: 2px;
   font-size: 12px;
   color: #64748b;
+}
+
+.form-card__badge {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  border-radius: 999px;
+  background: rgba(99, 102, 241, 0.1);
+  color: #4338ca;
+  padding: 3px 7px;
+  font-size: 10px;
+  font-weight: 760;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 @keyframes palette-loading {

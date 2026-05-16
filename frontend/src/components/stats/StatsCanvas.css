@@ -1,23 +1,23 @@
 .canvas-root {
-  --bg: #0a101d;
-  --canvas-board-base: #0b1220;
-  --canvas-board-surface: #0f1829;
-  --canvas-board-grid: rgba(176, 190, 215, 0.075);
-  --canvas-board-grid-strong: rgba(139, 92, 246, 0.095);
-  --canvas-widget-bg: linear-gradient(180deg, rgba(20, 29, 48, 0.97), rgba(12, 18, 34, 0.98));
-  --canvas-widget-border: rgba(167, 139, 250, 0.24);
-  --canvas-widget-border-hover: rgba(196, 181, 253, 0.42);
-  --canvas-widget-header-bg: rgba(15, 23, 42, 0.82);
-  --canvas-widget-header-border: rgba(196, 181, 253, 0.14);
-  --canvas-widget-title: rgba(248, 250, 252, 0.98);
-  --canvas-widget-shadow: 0 16px 42px rgba(2, 6, 23, 0.32), 0 1px 0 rgba(255, 255, 255, 0.04) inset;
-  --canvas-widget-shadow-hover: 0 18px 48px rgba(2, 6, 23, 0.38), 0 0 0 1px rgba(196, 181, 253, 0.08);
-  --template-surface-card: linear-gradient(180deg, rgba(22, 32, 54, 0.97), rgba(13, 20, 38, 0.98));
-  --template-surface-line: rgba(167, 139, 250, 0.28);
-  --template-shadow-card: 0 14px 34px rgba(2, 6, 23, 0.26);
-  --template-shadow-card-inset: inset 0 1px 0 rgba(255, 255, 255, 0.055);
-  --template-text: rgba(248, 250, 252, 0.99);
-  --template-text-muted: rgba(203, 213, 225, 0.84);
+  --bg: #edf3fb;
+  --canvas-board-base: #eaf2fc;
+  --canvas-board-surface: #f7fbff;
+  --canvas-board-grid: rgba(15, 23, 42, 0.055);
+  --canvas-board-grid-strong: rgba(99, 102, 241, 0.075);
+  --canvas-widget-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 247, 255, 0.96));
+  --canvas-widget-border: rgba(100, 116, 139, 0.24);
+  --canvas-widget-border-hover: rgba(91, 92, 226, 0.28);
+  --canvas-widget-header-bg: rgba(255, 255, 255, 0.68);
+  --canvas-widget-header-border: rgba(148, 163, 184, 0.22);
+  --canvas-widget-title: #111827;
+  --canvas-widget-shadow: 0 14px 34px rgba(31, 41, 55, 0.09), inset 0 1px 0 rgba(255, 255, 255, 0.74);
+  --canvas-widget-shadow-hover: 0 18px 42px rgba(31, 41, 55, 0.12), 0 0 0 1px rgba(91, 92, 226, 0.06);
+  --template-surface-card: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 247, 255, 0.96));
+  --template-surface-line: rgba(148, 163, 184, 0.28);
+  --template-shadow-card: 0 14px 34px rgba(31, 41, 55, 0.09);
+  --template-shadow-card-inset: inset 0 1px 0 rgba(255, 255, 255, 0.68);
+  --template-text: #111827;
+  --template-text-muted: #64748b;
   --stats-top-gap: max(16px, env(safe-area-inset-top, 0px) + 10px);
   --stats-side-gap: var(--app-edge-gap, clamp(10px, 2.8vw, 18px));
   --stats-bottom-gap: max(16px, env(safe-area-inset-bottom, 0px) + 10px);
@@ -34,6 +34,32 @@
   overscroll-behavior: contain;
   overscroll-behavior-x: none;
   background: var(--bg);
+}
+
+.canvas-root.is-route-leaving {
+  pointer-events: none;
+}
+
+.canvas-root.is-route-leaving .template-rail,
+.canvas-root.is-route-leaving .canvas-empty-guide,
+.canvas-root.is-route-leaving .drag-assist-overlay,
+.canvas-root.is-route-leaving .group-selection-frame,
+.canvas-root.is-route-leaving .snap-guide,
+.canvas-root.is-route-leaving .save-toast,
+.canvas-root.is-route-leaving .widget__actions,
+.canvas-root.is-route-leaving .widget__floating-actions,
+.canvas-root.is-route-leaving .widget__resize-overlay,
+.canvas-root.is-route-leaving .text-toolbar,
+.canvas-root.is-route-leaving .resize-meta {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: opacity 80ms ease !important;
+}
+
+.canvas-root.is-route-leaving .widget,
+.canvas-root.is-route-leaving .widget:hover {
+  border-color: var(--canvas-widget-border, rgba(148, 163, 184, 0.2)) !important;
+  box-shadow: var(--canvas-widget-shadow, 0 4px 14px rgba(2, 6, 23, 0.18)) !important;
 }
 
 body.canvas-resize-cursor,
@@ -83,9 +109,7 @@ body.canvas-resize-cursor--nesw {
     linear-gradient(90deg, var(--canvas-board-grid) 1px, transparent 1px) 0 0 / 32px 32px,
     linear-gradient(var(--canvas-board-grid-strong) 1px, transparent 1px) 0 0 / 160px 160px,
     linear-gradient(90deg, var(--canvas-board-grid-strong) 1px, transparent 1px) 0 0 / 160px 160px,
-    radial-gradient(circle at 18% -8%, rgba(124, 58, 237, 0.16), transparent 34%),
-    radial-gradient(circle at 82% -16%, rgba(56, 189, 248, 0.11), transparent 34%),
-    linear-gradient(180deg, var(--canvas-board-surface) 0%, var(--canvas-board-base) 100%);
+    var(--canvas-board-surface);
 }
 
 .board::before,
@@ -125,6 +149,7 @@ body.canvas-resize-cursor--nesw {
     radial-gradient(circle at 50% 90%, rgba(14, 165, 233, 0.12), transparent 48%);
   filter: blur(22px);
   opacity: 0.65;
+  pointer-events: none;
 }
 
 .canvas-empty-guide__card {
@@ -142,6 +167,7 @@ body.canvas-resize-cursor--nesw {
   display: grid;
   gap: 14px;
   pointer-events: auto;
+  touch-action: manipulation;
 }
 
 .canvas-empty-guide__kicker {
@@ -235,6 +261,8 @@ body.canvas-resize-cursor--nesw {
   gap: 8px;
   font-size: 0.78rem;
   font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
 }
 
 .canvas-empty-guide__btn--primary {

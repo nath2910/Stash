@@ -1,6 +1,6 @@
 <template>
   <KpiCard
-    title="Taux d'ecoulement"
+    title="Taux d’écoulement"
     subtitle="Part du stock vendu"
     :accent="accent"
     surface="kpi"
@@ -36,9 +36,9 @@
         <div class="st-goal" aria-hidden="true"></div>
         <div class="st-glow" aria-hidden="true"></div>
       </div>
-      <div class="mt-1 text-[10px] text-white/45 flex justify-between">
+      <div class="st-scale">
         <span>0%</span>
-        <span class="text-white/70">objectif 50%</span>
+        <span>objectif 50%</span>
         <span>100%</span>
       </div>
       <div class="objective-chip st-objective">
@@ -141,12 +141,9 @@ const tone = computed(() => {
   position: relative;
   height: 12px;
   border-radius: 999px;
-  background: linear-gradient(180deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9));
+  background: linear-gradient(180deg, rgba(226, 232, 240, 0.92), rgba(203, 213, 225, 0.86));
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.03),
-    inset 0 6px 10px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(148, 163, 184, 0.26);
 }
 .st-bar {
   height: 100%;
@@ -168,8 +165,7 @@ const tone = computed(() => {
   bottom: 2px;
   width: 2px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.5);
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.35);
+  background: rgba(71, 85, 105, 0.62);
 }
 .st-glow {
   position: absolute;
@@ -182,6 +178,14 @@ const tone = computed(() => {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+}
+
+.st-scale {
+  margin-top: 4px;
+  display: flex;
+  justify-content: space-between;
+  color: #64748b;
+  font-size: 10px;
 }
 .st-top {
   display: flex;
@@ -197,15 +201,12 @@ const tone = computed(() => {
   font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(226, 232, 240, 0.6);
+  color: #64748b;
   white-space: nowrap;
   padding: 6px 10px;
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.03),
-    0 6px 16px rgba(0, 0, 0, 0.25);
+  background: rgba(248, 250, 252, 0.82);
+  border: 1px solid rgba(148, 163, 184, 0.26);
 }
 .st-period-label {
   opacity: 0.7;
@@ -214,11 +215,11 @@ const tone = computed(() => {
   font-size: 11px;
   letter-spacing: 0.02em;
   text-transform: none;
-  color: rgba(226, 232, 240, 0.9);
+  color: #334155;
 }
 .st-status-label {
   font-size: 11px;
-  color: rgba(226, 232, 240, 0.55);
+  color: #64748b;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -231,24 +232,24 @@ const tone = computed(() => {
   letter-spacing: 0.08em;
 }
 .st-status-pill.is-low {
-  color: #fca5a5;
-  background: rgba(239, 68, 68, 0.12);
-  border-color: rgba(239, 68, 68, 0.35);
+  color: #be123c;
+  background: rgba(255, 228, 230, 0.72);
+  border-color: rgba(244, 63, 94, 0.24);
 }
 .st-status-pill.is-mid {
-  color: #fbbf24;
-  background: rgba(245, 158, 11, 0.14);
-  border-color: rgba(245, 158, 11, 0.35);
+  color: #b45309;
+  background: rgba(254, 243, 199, 0.78);
+  border-color: rgba(245, 158, 11, 0.24);
 }
 .st-status-pill.is-good {
-  color: #86efac;
-  background: rgba(34, 197, 94, 0.14);
-  border-color: rgba(34, 197, 94, 0.35);
+  color: #047857;
+  background: rgba(209, 250, 229, 0.68);
+  border-color: rgba(16, 185, 129, 0.24);
 }
 .st-goal-copy {
   margin-top: 6px;
   font-size: 11px;
-  color: rgba(226, 232, 240, 0.68);
+  color: #64748b;
   letter-spacing: 0.02em;
   display: inline-flex;
   align-items: center;
@@ -272,12 +273,9 @@ const tone = computed(() => {
   font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(226, 232, 240, 0.72);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(15, 23, 42, 0.6);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.02),
-    0 6px 14px rgba(0, 0, 0, 0.25);
+  color: #64748b;
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  background: rgba(248, 250, 252, 0.82);
 }
 .objective-label {
   opacity: 0.7;
@@ -286,12 +284,12 @@ const tone = computed(() => {
   font-size: 11px;
   text-transform: none;
   letter-spacing: 0.02em;
-  color: rgba(226, 232, 240, 0.92);
+  color: #111827;
 }
 .objective-note {
   font-size: 10px;
   letter-spacing: 0.04em;
   text-transform: none;
-  color: rgba(226, 232, 240, 0.55);
+  color: #64748b;
 }
 </style>

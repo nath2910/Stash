@@ -35,7 +35,7 @@ function normalizeRange(raw) {
   if (!raw || typeof raw !== 'object') return null
   const from = typeof raw.from === 'string' ? raw.from : ''
   const to = typeof raw.to === 'string' ? raw.to : ''
-  if (!from || !to) return null
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) return null
   if (from <= to) return { from, to }
   return { from: to, to: from }
 }
@@ -46,6 +46,21 @@ export function useStatsRange() {
   const from = ref('')
   const to = ref('')
 
+  function applyRange(nextFrom, nextTo) {
+    const normalized = normalizeRange({ from: nextFrom, to: nextTo })
+    if (!normalized) return false
+    let changed = false
+    if (from.value !== normalized.from) {
+      from.value = normalized.from
+      changed = true
+    }
+    if (to.value !== normalized.to) {
+      to.value = normalized.to
+      changed = true
+    }
+    return changed
+  }
+
   function loadForUser() {
     const key = `${STORAGE_KEY_PREFIX}_${userId.value}`
     const raw = safeGet(key)
@@ -54,8 +69,7 @@ export function useStatsRange() {
         const parsed = JSON.parse(raw)
         const normalized = normalizeRange(parsed)
         if (normalized) {
-          from.value = normalized.from
-          to.value = normalized.to
+          applyRange(normalized.from, normalized.to)
           return
         }
       } catch {
@@ -63,8 +77,7 @@ export function useStatsRange() {
       }
     }
     const def = defaultRange()
-    from.value = def.from
-    to.value = def.to
+    applyRange(def.from, def.to)
   }
 
   loadForUser()
@@ -83,5 +96,5 @@ export function useStatsRange() {
     { deep: false },
   )
 
-  return { from, to }
+  return { from, to, setRange: applyRange }
 }

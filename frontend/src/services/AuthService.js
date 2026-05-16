@@ -21,9 +21,6 @@ class AuthService {
     token = token || res.data?.token || res.data?.accessToken
 
     if (!token) {
-      if (import.meta.env.DEV) {
-        console.error('Reponse login:', res.data, res.headers)
-      }
       throw new Error('Token manquant dans la reponse /auth/login')
     }
 

@@ -1,6 +1,6 @@
 <template>
   <WidgetCard
-    title="Benefice net"
+    title="Bénéfice net"
     subtitle="Suivi de rentabilite"
     :hide-header="true"
     :accent="accent"
@@ -36,6 +36,7 @@
           :show-net-margin="props.showNetMargin"
           :show-best-period="props.showBestPeriod"
           :secondary-limit="props.secondaryLimit"
+          :kpi-variant="props.kpiVariant"
         />
       </template>
 
@@ -100,6 +101,7 @@ interface WidgetProps {
   showNetMargin?: boolean
   showBestPeriod?: boolean
   secondaryLimit?: number
+  kpiVariant?: 'total' | 'avgProfit' | 'sales' | string
   widgetWidth?: number
   widgetHeight?: number
   widgetBaseWidth?: number
@@ -130,6 +132,7 @@ const props = withDefaults(defineProps<WidgetProps>(), {
   showNetMargin: true,
   showBestPeriod: true,
   secondaryLimit: 4,
+  kpiVariant: 'total',
   widgetWidth: 760,
   widgetHeight: 500,
   widgetBaseWidth: 0,
@@ -435,12 +438,12 @@ const accent = computed(() => {
   margin: 0;
   font-size: 14px;
   font-weight: 650;
-  color: rgba(241, 245, 249, 0.96);
+  color: #111827;
 }
 
 .npw-state__copy {
   margin: 0;
   font-size: 12px;
-  color: rgba(148, 163, 184, 0.88);
+  color: #64748b;
 }
 </style>

@@ -56,18 +56,6 @@ Importe au bootstrap pour config chart.
 
 ---
 
-## 5) `src/components/DateRangeBar.vue`
-
-### Role
-Selecteur date range (composant historique hors canvas).
-
-### Logique
-- maintient `[from,to]` local,
-- emet updates vers parent,
-- presets month/ytd/year.
-
----
-
 ## 6) `src/components/ui/CompactDateInput.vue`
 
 ### Role
@@ -85,13 +73,6 @@ Input date compact custom (integration datepicker).
 
 ## 8) `src/components/HeaderDePage.vue`
 - Header simple reutilisable (titre/sous-titre/description).
-
-## 9) `src/components/StatBase.vue` (legacy)
-- Ancienne base stats.
-- Contient reset de layout legacy key v1.
-- Non coeur du systeme canvas actuel.
-
----
 
 ## 10) CSS globaux
 

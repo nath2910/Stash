@@ -9,7 +9,7 @@
       inputmode="search"
       autocomplete="off"
       class="palette-search__input"
-      placeholder="Rechercher un widget, un tag, un type..."
+      placeholder="Rechercher une metrique, une vue, une variante..."
       aria-label="Rechercher un widget"
       @input="onInput"
       @keydown="emit('keydown', $event)"
@@ -63,14 +63,14 @@ defineExpose({
   min-height: 44px;
   padding: 0 10px;
   border-radius: 12px;
-  border: 1px solid rgba(100, 116, 139, 0.44);
-  background: rgba(214, 224, 237, 0.82);
+  border: 1px solid rgba(148, 163, 184, 0.34);
+  background: rgba(255, 255, 255, 0.78);
   transition: border-color 140ms ease, background 140ms ease;
 }
 
 .palette-search:focus-within {
   border-color: rgba(59, 130, 246, 0.54);
-  background: rgba(226, 232, 240, 0.9);
+  background: rgba(255, 255, 255, 0.94);
 }
 
 .palette-search__icon {

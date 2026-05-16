@@ -112,123 +112,72 @@ function resolveRange(a, b, categories, types) {
   return { from: a, to: b, asOf: undefined, categories, types }
 }
 
-function summary(a, b, categories, types) {
+function nonEmptyArray(value) {
+  return Array.isArray(value) && value.length ? value : undefined
+}
+
+function resolvedDateParams(a, b, categories, types, { includeAsOf = true } = {}) {
   const { from, to, asOf, categories: cats, types: itemTypes } = resolveRange(a, b, categories, types)
-  const safeCats = Array.isArray(cats) && cats.length ? cats : undefined
-  const safeTypes = Array.isArray(itemTypes) && itemTypes.length ? itemTypes : undefined
-  return cachedGet('/stats/summary', dateParams(from, to, asOf, safeCats, safeTypes))
+  return dateParams(
+    from,
+    to,
+    includeAsOf ? asOf : undefined,
+    nonEmptyArray(cats),
+    nonEmptyArray(itemTypes),
+  )
+}
+
+function resolveGranularity(granularityOrOpts = 'day') {
+  if (typeof granularityOrOpts === 'string') return granularityOrOpts
+  if (granularityOrOpts && typeof granularityOrOpts === 'object') {
+    return granularityOrOpts.granularity || granularityOrOpts.bucket || 'day'
+  }
+  return 'day'
+}
+
+function summary(a, b, categories, types) {
+  return cachedGet('/stats/summary', resolvedDateParams(a, b, categories, types))
 }
 
 function timeseries(a, b, granularityOrOpts = 'day', categories, types) {
-  const { from, to, categories: cats, types: itemTypes } = resolveRange(a, b, categories, types)
-
-  let granularity = 'day'
-  if (typeof granularityOrOpts === 'string') {
-    granularity = granularityOrOpts
-  } else if (granularityOrOpts && typeof granularityOrOpts === 'object') {
-    granularity = granularityOrOpts.granularity || granularityOrOpts.bucket || 'day'
-  }
-
   return cachedGet('/stats/timeseries', {
-    ...dateParams(
-      from,
-      to,
-      undefined,
-      Array.isArray(cats) && cats.length ? cats : undefined,
-      Array.isArray(itemTypes) && itemTypes.length ? itemTypes : undefined,
-    ),
-    granularity,
+    ...resolvedDateParams(a, b, categories, types, { includeAsOf: false }),
+    granularity: resolveGranularity(granularityOrOpts),
   })
 }
 
 function brands(a, b, categories, types) {
-  const { from, to, categories: cats, types: itemTypes } = resolveRange(a, b, categories, types)
-  return cachedGet(
-    '/stats/brands',
-    dateParams(
-      from,
-      to,
-      undefined,
-      Array.isArray(cats) && cats.length ? cats : undefined,
-      Array.isArray(itemTypes) && itemTypes.length ? itemTypes : undefined,
-    ),
-  )
+  return cachedGet('/stats/brands', resolvedDateParams(a, b, categories, types, { includeAsOf: false }))
 }
 
 function topSales(a, b, limit = 3, categories, types) {
-  const { from, to, categories: cats, types: itemTypes } = resolveRange(a, b, categories, types)
   return cachedGet('/stats/top-sales', {
-    ...dateParams(
-      from,
-      to,
-      undefined,
-      Array.isArray(cats) && cats.length ? cats : undefined,
-      Array.isArray(itemTypes) && itemTypes.length ? itemTypes : undefined,
-    ),
+    ...resolvedDateParams(a, b, categories, types, { includeAsOf: false }),
     limit,
   })
 }
 
 function kpi(metric, a, b, categories, types) {
-  const { from, to, categories: cats, types: itemTypes } = resolveRange(a, b, categories, types)
-  return cachedGet(
-    `/stats/kpi/${metric}`,
-    dateParams(
-      from,
-      to,
-      undefined,
-      Array.isArray(cats) && cats.length ? cats : undefined,
-      Array.isArray(itemTypes) && itemTypes.length ? itemTypes : undefined,
-    ),
-  )
+  return cachedGet(`/stats/kpi/${metric}`, resolvedDateParams(a, b, categories, types, { includeAsOf: false }))
 }
 
 function series(metric, a, b, granularityOrOpts = 'day', categories, types) {
-  const { from, to, categories: cats, types: itemTypes } = resolveRange(a, b, categories, types)
-
-  let granularity = 'day'
-  if (typeof granularityOrOpts === 'string') {
-    granularity = granularityOrOpts
-  } else if (granularityOrOpts && typeof granularityOrOpts === 'object') {
-    granularity = granularityOrOpts.granularity || granularityOrOpts.bucket || 'day'
-  }
-
   return cachedGet(`/stats/series/${metric}`, {
-    ...dateParams(
-      from,
-      to,
-      undefined,
-      Array.isArray(cats) && cats.length ? cats : undefined,
-      Array.isArray(itemTypes) && itemTypes.length ? itemTypes : undefined,
-    ),
-    granularity,
+    ...resolvedDateParams(a, b, categories, types, { includeAsOf: false }),
+    granularity: resolveGranularity(granularityOrOpts),
   })
 }
 
 function breakdown(metric, a, b, categories, types) {
-  const { from, to, categories: cats, types: itemTypes } = resolveRange(a, b, categories, types)
   return cachedGet(
     `/stats/breakdown/${metric}`,
-    dateParams(
-      from,
-      to,
-      undefined,
-      Array.isArray(cats) && cats.length ? cats : undefined,
-      Array.isArray(itemTypes) && itemTypes.length ? itemTypes : undefined,
-    ),
+    resolvedDateParams(a, b, categories, types, { includeAsOf: false }),
   )
 }
 
 function rank(metric, a, b, limit = 10, categories, types) {
-  const { from, to, categories: cats, types: itemTypes } = resolveRange(a, b, categories, types)
   return cachedGet(`/stats/rank/${metric}`, {
-    ...dateParams(
-      from,
-      to,
-      undefined,
-      Array.isArray(cats) && cats.length ? cats : undefined,
-      Array.isArray(itemTypes) && itemTypes.length ? itemTypes : undefined,
-    ),
+    ...resolvedDateParams(a, b, categories, types, { includeAsOf: false }),
     limit,
   })
 }
@@ -248,15 +197,6 @@ function categories(from, to) {
 
 function annualDashboard(year) {
   return cachedGet('/stats/annual-dashboard', { year }, { ttlMs: 20_000 })
-}
-
-// Billing (backend à implémenter côté API Spring)
-function billingStatus() {
-  return api.get('/billing/status')
-}
-
-function billingCheckout(promoCode, discord) {
-  return api.post('/billing/checkout', { promoCode, discord })
 }
 
 // Persistance du layout cote backend (prive / multi-appareil).
@@ -282,6 +222,4 @@ export default {
   categories,
   getLayout,
   saveLayout,
-  billingStatus,
-  billingCheckout,
 }

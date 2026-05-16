@@ -1,6 +1,6 @@
 <template>
   <KpiCard
-    title="Delai moyen de vente"
+    title="Délai moyen avant vente"
     subtitle="Temps pour vendre"
     :accent="accent"
     surface="kpi"
@@ -124,12 +124,9 @@ const toLabel = computed(() =>
   font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(226, 232, 240, 0.72);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(15, 23, 42, 0.6);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.02),
-    0 6px 14px rgba(0, 0, 0, 0.25);
+  color: #64748b;
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  background: rgba(248, 250, 252, 0.82);
 }
 .objective-label {
   opacity: 0.7;
@@ -138,7 +135,7 @@ const toLabel = computed(() =>
   font-size: 11px;
   text-transform: none;
   letter-spacing: 0.02em;
-  color: rgba(226, 232, 240, 0.92);
+  color: #111827;
 }
 .objective-value .le {
   display: inline-block;
@@ -148,16 +145,15 @@ const toLabel = computed(() =>
   letter-spacing: 0.08em;
   text-transform: uppercase;
   border-radius: 999px;
-  background: rgba(59, 130, 246, 0.16);
-  color: rgba(191, 219, 254, 0.95);
-  border: 1px solid rgba(59, 130, 246, 0.35);
-  box-shadow: 0 0 10px rgba(59, 130, 246, 0.18);
+  background: rgba(219, 234, 254, 0.72);
+  color: #1d4ed8;
+  border: 1px solid rgba(59, 130, 246, 0.22);
 }
 .objective-note {
   font-size: 10px;
   letter-spacing: 0.04em;
   text-transform: none;
-  color: rgba(226, 232, 240, 0.55);
+  color: #64748b;
 }
 .period-chip {
   margin-left: auto;
@@ -167,15 +163,12 @@ const toLabel = computed(() =>
   font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(226, 232, 240, 0.6);
+  color: #64748b;
   white-space: nowrap;
   padding: 6px 10px;
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.03),
-    0 6px 16px rgba(0, 0, 0, 0.25);
+  background: rgba(248, 250, 252, 0.82);
+  border: 1px solid rgba(148, 163, 184, 0.26);
 }
 .period-label {
   opacity: 0.7;
@@ -184,6 +177,6 @@ const toLabel = computed(() =>
   font-size: 11px;
   letter-spacing: 0.02em;
   text-transform: none;
-  color: rgba(226, 232, 240, 0.9);
+  color: #334155;
 }
 </style>

@@ -17,15 +17,15 @@
     <!-- Actions -->
     <div class="relative grid grid-cols-1 sm:grid-cols-2 gap-3">
       <div
-        v-if="importing"
+        v-if="importing || parsing"
         class="absolute inset-0 rounded-2xl border border-violet-400/20 bg-slate-950/70 backdrop-blur-sm flex flex-col gap-3 items-center justify-center z-10 text-white text-sm"
       >
         <div class="loading-spinner h-8 w-8 border-2 border-violet-200 border-t-transparent rounded-full"></div>
         <div class="text-center leading-tight">
-          <div class="font-semibold">Import en cours...</div>
-          <div class="text-xs text-slate-300">{{ progress }}%</div>
+          <div class="font-semibold">{{ parsing ? 'Analyse du fichier...' : 'Import en cours...' }}</div>
+          <div class="text-xs text-slate-300">{{ parsing ? 'Validation des colonnes et lignes' : `${progress}%` }}</div>
         </div>
-        <div class="w-40 h-2 bg-slate-800 rounded-full overflow-hidden">
+        <div v-if="importing" class="w-40 h-2 bg-slate-800 rounded-full overflow-hidden">
           <div
             class="h-full bg-gradient-to-r from-violet-500 via-blue-400 to-emerald-400 transition-all duration-200"
             :style="{ width: progress + '%' }"
@@ -57,7 +57,13 @@
       </button>
 
       <!-- IMPORT -->
-      <div class="rounded-2xl border border-white/10 bg-slate-900/50 p-4 space-y-3">
+      <div
+        class="rounded-2xl border bg-slate-900/50 p-4 space-y-3 transition"
+        :class="dragOver ? 'border-violet-300/70 bg-violet-500/10' : 'border-white/10'"
+        @dragover.prevent="onDragOver"
+        @dragleave.prevent="onDragLeave"
+        @drop.prevent="onDropFile"
+      >
         <div class="flex items-center justify-between gap-3">
           <div class="min-w-0">
             <div class="text-sm font-semibold text-white flex items-center gap-2">
@@ -65,7 +71,7 @@
               Importer un fichier
             </div>
             <div class="text-xs text-white/60 truncate flex items-center gap-1">
-              {{ fileName ? fileName : 'Choisis un fichier CSV (export Excel)' }}
+              {{ fileName ? fileName : 'CSV, XLSX, XLS, TSV ou TXT' }}
               <span v-if="selectedFile" class="text-[10px] text-violet-200/70">({{ prettySize }})</span>
             </div>
           </div>
@@ -75,7 +81,7 @@
               type="button"
               class="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white text-sm transition"
               @click="pickFile"
-              :disabled="importing"
+              :disabled="importing || parsing"
             >
               Parcourir
             </button>
@@ -83,11 +89,11 @@
             <button
               type="button"
               class="px-3 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm disabled:opacity-50 transition inline-flex items-center gap-2"
-              :disabled="importing || !selectedFile"
+              :disabled="importing || parsing || !canConfirmImport"
               @click="importNow"
             >
               <span v-if="importing" class="loading-spinner h-4 w-4 border-2 border-white/50 border-t-transparent rounded-full"></span>
-              {{ importing ? 'Import...' : 'Importer' }}
+              {{ importing ? 'Import...' : importButtonLabel }}
             </button>
           </div>
         </div>
@@ -96,9 +102,163 @@
           ref="fileInput"
           type="file"
           class="hidden"
-          accept=".csv,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          accept=".csv,.tsv,.txt,.json,.xls,.xlsx,text/csv,text/plain,text/tab-separated-values,application/json,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
           @change="onFilePicked"
         />
+
+        <div class="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-xs text-slate-300">
+          <div class="font-semibold text-white">Formats acceptes</div>
+          <p class="mt-1 leading-relaxed">
+            CSV, XLSX, XLS, TSV, TXT structure, JSON simple, export Google Sheets en CSV,
+            export Apple Numbers en CSV, ou fichier texte structure.
+          </p>
+          <p class="mt-1 text-slate-400">
+            Depose un fichier ici ou selectionne-le depuis Sheets, Excel, Numbers ou un export texte.
+          </p>
+        </div>
+
+        <div
+          v-if="preview"
+          class="mt-3 space-y-3 rounded-2xl border border-white/10 bg-slate-950/40 p-3"
+        >
+          <div class="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+            <div class="rounded-xl border border-white/10 bg-white/[0.03] p-2">
+              <div class="text-white/50">Detectees</div>
+              <div class="text-base font-semibold text-white">{{ preview.rowsDetected }}</div>
+            </div>
+            <div class="rounded-xl border border-emerald-400/20 bg-emerald-400/10 p-2">
+              <div class="text-emerald-100/70">Valides</div>
+              <div class="text-base font-semibold text-emerald-100">{{ preview.validRows }}</div>
+            </div>
+            <div class="rounded-xl border border-red-400/20 bg-red-400/10 p-2">
+              <div class="text-red-100/70">Invalides</div>
+              <div class="text-base font-semibold text-red-100">{{ preview.invalidRows }}</div>
+            </div>
+            <div class="rounded-xl border border-sky-400/20 bg-sky-400/10 p-2">
+              <div class="text-sky-100/70">Items crees</div>
+              <div class="text-base font-semibold text-sky-100">{{ preview.validItems }}</div>
+            </div>
+          </div>
+
+          <div
+            v-if="preview.invalidRows"
+            class="rounded-xl border border-amber-300/20 bg-amber-300/10 p-3 text-xs text-amber-100"
+          >
+            {{ preview.invalidRows }} ligne(s) invalide(s) ne seront pas importees. Corrige le fichier ou ajuste le mapping si besoin.
+          </div>
+
+          <div class="rounded-xl border border-white/10 bg-slate-900/60 p-3 text-xs text-slate-200">
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <div class="font-semibold text-white">Mapping des colonnes</div>
+                <p class="mt-1 text-slate-400">Corrige les colonnes reconnues avant de confirmer.</p>
+              </div>
+              <button
+                type="button"
+                class="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[11px] font-semibold text-slate-100 transition hover:bg-white/10"
+                @click="rebuildPreviewFromMapping"
+              >
+                Reanalyser
+              </button>
+            </div>
+            <div class="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+              <label
+                v-for="field in mappingFields"
+                :key="field.key"
+                class="grid gap-1 rounded-lg border border-white/10 bg-white/[0.03] p-2"
+              >
+                <span class="text-[11px] font-semibold text-slate-300">
+                  {{ mappingLabels[field.key] ?? field.key }}
+                  <span v-if="field.required" class="text-red-200">*</span>
+                </span>
+                <select
+                  v-model="mappingDraft[field.key]"
+                  class="min-h-9 rounded-lg border border-slate-700 bg-slate-950 px-2 text-xs text-slate-100"
+                  @change="rebuildPreviewFromMapping"
+                >
+                  <option value="">Non utilise</option>
+                  <option v-for="header in headerOptions" :key="`${field.key}-${header}`" :value="header">
+                    {{ header }}
+                  </option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <div class="rounded-xl border border-white/10 bg-slate-900/60 p-3 text-xs text-slate-200">
+            <div class="font-semibold text-white">Colonnes reconnues</div>
+            <div class="mt-2 flex flex-wrap gap-1.5">
+              <span
+                v-for="entry in mappingEntries"
+                :key="entry.key"
+                class="rounded-full border border-white/10 bg-white/5 px-2 py-1"
+              >
+                {{ entry.label }} : {{ entry.value }}
+              </span>
+            </div>
+            <p class="mt-2 text-slate-400">
+              Google Sheets et Apple Numbers : exporte en CSV ou XLSX, sans identifiant ni secret.
+            </p>
+          </div>
+
+          <div
+            v-if="preview.unknownHeaders.length"
+            class="rounded-xl border border-amber-300/20 bg-amber-300/10 p-3 text-xs text-amber-100"
+          >
+            <div class="font-semibold">Colonnes non reconnues ou trop ambigues</div>
+            <div class="mt-2 flex flex-wrap gap-1.5">
+              <span
+                v-for="header in preview.unknownHeaders"
+                :key="header"
+                class="rounded-full border border-amber-200/20 bg-amber-200/10 px-2 py-1"
+              >
+                {{ header }}
+              </span>
+            </div>
+            <p class="mt-2 text-amber-100/80">
+              Elles sont ignorees par defaut. Tu peux les mapper manuellement avant de confirmer.
+            </p>
+          </div>
+
+          <div v-if="previewErrors.length" class="rounded-xl border border-red-400/20 bg-red-400/10 p-3">
+            <div class="text-xs font-semibold text-red-100">Erreurs a corriger</div>
+            <ul class="mt-2 space-y-1 text-xs text-red-100/90">
+              <li v-for="err in previewErrors" :key="err">{{ err }}</li>
+            </ul>
+          </div>
+
+          <div v-if="previewRows.length" class="overflow-hidden rounded-xl border border-white/10">
+            <div class="max-h-56 overflow-auto">
+              <table class="w-full text-left text-xs">
+                <thead class="sticky top-0 bg-slate-950 text-slate-300">
+                  <tr>
+                    <th class="px-3 py-2 font-semibold">Ligne</th>
+                    <th class="px-3 py-2 font-semibold">Statut</th>
+                    <th class="px-3 py-2 font-semibold">Item</th>
+                    <th class="px-3 py-2 font-semibold">Details</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-white/10 bg-slate-950/40 text-slate-200">
+                  <tr v-for="row in previewRows" :key="row.rowNumber">
+                    <td class="px-3 py-2 text-slate-400">{{ row.rowNumber }}</td>
+                    <td class="px-3 py-2">
+                      <span
+                        class="rounded-full px-2 py-1 text-[11px] font-semibold"
+                        :class="row.status === 'valid' ? 'bg-emerald-400/10 text-emerald-100' : 'bg-red-400/10 text-red-100'"
+                      >
+                        {{ row.status === 'valid' ? 'Valide' : 'Invalide' }}
+                      </span>
+                    </td>
+                    <td class="max-w-[220px] truncate px-3 py-2">{{ row.name || '-' }}</td>
+                    <td class="px-3 py-2 text-slate-300">
+                      {{ row.errors.length ? row.errors.join(' | ') : row.warnings.join(' | ') || `${row.quantity} item(s)` }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
 
         <div
           v-if="successMsg"
@@ -122,7 +282,21 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue'
 import SnkVenteServices from '@/services/SnkVenteServices.js'
-import { METADATA_FIELDS, typeLabel } from '@/constants/itemTypes'
+import {
+  analyzeImportRows,
+  buildStockExportCsv,
+  detectDelimiter,
+  extractTableFrom2D,
+  isExcelFile,
+  isJsonFile,
+  parseJsonContent,
+  parseLooseKeyValueText,
+  resolveImportMapping,
+  type CsvRow,
+  type ImportMapping,
+  type ImportPreview,
+  type ParsedTable,
+} from '@/utils/stockImportExport'
 
 /**
  * Exporte par defaut ce que tu passes dans filteredRows.
@@ -135,38 +309,6 @@ const emit = defineEmits<{
   (e: 'imported'): void
 }>()
 
-const EXPORT_METADATA_COLUMNS = [
-  { key: 'size', header: 'pointure' },
-  { key: 'sku', header: 'sku' },
-  { key: 'colorway', header: 'coloris' },
-  { key: 'condition', header: 'etat' },
-  { key: 'boxCondition', header: 'etat boite' },
-  { key: 'set', header: 'set' },
-  { key: 'language', header: 'langue' },
-  { key: 'rarity', header: 'rarete' },
-  { key: 'grade', header: 'grade' },
-  { key: 'eventDate', header: 'date evenement' },
-  { key: 'venue', header: 'lieu' },
-  { key: 'section', header: 'section' },
-  { key: 'row', header: 'rang' },
-  { key: 'seat', header: 'siege' },
-  { key: 'status', header: 'statut' },
-]
-
-const EXPORT_HEADERS = [
-  'nom item',
-  'type',
-  'type label',
-  'categorie',
-  'prix retail',
-  'prix resell',
-  'profit',
-  'date achat',
-  'date vente',
-  'description',
-  ...EXPORT_METADATA_COLUMNS.map((column) => column.header),
-]
-
 /* ------------------ EXPORT ------------------ */
 const rowsToExport = computed(() => (Array.isArray(props.filteredRows) ? props.filteredRows : []))
 
@@ -174,58 +316,7 @@ function exportCsv() {
   const rows = rowsToExport.value
   if (!rows.length) return
 
-  const safe = (v: any) => {
-    const s = String(v ?? '')
-    return `"${s.replaceAll('"', '""')}"`
-  }
-
-  const toIsoDate = (d: any) => {
-    if (!d) return ''
-    const date = new Date(d)
-    if (Number.isNaN(date.getTime())) return ''
-    return date.toISOString().slice(0, 10)
-  }
-
-  const toCsvNumber = (value: any) => {
-    if (value === null || value === undefined || value === '') return ''
-    const num = Number(value)
-    if (!Number.isFinite(num)) return ''
-    return String(num).replace('.', ',')
-  }
-
-  const lines = [
-    EXPORT_HEADERS.join(';'),
-    ...rows.map((v: any) => {
-      const metadata = v.metadata && typeof v.metadata === 'object' ? v.metadata : {}
-      const prixRetail = v.prixRetail ?? v.prix_retail
-      const prixResell = v.prixResell ?? v.prix_resell
-      const type = v.type ?? 'SNEAKER'
-      const profit =
-        Number.isFinite(Number(prixRetail)) && Number.isFinite(Number(prixResell))
-          ? Number(prixResell) - Number(prixRetail)
-          : ''
-
-      const row = {
-        'nom item': v.nomItem ?? v.nom_item ?? '',
-        type,
-        'type label': typeLabel(type),
-        categorie: v.categorie ?? '',
-        'prix retail': toCsvNumber(prixRetail),
-        'prix resell': toCsvNumber(prixResell),
-        profit: toCsvNumber(profit),
-        'date achat': toIsoDate(v.dateAchat ?? v.date_achat),
-        'date vente': toIsoDate(v.dateVente ?? v.date_vente),
-        description: v.description ?? '',
-        ...Object.fromEntries(
-          EXPORT_METADATA_COLUMNS.map((column) => [column.header, metadata?.[column.key] ?? '']),
-        ),
-      }
-
-      return EXPORT_HEADERS.map((h) => safe((row as any)[h])).join(';')
-    }),
-  ]
-
-  const csvContent = '\uFEFF' + lines.join('\r\n') // BOM + sauts de ligne Excel
+  const csvContent = buildStockExportCsv(rows)
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
 
@@ -240,16 +331,19 @@ function exportCsv() {
 }
 
 /* ------------------ IMPORT ------------------ */
-type CsvRow = Record<string, string>
-
 const fileInput = ref<HTMLInputElement | null>(null)
 const selectedFile = ref<File | null>(null)
 const fileName = ref('')
+const dragOver = ref(false)
 
+const parsing = ref(false)
 const importing = ref(false)
 const progress = ref(0)
 const successMsg = ref('')
 const errorMsg = ref('')
+const preview = ref<ImportPreview | null>(null)
+const parsedTable = ref<ParsedTable | null>(null)
+const mappingDraft = ref<ImportMapping>({})
 let progressTimer: number | null = null
 let progressResetTimer: number | null = null
 let papaModulePromise: Promise<typeof import('papaparse')> | null = null
@@ -274,10 +368,79 @@ const prettySize = computed(() => {
   return (f.size / (1024 * 1024)).toFixed(2) + ' Mo'
 })
 
+const canConfirmImport = computed(() => Boolean(preview.value?.payload?.length))
+const importButtonLabel = computed(() => {
+  if (!preview.value) return 'Importer'
+  return `Importer ${preview.value.validItems} item(s)`
+})
+const previewRows = computed(() => preview.value?.rows.slice(0, 12) ?? [])
+const previewErrors = computed(() =>
+  (preview.value?.rows ?? [])
+    .filter((row) => row.errors.length)
+    .slice(0, 6)
+    .map((row) => `Ligne ${row.rowNumber} : ${row.errors.join(' | ')}`),
+)
+const mappingLabels: Record<string, string> = {
+  name: 'Modele',
+  brand: 'Marque / categorie',
+  size: 'Taille',
+  retail: "Prix d'achat",
+  resell: 'Prix vente reel/estime',
+  quantity: 'Quantite',
+  condition: 'Etat',
+  sku: 'SKU',
+  dateAchat: "Date d'achat",
+  dateVente: 'Date de vente',
+  supplier: 'Fournisseur',
+  notes: 'Notes',
+  type: "Type d'item",
+  colorway: 'Coloris',
+  boxCondition: 'Etat boite',
+  metadata: 'Metadata JSON',
+}
+const mappingFields = [
+  { key: 'name', required: true },
+  { key: 'brand' },
+  { key: 'size' },
+  { key: 'retail' },
+  { key: 'resell' },
+  { key: 'quantity' },
+  { key: 'condition' },
+  { key: 'sku' },
+  { key: 'dateAchat' },
+  { key: 'dateVente' },
+  { key: 'supplier' },
+  { key: 'notes' },
+  { key: 'type' },
+  { key: 'colorway' },
+  { key: 'boxCondition' },
+  { key: 'metadata' },
+]
+const headerOptions = computed(() => preview.value?.headers ?? parsedTable.value?.headers ?? [])
+const mappingEntries = computed(() =>
+  Object.entries(preview.value?.mapping ?? {})
+    .filter(([, value]) => Boolean(value))
+    .map(([key, value]) => ({ key, label: mappingLabels[key] ?? key, value })),
+)
+
 function pickFile() {
   successMsg.value = ''
   errorMsg.value = ''
+  preview.value = null
+  parsedTable.value = null
+  mappingDraft.value = {}
+  selectedFile.value = null
+  fileName.value = ''
+  if (fileInput.value) fileInput.value.value = ''
   fileInput.value?.click()
+}
+
+function resetPreviewState() {
+  successMsg.value = ''
+  errorMsg.value = ''
+  preview.value = null
+  parsedTable.value = null
+  mappingDraft.value = {}
 }
 
 function onFilePicked(e: Event) {
@@ -285,8 +448,28 @@ function onFilePicked(e: Event) {
   const file = input.files?.[0] ?? null
   selectedFile.value = file
   fileName.value = file?.name ?? ''
-  successMsg.value = ''
-  errorMsg.value = ''
+  resetPreviewState()
+  if (file) void preparePreview(file)
+}
+
+function onDragOver() {
+  if (importing.value || parsing.value) return
+  dragOver.value = true
+}
+
+function onDragLeave() {
+  dragOver.value = false
+}
+
+function onDropFile(event: DragEvent) {
+  dragOver.value = false
+  if (importing.value || parsing.value) return
+  const file = event.dataTransfer?.files?.[0] ?? null
+  if (!file) return
+  selectedFile.value = file
+  fileName.value = file.name
+  resetPreviewState()
+  void preparePreview(file)
 }
 
 function startProgress() {
@@ -316,177 +499,6 @@ function stopProgress(finalValue = 100) {
   }, 600)
 }
 
-function normalize(s: string) {
-  return (s || '')
-    .toString()
-    .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim()
-}
-
-/** matching safe : exact puis startsWith */
-function findHeader(headers: string[], synonyms: string[]) {
-  const map = new Map<string, string>()
-  for (const h of headers) map.set(normalize(h), h)
-
-  for (const syn of synonyms) {
-    const exact = map.get(normalize(syn))
-    if (exact) return exact
-  }
-
-  for (const syn of synonyms) {
-    const ns = normalize(syn)
-    for (const [nh, orig] of map.entries()) {
-      if (nh.startsWith(ns)) return orig
-    }
-  }
-
-  return ''
-}
-
-function looksBadName(name: string) {
-  const t = (name || '').trim()
-  if (!t) return true
-  if (t.length <= 1) return true
-  if (t === '-' || t === '--') return true
-  return false
-}
-
-function toNumberSmart(v: unknown) {
-  if (v == null) return null
-  let s = String(v).trim()
-  if (!s) return null
-  s = s.replace(/\s/g, '').replace(/[€$£]/g, '')
-  if (s.includes(',') && !s.includes('.')) s = s.replace(',', '.')
-  s = s.replace(/,(?=\d{3}\b)/g, '').replace(/(?<=\d)\.(?=\d{3}\b)/g, '')
-  const n = Number(s)
-  return Number.isFinite(n) ? n : null
-}
-
-function excelSerialToIso(value: number) {
-  if (!Number.isFinite(value)) return null
-  const date = new Date(Math.round((value - 25569) * 86400 * 1000))
-  if (Number.isNaN(date.getTime())) return null
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`
-}
-
-function parseDateSmart(v: unknown) {
-  if (v == null) return null
-
-  // Excel numeric serials or numeric strings
-  if (typeof v === 'number') {
-    if (v > 30000 && v < 60000) {
-      const iso = excelSerialToIso(v)
-      if (iso) return iso
-    }
-  }
-
-  const s = String(v).trim()
-  if (!s) return null
-  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10)
-
-  // numeric string that looks like Excel serial
-  if (/^\d{4,6}(\.\d+)?$/.test(s)) {
-    const num = Number(s)
-    const iso = excelSerialToIso(num)
-    if (iso) return iso
-  }
-
-  const x = s.replace(/\./g, '/').replace(/-/g, '/')
-  const parts = x.split('/')
-  if (parts.length === 3) {
-    const [a, b, c] = parts
-    if (c.length === 4) {
-      const day = Number(a)
-      const month = Number(b)
-      const year = Number(c)
-      const d = new Date(year, month - 1, day)
-      return Number.isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10)
-    }
-  }
-
-  const d = new Date(s)
-  return Number.isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10)
-}
-
-function parseMetadata(v: unknown) {
-  if (v == null) return null
-  if (typeof v === 'object') return v as Record<string, unknown>
-  const s = String(v).trim()
-  if (!s) return null
-  try {
-    const parsed = JSON.parse(s)
-    if (parsed && typeof parsed === 'object') return parsed as Record<string, unknown>
-  } catch (e) {
-    // ignore parse error
-  }
-  return null
-}
-
-function buildMetadataFromColumns(row: CsvRow, headers: string[], typeValue: string | null) {
-  const metadata: Record<string, string> = {}
-  const normalizedType = String(typeValue || '').trim().toUpperCase()
-  const metadataFields = [
-    ...EXPORT_METADATA_COLUMNS,
-    ...Object.values(METADATA_FIELDS).flat().map((field) => ({
-      key: field.key,
-      header: field.label,
-    })),
-  ]
-
-  const allowedKeys =
-    normalizedType && METADATA_FIELDS[normalizedType as keyof typeof METADATA_FIELDS]
-      ? new Set(METADATA_FIELDS[normalizedType as keyof typeof METADATA_FIELDS].map((field) => field.key))
-      : null
-
-  for (const field of metadataFields) {
-    if (allowedKeys && !allowedKeys.has(field.key)) continue
-    const header = findHeader(headers, [field.header, field.key])
-    if (!header) continue
-    const value = String(row[header] ?? '').trim()
-    if (!value) continue
-    metadata[field.key] = value
-  }
-
-  return Object.keys(metadata).length ? metadata : null
-}
-
-type ParsedTable = { headers: string[]; rows: CsvRow[] }
-
-function isExcelFile(file: File) {
-  return (
-    file.type.includes('spreadsheet') ||
-    /\.xlsx?$/i.test(file.name || '') ||
-    file.type === 'application/vnd.ms-excel'
-  )
-}
-
-function extractTableFrom2D(rows2D: any[][]): ParsedTable {
-  // trouve la première ligne qui contient au moins 2 valeurs non vides pour servir d'en-têtes
-  const headerIndex = rows2D.findIndex((row) => (row || []).filter((c) => String(c).trim()).length >= 2)
-  if (headerIndex === -1) return { headers: [], rows: [] }
-
-  const rawHeaders = rows2D[headerIndex] || []
-  const headers = rawHeaders.map((h, idx) => {
-    const s = String(h ?? '').trim()
-    return s || `col${idx + 1}`
-  })
-
-  const dataRows = rows2D.slice(headerIndex + 1).map((r) => {
-    const obj: CsvRow = {}
-    headers.forEach((h, i) => {
-      obj[h] = (r && r[i] !== undefined ? r[i] : '') as any
-    })
-    return obj
-  })
-
-  return { headers, rows: dataRows }
-}
-
 async function parseExcel(file: File): Promise<ParsedTable> {
   const XLSX = await loadXlsx()
   const buffer = await file.arrayBuffer()
@@ -507,36 +519,39 @@ async function parseExcel(file: File): Promise<ParsedTable> {
   return extractTableFrom2D(rows2D || [])
 }
 
-async function parseCsv(file: File): Promise<ParsedTable> {
+async function parseDelimitedText(text: string): Promise<ParsedTable> {
   const Papa = await loadPapa()
+  const preferredDelimiter = detectDelimiter(text)
+  const delimiters = Array.from(new Set([preferredDelimiter, undefined, ';', '\t', ',', '|'].filter(Boolean))) as string[]
   const attempt = (delimiter?: string) =>
-    new Promise<{ headers: string[]; rows: CsvRow[] }>((resolve) => {
-      Papa.parse<CsvRow>(file, {
+    new Promise<ParsedTable>((resolve) => {
+      Papa.parse<CsvRow>(text, {
         header: true,
         skipEmptyLines: 'greedy',
         delimiter,
-        worker: true,
         complete: (res) => {
           resolve({
-            headers: (res.meta.fields ?? []) as string[],
+            headers: ((res.meta.fields ?? []) as string[]).filter((header) => String(header).trim()),
             rows: (res.data ?? []).filter(Boolean) as CsvRow[],
           })
         },
       })
     })
 
-  const auto = await attempt()
-  if (auto.headers.length >= 2) return auto
+  const attempts = await Promise.all((delimiters.length ? delimiters : [undefined]).map((delimiter) => attempt(delimiter)))
+  const best = attempts.sort((a, b) => {
+    const scoreA = a.headers.length * 100 + a.rows.length
+    const scoreB = b.headers.length * 100 + b.rows.length
+    return scoreB - scoreA
+  })[0] ?? { headers: [], rows: [] }
 
-  const semicolon = await attempt(';')
-  const best = semicolon.headers.length > auto.headers.length ? semicolon : auto
+  if (best.headers.length >= 2) return best
 
-  // fallback : reparser sans header pour récupérer la première ligne non vide comme entête
   const fallback = await new Promise<ParsedTable>((resolve) => {
-    Papa.parse<string[]>(file, {
+    Papa.parse<string[]>(text, {
       header: false,
       skipEmptyLines: 'greedy',
-      delimiter: best.headers.length ? undefined : ';',
+      delimiter: preferredDelimiter || undefined,
       complete: (res) => {
         const rows2D = res.data as any[][]
         resolve(extractTableFrom2D(rows2D || []))
@@ -547,8 +562,35 @@ async function parseCsv(file: File): Promise<ParsedTable> {
   return fallback.headers.length >= 2 ? fallback : best
 }
 
+async function parseTextContent(text: string): Promise<ParsedTable> {
+  const content = text.replace(/^\uFEFF/, '').trim()
+  if (!content) return { headers: [], rows: [] }
+
+  if (/^[\[{]/.test(content)) {
+    try {
+      const jsonTable = parseJsonContent(content)
+      if (jsonTable.headers.length >= 2) return jsonTable
+    } catch (e) {
+      // fallback to delimited parsing
+    }
+  }
+
+  const delimitedTable = await parseDelimitedText(content)
+  if (delimitedTable.headers.length >= 2) return delimitedTable
+
+  return parseLooseKeyValueText(content)
+}
+
+async function parseCsv(file: File): Promise<ParsedTable> {
+  return parseTextContent(await file.text())
+}
+
 async function parseFileSmart(file: File): Promise<ParsedTable> {
-  const table = isExcelFile(file) ? await parseExcel(file) : await parseCsv(file)
+  const table = isExcelFile(file)
+    ? await parseExcel(file)
+    : isJsonFile(file)
+      ? parseJsonContent(await file.text())
+      : await parseCsv(file)
   // si le header est vide (ex: 1re ligne vide ou colonnes fusionnées), on reprend les clés détectées
   if (table.headers.length < 2 && table.rows.length) {
     table.headers = Object.keys(table.rows[0] ?? {}).map((h) => h || '')
@@ -556,125 +598,65 @@ async function parseFileSmart(file: File): Promise<ParsedTable> {
   return table
 }
 
-function buildPayload(rows: CsvRow[], headers: string[]) {
-  const colNomItem = findHeader(headers, [
-    'nom item',
-    "nom de l'item",
-    'nom de l item',
-    'nom',
-    'item',
-    'produit',
-    'product',
-    'name',
-    'model',
-    'modele',
-  ])
+function applyPreviewFromMapping(mapping: ImportMapping) {
+  const table = parsedTable.value
+  if (!table) return
+  const analysis = analyzeImportRows(table.rows, table.headers, mapping, rowsToExport.value)
+  preview.value = analysis
+  mappingDraft.value = { ...analysis.mapping }
+  errorMsg.value = analysis.payload.length
+    ? ''
+    : analysis.rows[0]?.errors?.[0] || 'Aucune ligne valide a importer.'
+}
 
-  const colPrixRetail = findHeader(headers, [
-    'prix retail',
-    'PrixRetail',
-    'prix achat',
-    'achat',
-    'retail',
-    'buy',
-    'purchase',
-    'cost',
-  ])
+function rebuildPreviewFromMapping() {
+  applyPreviewFromMapping(mappingDraft.value)
+}
 
-  const colPrixResell = findHeader(headers, [
-    'prix resell',
-    'prix revente',
-    'prixResell',
-    'revente',
-    'resell',
-    'sell',
-    'sold',
-    'sale',
-  ])
+async function preparePreview(file: File) {
+  parsing.value = true
+  errorMsg.value = ''
+  successMsg.value = ''
+  preview.value = null
+  parsedTable.value = null
+  mappingDraft.value = {}
+  try {
+    const parsed = await parseFileSmart(file)
+    const headers = parsed.headers
+    const rows = parsed.rows
 
-  const colDateAchat = findHeader(headers, [
-    'date achat',
-    'date d achat',
-    "date d'achat",
-    'purchase date',
-    'buy date',
-    'acquired',
-    'acquisition',
-    'date',
-  ])
+    if (headers.length < 2) {
+      throw new Error('Fichier illisible : trop peu de colonnes detectees ou structure non reconnue.')
+    }
 
-  const colDateVente = findHeader(headers, [
-    'date vente',
-    'date de vente',
-    'sold date',
-    'sale date',
-    'resell date',
-  ])
-
-  const colCategorie = findHeader(headers, [
-    'categorie',
-    'category',
-    'brand',
-    'marque',
-  ])
-
-  const colDescription = findHeader(headers, [
-    'description',
-    'desc',
-    'notes',
-    'commentaire',
-    'comment',
-  ])
-  const colType = findHeader(headers, ['type'])
-  const colMetadata = findHeader(headers, ['metadata', 'meta'])
-
-  if (!colNomItem) {
-    throw new Error(
-      'Impossible de trouver la colonne du NOM (nom / item / produit / nom item). Renomme une colonne et re-essaie.',
-    )
+    parsedTable.value = { headers, rows }
+    applyPreviewFromMapping(resolveImportMapping(headers))
+  } catch (err: any) {
+    console.error(err)
+    preview.value = null
+    parsedTable.value = null
+    mappingDraft.value = {}
+    errorMsg.value =
+      err?.response?.data?.message ||
+      err?.response?.data?.error ||
+      err?.message ||
+      'Erreur analyse import'
+  } finally {
+    parsing.value = false
   }
-
-  // eviter achat=vente si meme colonne
-  const dateAchatCol = colDateAchat
-  let dateVenteCol = colDateVente
-  if (dateAchatCol && dateVenteCol && dateAchatCol === dateVenteCol) {
-    dateVenteCol = ''
-  }
-
-  const payload = rows
-    .map((r) => {
-      const nomItem = String(r[colNomItem] ?? '').trim()
-      if (looksBadName(nomItem)) return null
-
-      const typeValue = colType ? String(r[colType] ?? '').trim().toUpperCase() || null : null
-      const metadataValue =
-        (colMetadata ? parseMetadata(r[colMetadata]) : null) ||
-        buildMetadataFromColumns(r, headers, typeValue)
-
-      return {
-        nomItem,
-        prixRetail: colPrixRetail ? toNumberSmart(r[colPrixRetail]) : null,
-        prixResell: colPrixResell ? toNumberSmart(r[colPrixResell]) : null,
-        dateAchat: dateAchatCol ? parseDateSmart(r[dateAchatCol]) : null,
-        dateVente: dateVenteCol ? parseDateSmart(r[dateVenteCol]) : null,
-        categorie: colCategorie ? String(r[colCategorie] ?? '').trim() : null,
-        description: colDescription ? String(r[colDescription] ?? '').trim() : null,
-        type: typeValue,
-        metadata: metadataValue,
-      }
-    })
-    .filter(Boolean)
-
-  if (!payload.length) {
-    throw new Error('Aucune ligne importable : colonne NOM vide ou fichier mal parse.')
-  }
-
-  return payload
 }
 
 async function importNow() {
   const file = selectedFile.value
-  if (!file) return
+  if (!preview.value && file) {
+    await preparePreview(file)
+  }
+
+  const payload = preview.value?.payload ?? []
+  if (!payload.length) {
+    errorMsg.value = 'Aucune ligne valide a importer.'
+    return
+  }
 
   importing.value = true
   startProgress()
@@ -682,25 +664,19 @@ async function importNow() {
   errorMsg.value = ''
 
   try {
-    const parsed = await parseFileSmart(file)
-    const headers = parsed.headers
-    const rows = parsed.rows
-
-    if (headers.length < 2) {
-      throw new Error('CSV illisible : trop peu de colonnes detectees (mauvais separateur).')
-    }
-
-    const payload = buildPayload(rows, headers)
     const res = await SnkVenteServices.importBulk(payload)
 
     const created = res?.data?.created ?? null
     if (created === 0) throw new Error('Import fait mais 0 ligne créee.')
 
-    successMsg.value = `Import OK (${created ?? payload.length} lignes)`
+    successMsg.value = `Import OK (${created ?? payload.length} item(s))`
     emit('imported')
 
     selectedFile.value = null
     fileName.value = ''
+    preview.value = null
+    parsedTable.value = null
+    mappingDraft.value = {}
     stopProgress(100)
   } catch (err: any) {
     console.error(err)
@@ -708,7 +684,7 @@ async function importNow() {
       err?.response?.data?.message ||
       err?.response?.data?.error ||
       err?.message ||
-      'Erreur import CSV'
+      'Erreur import'
     stopProgress(0)
   } finally {
     importing.value = false

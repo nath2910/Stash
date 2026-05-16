@@ -17,6 +17,17 @@ export function normalizeText(value: unknown): string {
 }
 
 function widgetSearchIndex(item: WidgetPaletteItem): string {
+  const selectionTerms =
+    item.selection?.flatMap((group) => [
+      group.label,
+      group.hint,
+      ...(group.variants ?? []).flatMap((variant) => [
+        variant.label,
+        variant.hint,
+        variant.view,
+        variant.widgetTitle,
+      ]),
+    ]) ?? []
   return [
     item.title,
     item.help,
@@ -24,6 +35,7 @@ function widgetSearchIndex(item: WidgetPaletteItem): string {
     ...(item.tags ?? []),
     item.dataType,
     ...(item.forms ?? []),
+    ...selectionTerms,
   ]
     .map((part) => normalizeText(part))
     .join(' ')

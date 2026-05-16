@@ -1,5 +1,5 @@
 <template>
-  <VChart class="w-full h-12" :option="option" autoresize />
+  <VChart class="sparkline-chart" :option="option" autoresize />
 </template>
 
 <script setup>
@@ -23,7 +23,7 @@ const option = computed(() => {
         data: values,
         showSymbol: false,
         smooth: true,
-        lineStyle: { width: 2, color: props.color },
+        lineStyle: { width: 2.2, color: props.color },
         areaStyle: {
           color: {
             type: 'linear',
@@ -42,3 +42,11 @@ const option = computed(() => {
   }
 })
 </script>
+
+<style scoped>
+.sparkline-chart {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+</style>

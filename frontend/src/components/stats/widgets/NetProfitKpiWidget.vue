@@ -6,14 +6,14 @@
     </header>
 
     <section class="npk-main" :class="`is-${valueTone}`">
-      <p class="npk-main__label">Benefice net</p>
+      <p class="npk-main__label">{{ primaryLabel }}</p>
       <p class="npk-value">{{ valueText }}</p>
-      <div v-if="showComparison" class="npk-delta" :class="`is-${deltaTone}`">
+      <div v-if="showPrimaryComparison" class="npk-delta" :class="`is-${deltaTone}`">
         <span class="npk-delta__value">{{ deltaValueText }}</span>
         <span class="npk-delta__pct">{{ deltaPctText }}</span>
         <span class="npk-delta__meta">vs periode precedente</span>
       </div>
-      <p v-else class="npk-main__meta">Total net sur la periode</p>
+      <p v-else class="npk-main__meta">{{ primaryMeta }}</p>
     </section>
 
     <section v-if="secondaryCards.length" class="npk-secondary" :class="secondaryGridClass">
@@ -24,10 +24,6 @@
         :class="`is-${card.tone}`"
       >
         <p class="npk-card__label">{{ card.label }}</p>
-        <p></p>
-        <p></p>
-        <p></p>
-
         <p class="npk-card__value">{{ card.value }}</p>
         <p v-if="card.meta" class="npk-card__meta">{{ card.meta }}</p>
       </article>
@@ -89,6 +85,7 @@ const props = withDefaults(
     showNetMargin?: boolean
     showBestPeriod?: boolean
     secondaryLimit?: number
+    kpiVariant?: string
   }>(),
   {
     showComparison: true,
@@ -97,6 +94,7 @@ const props = withDefaults(
     showNetMargin: true,
     showBestPeriod: true,
     secondaryLimit: 4,
+    kpiVariant: 'total',
   },
 )
 
@@ -142,12 +140,41 @@ function bucketUnitLabel(bucket: Bucket, count: number) {
 }
 
 const deltaTone = computed(() => toneFromValue(props.metrics.deltaValue))
-const valueTone = computed(() => toneFromValue(props.metrics.value))
+const primaryKind = computed(() => String(props.kpiVariant ?? 'total'))
+const primaryRawValue = computed(() => {
+  if (primaryKind.value === 'avgProfit') return Number(props.metrics.avgProfitPerSale ?? 0)
+  if (primaryKind.value === 'sales') return Number(props.metrics.salesCount ?? 0)
+  return Number(props.metrics.value ?? 0)
+})
+const valueTone = computed(() =>
+  primaryKind.value === 'sales' ? 'neutral' : toneFromValue(primaryRawValue.value),
+)
 const showComparison = computed(() => props.showComparison !== false)
+const showPrimaryComparison = computed(() => showComparison.value && primaryKind.value === 'total')
+const isSalesOnly = computed(() => primaryKind.value === 'sales')
+
+const primaryLabel = computed(() => {
+  if (primaryKind.value === 'avgProfit') return 'Bénéfice moyen'
+  if (primaryKind.value === 'sales') return 'Nombre de ventes'
+  return 'Bénéfice net'
+})
 
 const valueText = computed(() => {
-  const compact = props.layout.mode !== 'large' || Math.abs(props.metrics.value) >= 1_000_000
-  return formatEUR(props.metrics.value, { compact, digits: compact ? 1 : 0 })
+  if (primaryKind.value === 'sales') {
+    return formatNumber(primaryRawValue.value, { digits: 0 })
+  }
+  const compact = props.layout.mode !== 'large' || Math.abs(primaryRawValue.value) >= 1_000_000
+  return formatEUR(primaryRawValue.value, { compact, digits: compact ? 1 : 0 })
+})
+
+const primaryMeta = computed(() => {
+  if (primaryKind.value === 'avgProfit') {
+    return props.metrics.salesCount
+      ? `${formatNumber(props.metrics.salesCount, { digits: 0 })} ventes analysees`
+      : 'Moyenne par vente'
+  }
+  if (primaryKind.value === 'sales') return 'Ventes sur la periode'
+  return 'Total net sur la periode'
 })
 
 const deltaValueText = computed(() => signedCurrency(props.metrics.deltaValue))
@@ -205,6 +232,8 @@ const worstPoint = computed<SeriesPoint | null>(() => {
 })
 
 const secondaryCards = computed<SecondaryCard[]>(() => {
+  if (isSalesOnly.value) return []
+
   const cards: SecondaryCard[] = []
 
   if (props.showNetMargin !== false && props.metrics.marginPct != null) {
@@ -217,10 +246,14 @@ const secondaryCards = computed<SecondaryCard[]>(() => {
     })
   }
 
-  if (props.showAvgProfitPerSale !== false && props.metrics.avgProfitPerSale != null) {
+  if (
+    props.showAvgProfitPerSale !== false &&
+    props.metrics.avgProfitPerSale != null &&
+    primaryKind.value !== 'avgProfit'
+  ) {
     cards.push({
       key: 'avg-profit',
-      label: 'Benefice moyen',
+      label: 'Bénéfice moyen',
       value: formatEUR(props.metrics.avgProfitPerSale, { compact: true, digits: 1 }),
       meta: props.metrics.salesCount
         ? `${formatNumber(props.metrics.salesCount, { digits: 0 })} ventes`
@@ -229,7 +262,11 @@ const secondaryCards = computed<SecondaryCard[]>(() => {
     })
   }
 
-  if (props.showSalesKpi !== false && props.metrics.salesCount != null) {
+  if (
+    props.showSalesKpi !== false &&
+    props.metrics.salesCount != null &&
+    primaryKind.value !== 'sales'
+  ) {
     cards.push({
       key: 'sales',
       label: 'Ventes',
@@ -287,10 +324,26 @@ const secondaryGridClass = computed(() => {
 const layoutClass = computed(() => ({
   'is-compact': props.layout.mode === 'compact',
   'is-tiny': props.layout.tiny,
+  'is-sales-only': isSalesOnly.value,
   'has-secondary': secondaryCards.value.length > 0,
 }))
 
 const layoutVars = computed(() => {
+  if (isSalesOnly.value) {
+    const valueSize = clamp(
+      Math.round(Math.min(props.layout.width * 0.22, props.layout.height * 0.42)),
+      34,
+      72,
+    )
+    return {
+      '--npk-gap': `${clamp(Math.round(Math.min(props.layout.width * 0.012, props.layout.height * 0.028)), 4, 7)}px`,
+      '--npk-main-size': `${valueSize}px`,
+      '--npk-label-size': `${clamp(Math.round(Math.min(props.layout.width * 0.013, props.layout.height * 0.034)), 9, 11)}px`,
+      '--npk-sub-size': `${clamp(Math.round(Math.min(props.layout.width * 0.017, props.layout.height * 0.048)), 11, 13)}px`,
+      '--npk-card-size': '13px',
+    }
+  }
+
   const mainSize = clamp(
     Math.round(Math.min(props.layout.width * 0.08, props.layout.height * 0.27)),
     24,
@@ -316,6 +369,7 @@ const layoutVars = computed(() => {
   display: grid;
   grid-template-rows: auto auto;
   gap: var(--npk-gap);
+  align-content: start;
   overflow: hidden;
 }
 
@@ -336,13 +390,13 @@ const layoutVars = computed(() => {
   text-transform: uppercase;
   letter-spacing: 0.09em;
   font-weight: 700;
-  color: rgba(148, 163, 184, 0.82);
+  color: #64748b;
 }
 
 .npk-period {
   margin: 0;
   font-size: var(--npk-sub-size);
-  color: rgba(203, 213, 225, 0.92);
+  color: #475569;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -350,25 +404,26 @@ const layoutVars = computed(() => {
 
 .npk-main {
   min-width: 0;
-  border-radius: 12px;
-  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
   background:
-    linear-gradient(180deg, rgba(15, 23, 42, 0.56), rgba(15, 23, 42, 0.44)),
-    radial-gradient(circle at 12% 0%, rgba(59, 130, 246, 0.08), transparent 55%);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(248, 250, 252, 0.7)),
+    radial-gradient(circle at 12% 0%, rgba(91, 92, 226, 0.08), transparent 55%);
   padding: 8px 10px;
   display: grid;
+  align-content: start;
   gap: 4px;
 }
 
 .npk-main.is-positive {
-  border-color: rgba(0, 210, 106, 0.45);
+  border-color: rgba(16, 185, 129, 0.28);
   background:
-    linear-gradient(180deg, rgba(15, 23, 42, 0.56), rgba(15, 23, 42, 0.44)),
-    radial-gradient(circle at 12% 0%, rgba(0, 210, 106, 0.16), transparent 58%);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(240, 253, 244, 0.68)),
+    radial-gradient(circle at 12% 0%, rgba(16, 185, 129, 0.1), transparent 58%);
 }
 
 .npk-main.is-negative {
-  border-color: rgba(225, 29, 72, 0.36);
+  border-color: rgba(225, 29, 72, 0.26);
 }
 
 .npk-main__label {
@@ -377,22 +432,22 @@ const layoutVars = computed(() => {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   font-weight: 700;
-  color: rgba(148, 163, 184, 0.82);
+  color: #64748b;
 }
 
 .npk-main__meta {
   margin: 0;
   font-size: var(--npk-label-size);
-  color: rgba(148, 163, 184, 0.88);
+  color: #64748b;
 }
 
 .npk-value {
   margin: 0;
   font-size: var(--npk-main-size);
   line-height: 0.94;
-  letter-spacing: -0.04em;
-  font-weight: 760;
-  color: rgba(248, 250, 252, 0.98);
+  letter-spacing: 0;
+  font-weight: 820;
+  color: #111827;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   overflow: hidden;
@@ -409,23 +464,23 @@ const layoutVars = computed(() => {
 .npk-delta__value {
   font-size: var(--npk-sub-size);
   font-weight: 730;
-  color: rgba(226, 232, 240, 0.96);
+  color: #334155;
 }
 
 .npk-delta__pct,
 .npk-delta__meta {
   font-size: var(--npk-label-size);
-  color: rgba(148, 163, 184, 0.92);
+  color: #64748b;
 }
 
 .npk-delta.is-positive .npk-delta__value,
 .npk-delta.is-positive .npk-delta__pct {
-  color: rgba(52, 255, 156, 0.98);
+  color: #047857;
 }
 
 .npk-delta.is-negative .npk-delta__value,
 .npk-delta.is-negative .npk-delta__pct {
-  color: rgba(251, 146, 160, 0.97);
+  color: #be123c;
 }
 
 .npk-secondary {
@@ -446,9 +501,9 @@ const layoutVars = computed(() => {
 
 .npk-card {
   min-width: 0;
-  border-radius: 10px;
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  background: rgba(15, 23, 42, 0.34);
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(248, 250, 252, 0.78);
   padding: 6px 8px;
   display: grid;
   gap: 2px;
@@ -459,16 +514,16 @@ const layoutVars = computed(() => {
   font-size: var(--npk-label-size);
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: rgba(148, 163, 184, 0.86);
+  color: #64748b;
 }
 
 .npk-card__value {
   margin: 0;
   font-size: var(--npk-card-size);
   line-height: 1;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
   font-weight: 700;
-  color: rgba(241, 245, 249, 0.97);
+  color: #111827;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -477,22 +532,58 @@ const layoutVars = computed(() => {
 .npk-card__meta {
   margin: 0;
   font-size: var(--npk-label-size);
-  color: rgba(148, 163, 184, 0.82);
+  color: #64748b;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .npk-card.is-positive .npk-card__value {
-  color: rgba(52, 255, 156, 0.97);
+  color: #047857;
 }
 
 .npk-card.is-negative .npk-card__value {
-  color: rgba(253, 164, 175, 0.96);
+  color: #be123c;
 }
 
 .npk-root.is-compact .npk-main {
   padding: 7px 9px;
+}
+
+.npk-root.is-sales-only {
+  grid-template-rows: auto auto;
+  gap: clamp(8px, calc(var(--npk-gap) * 1.4), 12px);
+}
+
+.npk-root.is-sales-only .npk-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 1px;
+}
+
+.npk-root.is-sales-only .npk-overline {
+  letter-spacing: 0.08em;
+}
+
+.npk-root.is-sales-only .npk-period {
+  max-width: 58%;
+  text-align: right;
+}
+
+.npk-root.is-sales-only .npk-main {
+  min-height: 0;
+  padding: clamp(10px, 4.2%, 16px);
+  gap: clamp(4px, 1.8%, 8px);
+}
+
+.npk-root.is-sales-only .npk-main__label {
+  letter-spacing: 0.08em;
+}
+
+.npk-root.is-sales-only .npk-main__meta {
+  font-size: var(--npk-sub-size);
 }
 
 .npk-root.is-tiny .npk-main {

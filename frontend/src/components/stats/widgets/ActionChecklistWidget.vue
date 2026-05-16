@@ -144,15 +144,15 @@ watch(() => [props.from, props.to, props.categories, props.types], load)
   grid-template-columns: auto 1fr;
   gap: 10px;
   align-items: flex-start;
-  border-radius: 12px;
-  border: 1px solid rgba(148, 163, 184, 0.22);
-  background: rgba(15, 23, 42, 0.56);
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: rgba(248, 250, 252, 0.82);
   padding: 10px;
 }
 
 .check-item.done {
-  border-color: rgba(20, 184, 166, 0.44);
-  background: rgba(15, 118, 110, 0.22);
+  border-color: rgba(20, 184, 166, 0.32);
+  background: rgba(204, 251, 241, 0.54);
 }
 
 .check-item input {
@@ -161,14 +161,13 @@ watch(() => [props.from, props.to, props.categories, props.types], load)
 
 .check-item strong {
   font-size: 13px;
-  color: rgba(248, 250, 252, 0.96);
+  color: #111827;
 }
 
 .check-item p {
   margin-top: 4px;
   font-size: 12px;
-  color: rgba(203, 213, 225, 0.84);
+  color: #64748b;
   line-height: 1.35;
 }
 </style>
-

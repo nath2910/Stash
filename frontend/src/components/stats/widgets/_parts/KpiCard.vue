@@ -11,28 +11,21 @@
     :widget-base-width="widgetBaseWidth"
     :widget-base-height="widgetBaseHeight"
   >
-    <div class="kpi-card h-full flex flex-col pb-1" :class="containerClass" :style="kpiStyle">
-      <div class="kpi-card__head flex min-w-0 items-end justify-between gap-3">
-        <div class="min-w-0">
-          <div class="kpi-card__value" :class="{ truncate: isShort }">{{ valueText }}</div>
-          <div class="kpi-card__meta-row mt-2 flex items-center gap-2 flex-wrap" :class="{ 'is-short': isShort }">
-            <span
-              v-if="deltaPct != null"
-              class="kpi-card__badge"
-              :class="deltaClass"
-            >
-              {{ deltaText }}
-            </span>
-            <span v-if="hint" class="kpi-card__hint truncate">{{ hint }}</span>
-          </div>
-        </div>
-
-        <div v-if="showSpark" class="kpi-card__spark">
-          <Sparkline :data="spark" :color="accent" />
-        </div>
+    <div
+      class="kpi-card"
+      :class="{ 'kpi-card--short': isShort, 'kpi-card--tiny': isTiny, 'has-details': hasDetails }"
+      :style="kpiStyle"
+    >
+      <span class="kpi-card__accent" aria-hidden="true"></span>
+      <div class="kpi-card__value" :class="{ truncate: isShort }">{{ valueText }}</div>
+      <div v-if="showMeta" class="kpi-card__meta">
+        <span v-if="deltaText" class="kpi-card__delta" :class="deltaToneClass">
+          {{ deltaText }}
+        </span>
+        <span v-if="hint" class="kpi-card__hint">{{ hint }}</span>
       </div>
-
-      <div v-if="showSlot" class="kpi-card__slot">
+      <Sparkline v-if="showSpark" class="kpi-card__spark" :data="spark" :color="accent" />
+      <div v-if="hasDetails" class="kpi-card__details">
         <slot />
       </div>
     </div>
@@ -40,7 +33,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, useSlots } from 'vue'
 import WidgetCard from './WidgetCard.vue'
 import Sparkline from './Sparkline.vue'
 
@@ -62,107 +55,180 @@ const props = defineProps({
   deltaClass: { type: String, default: '' },
   hint: { type: String, default: '' },
   spark: { type: Array, default: () => [] },
+  showDetails: { type: Boolean, default: true },
 })
 
+const slots = useSlots()
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
 
 const isShort = computed(() => Number(props.widgetHeight ?? 0) < 205)
-const isVeryShort = computed(() => Number(props.widgetHeight ?? 0) < 186)
-
-const deltaClass = computed(() => {
+const isTiny = computed(() => Number(props.widgetHeight ?? 0) < 155 || Number(props.widgetWidth ?? 0) < 300)
+const valueLength = computed(() => String(props.valueText ?? '').replace(/\s+/g, '').length)
+const valueScale = computed(() => {
+  const len = valueLength.value
+  if (len >= 16) return 0.56
+  if (len >= 13) return 0.66
+  if (len >= 10) return 0.82
+  return 1
+})
+const sparkValues = computed(() => (Array.isArray(props.spark) ? props.spark : []))
+const showSpark = computed(
+  () => props.showDetails !== false && sparkValues.value.length > 1 && !isTiny.value && Number(props.widgetHeight ?? 0) >= 210,
+)
+const showMeta = computed(() => Boolean(props.deltaText || props.hint) && !isTiny.value)
+const hasDetails = computed(
+  () => props.showDetails !== false && Boolean(slots.default) && !isTiny.value && Number(props.widgetHeight ?? 0) >= 230,
+)
+const deltaToneClass = computed(() => {
   if (props.deltaClass) return props.deltaClass
-  if (props.deltaPct == null) return ''
-  const up = props.deltaPct >= 0
-  return up
-    ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-300'
-    : 'border-red-400/30 bg-red-500/10 text-red-300'
+  const delta = Number(props.deltaPct ?? 0)
+  if (!Number.isFinite(delta) || delta === 0) return 'is-neutral'
+  return delta > 0 ? 'is-positive' : 'is-negative'
 })
 
-const containerClass = computed(() =>
-  [
-    props.compact ? 'justify-start gap-2.5' : 'justify-between',
-    props.widgetWidth < 460 ? 'kpi-card--narrow' : '',
-    isShort.value ? 'kpi-card--short' : '',
-  ].filter(Boolean),
-)
-const showSpark = computed(
-  () =>
-    Boolean(props.spark?.length) &&
-    Number(props.widgetWidth ?? 0) >= 380 &&
-    Number(props.widgetHeight ?? 0) >= 205,
-)
-const showSlot = computed(() => !isVeryShort.value)
-
 const kpiStyle = computed(() => {
-  const valueBase = Math.min(props.widgetWidth * 0.05, props.widgetHeight * 0.24)
-  const valueSize = clamp(Math.round(valueBase), 22, 44)
-  const metaSize = clamp(Math.round(valueSize * 0.31), 10, 14)
-  const sparkWidth = clamp(Math.round(props.widgetWidth * 0.2), 88, 170)
+  const width = Number(props.widgetWidth ?? 0) || 520
+  const height = Number(props.widgetHeight ?? 0) || 240
+  const valueBase = Math.min(width * 0.24, height * 0.48)
+  const valueSize = clamp(Math.round(valueBase * valueScale.value), 30, 64)
+  const padding = clamp(Math.round(Math.min(width * 0.024, height * 0.1)), 8, 16)
+  const topPadding = clamp(Math.round(height * 0.026), 3, 8)
+  const rowGap = clamp(Math.round(height * 0.035), 5, 9)
+  const metaSize = clamp(Math.round(Math.min(width * 0.034, height * 0.07)), 11, 13)
 
   return {
     '--kpi-value-size': `${valueSize}px`,
+    '--kpi-padding': `${padding}px`,
+    '--kpi-top-padding': `${topPadding}px`,
+    '--kpi-gap': `${rowGap}px`,
     '--kpi-meta-size': `${metaSize}px`,
-    '--kpi-spark-width': `${sparkWidth}px`,
+    '--kpi-accent': props.accent,
   }
 })
 </script>
 
 <style scoped>
 .kpi-card {
+  position: relative;
+  height: 100%;
   min-width: 0;
   min-height: 0;
+  display: grid;
+  grid-template-rows: auto auto auto auto minmax(0, auto);
+  align-content: start;
+  justify-items: center;
+  gap: var(--kpi-gap);
+  padding: var(--kpi-top-padding) var(--kpi-padding) var(--kpi-padding);
+  color: var(--template-text, #111827);
+  overflow: hidden;
 }
 
-.kpi-card__head {
-  flex: 0 0 auto;
+.kpi-card__accent {
+  position: relative;
+  display: block;
+  width: clamp(52px, 20%, 84px);
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--kpi-accent), color-mix(in srgb, var(--kpi-accent) 62%, #2563eb));
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--kpi-accent) 16%, transparent);
+  pointer-events: none;
 }
 
 .kpi-card__value {
+  max-width: 100%;
   font-size: var(--kpi-value-size);
-  line-height: 1.06;
-  font-weight: 620;
-  letter-spacing: -0.025em;
-  color: rgba(248, 250, 252, 0.96);
+  line-height: 0.96;
+  font-family: var(--template-title-font, var(--font-display, "Poppins", sans-serif));
+  font-weight: 820;
+  letter-spacing: 0;
+  color: var(--template-text, #111827);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
 }
 
-.kpi-card__meta-row.is-short {
-  margin-top: 0.36rem;
-}
-
-.kpi-card__badge {
+.kpi-card__meta {
+  max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--template-text-muted, #64748b);
   font-size: var(--kpi-meta-size);
-  padding: 0.24rem 0.52rem;
+  line-height: 1.2;
+  overflow: hidden;
+  text-align: center;
+}
+
+.kpi-card__delta,
+.kpi-card__hint {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kpi-card__delta {
+  flex: 0 1 auto;
   border-radius: 999px;
-  border: none;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(248, 250, 252, 0.76);
+  padding: 3px 7px;
+  font-weight: 760;
+}
+
+.kpi-card__delta.is-positive {
+  border-color: rgba(16, 185, 129, 0.24);
+  background: rgba(209, 250, 229, 0.62);
+  color: #047857;
+}
+
+.kpi-card__delta.is-negative {
+  border-color: rgba(244, 63, 94, 0.22);
+  background: rgba(255, 228, 230, 0.72);
+  color: #be123c;
+}
+
+.kpi-card__delta.is-neutral {
+  color: #475569;
 }
 
 .kpi-card__hint {
-  font-size: var(--kpi-meta-size);
-  color: rgba(148, 163, 184, 0.84);
+  flex: 1 1 auto;
+  color: var(--template-text-muted, #64748b);
+  font-weight: 650;
 }
 
 .kpi-card__spark {
-  width: var(--kpi-spark-width);
-  flex: 0 0 auto;
+  width: min(100%, 180px);
+  height: 38px;
+  opacity: 0.9;
 }
 
-.kpi-card__slot {
+.kpi-card__details {
+  width: 100%;
   min-width: 0;
   min-height: 0;
-  flex: 1 1 auto;
   overflow: auto;
-  padding-right: 2px;
-}
-
-.kpi-card--narrow .kpi-card__value {
-  letter-spacing: -0.02em;
-}
-
-.kpi-card--narrow .kpi-card__badge {
-  padding-inline: 0.48rem;
 }
 
 .kpi-card--short {
-  gap: 2px !important;
+  gap: max(5px, calc(var(--kpi-gap) - 1px));
+  padding-top: max(3px, calc(var(--kpi-top-padding) - 1px));
+}
+
+.kpi-card--tiny .kpi-card__accent {
+  width: min(48px, 24%);
+}
+
+.kpi-card--tiny .kpi-card__value {
+  font-weight: 780;
+}
+
+.kpi-card--tiny .kpi-card__meta,
+.kpi-card--tiny .kpi-card__spark,
+.kpi-card--tiny .kpi-card__details {
+  display: none;
 }
 </style>

@@ -109,6 +109,8 @@ const router = createRouter({
         fullBleed: true,
         allowScroll: true,
         hidePrimaryNav: true,
+        transition: 'page-canvas',
+        transitionMode: 'out-in',
       },
     },
     {

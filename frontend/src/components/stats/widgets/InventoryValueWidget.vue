@@ -94,7 +94,7 @@ const asOfLabel = computed(() => {
   justify-content: space-between;
   gap: 10px;
   padding-top: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(148, 163, 184, 0.22);
 }
 .accent-strip {
   margin-top: 10px;
@@ -107,14 +107,14 @@ const asOfLabel = computed(() => {
   font-size: 0.7rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: rgba(226, 232, 240, 0.6);
+  color: #64748b;
 }
 .asof-value {
   font-size: 0.75rem;
-  color: rgba(226, 232, 240, 0.9);
+  color: #0e7490;
   padding: 2px 8px;
   border-radius: 999px;
   border: 1px solid rgba(6, 182, 212, 0.25);
-  background: rgba(6, 182, 212, 0.08);
+  background: rgba(207, 250, 254, 0.55);
 }
 </style>

@@ -204,6 +204,10 @@ const option = computed(() => {
         trigger: 'item',
         confine: true,
         transitionDuration: 0,
+        backgroundColor: 'rgba(255,255,255,0.98)',
+        borderColor: 'rgba(148,163,184,0.32)',
+        textStyle: { color: '#0f172a', fontSize: 12, fontWeight: 600 },
+        extraCssText: 'border-radius:10px;box-shadow:0 12px 28px rgba(15,23,42,0.14);',
         formatter: ({ name, value }) => `${name}<br/>${cfg.tooltip(value)}`,
       },
       series: [
@@ -214,7 +218,7 @@ const option = computed(() => {
           breadcrumb: { show: false },
           label: { show: true, formatter: '{b}\n{c}' },
           upperLabel: { show: false },
-          itemStyle: { borderColor: 'rgba(2,6,23,0.6)', borderWidth: 2, gapWidth: 2 },
+          itemStyle: { borderColor: 'rgba(248,250,252,0.9)', borderWidth: 2, gapWidth: 2 },
           data: rows.value.map((row) => ({
             name: row.prettyLabel,
             value: row.value,
@@ -231,19 +235,23 @@ const option = computed(() => {
       tooltip: {
         trigger: 'axis',
         valueFormatter: (v) => cfg.tooltip(v),
+        backgroundColor: 'rgba(255,255,255,0.98)',
+        borderColor: 'rgba(148,163,184,0.32)',
+        textStyle: { color: '#0f172a', fontSize: 12, fontWeight: 600 },
+        extraCssText: 'border-radius:10px;box-shadow:0 12px 28px rgba(15,23,42,0.14);',
       },
       grid: { left: 92, right: 20, top: 10, bottom: 8, containLabel: true },
       xAxis: {
         type: 'value',
-        axisLabel: { color: '#9CA3AF', fontSize: 10 },
-        splitLine: { lineStyle: { color: 'rgba(148,163,184,0.15)' } },
+        axisLabel: { color: '#64748b', fontSize: 10 },
+        splitLine: { lineStyle: { color: 'rgba(148,163,184,0.18)' } },
       },
       yAxis: {
         type: 'category',
         data: labels,
-        axisLabel: { color: '#E5E7EB', fontSize: 11 },
+        axisLabel: { color: '#334155', fontSize: 11 },
         axisTick: { show: false },
-        axisLine: { lineStyle: { color: '#334155' } },
+        axisLine: { lineStyle: { color: '#cbd5e1' } },
       },
       series: [
         {
@@ -256,7 +264,7 @@ const option = computed(() => {
           label: {
             show: true,
             position: 'right',
-            color: '#E2E8F0',
+            color: '#334155',
             fontSize: 11,
             formatter: (p) => cfg.format(p.value),
           },
@@ -271,6 +279,10 @@ const option = computed(() => {
       trigger: 'item',
       confine: true,
       transitionDuration: 0,
+      backgroundColor: 'rgba(255,255,255,0.98)',
+      borderColor: 'rgba(148,163,184,0.32)',
+      textStyle: { color: '#0f172a', fontSize: 12, fontWeight: 600 },
+      extraCssText: 'border-radius:10px;box-shadow:0 12px 28px rgba(15,23,42,0.14);',
       formatter: ({ name, value, percent }) => `${name}<br/>${cfg.tooltip(value)} - ${percent}%`,
     },
     series: [
@@ -321,16 +333,16 @@ const toLabel = computed(() =>
   gap: 6px;
   padding: 6px 10px;
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: rgba(226, 232, 240, 0.78);
+  background: rgba(248, 250, 252, 0.82);
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  color: #64748b;
   font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   max-width: 100%;
 }
 .tm-chip-value {
-  color: rgba(226, 232, 240, 0.95);
+  color: #334155;
   font-size: 11px;
   letter-spacing: 0.02em;
   text-transform: none;
@@ -374,9 +386,9 @@ const toLabel = computed(() =>
   gap: 8px;
   align-items: center;
   padding: 4px 8px;
-  border-radius: 12px;
-  background: rgba(15, 23, 42, 0.45);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  background: rgba(248, 250, 252, 0.82);
+  border: 1px solid rgba(148, 163, 184, 0.22);
 }
 .tm-dot {
   width: 8px;
@@ -385,7 +397,7 @@ const toLabel = computed(() =>
 }
 .tm-name {
   font-size: 12px;
-  color: rgba(226, 232, 240, 0.92);
+  color: #111827;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -397,15 +409,15 @@ const toLabel = computed(() =>
 }
 .tm-pct {
   font-size: 11px;
-  color: rgba(226, 232, 240, 0.58);
+  color: #64748b;
 }
 .tm-val {
   font-size: 12px;
-  color: rgba(226, 232, 240, 0.86);
+  color: #334155;
 }
 .tm-empty {
   font-size: 12px;
-  color: rgba(226, 232, 240, 0.5);
+  color: #64748b;
 }
 
 .is-compact .tm-split {

@@ -27,6 +27,8 @@ const routeKey = (r) => {
 <style>
 .page-view {
   height: 100%;
+  min-width: 0;
+  min-height: 0;
 }
 
 .page-enter-active {
@@ -50,6 +52,10 @@ const routeKey = (r) => {
 .page-canvas-leave-active {
   transition: opacity 160ms ease;
   will-change: opacity;
+}
+
+.page-canvas-leave-active {
+  pointer-events: none;
 }
 
 .page-canvas-enter-from,

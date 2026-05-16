@@ -1,6 +1,6 @@
 <template>
   <KpiCard
-    title="Variance cible"
+    title="Écart à l’objectif"
     subtitle="Actuel vs objectif"
     :accent="accent"
     surface="kpi"
@@ -125,10 +125,10 @@ const statusClass = computed(() => {
 }
 
 .variance-cell {
-  border: 1px solid rgba(148, 163, 184, 0.22);
-  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 8px;
   padding: 8px;
-  background: rgba(15, 23, 42, 0.55);
+  background: rgba(248, 250, 252, 0.82);
   display: grid;
   gap: 2px;
 }
@@ -137,24 +137,23 @@ const statusClass = computed(() => {
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: rgba(203, 213, 225, 0.68);
+  color: #64748b;
 }
 
 .variance-cell strong {
   font-size: 13px;
-  color: rgba(248, 250, 252, 0.96);
+  color: #111827;
 }
 
 .variance-cell strong.is-good {
-  color: #86efac;
+  color: #047857;
 }
 
 .variance-cell strong.is-mid {
-  color: #fde047;
+  color: #b45309;
 }
 
 .variance-cell strong.is-low {
-  color: #fda4af;
+  color: #be123c;
 }
 </style>
-

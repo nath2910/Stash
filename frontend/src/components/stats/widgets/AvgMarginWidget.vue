@@ -24,25 +24,22 @@
       </div>
     </div>
 
-    <div
-      v-if="visibleTopItems.length"
-      :class="showPeriodChip ? 'mt-2.5 space-y-1' : 'mt-0.5 space-y-1'"
-    >
+    <div v-if="visibleTopItems.length" class="margin-list" :class="{ 'has-period': showPeriodChip }">
       <div
         v-for="(x, idx) in visibleTopItems"
         :key="`${x.nomItem}-${idx}`"
-        class="flex items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/30 px-3 py-1"
+        class="margin-row"
       >
-        <div class="min-w-0">
-          <p class="text-xs text-white/90 truncate">{{ x.nomItem }}</p>
-          <p class="text-[11px] text-white/45">#{{ idx + 1 }}</p>
+        <div class="margin-row__copy">
+          <p>{{ x.nomItem }}</p>
+          <span>#{{ idx + 1 }}</span>
         </div>
-        <div class="text-sm font-semibold text-emerald-300">
+        <div class="margin-row__value">
           {{ formatEUR(x.benefice, { compact: true }) }}
         </div>
       </div>
     </div>
-    <div v-else-if="!loading && !error && !topItems.length" class="mt-3 text-[11px] text-white/40">
+    <div v-else-if="!loading && !error && !topItems.length" class="margin-empty">
       Aucun article sur la periode.
     </div>
   </KpiCard>
@@ -153,15 +150,12 @@ const periodText = computed(() => {
   font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(226, 232, 240, 0.6);
+  color: #64748b;
   white-space: nowrap;
   padding: 6px 10px;
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.03),
-    0 6px 16px rgba(0, 0, 0, 0.25);
+  background: rgba(248, 250, 252, 0.82);
+  border: 1px solid rgba(148, 163, 184, 0.26);
 }
 .period-label {
   opacity: 0.7;
@@ -170,6 +164,60 @@ const periodText = computed(() => {
   font-size: 11px;
   letter-spacing: 0.02em;
   text-transform: none;
-  color: rgba(226, 232, 240, 0.9);
+  color: #334155;
+}
+
+.margin-list {
+  margin-top: 4px;
+  display: grid;
+  gap: 5px;
+}
+
+.margin-list.has-period {
+  margin-top: 10px;
+}
+
+.margin-row {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(248, 250, 252, 0.82);
+  padding: 6px 8px;
+}
+
+.margin-row__copy {
+  min-width: 0;
+}
+
+.margin-row__copy p {
+  margin: 0;
+  color: #111827;
+  font-size: 12px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.margin-row__copy span {
+  color: #64748b;
+  font-size: 11px;
+}
+
+.margin-row__value {
+  flex: 0 0 auto;
+  color: #047857;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.margin-empty {
+  margin-top: 10px;
+  color: #64748b;
+  font-size: 11px;
 }
 </style>

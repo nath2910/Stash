@@ -104,26 +104,34 @@ const deltaClass = computed(() => (deltaPct.value >= 0 ? 'is-good' : 'is-low'))
 const option = computed(() => ({
   backgroundColor: 'transparent',
   grid: { left: 40, right: 14, top: 20, bottom: 26, containLabel: true },
-  tooltip: { trigger: 'axis', confine: true, transitionDuration: 0 },
+  tooltip: {
+    trigger: 'axis',
+    confine: true,
+    transitionDuration: 0,
+    backgroundColor: 'rgba(255,255,255,0.98)',
+    borderColor: 'rgba(148,163,184,0.32)',
+    textStyle: { color: '#0f172a', fontSize: 12, fontWeight: 600 },
+    extraCssText: 'border-radius:10px;box-shadow:0 12px 28px rgba(15,23,42,0.14);',
+  },
   xAxis: {
     type: 'category',
     data: ['Precedent', 'Actuel'],
-    axisLine: { lineStyle: { color: 'rgba(148, 163, 184, 0.3)' } },
-    axisLabel: { color: 'rgba(226, 232, 240, 0.82)', fontSize: 11 },
+    axisLine: { lineStyle: { color: 'rgba(148, 163, 184, 0.32)' } },
+    axisLabel: { color: '#64748b', fontSize: 11 },
     axisTick: { show: false },
   },
   yAxis: {
     type: 'value',
-    axisLabel: { color: 'rgba(148, 163, 184, 0.85)', fontSize: 10 },
-    splitLine: { lineStyle: { color: 'rgba(148, 163, 184, 0.14)' } },
+    axisLabel: { color: '#64748b', fontSize: 10 },
+    splitLine: { lineStyle: { color: 'rgba(148, 163, 184, 0.18)' } },
   },
   series: [
     {
       type: 'bar',
       barWidth: 34,
       itemStyle: {
-        color: '#475569',
-        borderRadius: [10, 10, 0, 0],
+        color: '#cbd5e1',
+        borderRadius: [8, 8, 0, 0],
       },
       data: [previousValue.value, currentValue.value],
     },
@@ -157,9 +165,9 @@ const option = computed(() => ({
 }
 
 .comparison-kpi {
-  border: 1px solid rgba(148, 163, 184, 0.22);
-  border-radius: 11px;
-  background: rgba(15, 23, 42, 0.56);
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 8px;
+  background: rgba(248, 250, 252, 0.82);
   padding: 10px;
   display: grid;
   gap: 4px;
@@ -169,20 +177,19 @@ const option = computed(() => ({
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: rgba(203, 213, 225, 0.64);
+  color: #64748b;
 }
 
 .comparison-kpi strong {
   font-size: 16px;
-  color: rgba(248, 250, 252, 0.96);
+  color: #111827;
 }
 
 .comparison-kpi strong.is-good {
-  color: #86efac;
+  color: #047857;
 }
 
 .comparison-kpi strong.is-low {
-  color: #fda4af;
+  color: #be123c;
 }
 </style>
-

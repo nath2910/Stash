@@ -1,6 +1,6 @@
 <template>
   <KpiCard
-    title="Articles actifs"
+    title="Annonces actives"
     subtitle="Annonces en ligne"
     :accent="accent"
     surface="kpi"

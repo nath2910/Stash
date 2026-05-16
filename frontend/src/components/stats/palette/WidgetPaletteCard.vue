@@ -32,8 +32,8 @@
     </div>
 
     <div class="widget-card__foot">
-      <div class="widget-card__tags" v-if="visibleTags.length">
-        <span v-for="tag in visibleTags" :key="tag" class="widget-tag">{{ tag }}</span>
+      <div class="widget-card__views" v-if="visibleDisplays.length">
+        <span v-for="display in visibleDisplays" :key="display" class="widget-view">{{ display }}</span>
       </div>
       <span class="widget-card__cta" :aria-live="adding ? 'polite' : 'off'">
         {{ adding ? 'Ajout...' : ctaLabel }}
@@ -71,12 +71,20 @@ const cardStyle = computed(() => ({
   '--card-accent': props.accent,
 }))
 
-const visibleTags = computed(() => (props.widget.tags ?? []).slice(0, 3))
+const visibleDisplays = computed(() => {
+  const selection = props.widget.selection ?? []
+  if (selection.length) return selection.map((group) => group.label).slice(0, 3)
+  return (props.widget.forms ?? []).slice(0, 3)
+})
 
 const ctaLabel = computed(() => {
+  const variantsCount = (props.widget.selection ?? []).reduce(
+    (sum, group) => sum + (group.variants?.length ?? 0),
+    0,
+  )
   const formsCount = props.widget.forms?.length ?? 0
-  if (props.widget.formPicker === false || formsCount <= 1) return 'Ajouter'
-  return 'Choisir la vue'
+  if (props.widget.formPicker === false || Math.max(variantsCount, formsCount) <= 1) return 'Ajouter'
+  return 'Configurer'
 })
 
 function onSelect() {
@@ -121,10 +129,10 @@ defineExpose({
   min-height: 182px;
   padding: 12px;
   border-radius: 12px;
-  border: 1px solid rgba(100, 116, 139, 0.44);
+  border: 1px solid rgba(148, 163, 184, 0.32);
   background:
-    linear-gradient(180deg, rgba(214, 224, 237, 0.74), rgba(203, 213, 225, 0.72)),
-    radial-gradient(circle at 100% 0, color-mix(in srgb, var(--card-accent) 10%, transparent), transparent 58%);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(242, 247, 253, 0.9)),
+    radial-gradient(circle at 100% 0, color-mix(in srgb, var(--card-accent) 12%, transparent), transparent 58%);
   text-align: left;
   transition: border-color 140ms ease, box-shadow 150ms ease, transform 140ms ease;
   content-visibility: auto;
@@ -134,7 +142,9 @@ defineExpose({
 .widget-card:hover {
   border-color: color-mix(in srgb, var(--card-accent) 52%, rgba(100, 116, 139, 0.48));
   transform: translateY(-1px);
-  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.14);
+  box-shadow:
+    0 12px 24px rgba(15, 23, 42, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
 .widget-card:focus-visible {
@@ -207,25 +217,26 @@ defineExpose({
   align-items: center;
   gap: 10px;
   margin-top: auto;
-  border-top: 1px solid rgba(148, 163, 184, 0.4);
+  border-top: 1px solid rgba(148, 163, 184, 0.28);
   padding-top: 8px;
 }
 
-.widget-card__tags {
+.widget-card__views {
   display: flex;
   gap: 6px;
   min-width: 0;
   overflow: hidden;
 }
 
-.widget-tag {
+.widget-view {
   flex: 0 0 auto;
   padding: 3px 8px;
   border-radius: 999px;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   color: #334155;
-  background: rgba(148, 163, 184, 0.36);
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.26);
 }
 
 .widget-card__cta {

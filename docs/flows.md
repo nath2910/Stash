@@ -230,8 +230,8 @@ Exemple widget KPI:
 ---
 
 ## 12) Incertitudes et divergences fonctionnelles
-1. Certains widgets frontend (`OpexWidget`, `PlatformSplitWidget`, `ReturnRateWidget`) appellent des metriques qui ne semblent pas implementees explicitement dans les switch backend actuels.
-2. Le projet contient des traces de code legacy (`StatBase.vue`, cles de layout historiques `v1/v4`).
+1. Les widgets frontend ambigus non references ont ete retires du runtime lors du nettoyage frontend.
+2. Le projet conserve des cles de layout historiques `v1/v4` pour migration douce.
 3. Plusieurs messages/commentaires sont mal encodes, ce qui peut fausser interpretation metier.
 
 Voir details dans `docs/files/risky-zones.md`.

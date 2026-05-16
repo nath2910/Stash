@@ -81,12 +81,12 @@ onMounted(load)
 watch(() => [props.from, props.to, props.metric, props.target, props.bucket, props.categories, props.types], load)
 
 const metricLabelMap = {
-  netProfit: 'Objectif profit',
-  grossRevenue: 'Objectif revenu',
+  netProfit: 'Objectif bénéfice net',
+  grossRevenue: 'Objectif chiffre d’affaires',
   cashAvailable: 'Objectif cash',
   avgMargin: 'Objectif marge',
   roi: 'Objectif ROI',
-  sellThrough: 'Objectif ecoulement',
+  sellThrough: 'Objectif écoulement',
 }
 
 const targetValue = computed(() => Math.max(Number(props.target || 0), 0.0001))
@@ -122,8 +122,8 @@ const statusLabel = computed(() => {
   height: 12px;
   border-radius: 999px;
   overflow: hidden;
-  background: rgba(15, 23, 42, 0.72);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(226, 232, 240, 0.78);
+  border: 1px solid rgba(148, 163, 184, 0.26);
 }
 
 .goal-track__fill {
@@ -137,7 +137,7 @@ const statusLabel = computed(() => {
   top: 1px;
   bottom: 1px;
   width: 2px;
-  background: rgba(255, 255, 255, 0.86);
+  background: rgba(71, 85, 105, 0.72);
   transform: translateX(-1px);
 }
 
@@ -148,7 +148,6 @@ const statusLabel = computed(() => {
   justify-content: space-between;
   gap: 8px;
   font-size: 11px;
-  color: rgba(226, 232, 240, 0.8);
+  color: #64748b;
 }
 </style>
-

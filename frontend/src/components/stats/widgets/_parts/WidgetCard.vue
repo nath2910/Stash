@@ -42,7 +42,7 @@ const props = defineProps({
   subtitle: { type: String, default: '' },
   accent: { type: String, default: '#38BDF8' },
   surface: { type: String, default: 'generic' },
-  hideHeader: { type: Boolean, default: false },
+  hideHeader: { type: Boolean, default: true },
   loading: { type: Boolean, default: false },
   error: { type: String, default: '' },
   autoHeight: { type: Boolean, default: false },
@@ -65,16 +65,16 @@ const isTiny = computed(() => Number(props.widgetWidth ?? 0) > 0 && Number(props
 
 const cardStyle = computed(() => {
   const headerBase = Math.min(props.widgetWidth * 0.018, props.widgetHeight * 0.16)
-  const titleSize = clamp(Math.round(headerBase), 14, 30)
-  const subtitleSize = clamp(Math.round(titleSize * 0.78), 10, 20)
+  const titleSize = clamp(Math.round(headerBase), 13, 24)
+  const subtitleSize = clamp(Math.round(titleSize * 0.72), 10, 15)
   const padding = clamp(
-    Math.round(Math.min(props.widgetWidth * 0.024, props.widgetHeight * 0.1)),
-    12,
-    34,
+    Math.round(Math.min(props.widgetWidth * 0.02, props.widgetHeight * 0.08)),
+    10,
+    26,
   )
-  const dot = clamp(Math.round(titleSize * 0.62), 8, 16)
+  const dot = clamp(Math.round(titleSize * 0.48), 6, 11)
   const status = clamp(Math.round(titleSize * 0.82), 11, 20)
-  const radius = clamp(Math.round(Math.min(props.widgetWidth * 0.032, props.widgetHeight * 0.18)), 14, 24)
+  const radius = clamp(Math.round(Math.min(props.widgetWidth * 0.024, props.widgetHeight * 0.13)), 10, 18)
 
   return {
     '--widget-card-title-size': `${titleSize}px`,
@@ -94,11 +94,9 @@ const cardStyle = computed(() => {
   height: 100%;
   overflow: hidden;
   border-radius: var(--widget-card-radius);
-  border: 1px solid color-mix(in srgb, var(--template-surface-line, rgba(148, 163, 184, 0.22)) 90%, transparent);
-  background: var(--template-surface-card, linear-gradient(180deg, rgba(10, 15, 28, 0.95), rgba(7, 12, 22, 0.97)));
-  box-shadow:
-    var(--template-shadow-card, 0 8px 16px rgba(2, 6, 23, 0.16)),
-    var(--template-shadow-card-inset, inset 0 1px 0 rgba(255, 255, 255, 0.04));
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 .widget-card.is-auto {
   height: auto;
@@ -110,7 +108,7 @@ const cardStyle = computed(() => {
 .widget-card--ranking,
 .widget-card--utility,
 .widget-card--generic {
-  background: var(--template-surface-card, linear-gradient(180deg, rgba(10, 15, 28, 0.95), rgba(7, 12, 22, 0.97)));
+  background: transparent;
 }
 
 .widget-card__zoom {
@@ -130,9 +128,9 @@ const cardStyle = computed(() => {
   align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
-  margin-bottom: 10px;
-  padding-bottom: 9px;
-  border-bottom: 1px solid color-mix(in srgb, var(--template-surface-line, rgba(148, 163, 184, 0.18)) 90%, transparent);
+  margin-bottom: 8px;
+  padding-bottom: 0;
+  border-bottom: 0;
 }
 
 .widget-card__titlewrap {
@@ -175,24 +173,25 @@ const cardStyle = computed(() => {
 .widget-card__subtitle {
   font-size: var(--widget-card-subtitle-size);
   color: var(--template-text-muted, rgba(203, 213, 225, 0.78));
-  letter-spacing: 0.05em;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
-  font-weight: 700;
+  font-weight: 620;
+  opacity: 0.72;
 }
 
 .widget-card__title {
   font-size: var(--widget-card-title-size);
   line-height: 1.14;
-  font-weight: 720;
+  font-weight: 660;
   color: var(--template-text, rgba(248, 250, 252, 0.98));
-  font-family: var(--template-title-font, "Inter", sans-serif);
+  font-family: var(--template-title-font, var(--font-display, "Poppins", sans-serif));
 }
 
 .widget-card__dot {
-  width: calc(var(--widget-card-dot-size) + 6px);
-  height: 4px;
+  width: calc(var(--widget-card-dot-size) + 4px);
+  height: 3px;
   border-radius: 999px;
-  opacity: 0.9;
+  opacity: 0.68;
   box-shadow: none;
 }
 

@@ -107,9 +107,7 @@
 - `components/AuthForm.vue`: login/signup complet + OAuth buttons.
 - `components/AcceuilDernierItem.vue`: table derniers items.
 - `components/AcceuilWidgetLateral.vue`: cartes KPI laterales home.
-- `components/DateRangeBar.vue`: selecteur plage date classique.
 - `components/StatBadge.vue`: badge KPI reusable.
-- `components/StatBase.vue`: composant legacy stats ancien.
 - `components/HeaderDePage.vue`: titre/sous-titre standard pages.
 - `components/ui/CompactDateInput.vue`: input date compact custom.
 
@@ -126,6 +124,9 @@
 
 ### `utils/snkVente.js`
 - helpers metier lecture champs snake/camel + calcul profit.
+
+### `utils/stockImportExport.ts`
+- helpers purs export CSV, mapping colonnes, normalisation et validation preview import.
 
 ### `lib/echarts.js`
 - enregistrement modules ECharts utilises.

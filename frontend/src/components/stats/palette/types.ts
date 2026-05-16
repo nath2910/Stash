@@ -24,6 +24,23 @@ export interface WidgetPreviewSpec {
   legend?: string[]
 }
 
+export interface WidgetVariantOption {
+  key: string
+  label: string
+  hint?: string
+  view?: string
+  props?: Record<string, unknown>
+  widgetTitle?: string
+  badge?: string
+}
+
+export interface WidgetDisplayGroup {
+  key: string
+  label: string
+  hint?: string
+  variants: WidgetVariantOption[]
+}
+
 export interface WidgetPaletteItem {
   type: string
   title: string
@@ -31,6 +48,7 @@ export interface WidgetPaletteItem {
   icon?: unknown
   forms?: string[]
   formPicker?: boolean
+  selection?: WidgetDisplayGroup[]
   tags?: string[]
   dataType?: WidgetDataType
   preview?: WidgetPreviewSpec

@@ -14,17 +14,17 @@
     :widget-base-height="props.widgetBaseHeight"
   >
     <div ref="rootEl" class="ts-root">
-      <div ref="listEl" class="ts-list space-y-2">
+      <div ref="listEl" class="ts-list">
         <div
           v-for="(x, idx) in topSales"
           :key="idx"
-          class="flex items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/30 px-3 py-2"
+          class="ts-row"
         >
-          <div class="min-w-0">
-            <p class="text-xs text-white/90 truncate">{{ x.nomItem }}</p>
-            <p class="text-[11px] text-white/45">#{{ idx + 1 }}</p>
+          <div class="ts-row__copy">
+            <p>{{ x.nomItem }}</p>
+            <span>#{{ idx + 1 }}</span>
           </div>
-          <div class="text-sm font-semibold text-emerald-300">
+          <div class="ts-row__value">
             {{ formatEUR(x.benefice, { compact: true }) }}
           </div>
         </div>
@@ -33,14 +33,12 @@
       <div v-if="maxLimit > collapsedLimit" ref="actionsEl" class="ts-actions pt-3">
         <button
           type="button"
-          class="inline-flex items-center justify-center gap-2 rounded-full border border-emerald-400/40 bg-gradient-to-r from-emerald-500/15 via-emerald-500/5 to-transparent px-4 py-2 text-xs font-semibold uppercase tracking-wide text-emerald-200 shadow-[0_0_20px_rgba(16,185,129,0.15)] transition hover:border-emerald-300/70 hover:text-emerald-100"
+          class="ts-more"
           :aria-label="expanded ? 'Reduire la liste des top ventes' : 'Afficher plus de ventes'"
           @click="expanded = !expanded"
         >
           <span>{{ expanded ? 'Reduire la liste' : 'Voir plus' }}</span>
-          <span class="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold">
-            {{ activeLimit }}
-          </span>
+          <strong>{{ activeLimit }}</strong>
         </button>
       </div>
     </div>
@@ -220,5 +218,70 @@ onBeforeUnmount(() => {
   min-height: 0;
   overflow: auto;
   padding-right: 2px;
+  display: grid;
+  gap: 8px;
+}
+
+.ts-row {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(248, 250, 252, 0.82);
+  padding: 9px 10px;
+}
+
+.ts-row__copy {
+  min-width: 0;
+}
+
+.ts-row__copy p {
+  margin: 0;
+  color: #111827;
+  font-size: 13px;
+  font-weight: 760;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ts-row__copy span {
+  color: #64748b;
+  font-size: 11px;
+}
+
+.ts-row__value {
+  flex: 0 0 auto;
+  color: #047857;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.ts-more {
+  min-height: 34px;
+  border-radius: 999px;
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  background: rgba(209, 250, 229, 0.54);
+  color: #047857;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.ts-more strong {
+  min-width: 22px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.12);
+  padding: 2px 7px;
+  font-size: 10px;
 }
 </style>

@@ -294,12 +294,11 @@ Appels vers composable `useCanvaCamera.ts`.
 
 ## 16) Couplages externes de `StatsCanvas.vue`
 1. `WidgetFrame.vue` pour interaction widget unitaire.
-2. `CanvasDock.vue` pour commandes.
-3. `WidgetPalette.vue` pour ajout.
-4. `WidgetSettingsModal.vue` pour edition.
-5. `useCanvaCamera.ts` + `useCanvasShortcuts.ts`.
-6. `widgetRegistry.js`.
-7. `StatsServices.js` pour layout/categories/date bounds.
+2. `WidgetPalette.vue` pour ajout.
+3. `WidgetSettingsModal.vue` pour edition.
+4. `useCanvaCamera.ts` + `useCanvasShortcuts.ts`.
+5. `widgetRegistry.js`.
+6. `StatsServices.js` pour layout/categories/date bounds.
 
 ---
 

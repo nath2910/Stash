@@ -125,14 +125,14 @@ const visibleItems = computed(() => items.value.slice(0, Math.max(1, Number(prop
   display: grid;
   place-items: center;
   min-height: 160px;
-  color: rgba(203, 213, 225, 0.7);
+  color: #64748b;
   font-size: 13px;
 }
 
 .alert-card {
-  border-radius: 12px;
-  border: 1px solid rgba(148, 163, 184, 0.22);
-  background: rgba(15, 23, 42, 0.56);
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: rgba(248, 250, 252, 0.82);
   padding: 10px;
   display: grid;
   gap: 5px;
@@ -146,12 +146,12 @@ const visibleItems = computed(() => items.value.slice(0, Math.max(1, Number(prop
 
 .alert-card strong {
   font-size: 13px;
-  color: rgba(248, 250, 252, 0.96);
+  color: #111827;
 }
 
 .alert-card p {
   font-size: 12px;
-  color: rgba(203, 213, 225, 0.86);
+  color: #64748b;
   line-height: 1.35;
 }
 
@@ -164,21 +164,20 @@ const visibleItems = computed(() => items.value.slice(0, Math.max(1, Number(prop
 }
 
 .alert-card.tone-high .alert-pill {
-  color: #fecdd3;
-  border: 1px solid rgba(244, 63, 94, 0.38);
-  background: rgba(190, 24, 93, 0.22);
+  color: #be123c;
+  border: 1px solid rgba(244, 63, 94, 0.24);
+  background: rgba(255, 228, 230, 0.72);
 }
 
 .alert-card.tone-medium .alert-pill {
-  color: #fde68a;
-  border: 1px solid rgba(245, 158, 11, 0.34);
-  background: rgba(180, 83, 9, 0.24);
+  color: #b45309;
+  border: 1px solid rgba(245, 158, 11, 0.24);
+  background: rgba(254, 243, 199, 0.78);
 }
 
 .alert-card.tone-info .alert-pill {
-  color: #bae6fd;
-  border: 1px solid rgba(14, 165, 233, 0.34);
-  background: rgba(2, 132, 199, 0.2);
+  color: #0369a1;
+  border: 1px solid rgba(14, 165, 233, 0.24);
+  background: rgba(224, 242, 254, 0.78);
 }
 </style>
-

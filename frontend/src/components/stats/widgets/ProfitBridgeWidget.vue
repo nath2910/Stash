@@ -112,21 +112,25 @@ const option = computed(() => ({
     axisPointer: { type: 'shadow' },
     confine: true,
     transitionDuration: 0,
+    backgroundColor: 'rgba(255,255,255,0.98)',
+    borderColor: 'rgba(148,163,184,0.32)',
+    textStyle: { color: '#0f172a', fontSize: 12, fontWeight: 600 },
+    extraCssText: 'border-radius:10px;box-shadow:0 12px 28px rgba(15,23,42,0.14);',
   },
   xAxis: {
     type: 'category',
     data: bridgeBars.value.map((entry) => entry.label),
     axisLine: { lineStyle: { color: 'rgba(148, 163, 184, 0.35)' } },
     axisTick: { show: false },
-    axisLabel: { color: 'rgba(226, 232, 240, 0.82)', fontSize: 11 },
+    axisLabel: { color: '#64748b', fontSize: 11 },
   },
   yAxis: {
     type: 'value',
     axisLabel: {
-      color: 'rgba(148, 163, 184, 0.9)',
+      color: '#64748b',
       formatter: (value) => formatEUR(value, { compact: true, digits: 1 }),
     },
-    splitLine: { lineStyle: { color: 'rgba(148, 163, 184, 0.14)' } },
+    splitLine: { lineStyle: { color: 'rgba(148, 163, 184, 0.18)' } },
   },
   series: [
     {
@@ -143,7 +147,7 @@ const option = computed(() => ({
       label: {
         show: true,
         position: 'top',
-        color: 'rgba(226, 232, 240, 0.9)',
+        color: '#334155',
         formatter: (params) => formatEUR(params.value, { compact: true, digits: 1 }),
       },
       itemStyle: {
@@ -176,22 +180,21 @@ const option = computed(() => ({
   justify-content: space-between;
   gap: 10px;
   font-size: 11px;
-  color: rgba(226, 232, 240, 0.78);
+  color: #64748b;
 }
 
 .bridge-foot span {
-  border: 1px solid rgba(148, 163, 184, 0.22);
+  border: 1px solid rgba(148, 163, 184, 0.24);
   border-radius: 999px;
   padding: 5px 9px;
-  background: rgba(15, 23, 42, 0.56);
+  background: rgba(248, 250, 252, 0.82);
 }
 
 .bridge-foot span.is-up {
-  color: #86efac;
+  color: #047857;
 }
 
 .bridge-foot span.is-down {
-  color: #fda4af;
+  color: #be123c;
 }
 </style>
-

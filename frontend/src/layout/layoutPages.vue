@@ -5,7 +5,7 @@
     :style="layoutVars"
   >
     <!-- Header -->
-    <template v-if="!isAuthRoute">
+    <template v-if="showAppHeader">
       <!-- Header for stats: simple bar -->
       <header
         class="fixed left-0 right-0 z-50 pointer-events-none"
@@ -312,11 +312,16 @@ const isAuthRoute = computed(() =>
 )
 const showPrimaryNav = computed(() => !isAuthRoute.value && route.meta.hidePrimaryNav !== true)
 const statsTemplateModeActive = ref(false)
+const isAccountRoute = computed(() => route.name === 'account')
 const showHeaderNav = computed(() => showPrimaryNav.value && !isStats.value)
-const showHeaderUserMenu = computed(() => !isStats.value)
+const showHeaderUserMenu = computed(
+  () => showPrimaryNav.value && !isStats.value && !isAccountRoute.value,
+)
+const showAppHeader = computed(() => showHeaderNav.value || showHeaderUserMenu.value)
 const fullBleedHeaderOffsetClass = computed(() => {
   const needsOffset = route.meta.fullBleed === true && route.meta.allowScroll === true && !isAuthRoute.value
   if (!needsOffset) return ''
+  if (!showAppHeader.value) return ''
   if (showHeaderNav.value && isStats.value) return 'layout-fullbleed--with-header-stats'
   return showHeaderNav.value ? 'layout-fullbleed--with-header' : 'layout-fullbleed--with-header-compact'
 })
@@ -596,6 +601,7 @@ watch(
     if (route.path !== '/stats') statsTemplateModeActive.value = false
     closeMenus()
     notification.closeCenter()
+    notificationButtonExpanded.value = false
     detachScroll()
     await nextTick()
     attachScroll()

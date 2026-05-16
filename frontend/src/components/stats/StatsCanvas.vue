@@ -1,7 +1,11 @@
 ﻿<template>
   <div
     class="canvas-root"
-    :class="{ 'is-space-pan': spacePanActive, 'theme-light': themeMode === 'light' }"
+    :class="{
+      'is-space-pan': spacePanActive,
+      'is-route-leaving': isRouteLeaving,
+      'theme-light': themeMode === 'light',
+    }"
     :data-edit="editMode ? 'true' : 'false'"
     @pointerdown="onCanvasPointerDown"
     @wheel="onRootWheel"
@@ -114,6 +118,8 @@
           :group-selected="isGroupSelectionActive && isWidgetSelected(w.id)"
           :drag-armed="dragArmedId === w.id"
           :text-active="activeTextWidgetId === w.id"
+          :ui-active="!isRouteLeaving"
+          :settings-available="isWidgetSettingsAvailable(w)"
           :comp="getComp(w.type)"
           :from="widgetFrom(w)"
           :to="widgetTo(w)"
@@ -155,13 +161,14 @@
 
     <div
       v-if="showCanvasEmptyGuide"
-      class="canvas-empty-guide"
+      class="canvas-empty-guide panzoom-exclude"
       role="region"
       aria-label="Guide de demarrage du canvas"
       @pointerdown.stop
+      @pointerup.stop
     >
       <div class="canvas-empty-guide__glow" aria-hidden="true"></div>
-      <article class="canvas-empty-guide__card">
+      <article class="canvas-empty-guide__card panzoom-exclude" @pointerdown.stop @pointerup.stop @click.stop>
         <div class="canvas-empty-guide__kicker">Canvas libre</div>
         <h2 class="canvas-empty-guide__title">Ton dashboard est pret a etre construit</h2>
         <p class="canvas-empty-guide__lead">
@@ -202,13 +209,21 @@
         <div class="canvas-empty-guide__actions">
           <button
             type="button"
-            class="canvas-empty-guide__btn canvas-empty-guide__btn--primary"
-            @click.stop="onEmptyGuideAddWidget"
+            class="canvas-empty-guide__btn canvas-empty-guide__btn--primary panzoom-exclude"
+            @pointerdown.stop
+            @pointerup.stop.prevent="onEmptyGuideAddWidget"
+            @click.stop.prevent="onEmptyGuideAddWidget"
           >
             <PlusSquare class="h-4 w-4" />
             <span>{{ emptyGuidePrimaryActionLabel }}</span>
           </button>
-          <button type="button" class="canvas-empty-guide__btn" @click.stop="onEmptyGuideOpenTemplate">
+          <button
+            type="button"
+            class="canvas-empty-guide__btn panzoom-exclude"
+            @pointerdown.stop
+            @pointerup.stop.prevent="onEmptyGuideOpenTemplate"
+            @click.stop.prevent="onEmptyGuideOpenTemplate"
+          >
             <BarChart3 class="h-4 w-4" />
             <span>Voir les templates</span>
           </button>
@@ -219,6 +234,7 @@
 
     <!-- Palette -->
     <WidgetPalette
+      v-if="paletteOpen"
       :open="paletteOpen"
       :groups="paletteGroups"
       @close="paletteOpen = false"
@@ -227,6 +243,7 @@
 
     <!-- Settings -->
     <WidgetSettingsModal
+      v-if="settingsOpen && shouldShowWidgetSettings"
       :open="settingsOpen"
       :title="settingsTitle"
       :fields="settingsFields"
@@ -251,7 +268,7 @@
     </div>
 
     <aside
-      v-show="!fullscreenActive"
+      v-if="shouldShowStatsRail"
       class="template-rail stats-rail"
       aria-label="Navigation stats"
       @pointerdown.stop
@@ -538,11 +555,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, toRefs, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, toRefs, watch } from 'vue'
+import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import WidgetFrame from './canvas/WidgetFrame.vue'
 import TemplateEmptyLayout from './template-mode/TemplateEmptyLayout.vue'
-import AnnualDashboardTemplate from './template-mode/annual-dashboard/AnnualDashboardTemplate.vue'
 import { useCanvasCamera } from './canvas/useCanvaCamera'
 import { useCanvasShortcuts } from './canvas/useCanvasShortcuts'
 import {
@@ -558,8 +574,6 @@ import {
   Trash2,
 } from 'lucide-vue-next'
 
-import WidgetPalette from './WidgetPalette.vue'
-import WidgetSettingsModal from './WidgetSettingsModal.vue'
 import {
   WIDGET_DEFS,
   cloneWidgetProps,
@@ -567,10 +581,16 @@ import {
   getWidgetDef,
   newWidget,
 } from './widgetRegistry'
-import { getWidgetPaletteMeta } from './palette/widgetPaletteMeta'
+import { getWidgetPaletteMeta, getWidgetSelectionMeta } from './palette/widgetPaletteMeta'
 import { useTheme } from '@/composables/useTheme'
 import { useAuthStore } from '@/store/authStore'
 import StatsServices from '@/services/StatsServices'
+
+const AnnualDashboardTemplate = defineAsyncComponent(
+  () => import('./template-mode/annual-dashboard/AnnualDashboardTemplate.vue'),
+)
+const WidgetPalette = defineAsyncComponent(() => import('./WidgetPalette.vue'))
+const WidgetSettingsModal = defineAsyncComponent(() => import('./WidgetSettingsModal.vue'))
 
 type Widget = {
   id: string
@@ -624,6 +644,8 @@ const route = useRoute()
 const router = useRouter()
 const { theme } = useTheme()
 const themeMode = computed(() => (theme.value === 'light' ? 'light' : 'dark'))
+const isStatsDashboardRoute = computed(() => route.name === 'stats' || route.path.startsWith('/stats'))
+const isRouteLeaving = ref(false)
 // Chaque utilisateur a une cle de layout isolee; guest reste en stockage local.
 const userId = computed(() => user.value?.id ?? 'guest')
 
@@ -842,20 +864,20 @@ function setFrom(v: string) {
   const next = clampDate(v)
   if (!next) return
   localFrom.value = next
-  emit('update:from', next)
+  if (next !== from.value) emit('update:from', next)
   if (next > localTo.value) {
     localTo.value = next
-    emit('update:to', next)
+    if (next !== to.value) emit('update:to', next)
   }
 }
 function setTo(v: string) {
   const next = clampDate(v)
   if (!next) return
   localTo.value = next
-  emit('update:to', next)
+  if (next !== to.value) emit('update:to', next)
   if (next < localFrom.value) {
     localFrom.value = next
-    emit('update:from', next)
+    if (next !== from.value) emit('update:from', next)
   }
 }
 
@@ -872,10 +894,12 @@ function templateRouteActive(path: string) {
 
 function goTemplateRoute(path: string) {
   if (templateRouteActive(path)) return
+  resetTransientCanvasUi()
   router.push(path)
 }
 
 function goTemplateAccount() {
+  resetTransientCanvasUi()
   router.push('/compte')
 }
 
@@ -988,8 +1012,8 @@ function applyRangeFromDates(fromDate: Date, toDate: Date, closePicker = true) {
   const toSafe = nextFrom <= nextTo ? nextTo : nextFrom
   localFrom.value = fromSafe
   localTo.value = toSafe
-  emit('update:from', fromSafe)
-  emit('update:to', toSafe)
+  if (fromSafe !== from.value) emit('update:from', fromSafe)
+  if (toSafe !== to.value) emit('update:to', toSafe)
   if (closePicker) closeRailDatePicker()
 }
 
@@ -1053,6 +1077,13 @@ function minSizeFor(w: Widget) {
       h: textWidgetMinimumHeight(w),
     }
   }
+  if (
+    w.type === 'netProfit' &&
+    String(w.props?.view ?? '') === 'number' &&
+    String(w.props?.kpiVariant ?? '') === 'sales'
+  ) {
+    return { w: 220, h: 220 }
+  }
   return {
     w: def?.minSize?.w ?? MIN_W,
     h: def?.minSize?.h ?? MIN_H,
@@ -1065,6 +1096,13 @@ function maxSizeFor(w: Widget) {
       w: BOARD_W,
       h: BOARD_H,
     }
+  }
+  if (
+    w.type === 'netProfit' &&
+    String(w.props?.view ?? '') === 'number' &&
+    String(w.props?.kpiVariant ?? '') === 'sales'
+  ) {
+    return { w: 320, h: 320 }
   }
   const def = getWidgetDef(w.type)
   const baseW = Math.max(Number(def?.defaultSize?.w ?? w.w ?? MIN_W), 1)
@@ -1079,11 +1117,47 @@ function maxSizeFor(w: Widget) {
   }
 }
 
+const SQUARE_KPI_WIDGET_TYPES = new Set([
+  'activeListings',
+  'asp',
+  'avgDaysToSell',
+  'avgMargin',
+  'cashFlow',
+  'goalProgress',
+  'inventoryValue',
+  'roi',
+  'sellThrough',
+  'varianceToTarget',
+])
+
+function isSquareKpiWidget(widget: Pick<Widget, 'type' | 'props'> | null | undefined) {
+  const type = String(widget?.type ?? '')
+  if (type === 'grossRevenue' || type === 'netProfit') {
+    return String((widget as Widget | null | undefined)?.props?.view ?? 'line') !== 'line'
+  }
+  return SQUARE_KPI_WIDGET_TYPES.has(type)
+}
+
+function squareResizeSide(width: number, height: number, minW: number, minH: number, maxW: number, maxH: number) {
+  const minSide = Math.max(minW, minH)
+  const maxSide = Math.min(maxW, maxH)
+  return clamp(Math.min(width, height), minSide, maxSide)
+}
+
 function clampWidget(w: Widget) {
   const minSize = minSizeFor(w)
   const maxSize = maxSizeFor(w)
-  w.w = clamp(w.w, minSize.w, maxSize.w)
-  w.h = clamp(w.h, minSize.h, maxSize.h)
+  if (isSquareKpiWidget(w)) {
+    const minSide = Math.max(minSize.w, minSize.h)
+    const maxSide = Math.min(maxSize.w, maxSize.h)
+    const preferredSide = Math.min(Number(w.w ?? minSide), Number(w.h ?? minSide))
+    const side = clamp(preferredSide, minSide, maxSide)
+    w.w = side
+    w.h = side
+  } else {
+    w.w = clamp(w.w, minSize.w, maxSize.w)
+    w.h = clamp(w.h, minSize.h, maxSize.h)
+  }
   w.x = clamp(w.x, 0, BOARD_W - w.w)
   w.y = clamp(w.y, 0, BOARD_H - w.h)
 }
@@ -1103,6 +1177,7 @@ function shouldPreserveTextWidth(
 }
 
 const TEXT_FONT_STACKS: Record<string, string> = {
+  poppins: 'var(--font-sans, "Poppins", Arial, sans-serif)',
   'open-sans': '"Open Sans", Arial, sans-serif',
   'pt-sans': '"PT Sans", Arial, sans-serif',
   'pt-serif': '"PT Serif", Georgia, serif',
@@ -1118,8 +1193,8 @@ const TEXT_FONT_STACKS: Record<string, string> = {
 
 function textWidgetFontFamily(widget: Widget) {
   return (
-    TEXT_FONT_STACKS[String(widget.props?.fontFamily ?? 'open-sans')] ??
-    TEXT_FONT_STACKS['open-sans']
+    TEXT_FONT_STACKS[String(widget.props?.fontFamily ?? 'poppins')] ??
+    TEXT_FONT_STACKS.poppins
   )
 }
 
@@ -1510,13 +1585,31 @@ function normalizeLayout(raw: unknown): Widget[] | null {
     if (!def) continue
 
     const legacyTitles: Record<string, string> = {
+      avgDaysToSell: 'Délai moyen',
+      goalProgress: 'Goal progress',
+      grossRevenue: "Chiffre d'affaires",
+      netProfit: 'Benefice net',
+      varianceToTarget: 'Variance to target',
       sellThrough: 'Sell-through',
       deathPile: 'Death pile',
       topProfitDrivers: 'Top profit (marques/cat)',
     }
+    const legacyTitleAliases: Record<string, string[]> = {
+      avgDaysToSell: ['Delai moyen', 'Délai moyen', 'Delai moyen de vente', 'Délai moyen de vente'],
+      asp: ['ASP', 'Prix moyen (ASP)'],
+      goalProgress: ['Goal progress', 'Progression objectif'],
+      grossRevenue: ["Chiffre d'affaires", 'Chiffre d’affaires'],
+      netProfit: ['Benefice net', 'Bénéfice net'],
+      sellThrough: ["Taux d'ecoulement", 'Taux d’écoulement', 'Sell-through'],
+      varianceToTarget: ['Variance to target', 'Variance cible', "Écart à l'objectif"],
+    }
     const nextTitle = typeof (item as any)?.title === 'string' ? (item as any).title : def.title
     const normalizedTitle =
-      legacyTitles[def.type] && nextTitle === legacyTitles[def.type] ? def.title : nextTitle
+      legacyTitles[def.type] && nextTitle === legacyTitles[def.type]
+        ? def.title
+        : legacyTitleAliases[def.type]?.includes(nextTitle)
+          ? def.title
+          : nextTitle
 
     const w: Widget = {
       id:
@@ -1706,8 +1799,8 @@ function applyStoredRangeForActiveProfile() {
   if (!stored) return
   localFrom.value = stored.from
   localTo.value = stored.to
-  emit('update:from', stored.from)
-  emit('update:to', stored.to)
+  if (stored.from !== from.value) emit('update:from', stored.from)
+  if (stored.to !== to.value) emit('update:to', stored.to)
 }
 
 let saveTimer: number | null = null
@@ -1891,6 +1984,7 @@ watch(
 /* ===== Widget registry ===== */
 const paletteOpen = ref(false)
 const fullscreenActive = ref(false)
+const shouldShowStatsRail = computed(() => !fullscreenActive.value && !isRouteLeaving.value)
 const isCanvasEffectivelyEmpty = computed(
   () => widgets.value.length === 0 || (widgets.value.length === 1 && widgets.value[0]?.id === 'textBlock_welcome'),
 )
@@ -1934,6 +2028,7 @@ const paletteGroups = computed(() => {
       help: w.help ?? 'Ajoute ce widget au canvas',
       forms: w.forms ?? [],
       formPicker: w.formPicker !== false,
+      selection: getWidgetSelectionMeta(w.type, w.forms ?? []),
       tags: meta.tags,
       dataType: meta.dataType,
       preview: meta.preview,
@@ -2311,6 +2406,9 @@ const settingsDef = computed(() =>
 const settingsTitle = computed(() => settingsWidget.value?.title ?? 'Reglages')
 const SIMPLE_TEXT_SETTINGS = new Set(['content', 'fontSize', 'align', 'color'])
 const SIMPLE_COMMON_HIDDEN_SETTINGS = new Set(['types'])
+const isWidgetInEditMode = computed(
+  () => isStatsDashboardRoute.value && editMode.value && !templateActive.value && !isRouteLeaving.value,
+)
 
 function simplifySettingsFields(widget: Widget | null, fields: Array<Record<string, unknown>>) {
   if (!widget) return fields
@@ -2320,8 +2418,15 @@ function simplifySettingsFields(widget: Widget | null, fields: Array<Record<stri
   return fields.filter((field) => !SIMPLE_COMMON_HIDDEN_SETTINGS.has(String(field?.key ?? '')))
 }
 
-const settingsFields = computed(() => {
-  const def = settingsDef.value
+function isWidgetEditable(widget: Widget | null | undefined) {
+  return Boolean(widget && isWidgetInEditMode.value)
+}
+
+function buildSettingsFieldsForWidget(
+  widget: Widget | null | undefined,
+  def: Record<string, any> | null | undefined,
+) {
+  if (!widget || !def) return []
   const base = def?.settings ?? []
   const hideRange = def?.hideGlobalRange === true
 
@@ -2376,8 +2481,30 @@ const settingsFields = computed(() => {
     ...mappedBase,
   ]
 
-  return simplifySettingsFields(settingsWidget.value, rawFields)
+  return simplifySettingsFields(widget, rawFields)
+}
+
+function isWidgetSettingsAvailable(widget: Widget | null | undefined) {
+  if (!widget) return false
+  const def = getWidgetDef(widget.type)
+  return buildSettingsFieldsForWidget(widget, def).length > 0
+}
+
+const availableWidgetActions = computed(() => {
+  const widget = settingsWidget.value
+  if (!isWidgetEditable(widget)) return []
+  const actions = ['duplicate', 'remove']
+  if (isWidgetSettingsAvailable(widget)) actions.splice(1, 0, 'settings')
+  return actions
 })
+
+const shouldShowWidgetSettings = computed(
+  () => isWidgetEditable(settingsWidget.value) && isWidgetSettingsAvailable(settingsWidget.value),
+)
+
+const settingsFields = computed(() =>
+  buildSettingsFieldsForWidget(settingsWidget.value, settingsDef.value),
+)
 const settingsModel = computed(() => {
   const base = settingsWidget.value?.props ?? {}
   const categories =
@@ -2404,6 +2531,7 @@ const settingsModel = computed(() => {
 })
 
 function openSettings(w: Widget) {
+  if (!isWidgetEditable(w) || !isWidgetSettingsAvailable(w)) return
   settingsWidgetId.value = w.id
   settingsOpen.value = true
   if (widgetNeedsCategoryFilter(w)) {
@@ -2415,6 +2543,10 @@ function closeSettings() {
   settingsOpen.value = false
   settingsWidgetId.value = null
 }
+
+watch(shouldShowWidgetSettings, (visible) => {
+  if (!visible && settingsOpen.value) closeSettings()
+})
 
 const {
   shortcutHelpOpen,
@@ -2649,6 +2781,14 @@ function applySettings(newModel: Record<string, unknown>) {
     }
   }
   w.props = next
+  if (!isTextWidget(w)) {
+    const prevView = String(prevProps.view ?? '')
+    const nextView = String((next as any).view ?? '')
+    if (nextView && nextView !== prevView) {
+      applyWidgetVariantSize(w, nextView)
+    }
+    clampWidget(w)
+  }
   const shouldFitText = isTextWidget(w) && textLayoutChanged(prevProps, next)
   closeSettings()
   if (shouldFitText) {
@@ -2677,10 +2817,16 @@ function updateTextWidgetProps(id: string, patch: Record<string, unknown>) {
 function updateWidgetProps(id: string, patch: Record<string, unknown>) {
   const w = getWidgetById(id)
   if (!w || !patch || typeof patch !== 'object') return
+  const prevView = String(w.props?.view ?? '')
   w.props = {
     ...(w.props ?? {}),
     ...patch,
   }
+  const nextView = String(w.props?.view ?? '')
+  if (nextView && nextView !== prevView) {
+    applyWidgetVariantSize(w, nextView)
+  }
+  clampWidget(w)
   scheduleSave()
 }
 
@@ -2704,31 +2850,12 @@ const railDateButtonRef = ref<HTMLElement | null>(null)
 const railDatePanelRef = ref<HTMLElement | null>(null)
 const visibleRect = ref<{ left: number; top: number; right: number; bottom: number } | null>(null)
 let visibleRectRaf: number | null = null
-const cameraInteracting = ref(false)
-const CAMERA_IDLE_DELAY_MS = 160
-let cameraInteractionTimer: number | null = null
 
 function clearVisibleRectRaf() {
   if (visibleRectRaf != null) {
     cancelAnimationFrame(visibleRectRaf)
     visibleRectRaf = null
   }
-}
-
-function clearCameraInteractionTimer() {
-  if (cameraInteractionTimer != null) {
-    window.clearTimeout(cameraInteractionTimer)
-    cameraInteractionTimer = null
-  }
-}
-
-function markCameraInteracting() {
-  cameraInteracting.value = true
-  clearCameraInteractionTimer()
-  cameraInteractionTimer = window.setTimeout(() => {
-    cameraInteracting.value = false
-    cameraInteractionTimer = null
-  }, CAMERA_IDLE_DELAY_MS)
 }
 
 function updateVisibleRectNow() {
@@ -2859,34 +2986,30 @@ function widgetsBounds() {
 }
 
 function centerView() {
-  markCameraInteracting()
   fitToWidgets(80, true)
   scheduleVisibleRectUpdate()
 }
 
 function zoomIn() {
-  markCameraInteracting()
   camera.zoomIn()
   scheduleVisibleRectUpdate()
 }
 function zoomOut() {
-  markCameraInteracting()
   camera.zoomOut()
   scheduleVisibleRectUpdate()
 }
 function resetZoom() {
-  markCameraInteracting()
   fitToWidgets(120, true)
   scheduleVisibleRectUpdate()
 }
 function zoomToFitContent() {
-  markCameraInteracting()
   fitToWidgets(80, true)
   scheduleVisibleRectUpdate()
 }
 
 /* ===== Drag ===== */
 const widgetEls = new Map<string, HTMLElement>()
+const widgetInstances = new Map<string, any>()
 type SnapAnchor = 'start' | 'center' | 'end'
 type SnapAxis = 'x' | 'y'
 type ViewProjection = {
@@ -3061,7 +3184,6 @@ function widgetIntersectsVisibleRect(
 }
 
 const visibleWidgets = computed(() => {
-  if (cameraInteracting.value) return widgets.value
   const rect = visibleRect.value
   if (!rect) return widgets.value
 
@@ -3084,8 +3206,10 @@ function setWidgetRef(id: string, c: any) {
   // les phases de montage/teleport et de casser le drag.
   if (c == null) {
     widgetEls.delete(id)
+    widgetInstances.delete(id)
     return
   }
+  widgetInstances.set(id, c)
   const el = (c?.root?.value ?? c?.$el ?? null) as any
   if (el && el.nodeType === 1 && el.classList) {
     const nextEl = el as HTMLElement
@@ -4718,6 +4842,7 @@ function applyResizePointerMove(event: PointerEvent) {
   }
 
   state.previewFontSize = null
+  const squareResize = isSquareKpiWidget(w)
   let nextW = state.originW
   let nextH = state.originH
 
@@ -4786,9 +4911,15 @@ function applyResizePointerMove(event: PointerEvent) {
     nextH = clamp(nextH, minH, stateMaxH)
   }
 
+  if (squareResize) {
+    const side = squareResizeSide(nextW, nextH, minW, minH, stateMaxW, stateMaxH)
+    nextW = side
+    nextH = side
+  }
+
   let nextX = state.originX
   let nextY = state.originY
-  const smartSnap = shouldUseSmartSnap(event) && !fromCenter
+  const smartSnap = !squareResize && shouldUseSmartSnap(event) && !fromCenter
   let guideX: number | null = null
   let guideY: number | null = null
 
@@ -4877,6 +5008,11 @@ function applyResizePointerMove(event: PointerEvent) {
 
     nextW = clamp(nextW, minW, stateMaxW)
     nextH = clamp(nextH, minH, stateMaxH)
+    if (squareResize) {
+      const side = squareResizeSide(nextW, nextH, minW, minH, stateMaxW, stateMaxH)
+      nextW = side
+      nextH = side
+    }
     nextX = clamp(nextX, 0, BOARD_W - nextW)
     nextY = clamp(nextY, 0, BOARD_H - nextH)
   }
@@ -4931,8 +5067,13 @@ function finishResize(id: string) {
     (state.dir.includes('e') || state.dir.includes('w')) &&
     (state.dir.includes('n') || state.dir.includes('s'))
   const fineSnap = true
-  const snappedW = clamp(fineSnap ? Math.round(state.w) : snap(state.w), state.minW, state.maxW)
-  const snappedH = clamp(fineSnap ? Math.round(state.h) : snap(state.h), state.minH, state.maxH)
+  let snappedW = clamp(fineSnap ? Math.round(state.w) : snap(state.w), state.minW, state.maxW)
+  let snappedH = clamp(fineSnap ? Math.round(state.h) : snap(state.h), state.minH, state.maxH)
+  if (isSquareKpiWidget(w)) {
+    const side = squareResizeSide(snappedW, snappedH, state.minW, state.minH, state.maxW, state.maxH)
+    snappedW = side
+    snappedH = side
+  }
   const snappedX = clamp(fineSnap ? Math.round(state.x) : snap(state.x), 0, BOARD_W - snappedW)
   const snappedY = clamp(fineSnap ? Math.round(state.y) : snap(state.y), 0, BOARD_H - snappedH)
 
@@ -5124,6 +5265,52 @@ function detachAllInteract() {
   setCanvasPanEnabled(true)
 }
 
+function exitFullscreenWidgets() {
+  widgetInstances.forEach((instance) => {
+    if (typeof instance?.exitFullscreen === 'function') {
+      instance.exitFullscreen()
+    }
+  })
+  fullscreenActive.value = false
+  document.body.classList.remove('widget-fullscreen-open')
+}
+
+function blurCanvasFocus() {
+  const active = document.activeElement as HTMLElement | null
+  if (!active) return
+  if (
+    active.closest(
+      '.canvas-root, .widget, .template-picker-modal, .shortcut-modal, .profile-modal, .form-overlay',
+    )
+  ) {
+    active.blur()
+  }
+}
+
+function resetTransientCanvasUi() {
+  templatePickerOpen.value = false
+  paletteOpen.value = false
+  closeSettings()
+  closeRailDatePicker()
+  profileEditorOpen.value = false
+  shortcutHelpOpen.value = false
+  showSaveToast.value = false
+  if (toastTimer) {
+    window.clearTimeout(toastTimer)
+    toastTimer = null
+  }
+  exitFullscreenWidgets()
+  setSpacePanState(false)
+  dragArmedId.value = null
+  activeTextWidgetId.value = null
+  marqueeSelection.value = null
+  clearSelection()
+  setSnapGuides(null, null)
+  clearDragAssist()
+  detachAllInteract()
+  blurCanvasFocus()
+}
+
 watch(
   editMode,
   async (enabled) => {
@@ -5157,6 +5344,14 @@ watch(
       setSpacePanState(false)
       closeRailDatePicker()
     }
+  },
+)
+
+watch(
+  () => route.fullPath,
+  () => {
+    closeSettings()
+    closeRailDatePicker()
   },
 )
 
@@ -5368,12 +5563,43 @@ function resetLayout() {
   })
 }
 
-function addWidget(payload: string | { type: string; view?: string }) {
+function applyWidgetVariantSize(widget: Widget, view?: string) {
+  if (widget.type !== 'grossRevenue' && widget.type !== 'netProfit') return
+  if (widget.type === 'netProfit') {
+    if (view === 'number') {
+      const isSalesKpi = String(widget.props?.kpiVariant ?? '') === 'sales'
+      widget.w = isSalesKpi ? 240 : 300
+      widget.h = isSalesKpi ? 240 : 300
+      return
+    }
+    if (view === 'line') {
+      widget.w = 760
+      widget.h = 360
+    }
+    return
+  }
+  if (view === 'number') {
+    widget.w = 240
+    widget.h = 240
+    return
+  }
+  if (view === 'line') {
+    widget.w = 720
+    widget.h = 320
+  }
+}
+
+function addWidget(payload: string | { type: string; view?: string; props?: Record<string, unknown>; title?: string }) {
   if (!editMode.value) return
   paletteOpen.value = false
 
   const type = typeof payload === 'string' ? payload : payload?.type
   const view = typeof payload === 'string' ? undefined : payload?.view
+  const payloadProps =
+    typeof payload === 'string' || !payload?.props || typeof payload.props !== 'object'
+      ? {}
+      : payload.props
+  const title = typeof payload === 'string' ? undefined : payload?.title
 
   let w: Widget
   try {
@@ -5383,6 +5609,16 @@ function addWidget(payload: string | { type: string; view?: string }) {
     return
   }
 
+  if (Object.keys(payloadProps).length || view) {
+    w.props = { ...(w.props ?? {}), ...payloadProps }
+    if (view) w.props.view = view
+    applyWidgetVariantSize(w, String(w.props.view ?? view ?? ''))
+  }
+
+  if (title) {
+    w.title = title
+  }
+
   const p = camera.boardPointFromViewportCenter()
   const placed = placeWidget(w, p.x, p.y)
   w.x = placed.x
@@ -5390,13 +5626,8 @@ function addWidget(payload: string | { type: string; view?: string }) {
   w.z = ++zTop
   clampWidget(w)
 
-  if (view) {
-    w.props = { ...(w.props ?? {}), view }
-  }
-
   if (isTextWidget(w)) {
-    const textDefaultColor = themeMode.value === 'light' ? '#000000' : '#f8fafc'
-    w.props = { ...(w.props ?? {}), color: textDefaultColor }
+    w.props = { ...(w.props ?? {}), color: '#111827' }
     fitWidgetToContent(w)
   }
 
@@ -5470,6 +5701,11 @@ function onSelectionKeyDown(event: KeyboardEvent) {
   openSettings(selectedWidget)
 }
 
+onBeforeRouteLeave(() => {
+  isRouteLeaving.value = true
+  resetTransientCanvasUi()
+})
+
 /* ===== Lifecycle ===== */
 onMounted(async () => {
   const initCanvasCamera = () => {
@@ -5511,7 +5747,6 @@ onMounted(async () => {
   const board = boardEl.value
   if (board) {
     const onPanzoomChange = () => {
-      markCameraInteracting()
       scheduleVisibleRectUpdate()
     }
     board.addEventListener('panzoomchange', onPanzoomChange as EventListener)
@@ -5567,6 +5802,8 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  isRouteLeaving.value = true
+  resetTransientCanvasUi()
   window.dispatchEvent(
     new CustomEvent('snk:stats-template-mode', {
       detail: { active: false },
@@ -5574,7 +5811,6 @@ onBeforeUnmount(() => {
   )
   setSpacePanState(false)
   clearVisibleRectRaf()
-  clearCameraInteractionTimer()
   window.removeEventListener('keydown', onCanvasKeyDown, true)
   window.removeEventListener('keydown', onSelectionKeyDown, true)
   window.removeEventListener('keyup', onCanvasKeyUp, true)
@@ -5604,8 +5840,8 @@ function switchProfile(profileId: string) {
   if (nextRange) {
     localFrom.value = nextRange.from
     localTo.value = nextRange.to
-    emit('update:from', nextRange.from)
-    emit('update:to', nextRange.to)
+    if (nextRange.from !== from.value) emit('update:from', nextRange.from)
+    if (nextRange.to !== to.value) emit('update:to', nextRange.to)
   }
   nextTick(() => {
     if (!templateActive.value) {

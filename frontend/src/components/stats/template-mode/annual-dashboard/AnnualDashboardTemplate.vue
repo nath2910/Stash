@@ -213,7 +213,7 @@
                       <span>{{ dashboard.topProducts.length }} ventes</span>
                     </div>
 
-                    <div v-if="topProductsPreview.length" ref="topProductsTableRef" class="annual-table-scroll">
+                    <div v-if="topProductsPreview.length" class="annual-table-scroll">
                       <table class="annual-table annual-table--products">
                         <thead>
                           <tr>
@@ -255,7 +255,7 @@
                       <span>Au {{ formatDate(dashboard.asOf) }}</span>
                     </div>
 
-                    <div v-if="inventoryPreview.length" ref="inventoryTableRef" class="annual-table-scroll">
+                    <div v-if="inventoryPreview.length" class="annual-table-scroll">
                       <table class="annual-table annual-table--inventory">
                         <thead>
                           <tr>
@@ -296,7 +296,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
   BadgeEuro,
   Boxes,
@@ -409,10 +409,7 @@ const dashboard = ref<AnnualDashboard | null>(null)
 const loading = ref(false)
 const error = ref('')
 const activePage = ref(1)
-const topProductsTableRef = ref<HTMLElement | null>(null)
-const inventoryTableRef = ref<HTMLElement | null>(null)
-const topProductsRowLimit = ref(5)
-const inventoryRowLimit = ref(5)
+const DETAILS_ROW_LIMIT = 20
 const pointerDrag = ref({
   active: false,
   pointerId: -1,
@@ -422,8 +419,6 @@ const pointerDrag = ref({
 })
 let requestId = 0
 let lastWheelPageChangeAt = 0
-let detailsResizeObserver: ResizeObserver | null = null
-let detailsResizeRaf: number | null = null
 
 const pages = [
   { key: 'flow', label: 'Flux & categories' },
@@ -490,8 +485,8 @@ const currentPage = computed(() => pages[activePage.value] ?? pages[1])
 const pageTrackStyle = computed(() => ({
   transform: `translate3d(-${activePage.value * 100}%, 0, 0)`,
 }))
-const topProductsPreview = computed(() => dashboard.value?.topProducts.slice(0, topProductsRowLimit.value) ?? [])
-const inventoryPreview = computed(() => dashboard.value?.inventoryAging.slice(0, inventoryRowLimit.value) ?? [])
+const topProductsPreview = computed(() => dashboard.value?.topProducts.slice(0, DETAILS_ROW_LIMIT) ?? [])
+const inventoryPreview = computed(() => dashboard.value?.inventoryAging.slice(0, DETAILS_ROW_LIMIT) ?? [])
 const resellerSignals = computed(() => {
   const oldStock = (dashboard.value?.inventoryAging ?? []).filter((item) => Number(item.ageInDays || 0) >= 120)
   const cashNet = summary.value.revenue - summary.value.purchaseSpend
@@ -943,53 +938,6 @@ function onKeyDown(event: KeyboardEvent) {
   }
 }
 
-function getMeasuredHeight(element: Element | null, fallback: number) {
-  if (!(element instanceof HTMLElement)) return fallback
-  const height = element.getBoundingClientRect().height
-  return height > 0 ? height : fallback
-}
-
-function computeDetailsRowLimit(container: HTMLElement | null) {
-  if (!container) return 5
-  const containerHeight = container.getBoundingClientRect().height || container.clientHeight
-  if (!containerHeight) return 5
-
-  const headerHeight = getMeasuredHeight(container.querySelector('thead'), 38)
-  const firstRowHeight = getMeasuredHeight(container.querySelector('tbody tr'), 58)
-  const availableRowsHeight = containerHeight - headerHeight - 4
-  return Math.max(3, Math.min(8, Math.floor(availableRowsHeight / firstRowHeight)))
-}
-
-function updateDetailsRowLimits() {
-  topProductsRowLimit.value = computeDetailsRowLimit(topProductsTableRef.value)
-  inventoryRowLimit.value = computeDetailsRowLimit(inventoryTableRef.value)
-}
-
-function scheduleDetailsRowLimitUpdate() {
-  if (detailsResizeRaf != null) return
-  detailsResizeRaf = requestAnimationFrame(() => {
-    detailsResizeRaf = null
-    updateDetailsRowLimits()
-  })
-}
-
-function bindDetailsResizeObserver() {
-  detailsResizeObserver?.disconnect()
-  detailsResizeObserver = null
-
-  const targets = [topProductsTableRef.value, inventoryTableRef.value].filter(Boolean) as HTMLElement[]
-  if (!targets.length) return
-
-  if (typeof ResizeObserver === 'undefined') {
-    updateDetailsRowLimits()
-    return
-  }
-
-  detailsResizeObserver = new ResizeObserver(() => scheduleDetailsRowLimitUpdate())
-  targets.forEach((target) => detailsResizeObserver?.observe(target))
-  updateDetailsRowLimits()
-}
-
 async function loadDashboard() {
   const id = ++requestId
   loading.value = true
@@ -1027,25 +975,14 @@ watch(selectedYear, () => {
   loadDashboard()
 })
 
-watch([topProductsTableRef, inventoryTableRef], () => {
-  nextTick(() => bindDetailsResizeObserver())
-})
-
 onMounted(async () => {
   window.addEventListener('keydown', onKeyDown)
   await loadYearBounds()
   await loadDashboard()
-  await nextTick()
-  bindDetailsResizeObserver()
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeyDown)
-  detailsResizeObserver?.disconnect()
-  if (detailsResizeRaf != null) {
-    cancelAnimationFrame(detailsResizeRaf)
-    detailsResizeRaf = null
-  }
 })
 </script>
 
@@ -1082,16 +1019,15 @@ onBeforeUnmount(() => {
 
 .annual-dashboard__inner {
   width: min(1480px, 100%);
-  height: 100%;
+  min-height: 100%;
   min-width: 0;
-  min-height: 0;
   margin: 0 auto;
   padding: clamp(14px, 1.8vw, 24px) clamp(14px, 2.2vw, 28px) clamp(16px, 2vw, 24px)
     calc(96px + clamp(14px, 2.2vw, 28px));
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto;
   gap: var(--annual-template-gap);
-  align-content: stretch;
+  align-content: start;
 }
 
 .annual-header {
@@ -1300,7 +1236,7 @@ onBeforeUnmount(() => {
 .annual-stage {
   min-width: 0;
   min-height: 0;
-  height: 100%;
+  height: auto;
   overflow: hidden;
   overscroll-behavior: contain;
   overscroll-behavior-x: none;
@@ -1319,7 +1255,7 @@ onBeforeUnmount(() => {
 }
 
 .annual-pages {
-  height: 100%;
+  height: auto;
   min-height: 0;
   display: flex;
   transition:
@@ -1333,11 +1269,12 @@ onBeforeUnmount(() => {
   width: 100%;
   min-width: 0;
   min-height: 0;
-  height: 100%;
+  height: auto;
   padding: 2px;
   display: grid;
   gap: 12px;
-  overflow: hidden;
+  overflow: visible;
+  align-content: start;
 }
 
 .annual-page--side {
@@ -1345,13 +1282,14 @@ onBeforeUnmount(() => {
 }
 
 .annual-page--main {
-  grid-template-rows: auto minmax(0, 1fr);
-  align-content: stretch;
+  grid-template-rows: auto auto;
+  align-content: start;
   gap: 12px;
 }
 
 .annual-page--details {
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-content: start;
   gap: 10px;
 }
 
@@ -1450,7 +1388,7 @@ onBeforeUnmount(() => {
 .annual-panel {
   min-width: 0;
   min-height: 0;
-  height: 100%;
+  height: auto;
   border: 1px solid rgba(148, 163, 184, 0.28);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.9);
@@ -1506,7 +1444,7 @@ onBeforeUnmount(() => {
 .annual-panel--main-chart {
   padding: 12px;
   gap: 10px;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
 }
 
 .annual-panel--main-chart .annual-panel__head {
@@ -1544,10 +1482,11 @@ onBeforeUnmount(() => {
 .annual-action-grid {
   min-width: 0;
   min-height: 0;
-  height: 100%;
+  height: auto;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  grid-auto-rows: minmax(0, 1fr);
+  grid-auto-rows: auto;
+  align-items: start;
   gap: 9px;
 }
 
@@ -1560,7 +1499,7 @@ onBeforeUnmount(() => {
     radial-gradient(circle at top right, rgba(99, 102, 241, 0.08), transparent 36%);
   padding: 10px;
   display: grid;
-  grid-template-rows: auto auto auto 1fr;
+  grid-template-rows: auto auto auto auto;
   align-content: start;
   gap: 6px;
 }
@@ -1640,26 +1579,32 @@ onBeforeUnmount(() => {
 .annual-page-grid {
   min-width: 0;
   min-height: 0;
-  height: 100%;
+  height: auto;
   display: grid;
   gap: 14px;
+  align-items: start;
 }
 
 .annual-page-grid--two {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.annual-page-grid--two .annual-panel {
+  min-height: clamp(300px, 34vh, 430px);
+}
+
 .annual-table-grid {
   min-width: 0;
   min-height: 0;
-  height: 100%;
+  height: auto;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
+  align-items: start;
 }
 
 .annual-table-card {
-  align-content: stretch;
+  align-content: start;
   overflow: hidden;
 }
 
@@ -1689,9 +1634,26 @@ onBeforeUnmount(() => {
 .annual-table-scroll {
   min-width: 0;
   min-height: 0;
-  height: 100%;
-  overflow: hidden;
-  scrollbar-width: none;
+  height: auto;
+  max-height: clamp(260px, 38vh, 430px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(91, 92, 226, 0.32) rgba(226, 232, 240, 0.58);
+}
+
+.annual-table-scroll::-webkit-scrollbar {
+  width: 7px;
+}
+
+.annual-table-scroll::-webkit-scrollbar-track {
+  background: rgba(226, 232, 240, 0.58);
+}
+
+.annual-table-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(91, 92, 226, 0.34);
 }
 
 .annual-table {
@@ -1702,7 +1664,11 @@ onBeforeUnmount(() => {
 }
 
 .annual-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   color: #64748b;
+  background: rgba(255, 255, 255, 0.96);
   font-size: 0.7rem;
   font-weight: 780;
   letter-spacing: 0.08em;
@@ -1850,8 +1816,8 @@ onBeforeUnmount(() => {
 }
 
 .annual-mini-empty {
-  min-height: clamp(180px, 24vh, 280px);
-  height: 100%;
+  min-height: clamp(130px, 18vh, 220px);
+  height: auto;
   border: 1px dashed rgba(148, 163, 184, 0.34);
   border-radius: 8px;
   background: #f8fafc;
@@ -1887,11 +1853,11 @@ onBeforeUnmount(() => {
   }
 
   .annual-page-grid--two {
-    grid-template-rows: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(2, auto);
   }
 
   .annual-page--details .annual-table-grid {
-    grid-template-rows: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(2, auto);
   }
 
   .annual-insights {
@@ -1913,7 +1879,7 @@ onBeforeUnmount(() => {
   }
 
   .annual-stage {
-    min-height: min(920px, calc(100dvh - 210px));
+    min-height: 0;
   }
 }
 
@@ -1955,7 +1921,7 @@ onBeforeUnmount(() => {
   }
 
   .annual-dashboard__inner {
-    grid-template-rows: auto auto minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
     gap: 9px;
   }
 

@@ -239,6 +239,7 @@ const emit = defineEmits(['close', 'save'])
 const draft = reactive({})
 
 const FONT_PREVIEW = {
+  poppins: 'var(--font-sans, "Poppins", Arial, sans-serif)',
   'open-sans': '"Open Sans", Arial, sans-serif',
   'pt-sans': '"PT Sans", Arial, sans-serif',
   'pt-serif': '"PT Serif", Georgia, serif',
@@ -301,7 +302,7 @@ function settingCardClass(field) {
 
 function optionStyle(field, option) {
   if (field?.key === 'fontFamily') {
-    return { fontFamily: FONT_PREVIEW[option?.value] ?? FONT_PREVIEW['open-sans'] }
+    return { fontFamily: FONT_PREVIEW[option?.value] ?? FONT_PREVIEW.poppins }
   }
   return {}
 }

@@ -100,7 +100,7 @@ const option = computed(() => ({
     type: 'category',
     data: xLabels.value,
     axisLine: { lineStyle: { color: 'rgba(148, 163, 184, 0.36)' } },
-    axisLabel: { color: 'rgba(226, 232, 240, 0.82)', fontSize: 10, interval: 0 },
+    axisLabel: { color: '#64748b', fontSize: 10, interval: 0 },
     axisTick: { show: false },
   },
   yAxis: {
@@ -108,7 +108,7 @@ const option = computed(() => ({
     data: yLabels,
     axisLine: { show: false },
     axisTick: { show: false },
-    axisLabel: { color: 'rgba(203, 213, 225, 0.82)', fontSize: 10 },
+    axisLabel: { color: '#64748b', fontSize: 10 },
   },
   visualMap: {
     min: 0,
@@ -119,7 +119,7 @@ const option = computed(() => ({
     itemWidth: 90,
     itemHeight: 10,
     text: ['Eleve', 'Faible'],
-    textStyle: { color: 'rgba(203, 213, 225, 0.7)', fontSize: 10 },
+    textStyle: { color: '#64748b', fontSize: 10 },
     inRange: {
       color: ['#22c55e', '#f59e0b', '#f43f5e'],
     },
@@ -128,6 +128,10 @@ const option = computed(() => ({
   tooltip: {
     position: 'top',
     confine: true,
+    backgroundColor: 'rgba(255,255,255,0.98)',
+    borderColor: 'rgba(148,163,184,0.32)',
+    textStyle: { color: '#0f172a', fontSize: 12, fontWeight: 600 },
+    extraCssText: 'border-radius:10px;box-shadow:0 12px 28px rgba(15,23,42,0.14);',
     formatter: (params) => {
       const value = params?.value?.[2] ?? 0
       return `${yLabels[params?.value?.[1] ?? 0]} - ${xLabels.value[params?.value?.[0] ?? 0]}<br/>Risque: ${value}`
@@ -140,17 +144,17 @@ const option = computed(() => ({
       label: {
         show: true,
         fontSize: 10,
-        color: 'rgba(248, 250, 252, 0.9)',
+        color: '#ffffff',
         formatter: ({ value }) => `${value[2]}`,
       },
       itemStyle: {
-        borderColor: 'rgba(2, 6, 23, 0.65)',
+        borderColor: 'rgba(248, 250, 252, 0.86)',
         borderWidth: 1.4,
         borderRadius: 6,
       },
       emphasis: {
         itemStyle: {
-          borderColor: 'rgba(248, 250, 252, 0.6)',
+          borderColor: '#111827',
           borderWidth: 2,
         },
       },
@@ -176,7 +180,7 @@ const option = computed(() => ({
   align-items: center;
   gap: 10px;
   font-size: 11px;
-  color: rgba(203, 213, 225, 0.82);
+  color: #64748b;
 }
 
 .risk-legend span {
@@ -203,4 +207,3 @@ const option = computed(() => ({
   background: #f43f5e;
 }
 </style>
-

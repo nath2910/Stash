@@ -129,7 +129,7 @@ const gaugeOption = computed(() => ({
           color: [[1, 'rgba(148, 163, 184, 0.24)']],
         },
       },
-      axisLabel: { color: 'rgba(203, 213, 225, 0.7)' },
+      axisLabel: { color: '#64748b' },
       axisTick: { show: false },
       splitLine: { show: false },
       detail: { show: false },
@@ -191,28 +191,27 @@ const sparkOption = computed(() => ({
   font-size: 30px;
   line-height: 1;
   font-weight: 700;
-  color: rgba(248, 250, 252, 0.96);
+  color: #111827;
 }
 
 .momentum-score.is-good {
-  color: #86efac;
+  color: #047857;
 }
 
 .momentum-score.is-mid {
-  color: #fde047;
+  color: #b45309;
 }
 
 .momentum-score.is-low {
-  color: #fda4af;
+  color: #be123c;
 }
 
 .momentum-meta {
   font-size: 12px;
-  color: rgba(203, 213, 225, 0.82);
+  color: #64748b;
 }
 
 .momentum-spark {
   height: 88px;
 }
 </style>
-

@@ -2,7 +2,7 @@
   <section class="npt-root" :class="layoutClass" :style="layoutVars">
     <header class="npt-head">
       <div class="npt-head__main">
-        <p class="npt-overline">Benefice net</p>
+        <p class="npt-overline">Bénéfice net</p>
         <p class="npt-value">{{ valueText }}</p>
       </div>
       <div class="npt-head__side">
@@ -296,10 +296,10 @@ const showFooter = computed(
 const palette = computed(() => {
   if (valueTone.value === 'positive') {
     return {
-      line: '#00d26a',
-      lineSoft: '#34ff9c',
-      areaTop: 'rgba(0, 210, 106, 0.24)',
-      areaBottom: 'rgba(0, 210, 106, 0.03)',
+      line: '#047857',
+      lineSoft: '#10b981',
+      areaTop: 'rgba(16, 185, 129, 0.2)',
+      areaBottom: 'rgba(16, 185, 129, 0.02)',
     }
   }
   if (valueTone.value === 'negative') {
@@ -405,19 +405,19 @@ const option = computed(() => {
     },
     tooltip: {
       trigger: 'axis',
-      backgroundColor: 'rgba(15, 23, 42, 0.96)',
-      borderColor: 'rgba(148, 163, 184, 0.3)',
+      backgroundColor: 'rgba(255, 255, 255, 0.98)',
+      borderColor: 'rgba(148, 163, 184, 0.32)',
       borderWidth: 1,
       textStyle: {
-        color: '#e2e8f0',
+        color: '#0f172a',
         fontSize: 12,
       },
       axisPointer: {
         type: 'line',
         snap: true,
         lineStyle: {
-          color: 'rgba(100, 116, 139, 0.72)',
-          type: 'dashed',
+          color: 'rgba(91, 92, 226, 0.28)',
+          type: 'solid',
         },
       },
       formatter: (params: unknown) => {
@@ -432,12 +432,13 @@ const option = computed(() => {
           const curr = Number(y[idx] ?? 0)
           const delta = curr - prev
           const pct = percentFromDelta(curr, prev)
-          detail = `<div style="margin-top:4px;font-size:11px;color:#cbd5e1;">Variation: ${signedCurrency(delta)}${
+          detail = `<div style="margin-top:4px;font-size:11px;color:#64748b;">Variation: ${signedCurrency(delta)}${
             pct == null || !Number.isFinite(pct) ? '' : ` (${signedPercent(pct)})`
           }</div>`
         }
-        return `<div style="font-size:12px;color:#e2e8f0;">${label}</div><div style="margin-top:4px;color:#f8fafc;font-weight:700;">${value}</div>${detail}`
+        return `<div style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.06em;">${label}</div><div style="margin-top:4px;color:#111827;font-weight:800;">${value}</div>${detail}`
       },
+      extraCssText: 'border-radius:10px;box-shadow:0 12px 28px rgba(15,23,42,0.14);',
     },
     xAxis: {
       type: 'category',
@@ -446,7 +447,7 @@ const option = computed(() => {
       axisTick: { show: false },
       axisLine: { lineStyle: { color: 'rgba(148, 163, 184, 0.32)' } },
       axisLabel: {
-        color: 'rgba(148, 163, 184, 0.88)',
+        color: '#64748b',
         fontSize: chartGrid.value.axisFont,
         interval,
         hideOverlap: true,
@@ -458,13 +459,13 @@ const option = computed(() => {
       axisLine: { show: false },
       axisTick: { show: false },
       axisLabel: {
-        color: 'rgba(148, 163, 184, 0.84)',
+        color: '#64748b',
         fontSize: chartGrid.value.axisFont,
         formatter: (value: number) => compactCurrency(value),
       },
       splitLine: {
         lineStyle: {
-          color: 'rgba(148, 163, 184, 0.12)',
+          color: 'rgba(148, 163, 184, 0.18)',
           type: 'dashed',
         },
       },
@@ -488,7 +489,7 @@ const option = computed(() => {
           symbol: 'circle',
           symbolSize: symbolSize + 2,
           itemStyle: {
-            color: '#f8fafc',
+            color: '#ffffff',
             borderColor: palette.value.lineSoft,
             borderWidth: 2,
           },
@@ -521,11 +522,11 @@ const option = computed(() => {
         silent: true,
         z: 8,
         itemStyle: {
-          color: '#f8fafc',
+          color: '#ffffff',
           borderColor: palette.value.line,
           borderWidth: 2,
           shadowBlur: 8,
-          shadowColor: 'rgba(15, 23, 42, 0.5)',
+          shadowColor: 'rgba(4, 120, 87, 0.18)',
         },
         emphasis: {
           disabled: true,
@@ -586,16 +587,16 @@ const layoutVars = computed(() => {
   text-transform: uppercase;
   letter-spacing: 0.1em;
   font-weight: 700;
-  color: rgba(148, 163, 184, 0.9);
+  color: #64748b;
 }
 
 .npt-value {
   margin: 5px 0 0;
   font-size: var(--npt-value-size);
   line-height: 0.94;
-  letter-spacing: -0.04em;
-  font-weight: 760;
-  color: rgba(248, 250, 252, 0.98);
+  letter-spacing: 0;
+  font-weight: 820;
+  color: #111827;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -617,28 +618,28 @@ const layoutVars = computed(() => {
 .npt-delta__value {
   font-size: var(--npt-sub-size);
   font-weight: 730;
-  color: rgba(226, 232, 240, 0.95);
+  color: #334155;
 }
 
 .npt-delta__pct {
   font-size: var(--npt-label-size);
-  color: rgba(148, 163, 184, 0.9);
+  color: #64748b;
 }
 
 .npt-delta.is-positive .npt-delta__value,
 .npt-delta.is-positive .npt-delta__pct {
-  color: rgba(52, 255, 156, 0.98);
+  color: #047857;
 }
 
 .npt-delta.is-negative .npt-delta__value,
 .npt-delta.is-negative .npt-delta__pct {
-  color: rgba(253, 164, 175, 0.97);
+  color: #be123c;
 }
 
 .npt-period {
   margin: 0;
   font-size: var(--npt-label-size);
-  color: rgba(148, 163, 184, 0.84);
+  color: #64748b;
   max-width: min(52vw, 340px);
   white-space: nowrap;
   overflow: hidden;
@@ -648,9 +649,9 @@ const layoutVars = computed(() => {
 .npt-chart-shell {
   position: relative;
   min-height: 0;
-  border-radius: 12px;
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0.5), rgba(15, 23, 42, 0.34));
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(248, 250, 252, 0.64));
   overflow: hidden;
 }
 
@@ -666,7 +667,7 @@ const layoutVars = computed(() => {
   display: grid;
   place-items: center;
   text-align: center;
-  background: rgba(2, 6, 23, 0.3);
+  background: rgba(248, 250, 252, 0.82);
   padding: 10px;
 }
 
@@ -674,13 +675,13 @@ const layoutVars = computed(() => {
   margin: 0;
   font-size: 13px;
   font-weight: 650;
-  color: rgba(241, 245, 249, 0.96);
+  color: #111827;
 }
 
 .npt-overlay__copy {
   margin: 4px 0 0;
   font-size: 12px;
-  color: rgba(148, 163, 184, 0.88);
+  color: #64748b;
 }
 
 .npt-footer {
@@ -692,9 +693,9 @@ const layoutVars = computed(() => {
 
 .npt-card {
   min-width: 0;
-  border-radius: 10px;
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  background: rgba(15, 23, 42, 0.4);
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(248, 250, 252, 0.78);
   padding: 7px 8px;
   display: grid;
   gap: 2px;
@@ -705,33 +706,33 @@ const layoutVars = computed(() => {
   font-size: var(--npt-label-size);
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: rgba(148, 163, 184, 0.86);
+  color: #64748b;
 }
 
 .npt-card__value {
   margin: 0;
   font-size: var(--npt-card-size);
   line-height: 1;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
   font-weight: 700;
-  color: rgba(241, 245, 249, 0.97);
+  color: #111827;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .npt-card__value.is-positive {
-  color: rgba(52, 255, 156, 0.97);
+  color: #047857;
 }
 
 .npt-card__value.is-negative {
-  color: rgba(253, 164, 175, 0.97);
+  color: #be123c;
 }
 
 .npt-card__meta {
   margin: 0;
   font-size: var(--npt-label-size);
-  color: rgba(148, 163, 184, 0.82);
+  color: #64748b;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

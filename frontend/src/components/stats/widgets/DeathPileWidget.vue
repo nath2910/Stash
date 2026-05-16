@@ -154,19 +154,23 @@ const option = computed(() => {
     tooltip: {
       trigger: 'axis',
       valueFormatter: (v) => `${formatNumber(v)} paires`,
+      backgroundColor: 'rgba(255,255,255,0.98)',
+      borderColor: 'rgba(148,163,184,0.32)',
+      textStyle: { color: '#0f172a', fontSize: 12, fontWeight: 600 },
+      extraCssText: 'border-radius:10px;box-shadow:0 12px 28px rgba(15,23,42,0.14);',
     },
     grid: { left: 90, right: 20, top: 6, bottom: 6, containLabel: true },
     xAxis: {
       type: 'value',
-      axisLabel: { color: '#9CA3AF', formatter: '{value}', fontSize: 10 },
-      splitLine: { lineStyle: { color: 'rgba(148,163,184,0.15)' } },
+      axisLabel: { color: '#64748b', formatter: '{value}', fontSize: 10 },
+      splitLine: { lineStyle: { color: 'rgba(148,163,184,0.18)' } },
     },
     yAxis: {
       type: 'category',
       data: labels,
-      axisLabel: { color: '#E5E7EB', fontSize: 11, margin: 16 },
+      axisLabel: { color: '#334155', fontSize: 11, margin: 16 },
       axisTick: { show: false },
-      axisLine: { lineStyle: { color: '#334155' } },
+      axisLine: { lineStyle: { color: '#cbd5e1' } },
     },
     series: [
       {
@@ -182,7 +186,7 @@ const option = computed(() => {
         label: {
           show: true,
           position: 'right',
-          color: '#E2E8F0',
+          color: '#334155',
           fontSize: 11,
           formatter: (p) => `${formatNumber(p.value)} paires`,
         },
@@ -241,9 +245,9 @@ const toLabel = computed(() =>
   border: 1px solid transparent;
 }
 .dp-pill--static {
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(148, 163, 184, 0.12);
-  color: rgba(226, 232, 240, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: rgba(248, 250, 252, 0.82);
+  color: #334155;
 }
 .dp-body {
   height: 100%;
@@ -255,7 +259,7 @@ const toLabel = computed(() =>
 }
 .dp-note {
   font-size: 11px;
-  color: rgba(226, 232, 240, 0.6);
+  color: #64748b;
   letter-spacing: 0.02em;
 }
 .dp-chart {
@@ -273,7 +277,7 @@ const toLabel = computed(() =>
   font-size: 9px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: rgba(226, 232, 240, 0.55);
+  color: #64748b;
 }
 .dp-scale-bar {
   height: 8px;
@@ -287,16 +291,13 @@ const toLabel = computed(() =>
     #F97316 78%,
     #DC2626 100%
   );
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
-    0 6px 16px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(148, 163, 184, 0.24);
 }
 .dp-scale-labels {
   display: flex;
   justify-content: space-between;
   font-size: 10px;
-  color: rgba(226, 232, 240, 0.7);
+  color: #64748b;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -321,9 +322,9 @@ const toLabel = computed(() =>
   align-items: center;
   min-height: 0;
   padding: 4px 8px;
-  border-radius: 12px;
-  background: rgba(15, 23, 42, 0.45);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  background: rgba(248, 250, 252, 0.82);
+  border: 1px solid rgba(148, 163, 184, 0.22);
 }
 .dp-dot {
   width: 8px;
@@ -333,22 +334,22 @@ const toLabel = computed(() =>
 }
 .dp-name {
   font-size: 12px;
-  color: rgba(226, 232, 240, 0.92);
+  color: #111827;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .dp-pct {
   font-size: 11px;
-  color: rgba(226, 232, 240, 0.6);
+  color: #64748b;
 }
 .dp-val {
   font-size: 12px;
-  color: rgba(226, 232, 240, 0.85);
+  color: #334155;
 }
 .dp-empty {
   font-size: 12px;
-  color: rgba(226, 232, 240, 0.5);
+  color: #64748b;
 }
 .period-chip {
   display: inline-flex;
@@ -357,15 +358,12 @@ const toLabel = computed(() =>
   font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(226, 232, 240, 0.6);
+  color: #64748b;
   white-space: nowrap;
   padding: 6px 10px;
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.03),
-    0 6px 16px rgba(0, 0, 0, 0.25);
+  background: rgba(248, 250, 252, 0.82);
+  border: 1px solid rgba(148, 163, 184, 0.26);
   margin-left: auto;
   max-width: min(100%, 360px);
 }
@@ -376,7 +374,7 @@ const toLabel = computed(() =>
   font-size: 11px;
   letter-spacing: 0.02em;
   text-transform: none;
-  color: rgba(226, 232, 240, 0.9);
+  color: #334155;
   overflow: hidden;
   text-overflow: ellipsis;
 }

@@ -15,7 +15,7 @@ const props = defineProps({
   align: { type: String, default: 'left' }, // left | center | right
   valign: { type: String, default: 'start' }, // start | center | end
   autoHeight: { type: Boolean, default: true },
-  fontFamily: { type: String, default: 'open-sans' },
+  fontFamily: { type: String, default: 'poppins' },
   fontSize: { type: Number, default: 17 },
   color: { type: String, default: '#e2e8f0' },
   weight: { type: String, default: 'regular' }, // regular | medium | semibold | bold
@@ -27,6 +27,7 @@ const props = defineProps({
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
 const FONT_FAMILIES = {
+  poppins: 'var(--font-sans, "Poppins", Arial, sans-serif)',
   'open-sans': '"Open Sans", Arial, sans-serif',
   'pt-sans': '"PT Sans", Arial, sans-serif',
   'pt-serif': '"PT Serif", Georgia, serif',
@@ -68,7 +69,7 @@ const textStyle = computed(() => {
     textAlign: props.align,
     fontSize: `${fontSize}px`,
     lineHeight: cfg.line,
-    fontFamily: FONT_FAMILIES[props.fontFamily] ?? FONT_FAMILIES['open-sans'],
+    fontFamily: FONT_FAMILIES[props.fontFamily] ?? FONT_FAMILIES.poppins,
     fontWeight: weights[props.weight] ?? weights.regular,
     fontStyle: props.italic ? 'italic' : 'normal',
     textDecoration: props.underline ? 'underline' : 'none',

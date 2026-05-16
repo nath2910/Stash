@@ -48,9 +48,6 @@ Ce module implemente un dashboard stats tres flexible avec:
 ### `useCanvasShortcuts.ts`
 - Raccourcis clavier globaux canvas.
 
-### `CanvasDock.vue`
-- Dock actions (edit mode, palette, zoom, reset, theme, etc.).
-
 ## 4) Sous-dossier `palette/`
 
 ### `types.ts`
@@ -65,9 +62,6 @@ Ce module implemente un dashboard stats tres flexible avec:
 
 ### `WidgetPaletteCard.vue`
 - Carte unitaire d'un widget dans la palette.
-
-### `WidgetPaletteFilterChips.vue`
-- Chips filtres categorie/type de donnee.
 
 ### `WidgetPaletteSearchBar.vue`
 - Barre de recherche palette.
@@ -109,19 +103,14 @@ Pattern:
 
 ### 5.3 Widgets texte
 - `TextBlockWidget.vue`
-- `TextSectionWidget.vue`
 - `TextTitleWidget.vue`
 
 Pattern:
 - rendu purement props/style.
 - pas d'appel backend.
 
-### 5.4 Widgets legacy/ambigus
-- `OpexWidget.vue`
-- `PlatformSplitWidget.vue`
-- `ReturnRateWidget.vue`
-
-Ces widgets appellent des metrics possiblement non supportees backend actuel.
+### 5.4 Widgets retires
+Les widgets legacy non references `Opex`, `PlatformSplit`, `ReturnRate` et `TextSection` ont ete retires du runtime frontend.
 
 ## 6) Sous-dossier `widgets/_parts/`
 

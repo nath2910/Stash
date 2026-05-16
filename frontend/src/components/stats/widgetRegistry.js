@@ -1,6 +1,7 @@
 ﻿// src/components/stats/widgets/widgetRegistry.js
 // contient tout les reglages de chaque widget, leurs comportement leur taille etc
 // aussi les types de graph dispo (number, pie ...)
+import { defineAsyncComponent } from 'vue'
 import {
   TrendingUp,
   GitCompareArrows,
@@ -17,36 +18,31 @@ import {
   ListChecks,
 } from 'lucide-vue-next'
 
-// src/components/stats/widgets/widgetRegistry.js
-import NetProfitWidget from './widgets/NetProfitWidget.vue'
-
-import RoiWidget from './widgets/RoiWidget.vue'
-import GrossRevenueWidget from './widgets/ChiffreDaffaireWidget.vue'
-import AvgMarginWidget from './widgets/AvgMarginWidget.vue'
-
-import InventoryValueWidget from './widgets/InventoryValueWidget.vue'
-import SellThroughWidget from './widgets/SellThroughWidget.vue'
-import AvgDaysToSellWidget from './widgets/AvgDaysToSellWidget.vue'
-import DeathPileWidget from './widgets/DeathPileWidget.vue'
-import ActiveListingsWidget from './widgets/ActiveListingsWidget.vue'
-
-import TopProfitDriversWidget from './widgets/TopProfitDriversWidget.vue'
-import AspWidget from './widgets/AspWidget.vue'
-import CashFlowWidget from './widgets/CashFlowWidget.vue'
-import GoalProgressWidget from './widgets/GoalProgressWidget.vue'
-import VarianceToTargetWidget from './widgets/VarianceToTargetWidget.vue'
-import PeriodComparisonWidget from './widgets/PeriodComparisonWidget.vue'
-import ProfitBridgeWidget from './widgets/ProfitBridgeWidget.vue'
-import AlertFeedWidget from './widgets/AlertFeedWidget.vue'
-import ActionChecklistWidget from './widgets/ActionChecklistWidget.vue'
-import MomentumWidget from './widgets/MomentumWidget.vue'
-import RiskHeatWidget from './widgets/RiskHeatWidget.vue'
-
-import BrandsWidget from './widgets/BrandsWidget.vue'
-import TopSalesWidget from './widgets/TopSalesWidget.vue'
-import TypeMixWidget from './widgets/TypeMixWidget.vue'
-import TextTitleWidget from './widgets/TextTitleWidget.vue'
-import TextBlockWidget from './widgets/TextBlockWidget.vue'
+const TextTitleWidget = defineAsyncComponent(() => import('./widgets/TextTitleWidget.vue'))
+const TextBlockWidget = defineAsyncComponent(() => import('./widgets/TextBlockWidget.vue'))
+const NetProfitWidget = defineAsyncComponent(() => import('./widgets/NetProfitWidget.vue'))
+const RoiWidget = defineAsyncComponent(() => import('./widgets/RoiWidget.vue'))
+const GrossRevenueWidget = defineAsyncComponent(() => import('./widgets/ChiffreDaffaireWidget.vue'))
+const AvgMarginWidget = defineAsyncComponent(() => import('./widgets/AvgMarginWidget.vue'))
+const InventoryValueWidget = defineAsyncComponent(() => import('./widgets/InventoryValueWidget.vue'))
+const SellThroughWidget = defineAsyncComponent(() => import('./widgets/SellThroughWidget.vue'))
+const AvgDaysToSellWidget = defineAsyncComponent(() => import('./widgets/AvgDaysToSellWidget.vue'))
+const DeathPileWidget = defineAsyncComponent(() => import('./widgets/DeathPileWidget.vue'))
+const ActiveListingsWidget = defineAsyncComponent(() => import('./widgets/ActiveListingsWidget.vue'))
+const TopProfitDriversWidget = defineAsyncComponent(() => import('./widgets/TopProfitDriversWidget.vue'))
+const AspWidget = defineAsyncComponent(() => import('./widgets/AspWidget.vue'))
+const CashFlowWidget = defineAsyncComponent(() => import('./widgets/CashFlowWidget.vue'))
+const GoalProgressWidget = defineAsyncComponent(() => import('./widgets/GoalProgressWidget.vue'))
+const VarianceToTargetWidget = defineAsyncComponent(() => import('./widgets/VarianceToTargetWidget.vue'))
+const PeriodComparisonWidget = defineAsyncComponent(() => import('./widgets/PeriodComparisonWidget.vue'))
+const ProfitBridgeWidget = defineAsyncComponent(() => import('./widgets/ProfitBridgeWidget.vue'))
+const AlertFeedWidget = defineAsyncComponent(() => import('./widgets/AlertFeedWidget.vue'))
+const ActionChecklistWidget = defineAsyncComponent(() => import('./widgets/ActionChecklistWidget.vue'))
+const MomentumWidget = defineAsyncComponent(() => import('./widgets/MomentumWidget.vue'))
+const RiskHeatWidget = defineAsyncComponent(() => import('./widgets/RiskHeatWidget.vue'))
+const BrandsWidget = defineAsyncComponent(() => import('./widgets/BrandsWidget.vue'))
+const TopSalesWidget = defineAsyncComponent(() => import('./widgets/TopSalesWidget.vue'))
+const TypeMixWidget = defineAsyncComponent(() => import('./widgets/TypeMixWidget.vue'))
 
 export const CATEGORY_COLORS = {
   Texte: { color: '#a855f7', glow: 'rgba(168, 85, 247, 0.2)' },
@@ -79,13 +75,13 @@ export const WIDGET_DEFS = [
       content: 'Titre',
       align: 'left',
       valign: 'center',
-      fontFamily: 'open-sans',
+      fontFamily: 'poppins',
       fontSize: 52,
       size: 'lg',
       weight: 'bold',
       italic: false,
       underline: false,
-      color: '#ffffff',
+      color: '#111827',
       padding: 'md',
       tight: true,
       autoHeight: true,
@@ -122,13 +118,13 @@ export const WIDGET_DEFS = [
       content: 'Ton texte ici...',
       align: 'left',
       valign: 'start',
-      fontFamily: 'open-sans',
+      fontFamily: 'poppins',
       fontSize: 17,
       size: 'md',
       weight: 'regular',
       italic: false,
       underline: false,
-      color: '#e2e8f0',
+      color: '#334155',
       padding: 'md',
       autoHeight: true,
     },
@@ -159,7 +155,7 @@ export const WIDGET_DEFS = [
     component: NetProfitWidget,
     forms: ['number', 'line'],
     defaultSize: { w: 660, h: 380 },
-    minSize: { w: 380, h: 300 },
+    minSize: { w: 300, h: 220 },
     defaultProps: {
       view: 'line',
       bucket: 'week',
@@ -221,9 +217,9 @@ export const WIDGET_DEFS = [
     icon: GitCompareArrows,
     component: RoiWidget,
     forms: ['number'],
-    defaultSize: { w: 620, h: 460 },
-    minSize: { w: 420, h: 220 },
-    defaultProps: { autoHeight: true, categories: [], types: [] },
+    defaultSize: { w: 420, h: 420 },
+    minSize: { w: 320, h: 320 },
+    defaultProps: { autoHeight: false, categories: [], types: [] },
     settings: [],
     categoryFilter: true,
   },
@@ -235,9 +231,9 @@ export const WIDGET_DEFS = [
     icon: LineChart,
     component: GrossRevenueWidget,
     forms: ['number', 'line'],
-    defaultSize: { w: 920, h: 560 },
-    minSize: { w: 700, h: 420 },
-    defaultProps: { bucket: 'day', view: 'number', autoHeight: true, categories: [], types: [] },
+    defaultSize: { w: 720, h: 320 },
+    minSize: { w: 240, h: 150 },
+    defaultProps: { bucket: 'day', view: 'line', autoHeight: false, categories: [], types: [] },
     settings: [],
     categoryFilter: true,
   },
@@ -249,9 +245,9 @@ export const WIDGET_DEFS = [
     icon: Gauge,
     component: AvgMarginWidget,
     forms: ['number'],
-    defaultSize: { w: 600, h: 420 },
-    minSize: { w: 460, h: 240 },
-    maxSize: { w: 980, h: 760 },
+    defaultSize: { w: 180, h: 180 },
+    minSize: { w: 150, h: 150 },
+    maxSize: { w: 360, h: 360 },
     defaultProps: { bucket: 'week', autoHeight: false, categories: [], types: [] },
     settings: [],
     categoryFilter: true,
@@ -265,8 +261,8 @@ export const WIDGET_DEFS = [
     icon: Boxes,
     component: InventoryValueWidget,
     forms: ['number'],
-    defaultSize: { w: 520, h: 240 },
-    minSize: { w: 380, h: 210 },
+    defaultSize: { w: 180, h: 180 },
+    minSize: { w: 150, h: 150 },
     defaultProps: { autoHeight: false, useGlobalRange: false, asOf: '', categories: [], types: [] },
     settings: [{ key: 'asOf', label: 'Date', type: 'date' }],
     dateMode: 'asOf',
@@ -274,28 +270,28 @@ export const WIDGET_DEFS = [
   },
   {
     type: 'sellThrough',
-    title: "Taux d'ecoulement",
+    title: 'Taux d’écoulement',
     category: 'Stock',
     help: 'Part du stock vendu',
     icon: BarChart3,
     component: SellThroughWidget,
-    forms: ['bars'],
-    defaultSize: { w: 520, h: 260 },
-    minSize: { w: 420, h: 240 },
-    defaultProps: { bucket: 'week', autoHeight: true, categories: [], types: [] },
+    forms: ['number'],
+    defaultSize: { w: 180, h: 180 },
+    minSize: { w: 150, h: 150 },
+    defaultProps: { bucket: 'week', autoHeight: false, categories: [], types: [] },
     settings: [],
     categoryFilter: true,
   },
   {
     type: 'avgDaysToSell',
-    title: 'Délai moyen',
+    title: 'Délai moyen avant vente',
     category: 'Stock',
-    help: 'Days to sell',
+    help: 'Temps moyen entre achat et vente',
     icon: Activity,
     component: AvgDaysToSellWidget,
     forms: ['number'],
-    defaultSize: { w: 520, h: 240 },
-    minSize: { w: 420, h: 220 },
+    defaultSize: { w: 180, h: 180 },
+    minSize: { w: 150, h: 150 },
     defaultProps: { bucket: 'week', autoHeight: false, categories: [], types: [] },
     settings: [],
     categoryFilter: true,
@@ -322,8 +318,8 @@ export const WIDGET_DEFS = [
     icon: Activity,
     component: ActiveListingsWidget,
     forms: ['number'],
-    defaultSize: { w: 520, h: 240 },
-    minSize: { w: 380, h: 210 },
+    defaultSize: { w: 180, h: 180 },
+    minSize: { w: 150, h: 150 },
     defaultProps: { bucket: 'week', autoHeight: false, categories: [], types: [] },
     settings: [],
     categoryFilter: true,
@@ -356,14 +352,14 @@ export const WIDGET_DEFS = [
   },
   {
     type: 'asp',
-    title: 'Prix moyen (ASP)',
+    title: 'Prix moyen de vente',
     category: 'Performance',
     help: 'Average selling price',
     icon: Gauge,
     component: AspWidget,
     forms: ['number'],
-    defaultSize: { w: 520, h: 240 },
-    minSize: { w: 380, h: 210 },
+    defaultSize: { w: 180, h: 180 },
+    minSize: { w: 150, h: 150 },
     defaultProps: { bucket: 'week', autoHeight: false, categories: [], types: [] },
     settings: [],
     categoryFilter: true,
@@ -376,8 +372,8 @@ export const WIDGET_DEFS = [
     icon: TrendingUp,
     component: CashFlowWidget,
     forms: ['number'],
-    defaultSize: { w: 520, h: 240 },
-    minSize: { w: 380, h: 210 },
+    defaultSize: { w: 180, h: 180 },
+    minSize: { w: 150, h: 150 },
     defaultProps: { bucket: 'week', autoHeight: false, categories: [], types: [] },
     settings: [],
     categoryFilter: true,
@@ -386,14 +382,14 @@ export const WIDGET_DEFS = [
   // 🧭 Decision
   {
     type: 'goalProgress',
-    title: 'Goal progress',
+    title: 'Progression objectif',
     category: 'Decision',
     help: 'Progression vers un objectif',
     icon: Target,
     component: GoalProgressWidget,
     forms: ['target'],
-    defaultSize: { w: 760, h: 340 },
-    minSize: { w: 460, h: 260 },
+    defaultSize: { w: 190, h: 190 },
+    minSize: { w: 160, h: 160 },
     defaultProps: {
       metric: 'netProfit',
       target: 12000,
@@ -431,14 +427,14 @@ export const WIDGET_DEFS = [
   },
   {
     type: 'varianceToTarget',
-    title: 'Variance to target',
+    title: 'Écart à l’objectif',
     category: 'Decision',
     help: 'Ecart par rapport a la cible',
     icon: Radar,
     component: VarianceToTargetWidget,
     forms: ['number'],
-    defaultSize: { w: 760, h: 340 },
-    minSize: { w: 460, h: 260 },
+    defaultSize: { w: 190, h: 190 },
+    minSize: { w: 160, h: 160 },
     defaultProps: {
       metric: 'grossRevenue',
       target: 42000,

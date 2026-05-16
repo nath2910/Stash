@@ -111,7 +111,6 @@ Utilitaire clé:
 2. Metadata preview: `widgetPaletteMeta.ts`.
 3. Composants enfants:
 - `WidgetPaletteSearchBar`,
-- `WidgetPaletteFilterChips`,
 - `WidgetPaletteCard`.
 
 ---

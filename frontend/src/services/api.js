@@ -9,10 +9,6 @@ const rawBaseURL =
   'http://localhost:8080'
 const baseURL = rawBaseURL.replace(/\/+$/, '') // évite les doubles slash dans les appels
 
-if (metaEnv?.DEV) {
-  console.log('API baseURL =', baseURL)
-}
-
 const api = axios.create({
   baseURL,
   timeout: 15000,
@@ -48,11 +44,6 @@ api.interceptors.request.use((config) => {
     config.headers.Authorization = `Bearer ${token}`
   }
 
-  if (import.meta.env.DEV) {
-    console.log('REQ', config.method?.toUpperCase(), config.baseURL + config.url, {
-      hasToken: !!token,
-    })
-  }
   return config
 })
 

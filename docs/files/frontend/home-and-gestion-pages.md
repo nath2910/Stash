@@ -88,7 +88,8 @@ Page orchestration gestion stock.
 
 ### `CsvImportExportWidget.vue`
 - Export CSV robuste (BOM, mapping colonnes, metadata).
-- Import smart CSV/XLSX avec heuristiques colonne/date/nombre.
+- Import smart CSV/XLSX/JSON/TXT avec heuristiques colonne/date/nombre.
+- Delegue mapping, validation et generation CSV a `utils/stockImportExport.ts`.
 - Envoie payload backend import.
 
 ---
@@ -104,7 +105,10 @@ Page orchestration gestion stock.
 ### `utils/formatters.js`
 - format monetaire/num/date.
 
+### `utils/stockImportExport.ts`
+- parsing/mapping/validation import export stock, couvert par tests unitaires.
+
 ---
 
 ## 7) Legacy
-- `components/StatBase.vue` est un ancien composant stats (non central dans flux actuel canvas).
+Les anciens composants stats non references ont ete retires du frontend runtime.

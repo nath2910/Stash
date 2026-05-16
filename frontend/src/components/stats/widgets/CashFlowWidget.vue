@@ -1,6 +1,6 @@
 <template>
   <KpiCard
-    title="Cash flow disponible"
+    title="Cash disponible"
     subtitle="Liquide pour racheter du stock"
     :accent="accent"
     surface="kpi"

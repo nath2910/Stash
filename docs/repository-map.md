@@ -167,7 +167,6 @@ Ce document cartographie les fichiers utiles du repository (hors `node_modules`,
 - `frontend/.vscode/settings.json`
 - `frontend/.vscode/extensions.json`
 - `frontend/public/logo.png`
-- `frontend/jsco` (fichier vide)
 
 ### 4.2 Source frontend (`frontend/src`)
 - `App.vue`
@@ -181,10 +180,8 @@ Ce document cartographie les fichiers utiles du repository (hors `node_modules`,
 - `AcceuilDernierItem.vue`
 - `AcceuilWidgetLateral.vue`
 - `AuthForm.vue`
-- `DateRangeBar.vue`
 - `HeaderDePage.vue`
 - `StatBadge.vue`
-- `StatBase.vue`
 
 #### components/ui
 - `ui/CompactDateInput.vue`
@@ -208,7 +205,6 @@ Ce document cartographie les fichiers utiles du repository (hors `node_modules`,
 - `WidgetSettingsModal.vue`
 
 ##### components/stats/canvas
-- `CanvasDock.vue`
 - `useCanvaCamera.ts`
 - `useCanvasShortcuts.ts`
 - `WidgetFrame.vue`
@@ -218,32 +214,37 @@ Ce document cartographie les fichiers utiles du repository (hors `node_modules`,
 - `types.ts`
 - `widgetPaletteMeta.ts`
 - `WidgetPaletteCard.vue`
-- `WidgetPaletteFilterChips.vue`
 - `WidgetPaletteSearchBar.vue`
 - `WidgetPreview.vue`
 
 ##### components/stats/widgets
 - `ActiveListingsWidget.vue`
+- `ActionChecklistWidget.vue`
+- `AlertFeedWidget.vue`
 - `AspWidget.vue`
 - `AvgDaysToSellWidget.vue`
 - `AvgMarginWidget.vue`
 - `BrandsWidget.vue`
 - `CashFlowWidget.vue`
+- `ChiffreDaffaireWidget.vue`
 - `DeathPileWidget.vue`
-- `GrossRevenueWidget.vue`
+- `GoalProgressWidget.vue`
 - `InventoryValueWidget.vue`
+- `MomentumWidget.vue`
+- `NetProfitKpiWidget.vue`
+- `NetProfitTrendWidget.vue`
 - `NetProfitWidget.vue`
-- `OpexWidget.vue`
-- `PlatformSplitWidget.vue`
-- `ReturnRateWidget.vue`
+- `PeriodComparisonWidget.vue`
+- `ProfitBridgeWidget.vue`
+- `RiskHeatWidget.vue`
 - `RoiWidget.vue`
 - `SellThroughWidget.vue`
 - `TextBlockWidget.vue`
-- `TextSectionWidget.vue`
 - `TextTitleWidget.vue`
 - `TopProfitDriversWidget.vue`
 - `TopSalesWidget.vue`
 - `TypeMixWidget.vue`
+- `VarianceToTargetWidget.vue`
 
 ##### components/stats/widgets/_parts
 - `ChartCard.vue`
@@ -296,9 +297,11 @@ Ce document cartographie les fichiers utiles du repository (hors `node_modules`,
 #### utils
 - `formatters.js`
 - `snkVente.js`
+- `stockImportExport.ts`
 
 ### 4.3 Tests frontend
 - `frontend/tests/statsServices.test.js`
+- `frontend/tests/stockImportExport.test.ts`
 - `frontend/tests/widgetPalette.utils.test.ts`
 
 ## 5) Fichiers hors execution applicative mais importants en reprise

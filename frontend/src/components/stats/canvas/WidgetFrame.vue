@@ -19,10 +19,15 @@
         'widget--text': widget.type === 'textTitle' || widget.type === 'textBlock',
         'widget--roi': widget.type === 'roi',
         'widget--net-profit': widget.type === 'netProfit',
+        'widget--gross-revenue': widget.type === 'grossRevenue',
+        'widget--gross-revenue-kpi': widget.type === 'grossRevenue' && widget.props?.view !== 'line',
+        'widget--gross-revenue-chart': widget.type === 'grossRevenue' && widget.props?.view === 'line',
+        'widget--kpi-display': isKpiDisplayWidget(widget),
         'widget--headerless': !showHeader,
         'is-text-active': textActive,
         'is-editing': isInlineTextEditing,
         'is-fullscreen': isFullscreen,
+        'is-ui-inactive': !uiActive,
       }"
       :style="isFullscreen ? fullscreenStyle : style"
       :tabindex="rootTabIndex"
@@ -38,50 +43,26 @@
         </div>
 
         <div
+          v-if="shouldShowWidgetControls"
           class="widget__actions"
           :class="{ 'widget__actions--compact': compactActions }"
           @pointerdown.stop
         >
-          <button
-            type="button"
-            class="iconbtn"
-            :title="isFullscreen ? 'Quitter le plein ecran' : 'Plein ecran'"
-            :aria-label="isFullscreen ? 'Quitter le plein ecran' : 'Plein ecran'"
-            @click.stop="toggleFullscreen"
-          >
-            <Minimize2 v-if="isFullscreen" class="w-4 h-4" />
-            <Maximize2 v-else class="w-4 h-4" />
-          </button>
-          <template v-if="editMode && !compactActions">
+          <template v-if="!compactActions">
             <button
+              v-for="action in availableWidgetActions"
+              :key="action.key"
               type="button"
               class="iconbtn"
-              title="Dupliquer"
-              aria-label="Dupliquer"
-              @click.stop="emitDuplicateWidget"
+              :class="{ 'is-danger': action.tone === 'danger' }"
+              :title="action.title"
+              :aria-label="action.title"
+              @click.stop="runWidgetAction(action.key)"
             >
-              <Copy class="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              class="iconbtn"
-              title="Reglages"
-              aria-label="Reglages"
-              @click.stop="emitOpenSettings"
-            >
-              <Settings class="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              class="iconbtn"
-              title="Supprimer"
-              aria-label="Supprimer"
-              @click.stop="emitRemoveWidget"
-            >
-              <Trash2 class="w-4 h-4" />
+              <component :is="action.icon" class="w-4 h-4" />
             </button>
           </template>
-          <template v-else-if="editMode">
+          <template v-else>
             <button
               type="button"
               class="iconbtn iconbtn--menu"
@@ -100,34 +81,17 @@
               @pointerdown.stop
             >
               <button
+                v-for="action in availableWidgetActions"
+                :key="action.key"
                 type="button"
                 class="widget-action-menu__item"
+                :class="{ 'is-danger': action.tone === 'danger' }"
                 role="menuitem"
-                aria-label="Dupliquer"
-                @click.stop="emitDuplicateWidget"
+                :aria-label="action.title"
+                @click.stop="runWidgetAction(action.key)"
               >
-                <Copy class="w-4 h-4" />
-                <span>Dupliquer</span>
-              </button>
-              <button
-                type="button"
-                class="widget-action-menu__item"
-                role="menuitem"
-                aria-label="Reglages"
-                @click.stop="emitOpenSettings"
-              >
-                <Settings class="w-4 h-4" />
-                <span>Reglages</span>
-              </button>
-              <button
-                type="button"
-                class="widget-action-menu__item is-danger"
-                role="menuitem"
-                aria-label="Supprimer"
-                @click.stop="emitRemoveWidget"
-              >
-                <Trash2 class="w-4 h-4" />
-                <span>Supprimer</span>
+                <component :is="action.icon" class="w-4 h-4" />
+                <span>{{ action.label }}</span>
               </button>
             </div>
           </template>
@@ -135,50 +99,25 @@
       </div>
 
       <div
-        v-if="showFloatingActions"
+        v-if="shouldShowFloatingControls"
         class="widget__floating-actions panzoom-exclude"
         @pointerdown.stop
       >
-        <button
-          type="button"
-          class="iconbtn iconbtn--glass"
-          :title="isFullscreen ? 'Quitter le plein ecran' : 'Plein ecran'"
-          :aria-label="isFullscreen ? 'Quitter le plein ecran' : 'Plein ecran'"
-          @click.stop="toggleFullscreen"
-        >
-          <Minimize2 v-if="isFullscreen" class="w-4 h-4" />
-          <Maximize2 v-else class="w-4 h-4" />
-        </button>
-        <template v-if="editMode && !compactActions">
+        <template v-if="!compactActions">
           <button
+            v-for="action in availableWidgetActions"
+            :key="action.key"
             type="button"
             class="iconbtn iconbtn--glass"
-            title="Dupliquer"
-            aria-label="Dupliquer"
-            @click.stop="emitDuplicateWidget"
+            :class="{ 'is-danger': action.tone === 'danger' }"
+            :title="action.title"
+            :aria-label="action.title"
+            @click.stop="runWidgetAction(action.key)"
           >
-            <Copy class="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            class="iconbtn iconbtn--glass"
-            title="Reglages"
-            aria-label="Reglages"
-            @click.stop="emitOpenSettings"
-          >
-            <Settings class="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            class="iconbtn iconbtn--glass"
-            title="Supprimer"
-            aria-label="Supprimer"
-            @click.stop="emitRemoveWidget"
-          >
-            <Trash2 class="w-4 h-4" />
+            <component :is="action.icon" class="w-4 h-4" />
           </button>
         </template>
-        <template v-else-if="editMode">
+        <template v-else>
           <button
             type="button"
             class="iconbtn iconbtn--glass iconbtn--menu"
@@ -197,41 +136,24 @@
             @pointerdown.stop
           >
             <button
+              v-for="action in availableWidgetActions"
+              :key="action.key"
               type="button"
               class="widget-action-menu__item"
+              :class="{ 'is-danger': action.tone === 'danger' }"
               role="menuitem"
-              aria-label="Dupliquer"
-              @click.stop="emitDuplicateWidget"
+              :aria-label="action.title"
+              @click.stop="runWidgetAction(action.key)"
             >
-              <Copy class="w-4 h-4" />
-              <span>Dupliquer</span>
-            </button>
-            <button
-              type="button"
-              class="widget-action-menu__item"
-              role="menuitem"
-              aria-label="Reglages"
-              @click.stop="emitOpenSettings"
-            >
-              <Settings class="w-4 h-4" />
-              <span>Reglages</span>
-            </button>
-            <button
-              type="button"
-              class="widget-action-menu__item is-danger"
-              role="menuitem"
-              aria-label="Supprimer"
-              @click.stop="emitRemoveWidget"
-            >
-              <Trash2 class="w-4 h-4" />
-              <span>Supprimer</span>
+              <component :is="action.icon" class="w-4 h-4" />
+              <span>{{ action.label }}</span>
             </button>
           </div>
         </template>
       </div>
 
       <div
-        v-if="editMode && isTextWidget && !isFullscreen"
+        v-if="uiActive && editMode && isTextWidget && !isFullscreen"
         class="text-toolbar panzoom-exclude"
         role="toolbar"
         aria-label="Outils de texte"
@@ -239,7 +161,7 @@
       >
         <select
           class="text-toolbar__select"
-          :value="String(widget.props?.fontFamily ?? 'open-sans')"
+          :value="String(widget.props?.fontFamily ?? 'poppins')"
           aria-label="Police du texte"
           @change="emitTextProp('fontFamily', ($event.target as HTMLSelectElement).value)"
         >
@@ -313,16 +235,6 @@
           <button
             type="button"
             class="text-toolbar__iconbtn"
-            :title="isFullscreen ? 'Quitter le plein ecran' : 'Plein ecran'"
-            :aria-label="isFullscreen ? 'Quitter le plein ecran' : 'Plein ecran'"
-            @click.stop="toggleFullscreen"
-          >
-            <Minimize2 v-if="isFullscreen" class="w-4 h-4" />
-            <Maximize2 v-else class="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            class="text-toolbar__iconbtn"
             title="Dupliquer"
             aria-label="Dupliquer"
             @click.stop="$emit('duplicate')"
@@ -382,7 +294,7 @@
       </div>
       </div>
 
-      <div v-if="editMode && !isFullscreen" class="widget__resize-overlay">
+      <div v-if="uiActive && editMode && !isFullscreen" class="widget__resize-overlay">
         <template v-if="widget.type !== 'textTitle' && widget.type !== 'textBlock'">
           <span class="resize-rail resize-rail--h" />
           <span class="resize-rail resize-rail--v" />
@@ -416,8 +328,8 @@
           v-if="isTextWidget"
           type="button"
           class="text-scale-handle"
-          aria-label="Agrandir ou reduire le texte"
-          title="Agrandir ou reduire le texte"
+          aria-label="Ajuster la taille du texte"
+          title="Ajuster la taille du texte"
           @pointerdown.stop.prevent="$emit('textScaleStart', $event)"
         />
         <div class="resize-meta" aria-hidden="true">
@@ -437,8 +349,6 @@ import {
   AlignRight,
   ChevronDown,
   Copy,
-  Maximize2,
-  Minimize2,
   MoreHorizontal,
   Settings,
   Trash2,
@@ -467,6 +377,8 @@ const props = defineProps<{
   selected: boolean
   groupSelected: boolean
   textActive: boolean
+  uiActive: boolean
+  settingsAvailable: boolean
   comp: Component
   from: string
   to: string
@@ -493,8 +405,25 @@ const isTextWidget = computed(
 const isRoiWidget = computed(() => props.widget?.type === 'roi')
 const showHeader = computed(() => !isTextWidget.value)
 const showFloatingActions = computed(() => false)
+const shouldShowWidgetControls = computed(
+  () =>
+    props.uiActive &&
+    props.editMode &&
+    showHeader.value &&
+    !isFullscreen.value &&
+    availableWidgetActions.value.length > 0,
+)
+const shouldShowFloatingControls = computed(
+  () =>
+    props.uiActive &&
+    props.editMode &&
+    showFloatingActions.value &&
+    !isFullscreen.value &&
+    availableWidgetActions.value.length > 0,
+)
 const isTitleWidget = computed(() => props.widget?.type === 'textTitle')
 const textFonts = [
+  { label: 'Poppins', value: 'poppins' },
   { label: 'Open Sans', value: 'open-sans' },
   { label: 'PT Sans', value: 'pt-sans' },
   { label: 'PT Serif', value: 'pt-serif' },
@@ -512,12 +441,33 @@ const textAlignOptions: Array<{
   { value: 'center', title: 'Aligner au centre', icon: AlignCenter },
   { value: 'right', title: 'Aligner a droite', icon: AlignRight },
 ]
+const KPI_DISPLAY_WIDGET_TYPES = new Set([
+  'activeListings',
+  'asp',
+  'avgDaysToSell',
+  'avgMargin',
+  'cashFlow',
+  'goalProgress',
+  'inventoryValue',
+  'roi',
+  'sellThrough',
+  'varianceToTarget',
+])
+
+function isKpiDisplayWidget(widget: Widget | null | undefined) {
+  const type = String(widget?.type ?? '')
+  if (type === 'grossRevenue') return String(widget?.props?.view ?? 'line') !== 'line'
+  if (type === 'netProfit') return String(widget?.props?.view ?? 'line') !== 'line'
+  return KPI_DISPLAY_WIDGET_TYPES.has(type)
+}
+
 const defaultFontSize = computed(() => (isTitleWidget.value ? 52 : 17))
 const defaultWeight = computed(() => (isTitleWidget.value ? 'bold' : 'regular'))
-const defaultColor = computed(() => (isTitleWidget.value ? '#ffffff' : '#e2e8f0'))
+const defaultColor = computed(() => (isTitleWidget.value ? '#111827' : '#334155'))
 const liveRenderWidth = ref(0)
 const liveRenderHeight = ref(0)
 const TEXT_FONT_FAMILIES: Record<string, string> = {
+  poppins: 'var(--font-sans, "Poppins", Arial, sans-serif)',
   'open-sans': '"Open Sans", Arial, sans-serif',
   'pt-sans': '"PT Sans", Arial, sans-serif',
   'pt-serif': '"PT Serif", Georgia, serif',
@@ -543,6 +493,33 @@ const currentTextAlign = computed<'left' | 'center' | 'right'>(() => {
 const currentTextAlignOption = computed(
   () => textAlignOptions.find((align) => align.value === currentTextAlign.value) ?? textAlignOptions[0],
 )
+
+type WidgetActionKey = 'duplicate' | 'settings' | 'remove'
+type WidgetAction = {
+  key: WidgetActionKey
+  label: string
+  title: string
+  icon: Component
+  tone?: 'danger'
+}
+
+const availableWidgetActions = computed<WidgetAction[]>(() => {
+  if (!props.uiActive || !props.editMode || isTextWidget.value) return []
+  const actions: WidgetAction[] = [
+    { key: 'duplicate', label: 'Dupliquer', title: 'Dupliquer', icon: Copy },
+  ]
+  if (props.settingsAvailable) {
+    actions.push({ key: 'settings', label: 'Reglages', title: 'Reglages', icon: Settings })
+  }
+  actions.push({
+    key: 'remove',
+    label: 'Supprimer',
+    title: 'Supprimer',
+    icon: Trash2,
+    tone: 'danger',
+  })
+  return actions
+})
 
 function resolveTextFontSize() {
   const fallback = Number(props.widget?.props?.fontSize ?? defaultFontSize.value) || defaultFontSize.value
@@ -591,8 +568,8 @@ const inlineEditorStyle = computed(() => {
     fontSize: `${resolveTextFontSize()}px`,
     lineHeight: String(resolveTextLineHeight()),
     fontFamily:
-      TEXT_FONT_FAMILIES[String(props.widget?.props?.fontFamily ?? 'open-sans')] ??
-      TEXT_FONT_FAMILIES['open-sans'],
+      TEXT_FONT_FAMILIES[String(props.widget?.props?.fontFamily ?? 'poppins')] ??
+      TEXT_FONT_FAMILIES.poppins,
     fontWeight: String(resolveTextWeight()),
     fontStyle: Boolean(props.widget?.props?.italic) ? 'italic' : 'normal',
     textDecoration: Boolean(props.widget?.props?.underline) ? 'underline' : 'none',
@@ -617,7 +594,10 @@ const liveWidgetWidth = computed(() => {
   const fromProps = Number(props.widget?.w ?? 0)
   return Number.isFinite(fromProps) && fromProps > 0 ? fromProps : 0
 })
-const actionCount = computed(() => (props.editMode ? 4 : 1))
+const actionCount = computed(() => {
+  if (isTextWidget.value) return props.editMode ? 2 : 0
+  return availableWidgetActions.value.length
+})
 const actionUiScale = computed(() => {
   if (!isTextWidget.value) return 1
   const width = liveWidgetWidth.value
@@ -631,35 +611,52 @@ const actionUiScale = computed(() => {
   if (!needed) return 1
   return Math.max(0.72, Math.min(1, available / needed))
 })
+const kpiTitleSize = computed(() => {
+  if (!isKpiDisplayWidget(props.widget)) return 13
+  const width = Number(liveWidgetWidth.value || props.widget?.w || 320)
+  const height = Number(props.widget?.h ?? 140)
+  const titleLength = String(props.widget?.title ?? '').replace(/\s+/g, '').length
+  const lengthScale = titleLength > 22 ? 0.74 : titleLength > 16 ? 0.84 : titleLength > 12 ? 0.92 : 1
+  const raw = Math.min(width * 0.09, height * 0.15) * lengthScale
+  if (width < 180) return Math.max(12, Math.min(16, Math.round(raw)))
+  return Math.max(13, Math.min(22, Math.round(raw)))
+})
 const fullHeaderActionsWidth = computed(() => {
   const buttonSize = 34
   const gap = 8
-  const count = props.editMode ? 4 : 1
+  const count = availableWidgetActions.value.length
   return count * buttonSize + Math.max(0, count - 1) * gap
 })
 const headerStyle = computed(() => {
   if (!isTextWidget.value) {
-    return {
+    const style = {
       '--action-ui-scale': String(actionUiScale.value),
     } as Record<string, string>
+    if (isKpiDisplayWidget(props.widget)) {
+      style['--kpi-title-size'] = `${kpiTitleSize.value}px`
+    }
+    return style
   }
   return {
     '--text-ui-scale': String(textUiScale.value),
     '--action-ui-scale': String(actionUiScale.value),
   } as Record<string, string>
 })
-const rootTabIndex = computed(() => (props.editMode ? 0 : -1))
+const rootTabIndex = computed(() => (props.uiActive && props.editMode ? 0 : -1))
 const compactActions = computed(() => {
+  if (!props.uiActive) return false
   if (!showHeader.value) return false
   if (!props.editMode) return false
   const width = liveWidgetWidth.value
   if (!Number.isFinite(width) || width <= 0) return false
+  if (isKpiDisplayWidget(props.widget)) return width < 420
   // Reserve a minimal space so title stays readable and actions remain clickable.
   const minTitleSpace = 84
   const headerPadding = 26
   return width < fullHeaderActionsWidth.value + minTitleSpace + headerPadding
 })
 const widgetState = computed(() => {
+  if (!props.uiActive) return 'idle'
   if (!props.editMode) return 'idle'
   if (isInlineTextEditing.value) return 'editing'
   if (props.dragArmed) return 'dragging'
@@ -670,7 +667,12 @@ const widgetState = computed(() => {
 const shouldAutoHeight = computed(
   () => isTextWidget.value && props.widget?.props?.autoHeight !== false,
 )
-const headerOffset = computed(() => (showHeader.value ? 44 : 0))
+const DEFAULT_HEADER_HEIGHT = 38
+const KPI_HEADER_HEIGHT = 48
+const headerOffset = computed(() => {
+  if (!showHeader.value) return 0
+  return isKpiDisplayWidget(props.widget) ? KPI_HEADER_HEIGHT : DEFAULT_HEADER_HEIGHT
+})
 const widgetDef = computed(() => getWidgetDef(props.widget?.type))
 
 const widgetRenderWidth = computed(() => {
@@ -688,11 +690,16 @@ const widgetRenderHeight = computed(() => {
 const contentSizing = computed(() => {
   const currentWidth = Math.max(widgetRenderWidth.value, 1)
   const currentHeight = Math.max(widgetRenderHeight.value, 1)
-  const baseWidth = Math.max(Number(widgetDef.value?.defaultSize?.w ?? props.widget?.w ?? 0), 1)
-  const baseHeight = Math.max(
-    Number((widgetDef.value?.defaultSize?.h ?? props.widget?.h ?? 0) - headerOffset.value),
-    1,
-  )
+  const useRenderSizeAsBase = isKpiDisplayWidget(props.widget)
+  const baseWidth = useRenderSizeAsBase
+    ? currentWidth
+    : Math.max(Number(widgetDef.value?.defaultSize?.w ?? props.widget?.w ?? 0), 1)
+  const baseHeight = useRenderSizeAsBase
+    ? currentHeight
+    : Math.max(
+        Number((widgetDef.value?.defaultSize?.h ?? props.widget?.h ?? 0) - headerOffset.value),
+        1,
+      )
 
   return {
     renderWidth: currentWidth,
@@ -743,7 +750,7 @@ const mergedProps = computed(() => {
   p.widgetBaseHeight = sizing.baseHeight
   p.widgetRenderWidth = sizing.renderWidth
   p.widgetRenderHeight = sizing.renderHeight
-  p.canvasEditMode = props.editMode
+  p.canvasEditMode = props.uiActive && props.editMode
   return p
 })
 
@@ -791,6 +798,7 @@ const dotStyle = computed(() => {
 })
 
 function onPointerDown(e: PointerEvent) {
+  if (!props.uiActive) return
   if (!props.editMode) return
   if (e.button !== 0) return
   const target = e.target as HTMLElement | null
@@ -837,6 +845,7 @@ const resizeHintText = computed(() =>
 )
 
 function onResizeHandleDown(dir: ResizeDir, event: PointerEvent) {
+  if (!props.uiActive) return
   if (!props.editMode) return
   event.preventDefault()
   event.stopPropagation()
@@ -857,8 +866,22 @@ function closeActionMenu() {
 }
 
 function toggleActionMenu() {
+  if (!props.uiActive) return
   if (!props.editMode || isTextWidget.value) return
+  if (!availableWidgetActions.value.length) return
   isActionMenuOpen.value = !isActionMenuOpen.value
+}
+
+function runWidgetAction(action: WidgetActionKey) {
+  if (action === 'duplicate') {
+    emitDuplicateWidget()
+    return
+  }
+  if (action === 'settings') {
+    emitOpenSettings()
+    return
+  }
+  emitRemoveWidget()
 }
 
 function emitDuplicateWidget() {
@@ -867,6 +890,7 @@ function emitDuplicateWidget() {
 }
 
 function emitOpenSettings() {
+  if (!props.settingsAvailable) return
   closeActionMenu()
   emit('settings')
 }
@@ -878,6 +902,7 @@ function toggleBold() {
 }
 
 function toggleAlignMenu() {
+  if (!props.uiActive) return
   if (!props.editMode || !isTextWidget.value) return
   emit('activate')
   isAlignMenuOpen.value = !isAlignMenuOpen.value
@@ -929,6 +954,7 @@ function syncInlineEditorContent() {
 }
 
 function startInlineTextEdit() {
+  if (!props.uiActive) return
   if (!props.editMode || !isTextWidget.value) return
   emit('activate')
   isInlineTextEditing.value = true
@@ -1021,13 +1047,6 @@ const fullscreenStyle = {
   zIndex: 40, // keep below global header (z-50) so navigation stays usable
 }
 
-function enterFullscreen() {
-  if (isFullscreen.value) return
-  isFullscreen.value = true
-  document.body.classList.add('widget-fullscreen-open')
-  emit('fullscreen-change', true)
-}
-
 function exitFullscreen() {
   if (!isFullscreen.value) return
   isFullscreen.value = false
@@ -1035,15 +1054,7 @@ function exitFullscreen() {
   emit('fullscreen-change', false)
 }
 
-function toggleFullscreen() {
-  if (isFullscreen.value) {
-    exitFullscreen()
-    return
-  }
-  enterFullscreen()
-}
-
-defineExpose({ root })
+defineExpose({ root, exitFullscreen })
 
 let resizeRaf: number | null = null
 let widgetSizeRaf: number | null = null
@@ -1237,8 +1248,23 @@ watch(
   },
 )
 
+watch(
+  () => props.uiActive,
+  (active) => {
+    if (active) return
+    closeActionMenu()
+    isAlignMenuOpen.value = false
+    stopInlineTextEdit()
+    exitFullscreen()
+  },
+)
+
 watch(compactActions, (compact) => {
   if (!compact) closeActionMenu()
+})
+
+watch(availableWidgetActions, (actions) => {
+  if (!actions.length) closeActionMenu()
 })
 
 onBeforeUnmount(() => {
@@ -1269,6 +1295,7 @@ function onKeydown(e: KeyboardEvent) {
 }
 
 function onRootKeydown(event: KeyboardEvent) {
+  if (!props.uiActive) return
   if (!props.editMode) return
   if (event.key === 'Enter' || event.key === 'F2') {
     const target = event.target as HTMLElement | null
@@ -1287,7 +1314,7 @@ function onRootKeydown(event: KeyboardEvent) {
 <style scoped>
 .widget {
   position: absolute;
-  border-radius: 18px;
+  border-radius: 8px;
   overflow: visible;
   background: var(--canvas-widget-bg, rgba(10, 15, 26, 0.88));
   border: 1px solid var(--canvas-widget-border, rgba(148, 163, 184, 0.2));
@@ -1305,13 +1332,15 @@ function onRootKeydown(event: KeyboardEvent) {
 }
 .widget:focus-visible {
   box-shadow:
-    0 0 0 1px rgba(56, 189, 248, 0.92),
-    0 0 0 3px rgba(56, 189, 248, 0.18),
-    0 8px 18px rgba(2, 6, 23, 0.24);
+    0 0 0 1px rgba(91, 92, 226, 0.72),
+    0 0 0 3px rgba(91, 92, 226, 0.12),
+    0 14px 30px rgba(31, 41, 55, 0.14);
 }
 .widget__surface {
   width: 100%;
   height: 100%;
+  min-width: 0;
+  min-height: 0;
   border-radius: inherit;
   overflow: hidden;
   background: inherit;
@@ -1744,20 +1773,203 @@ function onRootKeydown(event: KeyboardEvent) {
 }
 .widget.is-selected {
   box-shadow:
-    0 0 0 1px rgba(56, 189, 248, 0.92),
-    0 0 0 3px rgba(56, 189, 248, 0.18),
-    0 6px 18px rgba(2, 6, 23, 0.24);
+    0 0 0 1px rgba(99, 102, 241, 0.58),
+    0 0 0 3px rgba(99, 102, 241, 0.1),
+    0 6px 18px rgba(2, 6, 23, 0.16);
 }
 .widget.drag-armed {
   box-shadow: 0 6px 18px rgba(2, 6, 23, 0.24);
   cursor: grab;
 }
 
+.widget--gross-revenue {
+  --template-text: #111827;
+  --template-text-muted: #64748b;
+  --template-title-font: var(--font-display, "Poppins", sans-serif);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.94)),
+    radial-gradient(circle at 100% 0, rgba(91, 92, 226, 0.08), transparent 36%);
+  border-color: rgba(148, 163, 184, 0.3);
+  box-shadow:
+    0 14px 34px rgba(31, 41, 55, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.widget--gross-revenue:hover {
+  border-color: rgba(91, 92, 226, 0.28);
+  box-shadow:
+    0 16px 36px rgba(31, 41, 55, 0.11),
+    inset 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+.widget--gross-revenue.is-selected {
+  border-color: rgba(91, 92, 226, 0.42);
+  box-shadow:
+    0 0 0 1px rgba(91, 92, 226, 0.34),
+    0 0 0 4px rgba(91, 92, 226, 0.08),
+    0 16px 36px rgba(31, 41, 55, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+.widget--gross-revenue .widget__surface {
+  background: inherit;
+}
+
+.widget--gross-revenue .widget__header {
+  border-bottom-color: rgba(148, 163, 184, 0.18);
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.widget--gross-revenue .title {
+  font-size: 0.68rem;
+  font-weight: 760;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.widget--gross-revenue .drag-grip {
+  opacity: 0.28;
+  background:
+    radial-gradient(circle, rgba(100, 116, 139, 0.68) 1px, transparent 1.5px) 0 0 / 6px 6px;
+}
+
+.widget--gross-revenue .widget__actions {
+  gap: 4px;
+}
+
+.widget--gross-revenue .iconbtn {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  border-color: rgba(148, 163, 184, 0.34);
+  background: rgba(248, 250, 252, 0.88);
+  color: #475569;
+}
+
+.widget--gross-revenue .iconbtn:hover {
+  border-color: rgba(91, 92, 226, 0.34);
+  background: #eef2ff;
+  color: #4338ca;
+}
+
+.widget--gross-revenue .iconbtn :deep(svg) {
+  width: 13px;
+  height: 13px;
+}
+
+.widget--kpi-display {
+  --kpi-header-height: 48px;
+  --template-text: #111827;
+  --template-text-muted: #64748b;
+  --template-title-font: var(--font-display, "Poppins", sans-serif);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(248, 250, 252, 0.94)),
+    radial-gradient(circle at 100% 0, rgba(91, 92, 226, 0.07), transparent 38%);
+  border-color: rgba(148, 163, 184, 0.28);
+  box-shadow:
+    0 14px 32px rgba(31, 41, 55, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.74);
+}
+
+.widget--kpi-display:hover {
+  border-color: rgba(91, 92, 226, 0.26);
+  box-shadow:
+    0 16px 36px rgba(31, 41, 55, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.widget--kpi-display.is-selected {
+  border-color: rgba(91, 92, 226, 0.42);
+  box-shadow:
+    0 0 0 1px rgba(91, 92, 226, 0.34),
+    0 0 0 4px rgba(91, 92, 226, 0.08),
+    0 16px 36px rgba(31, 41, 55, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.widget--kpi-display .widget__surface {
+  background: inherit;
+  overflow: visible;
+}
+
+.widget--kpi-display .widget__header {
+  height: var(--kpi-header-height);
+  justify-content: center;
+  padding: 5px 12px;
+  overflow: visible;
+  border-bottom: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(255, 255, 255, 0));
+}
+
+.widget--kpi-display .widget__body {
+  height: calc(100% - var(--kpi-header-height));
+}
+
+.widget--gross-revenue-kpi .widget__header {
+  position: relative;
+  inset: auto;
+}
+
+.widget--kpi-display .widget__title {
+  justify-content: center;
+  gap: 0;
+  text-align: center;
+  padding: 0 6px;
+}
+
+.widget--kpi-display .title {
+  width: 100%;
+  color: #111827;
+  font-family: var(--template-title-font);
+  font-size: var(--kpi-title-size, 18px);
+  line-height: 1.08;
+  font-weight: 860;
+  letter-spacing: 0;
+  text-transform: none;
+  display: -webkit-box;
+  white-space: normal;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: clip;
+}
+
+.widget--kpi-display .drag-grip {
+  display: none;
+}
+
+.widget--kpi-display .widget__actions {
+  display: none;
+}
+
+.widget--kpi-display .iconbtn {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  border-color: rgba(148, 163, 184, 0.34);
+  background: rgba(248, 250, 252, 0.88);
+  color: #475569;
+}
+
+.widget--kpi-display .iconbtn:hover {
+  border-color: rgba(91, 92, 226, 0.34);
+  background: #eef2ff;
+  color: #4338ca;
+}
+
+.widget--kpi-display .iconbtn :deep(svg) {
+  width: 12px;
+  height: 12px;
+}
+
 .widget__header {
-  height: 44px;
+  height: 38px;
   display: flex;
   align-items: center;
-  padding: 0 10px 0 12px;
+  padding: 0 8px 0 12px;
   border-bottom: 1px solid var(--canvas-widget-header-border, rgba(148, 163, 184, 0.16));
   background: var(--canvas-widget-header-bg, rgba(8, 13, 24, 0.78));
   position: relative;
@@ -1767,30 +1979,33 @@ function onRootKeydown(event: KeyboardEvent) {
 .widget__title {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   flex: 1 1 auto;
   min-width: 0;
   user-select: none;
 }
 .dot {
-  width: 10px;
-  height: 10px;
+  display: none;
+  width: 7px;
+  height: 7px;
   border-radius: 999px;
 }
 .title {
   color: var(--canvas-widget-title, rgba(241, 245, 249, 0.98));
-  font-weight: 650;
-  font-size: 0.88rem;
+  font-weight: 780;
+  font-size: 0.76rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .drag-grip {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   border-radius: 6px;
-  opacity: 0.52;
+  opacity: 0.36;
   background:
     radial-gradient(circle, rgba(226, 232, 240, 0.62) 1px, transparent 1.5px) 0 0 / 6px 6px;
 }
@@ -1811,7 +2026,6 @@ function onRootKeydown(event: KeyboardEvent) {
 }
 
 .widget[data-edit='true']:hover .widget__actions,
-.widget[data-edit='false']:hover .widget__actions,
 .widget.is-selected .widget__actions,
 .widget.is-resizing .widget__actions,
 .widget:focus-within .widget__actions,
@@ -1819,6 +2033,12 @@ function onRootKeydown(event: KeyboardEvent) {
   opacity: 1;
   transform: translateY(0);
   pointer-events: auto;
+}
+.widget:not([data-edit='true']) .widget__actions,
+.widget.is-ui-inactive .widget__actions {
+  opacity: 0;
+  transform: translateY(-2px);
+  pointer-events: none;
 }
 .widget__actions--compact {
   gap: 6px;
@@ -1845,12 +2065,12 @@ function onRootKeydown(event: KeyboardEvent) {
     transform 140ms ease;
 }
 .iconbtn {
-  width: calc(34px * var(--action-ui-scale, 1));
-  height: calc(34px * var(--action-ui-scale, 1));
-  border-radius: calc(11px * var(--action-ui-scale, 1));
-  border: 1px solid rgba(148, 163, 184, 0.24);
-  background: rgba(15, 23, 42, 0.52);
-  color: rgba(226, 232, 240, 0.92);
+  width: calc(30px * var(--action-ui-scale, 1));
+  height: calc(30px * var(--action-ui-scale, 1));
+  border-radius: calc(8px * var(--action-ui-scale, 1));
+  border: 1px solid rgba(148, 163, 184, 0.34);
+  background: rgba(255, 255, 255, 0.82);
+  color: #475569;
   display: grid;
   place-items: center;
   transition:
@@ -1859,8 +2079,17 @@ function onRootKeydown(event: KeyboardEvent) {
     opacity 160ms ease;
 }
 .iconbtn:hover {
-  border-color: rgba(148, 163, 184, 0.42);
-  background: rgba(30, 41, 59, 0.68);
+  border-color: rgba(91, 92, 226, 0.34);
+  background: #eef2ff;
+  color: #4338ca;
+}
+.iconbtn.is-danger {
+  color: #be123c;
+}
+.iconbtn.is-danger:hover {
+  border-color: rgba(244, 63, 94, 0.28);
+  background: rgba(255, 228, 230, 0.92);
+  color: #9f1239;
 }
 .iconbtn :deep(svg) {
   width: calc(16px * var(--action-ui-scale, 1));
@@ -1879,9 +2108,9 @@ function onRootKeydown(event: KeyboardEvent) {
   min-width: 162px;
   padding: 6px;
   border-radius: 11px;
-  border: 1px solid rgba(148, 163, 184, 0.24);
-  background: rgba(9, 15, 28, 0.96);
-  box-shadow: 0 14px 24px rgba(2, 6, 23, 0.4);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 14px 24px rgba(15, 23, 42, 0.16);
   display: grid;
   gap: 4px;
   z-index: 62;
@@ -1889,7 +2118,7 @@ function onRootKeydown(event: KeyboardEvent) {
 .widget-action-menu__item {
   border: 1px solid rgba(148, 163, 184, 0);
   background: rgba(15, 23, 42, 0);
-  color: rgba(241, 245, 249, 0.96);
+  color: #334155;
   border-radius: 9px;
   min-height: 32px;
   padding: 0 9px;
@@ -1901,14 +2130,14 @@ function onRootKeydown(event: KeyboardEvent) {
 }
 .widget-action-menu__item:hover {
   border-color: rgba(148, 163, 184, 0.34);
-  background: rgba(51, 65, 85, 0.36);
+  background: rgba(241, 245, 249, 0.92);
 }
 .widget-action-menu__item.is-danger {
-  color: rgba(254, 205, 211, 0.96);
+  color: #be123c;
 }
 .widget-action-menu__item.is-danger:hover {
-  border-color: rgba(248, 113, 113, 0.34);
-  background: rgba(127, 29, 29, 0.28);
+  border-color: rgba(244, 63, 94, 0.28);
+  background: rgba(255, 228, 230, 0.72);
 }
 .widget-action-menu__item:focus-visible {
   outline: 2px solid rgba(56, 189, 248, 0.9);
@@ -1935,7 +2164,7 @@ function onRootKeydown(event: KeyboardEvent) {
 }
 
 .widget__body {
-  height: calc(100% - 44px);
+  height: calc(100% - 38px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1969,12 +2198,19 @@ function onRootKeydown(event: KeyboardEvent) {
 .widget__content-inner {
   width: 100%;
   height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow-wrap: anywhere;
+}
+
+.widget__content-inner :deep(*) {
+  min-width: 0;
 }
 
 .widget__content-inner :deep([class*='border']) {
   border-color: color-mix(
     in srgb,
-    var(--canvas-widget-border, rgba(148, 163, 184, 0.2)) 70%,
+    var(--canvas-widget-border, rgba(148, 163, 184, 0.2)) 38%,
     transparent
   ) !important;
 }
@@ -2329,6 +2565,38 @@ function onRootKeydown(event: KeyboardEvent) {
 .widget:focus-within .resize-rail {
   opacity: 0.92;
 }
+
+.widget--gross-revenue .resize-rail {
+  display: none;
+}
+
+.widget--gross-revenue .resize-handle--corner {
+  --handle-size: 18px;
+  background: rgba(248, 250, 252, 0.96);
+  border: 1px solid rgba(91, 92, 226, 0.6);
+  box-shadow:
+    0 5px 13px rgba(15, 23, 42, 0.14),
+    0 0 0 4px rgba(91, 92, 226, 0.1);
+}
+
+.widget--gross-revenue .handle-corner-dot {
+  width: 3px;
+  height: 3px;
+  background: rgba(67, 56, 202, 0.86);
+}
+
+.widget--gross-revenue.is-selected .resize-handle,
+.widget--gross-revenue.is-resizing .resize-handle {
+  opacity: 0.88;
+}
+
+.widget--gross-revenue .resize-handle:hover,
+.widget--gross-revenue .resize-handle:focus-visible {
+  --handle-scale: 1.04;
+  box-shadow:
+    0 6px 15px rgba(15, 23, 42, 0.18),
+    0 0 0 5px rgba(91, 92, 226, 0.14);
+}
 .widget.is-dragging .resize-handle {
   opacity: 0.25;
 }
@@ -2404,8 +2672,17 @@ function onRootKeydown(event: KeyboardEvent) {
     padding: 0 10px 0 11px;
   }
 
+  .widget--kpi-display .widget__header {
+    min-height: var(--kpi-header-height);
+    padding: 5px 12px;
+  }
+
+  .widget--kpi-display .iconbtn {
+    width: 28px;
+    height: 28px;
+  }
+
   .widget[data-edit='true'] .widget__actions,
-  .widget[data-edit='false'] .widget__actions,
   .widget.is-fullscreen .widget__actions {
     opacity: 1;
     transform: translateY(0);

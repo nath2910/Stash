@@ -98,9 +98,6 @@ Pedagogie JS:
 ### `TextBlockWidget.vue`
 - Texte libre multi-style (align, taille, poids, famille).
 
-### `TextSectionWidget.vue`
-- Bloc section sobre (titre + sous-titre).
-
 ### `TextTitleWidget.vue`
 - Titre fort avec options typographiques.
 
@@ -108,22 +105,8 @@ Ces widgets n'appellent pas l'API.
 
 ---
 
-## 5) Widgets potentiellement legacy / ambigus
-
-### `OpexWidget.vue`
-- Appelle `breakdown('opex')`.
-- `StatsService.breakdown` ne mappe pas explicitement `opex`.
-- Risque: widget vide en prod.
-
-### `PlatformSplitWidget.vue`
-- Appelle `breakdown('platformSplit')`.
-- Metric non mappee explicitement backend actuel.
-
-### `ReturnRateWidget.vue`
-- Appelle `series('returnRate')`.
-- Metric non mappee explicitement backend actuel.
-
-Action reprise: verifier si code backend manquant, code frontend legacy, ou endpoint externe attendu.
+## 5) Widgets retires
+Les widgets legacy non references et ambigus ont ete retires du runtime frontend. Tout nouveau widget doit etre declare dans `widgetRegistry.js` et teste contre un endpoint existant.
 
 ---
 
