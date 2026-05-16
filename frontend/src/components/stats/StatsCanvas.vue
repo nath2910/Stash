@@ -264,6 +264,11 @@
         :initial-state="annualDashboardTemplateState"
         @state-change="onTemplateStateChange"
       />
+      <MonthlyDashboardTemplate
+        v-else-if="activeTemplateId === MONTHLY_DASHBOARD_TEMPLATE_ID"
+        :initial-state="monthlyDashboardTemplateState"
+        @state-change="onTemplateStateChange"
+      />
       <TemplateEmptyLayout v-else @back="removeActiveTemplate" />
     </div>
 
@@ -589,6 +594,9 @@ import StatsServices from '@/services/StatsServices'
 const AnnualDashboardTemplate = defineAsyncComponent(
   () => import('./template-mode/annual-dashboard/AnnualDashboardTemplate.vue'),
 )
+const MonthlyDashboardTemplate = defineAsyncComponent(
+  () => import('./template-mode/monthly-dashboard/MonthlyDashboardTemplate.vue'),
+)
 const WidgetPalette = defineAsyncComponent(() => import('./WidgetPalette.vue'))
 const WidgetSettingsModal = defineAsyncComponent(() => import('./WidgetSettingsModal.vue'))
 
@@ -677,6 +685,7 @@ const profileDraft = ref({
 const templatePickerOpen = ref(false)
 const templateActive = ref(false)
 const ANNUAL_DASHBOARD_TEMPLATE_ID = 'annual-dashboard'
+const MONTHLY_DASHBOARD_TEMPLATE_ID = 'monthly-dashboard'
 const activeTemplateId = ref('')
 const activeTemplateState = ref<Record<string, unknown>>({})
 const templateNavItems = [
@@ -691,9 +700,18 @@ const templatePickerItems: TemplatePickerItem[] = [
     title: 'Dashboard annuel',
     description: 'CA, profit, achats, stock et meilleurs produits sur une annee complete.',
   },
+  {
+    id: MONTHLY_DASHBOARD_TEMPLATE_ID,
+    badge: 'Vue mensuelle',
+    title: 'Dashboard mensuel',
+    description: 'Pilotage mois par mois avec KPI, tendances quotidiennes, achats et top ventes.',
+  },
 ]
 const annualDashboardTemplateState = computed(() =>
   activeTemplateId.value === ANNUAL_DASHBOARD_TEMPLATE_ID ? activeTemplateState.value : {},
+)
+const monthlyDashboardTemplateState = computed(() =>
+  activeTemplateId.value === MONTHLY_DASHBOARD_TEMPLATE_ID ? activeTemplateState.value : {},
 )
 const minDate = ref('')
 const maxDate = ref('')
