@@ -797,7 +797,6 @@ watch(
   (state) => {
     const next = clampMonthKey(normalizeInitialMonth(state))
     if (selectedMonthKey.value !== next) selectedMonthKey.value = next
-    if (activePage.value !== 1) activePage.value = 1
   },
   { deep: true },
 )

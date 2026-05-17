@@ -82,10 +82,6 @@
 - Gere plage date stats par utilisateur.
 - persistance storage user-scoped.
 
-### `composables/useStatsDashboard.js`
-- Ancien orchestrateur stats "dashboard classique".
-- charge summary/timeseries/brands/topSales + deltas.
-
 ## 6) Pages
 
 ### Auth
@@ -108,7 +104,6 @@
 - `components/AcceuilDernierItem.vue`: table derniers items.
 - `components/AcceuilWidgetLateral.vue`: cartes KPI laterales home.
 - `components/StatBadge.vue`: badge KPI reusable.
-- `components/HeaderDePage.vue`: titre/sous-titre standard pages.
 - `components/ui/CompactDateInput.vue`: input date compact custom.
 
 ## 8) Assets et utilitaires

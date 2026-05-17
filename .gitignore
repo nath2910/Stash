@@ -12,6 +12,21 @@ Thumbs.db
 
 # Logs
 *.log
+*.out
+*.err
+
+# Generated dependencies/build output
+node_modules/
+dist/
+.vite/
+target/
+**/target/
+
+# Local backups / ad-hoc notes
+*.dump
+*.zip
+patch_debug.txt
+Features a ajouter stash.txt
 
 # Local storage for attachments
 uploads/

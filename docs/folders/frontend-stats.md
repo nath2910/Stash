@@ -120,9 +120,6 @@ Les widgets legacy non references `Opex`, `PlatformSplit`, `ReturnRate` et `Text
 ### `KpiCard.vue`
 - pattern KPI principal + delta + sparkline.
 
-### `ChartCard.vue`
-- wrapper chart ECharts avec tuning fonts/layout selon dimensions.
-
 ### `Sparkline.vue`
 - mini graphe ligne ECharts minimal.
 

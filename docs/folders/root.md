@@ -4,8 +4,8 @@
 La racine assemble:
 1. orchestration locale (compose),
 2. documentation minimale,
-3. artefacts de travail (dumps, notes, zip),
-4. deux applications distinctes (`backend/`, `frontend/`).
+3. deux applications distinctes (`backend/`, `frontend/`),
+4. stockage runtime local (`uploads/`, ignore par git).
 
 ## 2) Fichiers principaux
 
@@ -26,18 +26,6 @@ La racine assemble:
 ### `package-lock.json` (racine)
 - Lock correspondante.
 
-### `patch_debug.txt` et `Features a ajouter stash.txt`
-- Notes ad-hoc (non code de prod).
-- A migrer idealement vers issues/projet board.
-
-### `dump16012026.dump`, `snkProjet_docker.dump`
-- Backups DB.
-- Impact possible RGPD / donnees perso.
-
-### `frontend.zip`
-- Archive hors pipeline principal.
-- A classifier (obsolete ou backup).
-
 ### `.gitignore`
 - Ignore `.env*` (sauf `.env.example`) et `uploads/`.
 - Bonne base, mais verifier que secrets n'ont pas deja fuite ailleurs.
@@ -54,11 +42,7 @@ La racine assemble:
 - Stockage runtime pieces jointes.
 - Contient des donnees utilisateurs reelles.
 
-### `.github/`
-- Dossier present mais structure CI/CD exploitable non evidente dans l'etat observe.
-
 ## 4) Conseils reprise sur la racine
-1. Clarifier le statut des artefacts (`*.dump`, `frontend.zip`).
-2. Sortir credentials en clair de `docker-compose.yml`.
-3. Ajouter une politique claire backup/restauration.
-4. Eventuellement separer docs projet des notes perso.
+1. Sortir credentials en clair de `docker-compose.yml`.
+2. Ajouter une politique claire backup/restauration hors repository.
+3. Eventuellement separer docs projet des notes perso.

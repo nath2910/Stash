@@ -259,14 +259,10 @@
     </Transition>
     </template>
     <div v-else class="template-mode">
-      <AnnualDashboardTemplate
-        v-if="activeTemplateId === ANNUAL_DASHBOARD_TEMPLATE_ID"
-        :initial-state="annualDashboardTemplateState"
-        @state-change="onTemplateStateChange"
-      />
-      <MonthlyDashboardTemplate
-        v-else-if="activeTemplateId === MONTHLY_DASHBOARD_TEMPLATE_ID"
-        :initial-state="monthlyDashboardTemplateState"
+      <component
+        :is="activeTemplateComponent"
+        v-if="activeTemplateComponent"
+        :initial-state="activeTemplateState"
         @state-change="onTemplateStateChange"
       />
       <TemplateEmptyLayout v-else @back="removeActiveTemplate" />
@@ -590,13 +586,23 @@ import { getWidgetPaletteMeta, getWidgetSelectionMeta } from './palette/widgetPa
 import { useTheme } from '@/composables/useTheme'
 import { useAuthStore } from '@/store/authStore'
 import StatsServices from '@/services/StatsServices'
+import {
+  DEFAULT_TEMPLATE_ID,
+  TEMPLATE_DEFINITIONS,
+  getTemplateDefinition,
+  sanitizeTemplateId,
+  type TemplateDefinition,
+  type TemplateId,
+} from './template-mode/registry'
+import {
+  normalizeProfileTemplateState,
+  sanitizeTemplateStateMap,
+  setTemplateState,
+  type ProfileTemplateState,
+  type TemplateRuntimeState,
+  type TemplateStateMap,
+} from './template-mode/templateState'
 
-const AnnualDashboardTemplate = defineAsyncComponent(
-  () => import('./template-mode/annual-dashboard/AnnualDashboardTemplate.vue'),
-)
-const MonthlyDashboardTemplate = defineAsyncComponent(
-  () => import('./template-mode/monthly-dashboard/MonthlyDashboardTemplate.vue'),
-)
 const WidgetPalette = defineAsyncComponent(() => import('./WidgetPalette.vue'))
 const WidgetSettingsModal = defineAsyncComponent(() => import('./WidgetSettingsModal.vue'))
 
@@ -615,19 +621,6 @@ type Widget = {
 type ResizeDir = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw'
 
 type ProfileRange = { from: string; to: string }
-
-type ProfileTemplateState = {
-  active?: boolean
-  templateId?: string
-  state?: Record<string, unknown>
-}
-
-type TemplatePickerItem = {
-  id: string
-  badge: string
-  title: string
-  description: string
-}
 
 type LayoutBundle = {
   version: number
@@ -684,35 +677,20 @@ const profileDraft = ref({
 })
 const templatePickerOpen = ref(false)
 const templateActive = ref(false)
-const ANNUAL_DASHBOARD_TEMPLATE_ID = 'annual-dashboard'
-const MONTHLY_DASHBOARD_TEMPLATE_ID = 'monthly-dashboard'
-const activeTemplateId = ref('')
-const activeTemplateState = ref<Record<string, unknown>>({})
+const activeTemplateId = ref<TemplateId | ''>('')
+const activeTemplateStates = ref<TemplateStateMap>({})
 const templateNavItems = [
   { key: 'home', label: 'Accueil', path: '/', icon: Home },
   { key: 'stats', label: 'Stats', path: '/stats', icon: BarChart3 },
   { key: 'gestion', label: 'Gestion', path: '/gestion', icon: Boxes },
 ]
-const templatePickerItems: TemplatePickerItem[] = [
-  {
-    id: ANNUAL_DASHBOARD_TEMPLATE_ID,
-    badge: 'Vue annuelle',
-    title: 'Dashboard annuel',
-    description: 'CA, profit, achats, stock et meilleurs produits sur une annee complete.',
-  },
-  {
-    id: MONTHLY_DASHBOARD_TEMPLATE_ID,
-    badge: 'Vue mensuelle',
-    title: 'Dashboard mensuel',
-    description: 'Pilotage mois par mois avec KPI, tendances quotidiennes, achats et top ventes.',
-  },
-]
-const annualDashboardTemplateState = computed(() =>
-  activeTemplateId.value === ANNUAL_DASHBOARD_TEMPLATE_ID ? activeTemplateState.value : {},
-)
-const monthlyDashboardTemplateState = computed(() =>
-  activeTemplateId.value === MONTHLY_DASHBOARD_TEMPLATE_ID ? activeTemplateState.value : {},
-)
+const templatePickerItems = TEMPLATE_DEFINITIONS
+const activeTemplateDefinition = computed(() => getTemplateDefinition(activeTemplateId.value))
+const activeTemplateComponent = computed(() => activeTemplateDefinition.value?.component ?? null)
+const activeTemplateState = computed<TemplateRuntimeState>(() => {
+  const templateId = sanitizeTemplateId(activeTemplateId.value)
+  return templateId ? (activeTemplateStates.value[templateId] ?? {}) : {}
+})
 const minDate = ref('')
 const maxDate = ref('')
 const settingsCategories = ref<string[]>([])
@@ -779,27 +757,10 @@ function dispatchTemplateMode(active: boolean) {
   )
 }
 
-function sanitizeTemplateId(id?: unknown) {
-  const value = typeof id === 'string' ? id : ''
-  return templatePickerItems.some((item) => item.id === value) ? value : ''
-}
-
-function sanitizeTemplateRuntimeState(raw: unknown): Record<string, unknown> {
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {}
-  return { ...(raw as Record<string, unknown>) }
-}
-
 function getProfileTemplateState(bundle: LayoutBundle, profileId: string): ProfileTemplateState | null {
   const picked = pickProfileId(profileId)
   const saved = bundle.profileTemplates?.[picked]
-  if (!saved?.active) return null
-  const templateId = sanitizeTemplateId(saved.templateId)
-  if (!templateId) return null
-  return {
-    active: true,
-    templateId,
-    state: sanitizeTemplateRuntimeState(saved.state),
-  }
+  return normalizeProfileTemplateState(saved)
 }
 
 function writeActiveProfileTemplateState(bundle: LayoutBundle) {
@@ -807,10 +768,13 @@ function writeActiveProfileTemplateState(bundle: LayoutBundle) {
   bundle.profileTemplates = bundle.profileTemplates ?? {}
   const templateId = sanitizeTemplateId(activeTemplateId.value)
   if (templateActive.value && templateId) {
+    const states = setTemplateState(activeTemplateStates.value, templateId, activeTemplateState.value)
+    activeTemplateStates.value = states
     bundle.profileTemplates[picked] = {
       active: true,
       templateId,
-      state: sanitizeTemplateRuntimeState(activeTemplateState.value),
+      state: states[templateId] ?? {},
+      states,
     }
     return
   }
@@ -818,8 +782,9 @@ function writeActiveProfileTemplateState(bundle: LayoutBundle) {
 }
 
 function onTemplateStateChange(state: unknown) {
-  if (!templateActive.value || !activeTemplateId.value) return
-  activeTemplateState.value = sanitizeTemplateRuntimeState(state)
+  const templateId = sanitizeTemplateId(activeTemplateId.value)
+  if (!templateActive.value || !templateId) return
+  activeTemplateStates.value = setTemplateState(activeTemplateStates.value, templateId, state)
   scheduleSave()
 }
 
@@ -832,12 +797,20 @@ function onRootWheel(event: WheelEvent) {
   }
 }
 
-function applyTemplate(item?: TemplatePickerItem) {
-  const id = item?.id ?? ANNUAL_DASHBOARD_TEMPLATE_ID
-  const previousTemplateId = activeTemplateId.value
-  const previousState = previousTemplateId === id ? activeTemplateState.value : {}
+function applyTemplate(item?: TemplateDefinition) {
+  const id = sanitizeTemplateId(item?.id) || DEFAULT_TEMPLATE_ID
+  const previousTemplateId = sanitizeTemplateId(activeTemplateId.value)
+  if (previousTemplateId) {
+    activeTemplateStates.value = setTemplateState(
+      activeTemplateStates.value,
+      previousTemplateId,
+      activeTemplateState.value,
+    )
+  }
   activeTemplateId.value = id
-  activeTemplateState.value = sanitizeTemplateRuntimeState(previousState)
+  if (!activeTemplateStates.value[id]) {
+    activeTemplateStates.value = setTemplateState(activeTemplateStates.value, id, {})
+  }
   templateActive.value = true
   templatePickerOpen.value = false
   paletteOpen.value = false
@@ -861,7 +834,7 @@ function removeActiveTemplate() {
   syncPanzoomExclude(false)
   templateActive.value = false
   activeTemplateId.value = ''
-  activeTemplateState.value = {}
+  activeTemplateStates.value = {}
   dispatchTemplateMode(false)
   saveBundleNow(false)
 }
@@ -1718,15 +1691,9 @@ function normalizeBundle(raw: unknown): LayoutBundle {
     if (!templates || typeof templates !== 'object' || Array.isArray(templates)) return {}
     const map: Record<string, ProfileTemplateState> = {}
     for (const [profileId, value] of Object.entries(templates as Record<string, unknown>)) {
-      if (!value || typeof value !== 'object' || Array.isArray(value)) continue
-      const source = value as Record<string, unknown>
-      const templateId = sanitizeTemplateId(source.templateId)
-      if (source.active !== true || !templateId) continue
-      map[pickProfileId(profileId)] = {
-        active: true,
-        templateId,
-        state: sanitizeTemplateRuntimeState(source.state),
-      }
+      const normalized = normalizeProfileTemplateState(value)
+      if (!normalized) continue
+      map[pickProfileId(profileId)] = normalized
     }
     return map
   }
@@ -1778,13 +1745,17 @@ function applyProfileLayout(bundle: LayoutBundle, profileId: string) {
   const templateState = getProfileTemplateState(bundle, picked)
   if (templateState?.templateId) {
     activeTemplateId.value = templateState.templateId
-    activeTemplateState.value = sanitizeTemplateRuntimeState(templateState.state)
+    activeTemplateStates.value = setTemplateState(
+      sanitizeTemplateStateMap(templateState.states),
+      templateState.templateId,
+      templateState.state,
+    )
     templateActive.value = true
     dispatchTemplateMode(true)
   } else {
     templateActive.value = false
     activeTemplateId.value = ''
-    activeTemplateState.value = {}
+    activeTemplateStates.value = {}
     dispatchTemplateMode(false)
   }
   const raw = bundle.profiles?.[picked]

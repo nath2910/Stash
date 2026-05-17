@@ -172,13 +172,9 @@ Les widgets peuvent supposer une forme stable meme si backend varie.
 - Persist plage date par user.
 - Cle storage prefixee `snk_stats_range_v1_<userId>`.
 
-## 11) `src/composables/useStatsDashboard.js`
-- Ancien orchestrateur dashboard pre-canvas.
-- Encore utile pour reference logique delta/periode precedente.
-
 ---
 
-## 12) Conseils reprise
+## 11) Conseils reprise
 1. Garder `api.js` comme point unique interceptors.
 2. Eviter duplication de caches stats hors `StatsServices.js`.
 3. Si migration vers Pinia: traiter d'abord `authStore` puis `billingStore`.

@@ -121,10 +121,6 @@ Les widgets legacy non references et ambigus ont ete retires du runtime frontend
 - Layout KPI + delta + sparkline.
 - Classes delta up/down.
 
-### `ChartCard.vue`
-- Wrapper chart ECharts.
-- Ajuste taille polices axes/legend selon dimension widget.
-
 ### `Sparkline.vue`
 - Mini line chart simple.
 

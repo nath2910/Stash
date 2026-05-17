@@ -56,7 +56,7 @@ Importe au bootstrap pour config chart.
 
 ---
 
-## 6) `src/components/ui/CompactDateInput.vue`
+## 5) `src/components/ui/CompactDateInput.vue`
 
 ### Role
 Input date compact custom (integration datepicker).
@@ -68,13 +68,10 @@ Input date compact custom (integration datepicker).
 
 ---
 
-## 7) `src/components/StatBadge.vue`
+## 6) `src/components/StatBadge.vue`
 - Petit composant de badge KPI avec ton dynamique.
 
-## 8) `src/components/HeaderDePage.vue`
-- Header simple reutilisable (titre/sous-titre/description).
-
-## 10) CSS globaux
+## 7) CSS globaux
 
 ### `src/assets/base.css`
 - reset/base styles + variables globales.
@@ -87,7 +84,7 @@ Input date compact custom (integration datepicker).
 
 ---
 
-## 11) Config frontend autour styles
+## 8) Config frontend autour styles
 
 ### `tailwind.config.js`
 - content paths + font family extension.
@@ -100,5 +97,5 @@ Input date compact custom (integration datepicker).
 
 ---
 
-## 12) Note reprise
+## 9) Note reprise
 Le couple `formatters.js` + `snkVente.js` est tres utilise; toute modification peut impacter home, gestion, stats simultanement.

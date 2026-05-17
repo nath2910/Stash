@@ -431,7 +431,6 @@ watch(
   (state) => {
     const nextYear = normalizeInitialYear(state?.year)
     if (selectedYear.value !== nextYear) selectedYear.value = nextYear
-    if (activePage.value !== 1) activePage.value = 1
   },
   { deep: true },
 )

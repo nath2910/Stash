@@ -16,7 +16,7 @@ Le backend, l'authentification, Stripe, Flyway et les contrats API ne doivent pa
 - `src/components/stats/`: dashboard stats, canvas, widgets, palette, settings, templates.
 - `src/services/`: clients API Axios par domaine.
 - `src/store/`: stores globaux simples bases sur `ref`.
-- `src/composables/`: logique Vue reutilisable (`useTheme`, `useStatsRange`, `useStatsDashboard`).
+- `src/composables/`: logique Vue reutilisable (`useTheme`, `useStatsRange`).
 - `src/utils/`: helpers purs (`formatters`, `snkVente`, `stockImportExport`).
 - `src/assets/`: styles globaux.
 
@@ -46,7 +46,7 @@ Les modules associes sont:
 - `widgetRegistry.js`: contrat central des widgets, tailles, props par defaut, settings et composants.
 
 ## Widgets
-Les widgets actifs sont declares dans `widgetRegistry.js` et charges en `defineAsyncComponent`. Les widgets partagent les pieces UI de `widgets/_parts/` (`WidgetCard`, `KpiCard`, `ChartCard`, `Sparkline`) et appellent `StatsServices` avec les filtres `from/to/categories/types`.
+Les widgets actifs sont declares dans `widgetRegistry.js` et charges en `defineAsyncComponent`. Les widgets partagent les pieces UI de `widgets/_parts/` (`WidgetCard`, `KpiCard`, `Sparkline`) et appellent `StatsServices` avec les filtres `from/to/categories/types`.
 
 Les anciens widgets non references et non presents dans le registry ont ete retires pour eviter la confusion: `OpexWidget`, `PlatformSplitWidget`, `ReturnRateWidget`, `TextSectionWidget`.
 

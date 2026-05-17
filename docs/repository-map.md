@@ -7,18 +7,11 @@ Ce document cartographie les fichiers utiles du repository (hors `node_modules`,
 - `docker-compose.yml`: compose principal (db + backend + frontend).
 - `package.json`: dependances CSS/tooling racine.
 - `package-lock.json`: lock racine.
-- `patch_debug.txt`: note de patch hors code.
-- `Features a ajouter stash.txt`: backlog informel.
-- `frontend.zip`: archive hors build pipeline.
-- `dump16012026.dump`, `snkProjet_docker.dump`: dumps base.
 - `uploads/...`: stockage local des pieces jointes uploades.
 
-## 2) Dossier `.github`
-- `.github/appmod/appcat`: repertoire present mais non structure CI exploitable constatee.
+## 2) Backend (`backend/`)
 
-## 3) Backend (`backend/`)
-
-### 3.1 Config/build
+### 2.1 Config/build
 - `backend/pom.xml`: dependances Maven + plugins build.
 - `backend/Dockerfile`: image backend multi-stage.
 - `backend/mvnw`, `backend/mvnw.cmd`: wrappers Maven.
@@ -27,7 +20,7 @@ Ce document cartographie les fichiers utiles du repository (hors `node_modules`,
 - `backend/HELP.md`: template Spring genere.
 - `backend/.mvn/wrapper/maven-wrapper.properties`: version Maven wrapper.
 
-### 3.2 Source Java principal
+### 2.2 Source Java principal
 - `backend/src/main/java/backend/BackendApplication.java`
 
 #### `config/`
@@ -113,7 +106,7 @@ Ce document cartographie les fichiers utiles du repository (hors `node_modules`,
 - `StatsService.java`
 - `UserService.java`
 
-### 3.3 Resources backend
+### 2.3 Resources backend
 - `backend/src/main/resources/application.yml`
 - `backend/src/main/resources/compose.yaml`
 - `backend/src/main/resources/ss.sql` (vide)
@@ -134,16 +127,16 @@ Ce document cartographie les fichiers utiles du repository (hors `node_modules`,
 - `V13__update_discord_role.sql`
 - `V14__typed_items_and_attachments.sql`
 
-### 3.4 Tests backend
+### 2.4 Tests backend
 - `backend/src/test/java/backend/BackendApplicationTests.java`
 - `backend/src/test/java/backend/controller/BillingControllerTest.java`
 - `backend/src/test/java/backend/controller/HealthControllerTest.java`
 - `backend/src/test/java/backend/controller/StatsControllerTest.java`
 - `backend/src/test/java/backend/service/SnkVenteServiceImportTest.java`
 
-## 4) Frontend (`frontend/`)
+## 3) Frontend (`frontend/`)
 
-### 4.1 Config/build/outillage
+### 3.1 Config/build/outillage
 - `frontend/package.json`
 - `frontend/package-lock.json`
 - `frontend/README.md`
@@ -168,7 +161,7 @@ Ce document cartographie les fichiers utiles du repository (hors `node_modules`,
 - `frontend/.vscode/extensions.json`
 - `frontend/public/logo.png`
 
-### 4.2 Source frontend (`frontend/src`)
+### 3.2 Source frontend (`frontend/src`)
 - `App.vue`
 - `main.js`
 
@@ -180,7 +173,6 @@ Ce document cartographie les fichiers utiles du repository (hors `node_modules`,
 - `AcceuilDernierItem.vue`
 - `AcceuilWidgetLateral.vue`
 - `AuthForm.vue`
-- `HeaderDePage.vue`
 - `StatBadge.vue`
 
 #### components/ui
@@ -247,13 +239,11 @@ Ce document cartographie les fichiers utiles du repository (hors `node_modules`,
 - `VarianceToTargetWidget.vue`
 
 ##### components/stats/widgets/_parts
-- `ChartCard.vue`
 - `KpiCard.vue`
 - `Sparkline.vue`
 - `WidgetCard.vue`
 
 #### composables
-- `useStatsDashboard.js`
 - `useStatsRange.js`
 - `useTheme.js`
 
@@ -299,17 +289,16 @@ Ce document cartographie les fichiers utiles du repository (hors `node_modules`,
 - `snkVente.js`
 - `stockImportExport.ts`
 
-### 4.3 Tests frontend
+### 3.3 Tests frontend
 - `frontend/tests/statsServices.test.js`
 - `frontend/tests/stockImportExport.test.ts`
 - `frontend/tests/widgetPalette.utils.test.ts`
 
-## 5) Fichiers hors execution applicative mais importants en reprise
+## 4) Fichiers hors execution applicative mais importants en reprise
 1. `uploads/...`: fichiers utilisateurs reels, impact RGPD / sauvegarde.
 2. `backend/.env`: secrets locaux sensibles.
 3. `docker-compose.yml` et `backend/src/main/resources/compose.yaml`: credentials en clair.
-4. `frontend.zip`, dumps SQL: artefacts a classifier (backup? archive? obsolete?).
 
-## 6) Note de confiance (completude)
+## 5) Note de confiance (completude)
 - Cartographie realisee par scan complet du repository hors dependances generees (`node_modules`, `dist`, `target`).
 - Si de nouveaux fichiers apparaissent apres cette date, ce document doit etre regenére.
