@@ -213,11 +213,11 @@ const heatCells = computed(() => {
 .widget-preview {
   position: relative;
   overflow: hidden;
-  border-radius: 10px;
-  border: 1px solid rgba(100, 116, 139, 0.28);
+  border-radius: 8px;
+  border: 1px solid rgba(100, 116, 139, 0.18);
   background:
-    linear-gradient(180deg, rgba(214, 224, 237, 0.74), rgba(203, 213, 225, 0.74)),
-    radial-gradient(circle at 100% 0, color-mix(in srgb, var(--preview-accent) 14%, transparent), transparent 55%);
+    linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(226, 232, 240, 0.78)),
+    linear-gradient(135deg, color-mix(in srgb, var(--preview-accent) 10%, transparent), transparent 58%);
   min-height: 88px;
   padding: 9px;
 }
@@ -245,7 +245,7 @@ const heatCells = computed(() => {
 
 .preview-delta {
   padding: 2px 6px;
-  border-radius: 999px;
+  border-radius: 6px;
   font-size: 10px;
   font-weight: 700;
   color: #166534;
@@ -392,7 +392,7 @@ const heatCells = computed(() => {
 .line {
   display: block;
   height: 5px;
-  border-radius: 99px;
+  border-radius: 4px;
   background: rgba(148, 163, 184, 0.3);
 }
 

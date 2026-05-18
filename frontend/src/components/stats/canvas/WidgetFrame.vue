@@ -330,7 +330,7 @@
           class="text-scale-handle"
           aria-label="Ajuster la taille du texte"
           title="Ajuster la taille du texte"
-          @pointerdown.stop.prevent="$emit('textScaleStart', $event)"
+          @pointerdown.stop.prevent="onTextScaleHandleDown"
         />
         <div class="resize-meta" aria-hidden="true">
           <div class="resize-metrics">{{ Math.round(widget.w) }} x {{ Math.round(widget.h) }}</div>
@@ -455,6 +455,11 @@ const defaultWeight = computed(() => (isTitleWidget.value ? 'bold' : 'regular'))
 const defaultColor = computed(() => (isTitleWidget.value ? '#111827' : '#334155'))
 const liveRenderWidth = ref(0)
 const liveRenderHeight = ref(0)
+const isResizingLive = ref(false)
+const resizePreviewWidth = ref(0)
+const resizePreviewHeight = ref(0)
+const resizeBaseWidth = ref(0)
+const resizeBaseHeight = ref(0)
 const TEXT_FONT_FAMILIES: Record<string, string> = {
   poppins: 'var(--font-sans, "Poppins", Arial, sans-serif)',
   'open-sans': '"Open Sans", Arial, sans-serif',
@@ -656,7 +661,7 @@ const widgetState = computed(() => {
 const shouldAutoHeight = computed(
   () => isTextWidget.value && props.widget?.props?.autoHeight !== false,
 )
-const DEFAULT_HEADER_HEIGHT = 38
+const DEFAULT_HEADER_HEIGHT = 36
 const KPI_HEADER_HEIGHT = 40
 const headerOffset = computed(() => {
   if (!showHeader.value) return 0
@@ -679,16 +684,11 @@ const widgetRenderHeight = computed(() => {
 const contentSizing = computed(() => {
   const currentWidth = Math.max(widgetRenderWidth.value, 1)
   const currentHeight = Math.max(widgetRenderHeight.value, 1)
-  const useRenderSizeAsBase = isKpiDisplayWidget(props.widget)
-  const baseWidth = useRenderSizeAsBase
-    ? currentWidth
-    : Math.max(Number(widgetDef.value?.defaultSize?.w ?? props.widget?.w ?? 0), 1)
-  const baseHeight = useRenderSizeAsBase
-    ? currentHeight
-    : Math.max(
-        Number((widgetDef.value?.defaultSize?.h ?? props.widget?.h ?? 0) - headerOffset.value),
-        1,
-      )
+  const baseWidth = Math.max(Number(widgetDef.value?.defaultSize?.w ?? props.widget?.w ?? 0), 1)
+  const baseHeight = Math.max(
+    Number((widgetDef.value?.defaultSize?.h ?? props.widget?.h ?? 0) - headerOffset.value),
+    1,
+  )
 
   return {
     renderWidth: currentWidth,
@@ -698,30 +698,30 @@ const contentSizing = computed(() => {
   }
 })
 
-const surfaceScale = computed(() => {
-  if (isTextWidget.value) {
-    return {
-      scaleX: 1,
-      scaleY: 1,
-    }
-  }
-  const sizing = contentSizing.value
-  const renderTotalHeight = sizing.renderHeight + headerOffset.value
-  const baseTotalHeight = Math.max(sizing.baseHeight + headerOffset.value, 1)
+const shouldFreezeContentDuringResize = computed(
+  () => isResizingLive.value && !isTextWidget.value && !isFullscreen.value,
+)
+
+const resizePreviewScale = computed(() => {
+  const baseWidth = Math.max(Number(resizeBaseWidth.value || widgetRenderWidth.value || 1), 1)
+  const baseHeight = Math.max(Number(resizeBaseHeight.value || widgetRenderHeight.value || 1), 1)
+  const previewWidth = Math.max(Number(resizePreviewWidth.value || baseWidth), 1)
+  const previewHeight = Math.max(Number(resizePreviewHeight.value || baseHeight), 1)
+
   return {
-    scaleX: Math.max(0.2, Math.min(6, sizing.renderWidth / Math.max(sizing.baseWidth, 1))),
-    scaleY: Math.max(0.2, Math.min(6, renderTotalHeight / baseTotalHeight)),
+    baseWidth,
+    baseHeight,
+    scaleX: Math.max(0.05, Math.min(previewWidth / baseWidth, 12)),
+    scaleY: Math.max(0.05, Math.min(previewHeight / baseHeight, 12)),
   }
 })
 
 const surfaceLayoutStyle = computed(() => {
   if (isTextWidget.value) return {}
-  const sizing = contentSizing.value
-  const scale = surfaceScale.value
   return {
-    width: `${Math.round(sizing.baseWidth)}px`,
-    height: `${Math.round(sizing.baseHeight + headerOffset.value)}px`,
-    transform: `scale(${scale.scaleX}, ${scale.scaleY})`,
+    width: '100%',
+    height: '100%',
+    transform: 'none',
     transformOrigin: 'top left',
   }
 })
@@ -729,8 +729,8 @@ const surfaceLayoutStyle = computed(() => {
 const mergedProps = computed(() => {
   const p = { ...(props.widget?.props ?? {}) } as Record<string, unknown>
   const sizing = contentSizing.value
-  const logicalWidth = isTextWidget.value ? sizing.renderWidth : sizing.baseWidth
-  const logicalHeight = isTextWidget.value ? sizing.renderHeight : sizing.baseHeight
+  const logicalWidth = sizing.renderWidth
+  const logicalHeight = sizing.renderHeight
   delete p.kpiTileNormalizedV1
   delete p.from
   delete p.to
@@ -741,6 +741,7 @@ const mergedProps = computed(() => {
   p.widgetRenderWidth = sizing.renderWidth
   p.widgetRenderHeight = sizing.renderHeight
   p.canvasEditMode = props.uiActive && props.editMode
+  p.canvasResizeActive = isResizingLive.value
   return p
 })
 
@@ -768,8 +769,19 @@ const contentInnerEl = ref<HTMLElement | null>(null)
 
 const contentLayoutStyle = computed(() => {
   if (!isTextWidget.value) {
-    // Keep a stable widget structure at every canvas/page zoom level.
-    return {}
+    if (!shouldFreezeContentDuringResize.value) {
+      // Keep a stable widget structure at every canvas/page zoom level.
+      return {}
+    }
+    const preview = resizePreviewScale.value
+    return {
+      width: `${Math.round(preview.baseWidth)}px`,
+      height: `${Math.round(preview.baseHeight)}px`,
+      flex: '0 0 auto',
+      transform: `scale(${preview.scaleX}, ${preview.scaleY})`,
+      transformOrigin: 'top left',
+      willChange: 'transform',
+    }
   }
   return {
     width: '100%',
@@ -839,7 +851,26 @@ function onResizeHandleDown(dir: ResizeDir, event: PointerEvent) {
   if (!props.editMode) return
   event.preventDefault()
   event.stopPropagation()
+  capturePointer(event)
   emit('resizeStart', { dir, event })
+}
+
+function onTextScaleHandleDown(event: PointerEvent) {
+  if (!props.uiActive) return
+  if (!props.editMode) return
+  event.preventDefault()
+  event.stopPropagation()
+  capturePointer(event)
+  emit('textScaleStart', event)
+}
+
+function capturePointer(event: PointerEvent) {
+  const target = event.currentTarget as HTMLElement | null
+  try {
+    target?.setPointerCapture?.(event.pointerId)
+  } catch {
+    // Pointer capture is best-effort; global listeners still keep the interaction alive.
+  }
 }
 
 function emitTextProp(key: string, value: unknown) {
@@ -1049,6 +1080,7 @@ defineExpose({ root, exitFullscreen })
 let resizeRaf: number | null = null
 let widgetSizeRaf: number | null = null
 let widgetSizeRo: ResizeObserver | null = null
+let interactionMo: MutationObserver | null = null
 let mo: MutationObserver | null = null
 let ro: ResizeObserver | null = null
 let postInteractionRaf: number | null = null
@@ -1057,6 +1089,91 @@ function isInteractionLocked() {
   const el = root.value
   if (!el) return false
   return el.classList.contains('is-resizing') || el.classList.contains('is-dragging')
+}
+
+function isDragLocked() {
+  const el = root.value
+  if (!el) return false
+  return el.classList.contains('is-dragging')
+}
+
+function readBodyRenderHeight(height: number) {
+  return Math.max(1, Math.round(height - headerOffset.value))
+}
+
+function applyResizePreviewSize(width: number, height: number) {
+  const nextWidth = Math.max(1, Math.round(width))
+  const nextHeight = readBodyRenderHeight(height)
+  if (Math.abs(nextWidth - resizePreviewWidth.value) >= 1) {
+    resizePreviewWidth.value = nextWidth
+  }
+  if (Math.abs(nextHeight - resizePreviewHeight.value) >= 1) {
+    resizePreviewHeight.value = nextHeight
+  }
+}
+
+function beginResizePreview(el: HTMLElement) {
+  const width = Number(el.offsetWidth)
+  const height = Number(el.offsetHeight)
+  const measuredWidth = Number.isFinite(width) && width > 0 ? width : Number(props.widget?.w ?? 1)
+  const measuredHeight = Number.isFinite(height) && height > 0 ? height : Number(props.widget?.h ?? 1)
+  const currentBodyHeight = readBodyRenderHeight(measuredHeight)
+
+  resizeBaseWidth.value = Math.max(
+    1,
+    Math.round(Number(liveRenderWidth.value || measuredWidth || props.widget?.w || 1)),
+  )
+  resizeBaseHeight.value = Math.max(
+    1,
+    Math.round(Number(liveRenderHeight.value || currentBodyHeight || props.widget?.h || 1)),
+  )
+  applyResizePreviewSize(measuredWidth, measuredHeight)
+}
+
+function endResizePreview() {
+  resizeBaseWidth.value = 0
+  resizeBaseHeight.value = 0
+  resizePreviewWidth.value = 0
+  resizePreviewHeight.value = 0
+  scheduleWidgetSizeMeasure()
+  scheduleAutoResize()
+}
+
+function syncInteractionState() {
+  const el = root.value
+  const resizing = Boolean(el?.classList.contains('is-resizing'))
+  if (resizing === isResizingLive.value) {
+    if (resizing && el && !isTextWidget.value) {
+      applyResizePreviewSize(Number(el.offsetWidth), Number(el.offsetHeight))
+    }
+    return
+  }
+
+  isResizingLive.value = resizing
+  if (resizing && el) {
+    beginResizePreview(el)
+    return
+  }
+  endResizePreview()
+}
+
+function clearInteractionObserver() {
+  if (interactionMo) {
+    interactionMo.disconnect()
+    interactionMo = null
+  }
+}
+
+function ensureInteractionObserver() {
+  clearInteractionObserver()
+  const el = root.value
+  if (!el || typeof MutationObserver === 'undefined') {
+    syncInteractionState()
+    return
+  }
+  interactionMo = new MutationObserver(() => syncInteractionState())
+  interactionMo.observe(el, { attributes: true, attributeFilter: ['class'] })
+  syncInteractionState()
 }
 
 function schedulePostInteractionRefresh() {
@@ -1090,7 +1207,7 @@ function clearWidgetSizeObserver() {
 function applyLiveRenderSize(width: number, height: number) {
   const epsilon = isTextWidget.value ? 4 : 2
   const nextWidth = Math.max(1, Math.round(width))
-  const nextHeight = Math.max(1, Math.round(height - headerOffset.value))
+  const nextHeight = readBodyRenderHeight(height)
 
   if (Math.abs(nextWidth - liveRenderWidth.value) >= epsilon) {
     liveRenderWidth.value = nextWidth
@@ -1101,7 +1218,7 @@ function applyLiveRenderSize(width: number, height: number) {
 }
 
 function measureWidgetSize() {
-  if (isInteractionLocked()) {
+  if (isDragLocked()) {
     schedulePostInteractionRefresh()
     return
   }
@@ -1110,6 +1227,11 @@ function measureWidgetSize() {
   const width = Number(el.offsetWidth)
   const height = Number(el.offsetHeight)
   if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return
+  syncInteractionState()
+  if (isResizingLive.value && !isTextWidget.value) {
+    applyResizePreviewSize(width, height)
+    return
+  }
   applyLiveRenderSize(width, height)
 }
 
@@ -1128,7 +1250,7 @@ function ensureWidgetSizeObserver() {
     return
   }
   widgetSizeRo = new ResizeObserver(() => {
-    if (isInteractionLocked()) {
+    if (isDragLocked()) {
       schedulePostInteractionRefresh()
       return
     }
@@ -1186,6 +1308,7 @@ function ensureAutoResizeObservers() {
 
 onMounted(() => {
   nextTick(() => {
+    ensureInteractionObserver()
     ensureWidgetSizeObserver()
     ensureAutoResizeObservers()
     scheduleWidgetSizeMeasure()
@@ -1260,6 +1383,7 @@ watch(availableWidgetActions, (actions) => {
 onBeforeUnmount(() => {
   if (resizeRaf) cancelAnimationFrame(resizeRaf)
   if (postInteractionRaf) cancelAnimationFrame(postInteractionRaf)
+  clearInteractionObserver()
   clearWidgetSizeObserver()
   clearAutoResizeObservers()
   window.removeEventListener('keydown', onKeydown)
@@ -1310,6 +1434,11 @@ function onRootKeydown(event: KeyboardEvent) {
   background: var(--canvas-widget-bg, rgba(10, 15, 26, 0.88));
   border: 1px solid var(--canvas-widget-border, rgba(148, 163, 184, 0.2));
   box-shadow: var(--canvas-widget-shadow, 0 4px 14px rgba(2, 6, 23, 0.18));
+  --widget-frame-radius: 8px;
+  --widget-frame-padding: 0px;
+  --widget-frame-text: var(--template-text, #111827);
+  --widget-frame-muted: var(--template-text-muted, #64748b);
+  --widget-frame-accent: var(--widget-ui-accent, #4f46e5);
   contain: layout paint;
   touch-action: none;
   outline: none;
@@ -1323,9 +1452,9 @@ function onRootKeydown(event: KeyboardEvent) {
 }
 .widget:focus-visible {
   box-shadow:
-    0 0 0 1px rgba(91, 92, 226, 0.72),
-    0 0 0 3px rgba(91, 92, 226, 0.12),
-    0 14px 30px rgba(31, 41, 55, 0.14);
+    0 0 0 1px rgba(79, 70, 229, 0.72),
+    0 0 0 4px rgba(79, 70, 229, 0.12),
+    var(--canvas-widget-shadow-hover, 0 16px 34px rgba(15, 23, 42, 0.12));
 }
 .widget__surface {
   width: 100%;
@@ -1341,12 +1470,12 @@ function onRootKeydown(event: KeyboardEvent) {
   border-color: transparent;
   box-shadow: none;
   contain: layout;
-  --text-accent: rgba(59, 130, 246, 1);
-  --text-accent-soft: rgba(59, 130, 246, 0.18);
-  --text-panel-bg: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(7, 12, 24, 0.94));
-  --text-panel-border: rgba(148, 163, 184, 0.34);
-  --text-control-bg: rgba(15, 23, 42, 0.76);
-  --text-control-border: rgba(148, 163, 184, 0.28);
+  --text-accent: rgba(79, 70, 229, 1);
+  --text-accent-soft: rgba(79, 70, 229, 0.14);
+  --text-panel-bg: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.94));
+  --text-panel-border: rgba(148, 163, 184, 0.3);
+  --text-control-bg: rgba(15, 23, 42, 0.72);
+  --text-control-border: rgba(148, 163, 184, 0.26);
 }
 .widget--text .widget__surface {
   overflow: visible;
@@ -1361,13 +1490,13 @@ function onRootKeydown(event: KeyboardEvent) {
   content: '';
   position: absolute;
   inset: 0;
-  border-radius: 14px;
-  border: 1px solid rgba(96, 165, 250, 0.92);
+  border-radius: 8px;
+  border: 1px solid rgba(79, 70, 229, 0.72);
   pointer-events: none;
   opacity: 0;
   box-shadow:
-    inset 0 0 0 1px rgba(191, 219, 254, 0.22),
-    0 0 0 2px rgba(59, 130, 246, 0.12);
+    inset 0 0 0 1px rgba(199, 210, 254, 0.2),
+    0 0 0 2px rgba(79, 70, 229, 0.08);
   transition:
     opacity 120ms ease,
     border-color 120ms ease,
@@ -1377,11 +1506,11 @@ function onRootKeydown(event: KeyboardEvent) {
 .widget--text.is-selected::before,
 .widget--text.is-resizing::before {
   opacity: 1;
-  border-color: rgba(59, 130, 246, 1);
+  border-color: rgba(79, 70, 229, 0.92);
   box-shadow:
-    inset 0 0 0 1px rgba(191, 219, 254, 0.28),
-    0 0 0 2px rgba(59, 130, 246, 0.16),
-    0 14px 30px rgba(15, 23, 42, 0.26);
+    inset 0 0 0 1px rgba(199, 210, 254, 0.24),
+    0 0 0 3px rgba(79, 70, 229, 0.1),
+    0 14px 28px rgba(15, 23, 42, 0.18);
 }
 .text-toolbar {
   position: absolute;
@@ -1748,28 +1877,42 @@ function onRootKeydown(event: KeyboardEvent) {
   will-change: transform;
 }
 .widget.is-resizing {
+  transition: none;
   box-shadow: 0 5px 16px rgba(2, 6, 23, 0.24);
-  will-change: transform;
+  will-change: transform, width, height;
 }
 .widget.is-resizing .widget__surface {
   outline: 1px solid rgba(129, 140, 248, 0.82);
   outline-offset: -1px;
+  contain: layout paint;
 }
 .widget.is-resizing .widget__content-inner {
   pointer-events: none;
+}
+.widget.is-resizing .widget__content-scale {
+  backface-visibility: hidden;
+}
+.widget.is-resizing .widget__actions,
+.widget.is-resizing .widget__floating-actions,
+.widget.is-resizing .resize-edge,
+.widget.is-resizing .resize-handle,
+.widget.is-resizing .resize-meta {
+  transition: none;
 }
 .widget:hover {
   border-color: var(--canvas-widget-border-hover, rgba(148, 163, 184, 0.42));
   box-shadow: var(--canvas-widget-shadow-hover, 0 6px 18px rgba(2, 6, 23, 0.24));
 }
 .widget.is-selected {
+  border-color: rgba(79, 70, 229, 0.42);
   box-shadow:
-    0 0 0 1px rgba(99, 102, 241, 0.58),
-    0 0 0 3px rgba(99, 102, 241, 0.1),
-    0 6px 18px rgba(2, 6, 23, 0.16);
+    0 0 0 1px rgba(79, 70, 229, 0.34),
+    0 0 0 4px rgba(79, 70, 229, 0.08),
+    0 16px 34px rgba(15, 23, 42, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
 }
 .widget.drag-armed {
-  box-shadow: 0 6px 18px rgba(2, 6, 23, 0.24);
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.14);
   cursor: grab;
 }
 
@@ -1779,28 +1922,28 @@ function onRootKeydown(event: KeyboardEvent) {
   --template-title-font: var(--font-display, "Poppins", sans-serif);
   border-radius: 8px;
   background:
-    linear-gradient(180deg, rgba(255, 253, 248, 0.99), rgba(250, 247, 240, 0.96)),
-    radial-gradient(circle at 100% 0, rgba(91, 92, 226, 0.055), transparent 36%);
-  border-color: rgba(126, 111, 91, 0.24);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 250, 252, 0.98)),
+    linear-gradient(90deg, rgba(79, 70, 229, 0.05), rgba(20, 184, 166, 0.035));
+  border-color: rgba(100, 116, 139, 0.18);
   box-shadow:
-    0 14px 34px rgba(73, 59, 42, 0.075),
-    inset 0 1px 0 rgba(255, 255, 255, 0.76);
+    0 12px 26px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
 }
 
 .widget--gross-revenue:hover {
-  border-color: rgba(91, 92, 226, 0.28);
+  border-color: rgba(79, 70, 229, 0.28);
   box-shadow:
-    0 16px 36px rgba(31, 41, 55, 0.11),
-    inset 0 1px 0 rgba(255, 255, 255, 0.78);
+    0 16px 34px rgba(15, 23, 42, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
 }
 
 .widget--gross-revenue.is-selected {
-  border-color: rgba(91, 92, 226, 0.42);
+  border-color: rgba(79, 70, 229, 0.42);
   box-shadow:
-    0 0 0 1px rgba(91, 92, 226, 0.34),
-    0 0 0 4px rgba(91, 92, 226, 0.08),
-    0 16px 36px rgba(31, 41, 55, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.78);
+    0 0 0 1px rgba(79, 70, 229, 0.34),
+    0 0 0 4px rgba(79, 70, 229, 0.08),
+    0 16px 34px rgba(15, 23, 42, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
 }
 
 .widget--gross-revenue .widget__surface {
@@ -1808,8 +1951,8 @@ function onRootKeydown(event: KeyboardEvent) {
 }
 
 .widget--gross-revenue .widget__header {
-  border-bottom-color: rgba(126, 111, 91, 0.14);
-  background: rgba(255, 253, 248, 0.54);
+  border-bottom-color: rgba(100, 116, 139, 0.12);
+  background: rgba(255, 255, 255, 0.58);
 }
 
 .widget--gross-revenue .title {
@@ -1857,28 +2000,28 @@ function onRootKeydown(event: KeyboardEvent) {
   --template-title-font: var(--font-display, "Poppins", sans-serif);
   border-radius: 8px;
   background:
-    linear-gradient(180deg, rgba(255, 253, 248, 0.99), rgba(250, 247, 240, 0.96)),
-    radial-gradient(circle at 100% 0, rgba(91, 92, 226, 0.045), transparent 38%);
-  border-color: rgba(126, 111, 91, 0.22);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 250, 252, 0.98)),
+    linear-gradient(135deg, rgba(79, 70, 229, 0.045), rgba(20, 184, 166, 0.035));
+  border-color: rgba(100, 116, 139, 0.18);
   box-shadow:
-    0 14px 32px rgba(73, 59, 42, 0.075),
-    inset 0 1px 0 rgba(255, 255, 255, 0.78);
+    0 12px 26px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
 }
 
 .widget--kpi-display:hover {
-  border-color: rgba(91, 92, 226, 0.26);
+  border-color: rgba(79, 70, 229, 0.26);
   box-shadow:
-    0 16px 36px rgba(31, 41, 55, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    0 16px 34px rgba(15, 23, 42, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
 }
 
 .widget--kpi-display.is-selected {
-  border-color: rgba(91, 92, 226, 0.42);
+  border-color: rgba(79, 70, 229, 0.42);
   box-shadow:
-    0 0 0 1px rgba(91, 92, 226, 0.34),
-    0 0 0 4px rgba(91, 92, 226, 0.08),
-    0 16px 36px rgba(31, 41, 55, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    0 0 0 1px rgba(79, 70, 229, 0.34),
+    0 0 0 4px rgba(79, 70, 229, 0.08),
+    0 16px 34px rgba(15, 23, 42, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
 }
 
 .widget--kpi-display .widget__surface {
@@ -1961,10 +2104,10 @@ function onRootKeydown(event: KeyboardEvent) {
 }
 
 .widget__header {
-  height: 38px;
+  height: 36px;
   display: flex;
   align-items: center;
-  padding: 0 8px 0 12px;
+  padding: 0 8px 0 11px;
   border-bottom: 1px solid var(--canvas-widget-header-border, rgba(148, 163, 184, 0.16));
   background: var(--canvas-widget-header-bg, rgba(8, 13, 24, 0.78));
   position: relative;
@@ -1988,8 +2131,8 @@ function onRootKeydown(event: KeyboardEvent) {
 .title {
   color: var(--canvas-widget-title, rgba(241, 245, 249, 0.98));
   font-weight: 780;
-  font-size: 0.76rem;
-  letter-spacing: 0.04em;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   min-width: 0;
   overflow: hidden;
@@ -1997,12 +2140,12 @@ function onRootKeydown(event: KeyboardEvent) {
   white-space: nowrap;
 }
 .drag-grip {
-  width: 12px;
-  height: 12px;
-  border-radius: 6px;
-  opacity: 0.36;
+  width: 10px;
+  height: 10px;
+  border-radius: 5px;
+  opacity: 0.24;
   background:
-    radial-gradient(circle, rgba(226, 232, 240, 0.62) 1px, transparent 1.5px) 0 0 / 6px 6px;
+    radial-gradient(circle, rgba(100, 116, 139, 0.58) 1px, transparent 1.5px) 0 0 / 5px 5px;
 }
 
 .widget__actions {
@@ -2063,8 +2206,8 @@ function onRootKeydown(event: KeyboardEvent) {
   width: calc(30px * var(--action-ui-scale, 1));
   height: calc(30px * var(--action-ui-scale, 1));
   border-radius: calc(8px * var(--action-ui-scale, 1));
-  border: 1px solid rgba(148, 163, 184, 0.34);
-  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(100, 116, 139, 0.24);
+  background: rgba(255, 255, 255, 0.88);
   color: #475569;
   display: grid;
   place-items: center;
@@ -2074,8 +2217,8 @@ function onRootKeydown(event: KeyboardEvent) {
     opacity 160ms ease;
 }
 .iconbtn:hover {
-  border-color: rgba(91, 92, 226, 0.34);
-  background: #eef2ff;
+  border-color: rgba(79, 70, 229, 0.34);
+  background: rgba(238, 242, 255, 0.92);
   color: #4338ca;
 }
 .iconbtn.is-danger {
@@ -2102,10 +2245,10 @@ function onRootKeydown(event: KeyboardEvent) {
   right: 0;
   min-width: 162px;
   padding: 6px;
-  border-radius: 11px;
-  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 8px;
+  border: 1px solid rgba(100, 116, 139, 0.22);
   background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 14px 24px rgba(15, 23, 42, 0.16);
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.16);
   display: grid;
   gap: 4px;
   z-index: 62;
@@ -2114,7 +2257,7 @@ function onRootKeydown(event: KeyboardEvent) {
   border: 1px solid rgba(148, 163, 184, 0);
   background: rgba(15, 23, 42, 0);
   color: #334155;
-  border-radius: 9px;
+  border-radius: 6px;
   min-height: 32px;
   padding: 0 9px;
   display: inline-flex;
@@ -2159,7 +2302,7 @@ function onRootKeydown(event: KeyboardEvent) {
 }
 
 .widget__body {
-  height: calc(100% - 38px);
+  height: calc(100% - 36px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -2208,6 +2351,48 @@ function onRootKeydown(event: KeyboardEvent) {
     var(--canvas-widget-border, rgba(148, 163, 184, 0.2)) 38%,
     transparent
   ) !important;
+}
+
+.widget__content-inner :deep(.period-chip),
+.widget__content-inner :deep(.roi-header-period),
+.widget__content-inner :deep(.tm-chip) {
+  border-radius: 999px !important;
+  border-color: var(--widget-panel-border, rgba(100, 116, 139, 0.16)) !important;
+  background: rgba(255, 255, 255, 0.72) !important;
+  color: var(--widget-frame-muted, #64748b) !important;
+}
+
+.widget__content-inner :deep(.ts-row),
+.widget__content-inner :deep(.margin-row),
+.widget__content-inner :deep(.dp-row),
+.widget__content-inner :deep(.tp-row),
+.widget__content-inner :deep(.tm-row),
+.widget__content-inner :deep(.npt-card),
+.widget__content-inner :deep(.roi-breakdown-panel) {
+  border-radius: 8px !important;
+  border-color: var(--widget-row-border, rgba(100, 116, 139, 0.16)) !important;
+  background: var(--widget-row-bg, rgba(248, 250, 252, 0.86)) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.68) !important;
+}
+
+.widget__content-inner :deep(.ts-row:hover),
+.widget__content-inner :deep(.margin-row:hover),
+.widget__content-inner :deep(.dp-row:hover),
+.widget__content-inner :deep(.tp-row:hover),
+.widget__content-inner :deep(.tm-row:hover) {
+  background: var(--widget-row-bg-hover, rgba(241, 245, 249, 0.96)) !important;
+}
+
+.widget__content-inner :deep(.npw-state),
+.widget__content-inner :deep(.dp-empty),
+.widget__content-inner :deep(.tp-empty),
+.widget__content-inner :deep(.tm-empty),
+.widget__content-inner :deep(.roi-empty),
+.widget__content-inner :deep(.margin-empty) {
+  border-radius: 8px;
+  border: 1px dashed rgba(100, 116, 139, 0.22);
+  background: rgba(248, 250, 252, 0.72);
+  color: var(--widget-frame-muted, #64748b);
 }
 
 .widget__body--auto .widget__content-scale {

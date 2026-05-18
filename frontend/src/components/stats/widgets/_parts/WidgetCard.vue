@@ -1,7 +1,7 @@
 <template>
   <div
     class="widget-card"
-    :class="[surfaceClass, { 'is-narrow': isNarrow, 'is-tiny': isTiny, 'is-auto': autoHeight }]"
+    :class="[surfaceClass, { 'is-narrow': isNarrow, 'is-tiny': isTiny, 'is-auto': autoHeight, 'is-headless': hideHeader }]"
     :style="cardStyle"
   >
     <div class="widget-card__zoom">
@@ -18,12 +18,16 @@
       </div>
 
       <div class="widget-card__content" :class="{ 'widget-card__content--headless': hideHeader }">
-        <div v-if="loading" class="h-full flex items-center justify-center">
-          <div class="animate-pulse widget-card__status">Chargement...</div>
+        <div v-if="loading" class="widget-card__state widget-card__state--loading" role="status">
+          <span class="widget-card__skeleton widget-card__skeleton--lg" />
+          <span class="widget-card__skeleton widget-card__skeleton--md" />
+          <span class="widget-card__skeleton widget-card__skeleton--sm" />
+          <span class="widget-card__state-label">Chargement</span>
         </div>
 
-        <div v-else-if="error" class="h-full flex items-center justify-center">
-          <div class="widget-card__status widget-card__status--error">Erreur : {{ error }}</div>
+        <div v-else-if="error" class="widget-card__state widget-card__state--error" role="alert">
+          <div class="widget-card__state-title">Donnees indisponibles</div>
+          <div class="widget-card__status widget-card__status--error">{{ error }}</div>
         </div>
 
         <div v-else class="widget-card__slot">
@@ -75,6 +79,7 @@ const cardStyle = computed(() => {
   const dot = clamp(Math.round(titleSize * 0.48), 6, 11)
   const status = clamp(Math.round(titleSize * 0.82), 11, 20)
   const radius = 8
+  const contentGap = clamp(Math.round(Math.min(props.widgetWidth * 0.014, props.widgetHeight * 0.045)), 6, 12)
 
   return {
     '--widget-card-title-size': `${titleSize}px`,
@@ -83,6 +88,7 @@ const cardStyle = computed(() => {
     '--widget-card-dot-size': `${dot}px`,
     '--widget-card-status-size': `${status}px`,
     '--widget-card-radius': `${radius}px`,
+    '--widget-card-content-gap': `${contentGap}px`,
     '--widget-card-accent': props.accent,
   }
 })
@@ -118,6 +124,7 @@ const cardStyle = computed(() => {
   flex-direction: column;
   box-sizing: border-box;
   padding: var(--widget-card-padding);
+  gap: var(--widget-card-content-gap);
 }
 .widget-card.is-auto .widget-card__zoom {
   height: auto;
@@ -128,7 +135,7 @@ const cardStyle = computed(() => {
   align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
-  margin-bottom: 8px;
+  margin-bottom: 0;
   padding-bottom: 0;
   border-bottom: 0;
 }
@@ -148,6 +155,7 @@ const cardStyle = computed(() => {
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
+  overflow: hidden;
 }
 .widget-card.is-auto .widget-card__content {
   flex: 0 0 auto;
@@ -164,6 +172,8 @@ const cardStyle = computed(() => {
   min-height: 0;
   overflow: auto;
   padding-right: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.28) transparent;
 }
 .widget-card.is-auto .widget-card__slot {
   height: auto;
@@ -173,7 +183,7 @@ const cardStyle = computed(() => {
 .widget-card__subtitle {
   font-size: var(--widget-card-subtitle-size);
   color: var(--template-text-muted, rgba(203, 213, 225, 0.78));
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   font-weight: 720;
   opacity: 0.78;
@@ -188,11 +198,62 @@ const cardStyle = computed(() => {
 }
 
 .widget-card__dot {
-  width: calc(var(--widget-card-dot-size) + 12px);
-  height: 3px;
+  width: calc(var(--widget-card-dot-size) + 10px);
+  height: 2px;
   border-radius: 999px;
-  opacity: 0.68;
+  opacity: 0.74;
   box-shadow: none;
+}
+
+.widget-card__state {
+  height: 100%;
+  min-height: 88px;
+  display: grid;
+  place-content: center;
+  gap: 8px;
+  padding: 12px;
+  text-align: center;
+}
+
+.widget-card__state--loading {
+  justify-items: center;
+}
+
+.widget-card__skeleton {
+  display: block;
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    rgba(203, 213, 225, 0.42),
+    rgba(241, 245, 249, 0.9),
+    rgba(203, 213, 225, 0.42)
+  );
+  background-size: 220% 100%;
+  animation: widget-card-skeleton 1.2s linear infinite;
+}
+
+.widget-card__skeleton--lg {
+  width: min(190px, 72%);
+}
+
+.widget-card__skeleton--md {
+  width: min(150px, 58%);
+}
+
+.widget-card__skeleton--sm {
+  width: min(96px, 42%);
+}
+
+.widget-card__state-label,
+.widget-card__state-title {
+  font-size: var(--widget-card-status-size);
+  color: var(--template-text-muted, #64748b);
+  font-weight: 650;
+}
+
+.widget-card__state-title {
+  color: var(--template-text, #111827);
 }
 
 .widget-card__status {
@@ -201,7 +262,16 @@ const cardStyle = computed(() => {
 }
 
 .widget-card__status--error {
-  color: rgba(254, 202, 202, 0.96);
+  color: #be123c;
+}
+
+@keyframes widget-card-skeleton {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: -220% 0;
+  }
 }
 
 .widget-card.is-narrow .widget-card__zoom {

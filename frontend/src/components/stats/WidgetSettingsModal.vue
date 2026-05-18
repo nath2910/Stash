@@ -424,10 +424,10 @@ watch(
 .glass-panel {
   position: relative;
   overflow: hidden;
-  border: 1px solid rgba(148, 163, 184, 0.34);
+  border: 1px solid rgba(100, 116, 139, 0.34);
   background:
-    radial-gradient(circle at top right, rgba(59, 130, 246, 0.14), transparent 28%),
-    linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.92));
+    linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.94)),
+    linear-gradient(135deg, rgba(79, 70, 229, 0.16), rgba(20, 184, 166, 0.08) 52%, transparent);
   box-shadow:
     0 24px 60px rgba(2, 6, 23, 0.62),
     0 1px 0 rgba(255, 255, 255, 0.06) inset;
@@ -436,6 +436,7 @@ watch(
   max-height: min(88dvh, 860px);
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
+  border-radius: 8px !important;
 }
 .glass-panel::before {
   display: none;
@@ -456,7 +457,7 @@ watch(
   background: rgba(15, 23, 42, 0.9);
 }
 .glass-iconbtn {
-  border: 1px solid rgba(148, 163, 184, 0.32);
+  border: 1px solid rgba(148, 163, 184, 0.28);
   background: rgba(15, 23, 42, 0.82);
   color: rgba(241, 245, 249, 0.94);
   transition:
@@ -471,7 +472,7 @@ watch(
   display: none;
 }
 .glass-field {
-  border: 1px solid rgba(148, 163, 184, 0.28);
+  border: 1px solid rgba(148, 163, 184, 0.24);
   background: rgba(15, 23, 42, 0.76);
   color: rgba(255, 255, 255, 0.95);
   transition:
@@ -514,7 +515,7 @@ watch(
 }
 .setting-card {
   padding: 12px;
-  border-radius: 14px;
+  border-radius: 8px;
   border: 1px solid rgba(148, 163, 184, 0.2);
   background: rgba(15, 23, 42, 0.52);
 }
@@ -564,7 +565,7 @@ watch(
 .multi-btn {
   height: 28px;
   padding: 0 10px;
-  border-radius: 10px;
+  border-radius: 8px;
   border: 1px solid rgba(148, 163, 184, 0.3);
   background: rgba(15, 23, 42, 0.78);
   color: rgba(226, 232, 240, 0.85);
@@ -585,7 +586,7 @@ watch(
   flex-wrap: wrap;
   gap: 6px;
   padding: 6px 8px;
-  border-radius: 12px;
+  border-radius: 8px;
   border: 1px solid rgba(148, 163, 184, 0.24);
   background: rgba(15, 23, 42, 0.78);
 }
@@ -605,7 +606,7 @@ watch(
   max-height: none;
   overflow: visible;
   padding: 6px;
-  border-radius: 12px;
+  border-radius: 8px;
   border: 1px solid rgba(148, 163, 184, 0.24);
   background: rgba(15, 23, 42, 0.74);
   display: grid;
@@ -630,7 +631,7 @@ watch(
   font-size: 12px;
   color: rgba(226, 232, 240, 0.85);
   padding: 6px 6px;
-  border-radius: 10px;
+  border-radius: 8px;
   border: 1px solid transparent;
 }
 .multi-option:hover {
@@ -648,7 +649,7 @@ watch(
 }
 .number-input {
   height: 40px;
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 0 12px;
   text-align: center;
   font-weight: 600;
@@ -657,7 +658,7 @@ watch(
 .number-btn {
   height: 40px;
   width: 34px;
-  border-radius: 12px;
+  border-radius: 8px;
   font-weight: 700;
   font-size: 16px;
 }
@@ -686,7 +687,7 @@ watch(
 .tile-option {
   min-height: 52px;
   padding: 10px 10px;
-  border-radius: 12px;
+  border-radius: 8px;
   border: 1px solid rgba(148, 163, 184, 0.24);
   background: rgba(15, 23, 42, 0.7);
   color: rgba(241, 245, 249, 0.92);
@@ -717,7 +718,7 @@ watch(
   justify-content: center;
   min-height: 54px;
   padding: 0 14px;
-  border-radius: 12px;
+  border-radius: 8px;
   border: 1px solid rgba(148, 163, 184, 0.24);
   background: rgba(15, 23, 42, 0.72);
   color: rgba(241, 245, 249, 0.9);
@@ -740,7 +741,7 @@ watch(
   height: 36px;
   padding: 0;
   border: 1px solid rgba(148, 163, 184, 0.3);
-  border-radius: 12px;
+  border-radius: 8px;
   background: transparent;
   overflow: hidden;
 }
@@ -752,7 +753,7 @@ watch(
 .color-text {
   width: 100%;
   height: 36px;
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 0 12px;
   font-size: 0.92rem;
 }
@@ -761,11 +762,11 @@ watch(
 }
 .color-field::-webkit-color-swatch {
   border: none;
-  border-radius: 10px;
+  border-radius: 6px;
 }
 .color-field::-moz-color-swatch {
   border: none;
-  border-radius: 10px;
+  border-radius: 6px;
 }
 .glass-iconbtn:focus-visible,
 .glass-btn:focus-visible,
@@ -797,7 +798,7 @@ watch(
     max-width: none !important;
     max-height: 100dvh;
     min-height: min(72dvh, 620px);
-    border-radius: 18px 18px 0 0;
+    border-radius: 8px 8px 0 0 !important;
     border-bottom: none;
   }
 

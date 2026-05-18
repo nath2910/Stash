@@ -20,27 +20,27 @@ export type TemplateDefinition = {
 export const TEMPLATE_DEFINITIONS = [
   {
     id: ANNUAL_DASHBOARD_TEMPLATE_ID,
-    badge: 'Vue annuelle',
-    title: 'Dashboard annuel',
-    description: 'CA, profit, achats, stock et meilleurs produits sur une annee complete.',
+    badge: 'Executive',
+    title: 'Pilotage annuel',
+    description: 'Vue dirigeant avec CA, profit, achats, stock et meilleurs produits sur une annee complete.',
     component: defineAsyncComponent(
       () => import('./annual-dashboard/AnnualDashboardTemplate.vue'),
     ),
   },
   {
     id: MONTHLY_DASHBOARD_TEMPLATE_ID,
-    badge: 'Vue mensuelle',
-    title: 'Dashboard mensuel',
-    description: 'Pilotage mois par mois avec KPI, tendances quotidiennes, achats et top ventes.',
+    badge: 'Sales',
+    title: 'Performance mensuelle',
+    description: 'Lecture mois par mois avec KPI, tendance quotidienne, achats et top ventes.',
     component: defineAsyncComponent(
       () => import('./monthly-dashboard/MonthlyDashboardTemplate.vue'),
     ),
   },
   {
     id: CATEGORY_DASHBOARD_TEMPLATE_ID,
-    badge: 'Vue categories',
-    title: 'Statistiques par categories',
-    description: 'Analyse mensuelle filtree sur une ou plusieurs categories, avec comparaison et top items.',
+    badge: 'Inventory',
+    title: 'Analyse categories',
+    description: 'Focus categories avec comparaison, stock visible, ventes et top items.',
     component: defineAsyncComponent(
       () => import('./category-dashboard/CategoryDashboardTemplate.vue'),
     ),

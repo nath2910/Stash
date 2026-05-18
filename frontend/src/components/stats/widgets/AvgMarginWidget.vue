@@ -152,10 +152,10 @@ const periodText = computed(() => {
   text-transform: uppercase;
   color: #64748b;
   white-space: nowrap;
-  padding: 6px 10px;
+  padding: 5px 9px;
   border-radius: 999px;
-  background: rgba(248, 250, 252, 0.82);
-  border: 1px solid rgba(148, 163, 184, 0.26);
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--widget-panel-border, rgba(100, 116, 139, 0.16));
 }
 .period-label {
   opacity: 0.7;
@@ -170,7 +170,7 @@ const periodText = computed(() => {
 .margin-list {
   margin-top: 4px;
   display: grid;
-  gap: 5px;
+  gap: 7px;
 }
 
 .margin-list.has-period {
@@ -179,40 +179,57 @@ const periodText = computed(() => {
 
 .margin-row {
   min-width: 0;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   gap: 10px;
   border-radius: 8px;
-  border: 1px solid rgba(148, 163, 184, 0.22);
-  background: rgba(248, 250, 252, 0.82);
-  padding: 6px 8px;
+  border: 1px solid var(--widget-row-border, rgba(100, 116, 139, 0.16));
+  background: var(--widget-row-bg, rgba(248, 250, 252, 0.86));
+  padding: 7px 9px;
 }
 
 .margin-row__copy {
   min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
 }
 
 .margin-row__copy p {
   margin: 0;
   color: #111827;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 720;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  grid-column: 2;
 }
 
 .margin-row__copy span {
+  grid-column: 1;
+  grid-row: 1;
+  width: 28px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid rgba(100, 116, 139, 0.16);
+  background: rgba(255, 255, 255, 0.74);
   color: #64748b;
-  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 780;
 }
 
 .margin-row__value {
   flex: 0 0 auto;
   color: #047857;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 800;
+  font-variant-numeric: tabular-nums;
 }
 
 .margin-empty {

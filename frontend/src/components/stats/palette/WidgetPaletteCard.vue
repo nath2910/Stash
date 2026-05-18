@@ -126,13 +126,13 @@ defineExpose({
 .widget-card {
   display: grid;
   gap: 10px;
-  min-height: 182px;
+  min-height: 176px;
   padding: 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(148, 163, 184, 0.32);
+  border-radius: 8px;
+  border: 1px solid rgba(100, 116, 139, 0.18);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(242, 247, 253, 0.9)),
-    radial-gradient(circle at 100% 0, color-mix(in srgb, var(--card-accent) 12%, transparent), transparent 58%);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96)),
+    linear-gradient(135deg, color-mix(in srgb, var(--card-accent) 7%, transparent), transparent 62%);
   text-align: left;
   transition: border-color 140ms ease, box-shadow 150ms ease, transform 140ms ease;
   content-visibility: auto;
@@ -140,10 +140,10 @@ defineExpose({
 }
 
 .widget-card:hover {
-  border-color: color-mix(in srgb, var(--card-accent) 52%, rgba(100, 116, 139, 0.48));
+  border-color: color-mix(in srgb, var(--card-accent) 40%, rgba(100, 116, 139, 0.4));
   transform: translateY(-1px);
   box-shadow:
-    0 12px 24px rgba(15, 23, 42, 0.1),
+    0 12px 24px rgba(15, 23, 42, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
@@ -157,7 +157,8 @@ defineExpose({
 }
 
 .widget-card.is-selected {
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--card-accent) 28%, #bfdbfe);
+  border-color: color-mix(in srgb, var(--card-accent) 46%, rgba(100, 116, 139, 0.3));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--card-accent) 14%, transparent);
 }
 
 .widget-card.is-disabled {
@@ -181,7 +182,7 @@ defineExpose({
 }
 
 .widget-card__title {
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.2;
   font-weight: 700;
   color: #0f172a;
@@ -191,7 +192,7 @@ defineExpose({
   margin-top: 4px;
   font-size: 12px;
   line-height: 1.4;
-  color: #526277;
+  color: #64748b;
 }
 
 .widget-card__icon {
@@ -203,7 +204,7 @@ defineExpose({
 }
 
 .widget-card__preview-skeleton {
-  border-radius: 11px;
+  border-radius: 8px;
   min-height: 88px;
   border: 1px solid rgba(100, 116, 139, 0.18);
   background: linear-gradient(90deg, rgba(203, 213, 225, 0.56), rgba(226, 232, 240, 0.8), rgba(203, 213, 225, 0.56));
@@ -217,7 +218,7 @@ defineExpose({
   align-items: center;
   gap: 10px;
   margin-top: auto;
-  border-top: 1px solid rgba(148, 163, 184, 0.28);
+  border-top: 1px solid rgba(100, 116, 139, 0.16);
   padding-top: 8px;
 }
 
@@ -231,12 +232,12 @@ defineExpose({
 .widget-view {
   flex: 0 0 auto;
   padding: 3px 8px;
-  border-radius: 999px;
+  border-radius: 6px;
   font-size: 11px;
   font-weight: 700;
   color: #334155;
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px solid rgba(148, 163, 184, 0.26);
+  background: rgba(248, 250, 252, 0.8);
+  border: 1px solid rgba(100, 116, 139, 0.16);
 }
 
 .widget-card__cta {

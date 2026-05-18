@@ -9,7 +9,43 @@ type InitOptions = {
   minScale?: number
   contain?: any
   excludeClass?: string
+  panIgnoreSelector?: string
 }
+
+const ALWAYS_IGNORE_PAN_SELECTOR = [
+  'button',
+  '[role="button"]',
+  'a[href]',
+  'input',
+  'select',
+  'textarea',
+  'option',
+  'summary',
+  '[contenteditable="true"]',
+  '[data-pan-ignore]',
+  '[data-widget-control]',
+  '.interactive',
+  '.widget-control',
+  '.widget__actions',
+  '.widget__floating-actions',
+  '.widget-action-menu',
+  '.text-toolbar',
+  '.text-inline-editor',
+  '.resize-handle',
+  '.resize-edge',
+  '.text-scale-handle',
+  '.group-selection-handle',
+  '.canvas-empty-guide',
+  '.template-rail',
+  '.template-picker-modal',
+  '.profile-modal',
+  '.shortcut-modal',
+  '.echarts',
+  '.vue-echarts',
+].join(', ')
+
+const DEFAULT_PAN_CONTENT_SELECTOR = ['.widget', '.widget-card'].join(', ')
+const WHEEL_PAN_SPEED = 1.55
 
 export function useCanvasCamera(
   viewportEl: Ref<HTMLElement | null>,
@@ -21,6 +57,20 @@ export function useCanvasCamera(
   let ro: ResizeObserver | null = null
   let didReady = false
   let resizeRaf: number | null = null
+  let wheelZoomRaf: number | null = null
+  let wheelTargetScale: number | null = null
+  let wheelAnchor: { x: number; y: number } | null = null
+  let panRaf: number | null = null
+  let pendingPanDx = 0
+  let pendingPanDy = 0
+  let pointerPanState:
+    | {
+        pointerId: number
+        lastX: number
+        lastY: number
+        captureTarget: HTMLElement | null
+      }
+    | null = null
   let wheelHandler: ((e: WheelEvent) => void) | null = null
   let pointerDownHandler: ((e: PointerEvent) => void) | null = null
   let pointerMoveHandler: ((e: PointerEvent) => void) | null = null
@@ -43,6 +93,31 @@ export function useCanvasCamera(
   const BOARD_W = opts.boardWidth
   const BOARD_H = opts.boardHeight
   const EXCLUDE_CLASS = opts.excludeClass ?? 'panzoom-exclude'
+  const PAN_CONTENT_SELECTOR = opts.panIgnoreSelector ?? DEFAULT_PAN_CONTENT_SELECTOR
+
+  function clampNumber(value: number, min: number, max: number) {
+    return Math.min(Math.max(value, min), max)
+  }
+
+  function eventElement(target: EventTarget | null) {
+    return target instanceof Element ? target : null
+  }
+
+  function closestFrom(el: Element | null, selector: string) {
+    if (!el || !selector) return null
+    try {
+      return el.closest(selector)
+    } catch {
+      return null
+    }
+  }
+
+  function htmlElementFrom(target: EventTarget | null) {
+    const el = eventElement(target)
+    if (!el) return null
+    if (el instanceof HTMLElement) return el
+    return el.parentElement
+  }
 
   function getRects() {
     const vp = viewportEl.value
@@ -65,6 +140,54 @@ export function useCanvasCamera(
     scale.value = Number(panzoom.getScale?.() ?? 1)
   }
 
+  function setPanningCursor(active: boolean) {
+    document.body.classList.toggle('canvas-pan-cursor', active)
+  }
+
+  function cancelQueuedPan() {
+    if (panRaf != null) {
+      cancelAnimationFrame(panRaf)
+      panRaf = null
+    }
+    pendingPanDx = 0
+    pendingPanDy = 0
+  }
+
+  function queuePanBy(dx: number, dy: number) {
+    if (!panzoom || !Number.isFinite(dx) || !Number.isFinite(dy)) return
+    if (Math.abs(dx) < 0.01 && Math.abs(dy) < 0.01) return
+    pendingPanDx += dx
+    pendingPanDy += dy
+    if (panRaf != null) return
+
+    panRaf = requestAnimationFrame(() => {
+      panRaf = null
+      const nextDx = pendingPanDx
+      const nextDy = pendingPanDy
+      pendingPanDx = 0
+      pendingPanDy = 0
+      if (!panzoom || (Math.abs(nextDx) < 0.01 && Math.abs(nextDy) < 0.01)) return
+      panzoom.pan(nextDx, nextDy, { relative: true, force: true } as any)
+      onPanzoomChange()
+    })
+  }
+
+  function panByNow(dx: number, dy: number) {
+    if (!panzoom || !Number.isFinite(dx) || !Number.isFinite(dy)) return
+    if (Math.abs(dx) < 0.01 && Math.abs(dy) < 0.01) return
+    panzoom.pan(dx, dy, { relative: true, force: true } as any)
+    onPanzoomChange()
+  }
+
+  function cancelWheelZoom() {
+    if (wheelZoomRaf != null) {
+      cancelAnimationFrame(wheelZoomRaf)
+      wheelZoomRaf = null
+    }
+    wheelTargetScale = null
+    wheelAnchor = null
+  }
+
   function normalizeWheelDelta(event: WheelEvent) {
     const axisDelta =
       event.shiftKey && Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY
@@ -74,17 +197,44 @@ export function useCanvasCamera(
     return axisDelta
   }
 
-  function shouldZoomFromWheel(event: WheelEvent) {
-    if (event.ctrlKey || event.metaKey) return true
-    return event.deltaMode !== 0 || Math.abs(event.deltaY) >= 24 || Math.abs(event.deltaX) >= 24
+  function normalizeWheelPanDelta(event: WheelEvent) {
+    const multiplier =
+      event.deltaMode === WheelEvent.DOM_DELTA_LINE
+        ? 16
+        : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
+          ? Math.max(window.innerHeight * 0.86, 120)
+          : 1
+    let dx = event.deltaX * multiplier
+    let dy = event.deltaY * multiplier
+
+    if (event.shiftKey && Math.abs(dx) < Math.abs(dy)) {
+      dx = dy
+      dy = 0
+    }
+
+    return { dx, dy }
   }
 
-  function isExcludedTarget(target: EventTarget | null) {
-    const el = target instanceof HTMLElement ? target : null
+  function shouldZoomFromWheel(event: WheelEvent) {
+    if (event.ctrlKey || event.metaKey) return true
+    if (event.deltaMode !== WheelEvent.DOM_DELTA_PIXEL) return true
+    if (Math.abs(event.deltaX) > Math.abs(event.deltaY) * 0.35) return false
+    return Math.abs(event.deltaY) >= 48
+  }
+
+  function shouldIgnorePanTarget(target: EventTarget | null) {
+    const el = eventElement(target)
     if (!el) return false
-    if (el.closest('input, textarea, select, option, [contenteditable="true"]')) return true
-    const activeExclude = panzoom?.getOptions?.().excludeClass ?? EXCLUDE_CLASS
-    return !!(activeExclude && el.closest(`.${activeExclude}`))
+    if (closestFrom(el, ALWAYS_IGNORE_PAN_SELECTOR)) return true
+
+    const configuredExclude = panzoom?.getOptions?.().excludeClass
+    const activeExclude = configuredExclude === undefined ? EXCLUDE_CLASS : configuredExclude
+    if (activeExclude && closestFrom(el, `.${activeExclude}`)) return true
+
+    const isExplicitSpacePan = Boolean(closestFrom(el, '.canvas-root.is-space-pan'))
+    if (!isExplicitSpacePan && closestFrom(el, PAN_CONTENT_SELECTOR)) return true
+
+    return false
   }
 
   function boardPointFromViewport(vx: number, vy: number) {
@@ -168,13 +318,17 @@ export function useCanvasCamera(
     onPanzoomChange()
   }
 
+  function clampScale(targetScale: number) {
+    const minScale = Number(panzoom?.getOptions?.().minScale ?? opts.minScale ?? 0.15)
+    const maxScale = Number(panzoom?.getOptions?.().maxScale ?? opts.maxScale ?? 3)
+    return Math.min(Math.max(targetScale, minScale), maxScale)
+  }
+
   function zoomToPoint(targetScale: number, vx: number, vy: number, options?: Record<string, unknown>) {
     if (!panzoom) return
     const r = getRects()
     if (!r) return
-    const minScale = Number(panzoom.getOptions?.().minScale ?? opts.minScale ?? 0.15)
-    const maxScale = Number(panzoom.getOptions?.().maxScale ?? opts.maxScale ?? 3)
-    const nextScale = Math.min(Math.max(targetScale, minScale), maxScale)
+    const nextScale = clampScale(targetScale)
     panzoom.zoomToPoint(
       nextScale,
       {
@@ -186,19 +340,90 @@ export function useCanvasCamera(
     onPanzoomChange()
   }
 
+  function scheduleSmoothWheelZoom() {
+    if (wheelZoomRaf != null) return
+    wheelZoomRaf = requestAnimationFrame(() => {
+      wheelZoomRaf = null
+      if (!panzoom || !wheelAnchor || wheelTargetScale == null) return
+      const targetScale = clampScale(wheelTargetScale)
+      const anchor = wheelAnchor
+      wheelTargetScale = null
+      wheelAnchor = null
+
+      zoomToPoint(targetScale, anchor.x, anchor.y, {
+        animate: false,
+        force: true,
+      })
+    })
+  }
+
   function zoomWithWheel(event: WheelEvent) {
     if (!panzoom) return
     const vp = viewportEl.value
     if (!vp) return
-    const delta = normalizeWheelDelta(event)
+    const delta = clampNumber(normalizeWheelDelta(event), -220, 220)
     if (!delta) return
-    const currentScale = Number(panzoom.getScale?.() ?? scale.value ?? 1)
-    const intensity = event.ctrlKey || event.metaKey ? 0.0036 : 0.00235
-    const nextScale = currentScale * Math.exp(-delta * intensity)
+    cancelQueuedPan()
+    const currentScale = Number(wheelTargetScale ?? panzoom.getScale?.() ?? scale.value ?? 1)
+    const intensity = event.ctrlKey || event.metaKey ? 0.0022 : 0.00135
+    const nextScale = clampScale(currentScale * Math.exp(-delta * intensity))
     const rect = vp.getBoundingClientRect()
-    zoomToPoint(nextScale, event.clientX - rect.left, event.clientY - rect.top, {
-      animate: false,
-    })
+    wheelTargetScale = nextScale
+    wheelAnchor = {
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top,
+    }
+    scheduleSmoothWheelZoom()
+  }
+
+  function endPointerPan(event?: PointerEvent) {
+    if (!pointerPanState) return
+    if (event && event.pointerId !== pointerPanState.pointerId) return
+    const { pointerId, captureTarget } = pointerPanState
+    pointerPanState = null
+    if (captureTarget?.hasPointerCapture?.(pointerId)) {
+      try {
+        captureTarget.releasePointerCapture(pointerId)
+      } catch {
+        // Ignore stale pointer capture errors from interrupted gestures.
+      }
+    }
+    setPanningCursor(false)
+  }
+
+  function beginPointerPan(event: PointerEvent) {
+    if (!panzoom || !customPanEnabled) return false
+    if (event.pointerType === 'touch') return false
+    if (event.button !== 0 && event.button !== 1) return false
+    if (event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) return false
+
+    const vp = viewportEl.value
+    if (!vp) return false
+    const target = htmlElementFrom(event.target)
+    if (shouldIgnorePanTarget(event.target)) return false
+    if (findScrollableAncestor(target, vp)) return false
+
+    event.preventDefault()
+    cancelWheelZoom()
+    cancelQueuedPan()
+
+    pointerPanState = {
+      pointerId: event.pointerId,
+      lastX: event.clientX,
+      lastY: event.clientY,
+      captureTarget: vp,
+    }
+
+    if (vp.setPointerCapture) {
+      try {
+        vp.setPointerCapture(event.pointerId)
+      } catch {
+        // Pointer capture is a progressive enhancement here.
+      }
+    }
+
+    setPanningCursor(true)
+    return true
   }
 
   function getTouchPair() {
@@ -230,9 +455,9 @@ export function useCanvasCamera(
       return
     }
     const vp = viewportEl.value
-    const target = point.target instanceof HTMLElement ? point.target : null
+    const target = htmlElementFrom(point.target)
     if (!vp) return
-    if (isExcludedTarget(point.target)) {
+    if (shouldIgnorePanTarget(point.target)) {
       touchPanState = null
       return
     }
@@ -240,6 +465,7 @@ export function useCanvasCamera(
       touchPanState = null
       return
     }
+    cancelWheelZoom()
     touchPanState = { lastX: point.clientX, lastY: point.clientY }
   }
 
@@ -341,6 +567,10 @@ export function useCanvasCamera(
     wheelHandler = (e: WheelEvent) => {
       if (!panzoom) return
 
+      const target = htmlElementFrom(e.target)
+      if (shouldIgnorePanTarget(e.target)) return
+      if (findScrollableAncestor(target, vp)) return
+
       const isZoomGesture = e.ctrlKey || e.metaKey
       if (isZoomGesture || shouldZoomFromWheel(e)) {
         e.preventDefault()
@@ -348,16 +578,10 @@ export function useCanvasCamera(
         return
       }
 
-      const activeExclude = panzoom?.getOptions?.().excludeClass ?? EXCLUDE_CLASS
-      const target = e.target as HTMLElement | null
-      if (target && activeExclude && target.closest(`.${activeExclude}`)) return
-      if (target && target.closest('input, textarea, select, option, [contenteditable="true"]')) {
-        return
-      }
-      if (findScrollableAncestor(target, vp)) return
-
       e.preventDefault()
-      panzoom.pan(e.deltaX, e.deltaY, { relative: true, force: true } as any)
+      cancelWheelZoom()
+      const { dx, dy } = normalizeWheelPanDelta(e)
+      queuePanBy(-dx * WHEEL_PAN_SPEED, -dy * WHEEL_PAN_SPEED)
     }
 
     vp.addEventListener('wheel', wheelHandler, { passive: false })
@@ -365,6 +589,9 @@ export function useCanvasCamera(
 
     pointerDownHandler = (event: PointerEvent) => {
       if (event.pointerType === 'touch') {
+        const target = htmlElementFrom(event.target)
+        if (shouldIgnorePanTarget(event.target)) return
+        if (findScrollableAncestor(target, vp)) return
         event.preventDefault()
         activeTouchPointers.set(event.pointerId, {
           clientX: event.clientX,
@@ -374,7 +601,7 @@ export function useCanvasCamera(
         syncTouchGesture()
         return
       }
-      panzoom.handleDown?.(event)
+      beginPointerPan(event)
     }
 
     pointerMoveHandler = (event: PointerEvent) => {
@@ -396,12 +623,17 @@ export function useCanvasCamera(
         touchPanState.lastX = event.clientX
         touchPanState.lastY = event.clientY
         if (dx || dy) {
-          panzoom.pan(dx, dy, { relative: true, force: true } as any)
-          onPanzoomChange()
+          panByNow(dx, dy)
         }
         return
       }
-      panzoom.handleMove?.(event)
+      if (!pointerPanState || event.pointerId !== pointerPanState.pointerId) return
+      event.preventDefault()
+      const dx = event.clientX - pointerPanState.lastX
+      const dy = event.clientY - pointerPanState.lastY
+      pointerPanState.lastX = event.clientX
+      pointerPanState.lastY = event.clientY
+      panByNow(dx, dy)
     }
 
     pointerUpHandler = (event: PointerEvent) => {
@@ -410,7 +642,7 @@ export function useCanvasCamera(
         syncTouchGesture()
         return
       }
-      panzoom.handleUp?.(event)
+      endPointerPan(event)
     }
 
     vp.addEventListener('pointerdown', pointerDownHandler, { capture: true })
@@ -471,6 +703,15 @@ export function useCanvasCamera(
       cancelAnimationFrame(resizeRaf)
       resizeRaf = null
     }
+    if (wheelZoomRaf != null) {
+      cancelAnimationFrame(wheelZoomRaf)
+      wheelZoomRaf = null
+    }
+    wheelTargetScale = null
+    wheelAnchor = null
+    cancelQueuedPan()
+    endPointerPan()
+    setPanningCursor(false)
     if (vp && wheelHandler) vp.removeEventListener('wheel', wheelHandler)
     if (vp && pointerDownHandler) vp.removeEventListener('pointerdown', pointerDownHandler, true)
     if (pointerMoveHandler) window.removeEventListener('pointermove', pointerMoveHandler)
@@ -504,6 +745,10 @@ export function useCanvasCamera(
     centerOn,
     setPanEnabled(enabled: boolean) {
       customPanEnabled = enabled
+      if (!enabled) {
+        endPointerPan()
+        cancelQueuedPan()
+      }
       panzoom?.setOptions?.({ disablePan: !enabled })
     },
     boardPointFromViewport,

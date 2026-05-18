@@ -62,15 +62,15 @@ defineExpose({
   gap: 10px;
   min-height: 44px;
   padding: 0 10px;
-  border-radius: 12px;
-  border: 1px solid rgba(148, 163, 184, 0.34);
-  background: rgba(255, 255, 255, 0.78);
+  border-radius: 8px;
+  border: 1px solid rgba(100, 116, 139, 0.22);
+  background: rgba(255, 255, 255, 0.88);
   transition: border-color 140ms ease, background 140ms ease;
 }
 
 .palette-search:focus-within {
-  border-color: rgba(59, 130, 246, 0.54);
-  background: rgba(255, 255, 255, 0.94);
+  border-color: rgba(79, 70, 229, 0.5);
+  background: rgba(255, 255, 255, 0.98);
 }
 
 .palette-search__icon {
@@ -103,15 +103,15 @@ defineExpose({
   height: 28px;
   display: grid;
   place-items: center;
-  border-radius: 8px;
-  border: 1px solid rgba(148, 163, 184, 0.56);
+  border-radius: 6px;
+  border: 1px solid rgba(100, 116, 139, 0.28);
   color: #475569;
   background: rgba(226, 232, 240, 0.86);
   transition: border-color 120ms ease, background 120ms ease;
 }
 
 .palette-search__clear:hover {
-  border-color: rgba(59, 130, 246, 0.48);
+  border-color: rgba(79, 70, 229, 0.42);
   background: rgba(241, 245, 249, 0.94);
 }
 </style>

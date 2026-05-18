@@ -1947,6 +1947,13 @@ function widgetStyle(w: Widget) {
 function widgetMemoDeps(w: Widget) {
   const selected = isWidgetSelected(w.id)
   const grouped = isGroupSelectionActive.value && selected
+  const liveInteraction =
+    activeDragId === w.id ||
+    activeDragIds.includes(w.id) ||
+    activeResizeId === w.id ||
+    resizeStates.has(w.id) ||
+    dragStates.has(w.id) ||
+    Boolean(activeGroupResizeState?.members.some((member) => member.id === w.id))
   const useGlobal = w.props?.useGlobalRange !== false
   const fromVal = useGlobal ? from.value : (w.props?.from ?? from.value)
   const toVal = useGlobal ? to.value : (w.props?.to ?? to.value)
@@ -1968,6 +1975,7 @@ function widgetMemoDeps(w: Widget) {
     fromVal,
     toVal,
     themeMode.value,
+    liveInteraction ? interactionTick.value : 0,
   ]
 }
 
@@ -2835,7 +2843,7 @@ const camera = useCanvasCamera(viewportEl, boardEl, {
   boardWidth: BOARD_W,
   boardHeight: BOARD_H,
   maxScale: 3,
-  minScale: 0.15,
+  minScale: 0.25,
   contain: 'outside',
   excludeClass: 'panzoom-exclude',
 })
@@ -2868,7 +2876,7 @@ function updateVisibleRectNow() {
   const right = Math.max(p1.x, p2.x)
   const top = Math.min(p1.y, p2.y)
   const bottom = Math.max(p1.y, p2.y)
-  const safeScale = Math.max(Number(scale.value) || 1, 0.15)
+  const safeScale = Math.max(Number(scale.value) || 1, 0.25)
   const pad = clamp(420 / safeScale, 220, 860)
 
   visibleRect.value = {
@@ -3233,6 +3241,9 @@ function setWidgetRef(id: string, c: any) {
         resizeState.w,
         resizeState.h,
       )
+      if (resizeState.isText) {
+        applyTextWidgetPreviewFont(nextEl, resizeState.previewFontSize)
+      }
       updateResizeMetricsText(resizeState.metricsEl, resizeState.w, resizeState.h)
     }
 
@@ -3250,6 +3261,9 @@ function setWidgetRef(id: string, c: any) {
         groupMember.w,
         groupMember.h,
       )
+      if (groupMember.isText) {
+        applyTextWidgetPreviewFont(nextEl, groupMember.previewFontSize)
+      }
       updateResizeMetricsText(groupMember.metricsEl, groupMember.w, groupMember.h)
     }
   }
@@ -3273,20 +3287,34 @@ function applyWidgetDOMRect(el: HTMLElement, x: number, y: number, w: number, h:
 
 function applyWidgetResizePreview(
   el: HTMLElement,
-  originW: number,
-  originH: number,
+  _originW: number,
+  _originH: number,
   x: number,
   y: number,
   w: number,
   h: number,
 ) {
-  const safeOriginW = Math.max(originW, 1)
-  const safeOriginH = Math.max(originH, 1)
-  const scaleX = clamp(w / safeOriginW, 0.01, 24)
-  const scaleY = clamp(h / safeOriginH, 0.01, 24)
-  el.style.width = `${safeOriginW}px`
-  el.style.height = `${safeOriginH}px`
-  el.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${scaleX}, ${scaleY})`
+  applyWidgetDOMRect(el, x, y, Math.max(w, 1), Math.max(h, 1))
+}
+
+function textPreviewEl(el: HTMLElement | null) {
+  return el?.querySelector<HTMLElement>(
+    '.text-title-copy, .text-block-copy, .text-inline-editor',
+  ) ?? null
+}
+
+function applyTextWidgetPreviewFont(el: HTMLElement | null, fontSize: number | null) {
+  const target = textPreviewEl(el)
+  if (!target) return
+  if (fontSize == null || !Number.isFinite(fontSize)) {
+    target.style.removeProperty('font-size')
+    return
+  }
+  target.style.fontSize = `${Math.round(fontSize)}px`
+}
+
+function clearTextWidgetPreviewFont(el: HTMLElement | null) {
+  applyTextWidgetPreviewFont(el, null)
 }
 
 function readResizeMetricsEl(el: HTMLElement | null) {
@@ -3882,7 +3910,7 @@ function scheduleDragApply(state: DragState) {
     if (state.el) {
       applyWidgetTransform(state.el, state.x, state.y)
     }
-    if (activeDragIds.length > 1) {
+    if (activeDragIds.length > 0) {
       bumpInteractionTick()
     }
   })
@@ -3892,6 +3920,7 @@ function clearResizeState(id: string) {
   const state = resizeStates.get(id)
   if (!state) return
   if (state.raf) cancelAnimationFrame(state.raf)
+  if (state.isText) clearTextWidgetPreviewFont(state.el)
   applyWidgetDOM(state.el, state.widget)
   resizeStates.delete(id)
 }
@@ -3902,6 +3931,7 @@ function clearGroupResizeState() {
   if (state.raf) cancelAnimationFrame(state.raf)
   for (const member of state.members) {
     member.el?.classList.remove('is-resizing')
+    if (member.isText) clearTextWidgetPreviewFont(member.el)
     if (member.el) applyWidgetDOM(member.el, member.widget)
   }
   activeGroupResizeState = null
@@ -3923,6 +3953,9 @@ function scheduleGroupResizeApply(state: GroupResizeState) {
         member.w,
         member.h,
       )
+      if (member.isText) {
+        applyTextWidgetPreviewFont(member.el, member.previewFontSize)
+      }
       updateResizeMetricsText(member.metricsEl, member.w, member.h)
     }
     bumpInteractionTick()
@@ -3949,7 +3982,11 @@ function scheduleResizeApply(state: ResizeState) {
       state.w,
       state.h,
     )
+    if (state.isText) {
+      applyTextWidgetPreviewFont(state.el, state.previewFontSize)
+    }
     updateResizeMetricsText(state.metricsEl, state.w, state.h)
+    bumpInteractionTick()
   })
 }
 

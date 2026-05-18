@@ -57,8 +57,8 @@ const props = defineProps({
   hint: { type: String, default: '' },
   spark: { type: Array, default: () => [] },
   showDetails: { type: Boolean, default: false },
-  showMeta: { type: Boolean, default: false },
-  showSparkline: { type: Boolean, default: false },
+  showMeta: { type: Boolean, default: true },
+  showSparkline: { type: Boolean, default: true },
 })
 
 const slots = useSlots()
@@ -118,7 +118,7 @@ const kpiStyle = computed(() => {
   min-width: 0;
   min-height: 0;
   display: grid;
-  grid-template-rows: auto auto auto auto minmax(0, auto);
+  grid-template-rows: auto auto auto minmax(0, auto);
   align-content: center;
   justify-items: center;
   gap: var(--kpi-gap);
@@ -130,11 +130,11 @@ const kpiStyle = computed(() => {
 .kpi-card__accent {
   position: relative;
   display: block;
-  width: clamp(36px, 18%, 64px);
-  height: 3px;
+  width: clamp(34px, 16%, 58px);
+  height: 2px;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--kpi-accent), color-mix(in srgb, var(--kpi-accent) 62%, #2563eb));
-  box-shadow: 0 8px 18px color-mix(in srgb, var(--kpi-accent) 16%, transparent);
+  background: linear-gradient(90deg, var(--kpi-accent), color-mix(in srgb, var(--kpi-accent) 52%, #4f46e5));
+  box-shadow: none;
   pointer-events: none;
 }
 
@@ -143,7 +143,7 @@ const kpiStyle = computed(() => {
   font-size: var(--kpi-value-size);
   line-height: 0.98;
   font-family: var(--template-title-font, var(--font-display, "Poppins", sans-serif));
-  font-weight: 820;
+  font-weight: 800;
   letter-spacing: 0;
   color: var(--template-text, #111827);
   white-space: nowrap;
@@ -176,21 +176,21 @@ const kpiStyle = computed(() => {
 .kpi-card__delta {
   flex: 0 1 auto;
   border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.22);
-  background: rgba(248, 250, 252, 0.76);
-  padding: 3px 7px;
+  border: 1px solid var(--widget-panel-border, rgba(100, 116, 139, 0.18));
+  background: rgba(255, 255, 255, 0.72);
+  padding: 3px 8px;
   font-weight: 760;
 }
 
 .kpi-card__delta.is-positive {
-  border-color: rgba(16, 185, 129, 0.24);
-  background: rgba(209, 250, 229, 0.62);
+  border-color: rgba(16, 185, 129, 0.2);
+  background: rgba(209, 250, 229, 0.56);
   color: #047857;
 }
 
 .kpi-card__delta.is-negative {
-  border-color: rgba(244, 63, 94, 0.22);
-  background: rgba(255, 228, 230, 0.72);
+  border-color: rgba(244, 63, 94, 0.2);
+  background: rgba(255, 228, 230, 0.64);
   color: #be123c;
 }
 
@@ -205,9 +205,9 @@ const kpiStyle = computed(() => {
 }
 
 .kpi-card__spark {
-  width: min(100%, 180px);
-  height: 38px;
-  opacity: 0.9;
+  width: min(100%, 190px);
+  height: 34px;
+  opacity: 0.86;
 }
 
 .kpi-card__details {

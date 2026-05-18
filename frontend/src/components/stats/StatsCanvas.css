@@ -1,21 +1,31 @@
 .canvas-root {
-  --bg: #f3eee6;
-  --canvas-board-base: #efe7dc;
-  --canvas-board-surface: #f6f1e9;
-  --canvas-board-grid: rgba(79, 70, 55, 0.055);
-  --canvas-board-grid-strong: rgba(107, 91, 71, 0.085);
-  --canvas-widget-bg: linear-gradient(180deg, rgba(255, 253, 248, 0.99), rgba(250, 247, 240, 0.97));
-  --canvas-widget-border: rgba(126, 111, 91, 0.22);
-  --canvas-widget-border-hover: rgba(91, 92, 226, 0.28);
-  --canvas-widget-header-bg: rgba(255, 253, 248, 0.74);
-  --canvas-widget-header-border: rgba(126, 111, 91, 0.16);
-  --canvas-widget-title: #111827;
-  --canvas-widget-shadow: 0 14px 34px rgba(73, 59, 42, 0.075), inset 0 1px 0 rgba(255, 255, 255, 0.78);
-  --canvas-widget-shadow-hover: 0 18px 42px rgba(73, 59, 42, 0.11), 0 0 0 1px rgba(91, 92, 226, 0.06);
-  --template-surface-card: linear-gradient(180deg, rgba(255, 253, 248, 0.99), rgba(250, 247, 240, 0.97));
-  --template-surface-line: rgba(126, 111, 91, 0.22);
-  --template-shadow-card: 0 14px 34px rgba(73, 59, 42, 0.075);
-  --template-shadow-card-inset: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  --bg: #e9eef5;
+  --canvas-board-base: #e4ebf4;
+  --canvas-board-surface: #f8fafc;
+  --canvas-board-grid: rgba(51, 65, 85, 0.045);
+  --canvas-board-grid-strong: rgba(51, 65, 85, 0.075);
+  --canvas-widget-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.98));
+  --canvas-widget-border: rgba(100, 116, 139, 0.18);
+  --canvas-widget-border-hover: rgba(67, 56, 202, 0.28);
+  --canvas-widget-header-bg: rgba(255, 255, 255, 0.72);
+  --canvas-widget-header-border: rgba(100, 116, 139, 0.14);
+  --canvas-widget-title: #0f172a;
+  --canvas-widget-shadow: 0 12px 26px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  --canvas-widget-shadow-hover: 0 16px 34px rgba(15, 23, 42, 0.12), 0 0 0 1px rgba(67, 56, 202, 0.06);
+  --widget-ui-accent: #4f46e5;
+  --widget-ui-accent-soft: rgba(79, 70, 229, 0.1);
+  --widget-ui-positive: #047857;
+  --widget-ui-negative: #be123c;
+  --widget-ui-warning: #b45309;
+  --widget-row-bg: rgba(248, 250, 252, 0.86);
+  --widget-row-bg-hover: rgba(241, 245, 249, 0.96);
+  --widget-row-border: rgba(100, 116, 139, 0.16);
+  --widget-panel-bg: rgba(255, 255, 255, 0.82);
+  --widget-panel-border: rgba(100, 116, 139, 0.16);
+  --template-surface-card: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.98));
+  --template-surface-line: rgba(100, 116, 139, 0.18);
+  --template-shadow-card: 0 12px 26px rgba(15, 23, 42, 0.08);
+  --template-shadow-card-inset: inset 0 1px 0 rgba(255, 255, 255, 0.78);
   --template-text: #111827;
   --template-text-muted: #64748b;
   --stats-top-gap: max(16px, env(safe-area-inset-top, 0px) + 10px);
@@ -65,6 +75,8 @@
 body.canvas-resize-cursor,
 body.canvas-resize-cursor * {
   cursor: var(--stats-resize-cursor, default) !important;
+  user-select: none;
+  -webkit-user-select: none;
 }
 body.canvas-resize-cursor--ns {
   --stats-resize-cursor: ns-resize;
@@ -79,16 +91,58 @@ body.canvas-resize-cursor--nesw {
   --stats-resize-cursor: nesw-resize;
 }
 
+body.canvas-pan-cursor,
+body.canvas-pan-cursor * {
+  cursor: grabbing !important;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 .viewport {
   position: absolute;
   inset: 0;
   overflow: hidden;
   overscroll-behavior: contain;
   touch-action: none;
+  cursor: grab;
 }
 .viewport,
 .board {
   touch-action: none;
+}
+
+.viewport:active {
+  cursor: grabbing;
+}
+
+.viewport .widget {
+  cursor: default;
+}
+
+.viewport .widget[data-edit='true']:not(.is-fullscreen) {
+  cursor: grab;
+}
+
+.viewport button,
+.viewport a,
+.viewport input,
+.viewport select,
+.viewport textarea,
+.viewport [contenteditable='true'],
+.template-rail,
+.template-picker-modal,
+.profile-modal,
+.shortcut-modal {
+  cursor: auto;
+}
+
+.viewport button,
+.viewport a,
+.template-rail button,
+.template-picker-modal button,
+.profile-modal button,
+.shortcut-modal button {
+  cursor: pointer;
 }
 
 .canvas-root.is-space-pan .viewport {
@@ -104,6 +158,8 @@ body.canvas-resize-cursor--nesw {
   height: 6000px;
   position: relative;
   z-index: 1;
+  transform-origin: 0 0;
+  will-change: transform;
   background:
     linear-gradient(var(--canvas-board-grid) 1px, transparent 1px) 0 0 / 32px 32px,
     linear-gradient(90deg, var(--canvas-board-grid) 1px, transparent 1px) 0 0 / 32px 32px,
@@ -296,10 +352,12 @@ body.canvas-resize-cursor--nesw {
   width: min(460px, calc(100vw - 28px));
   max-height: min(720px, calc(100dvh - 28px));
   transform: translate(-50%, -50%);
-  border-radius: 20px;
-  border: 1px solid rgba(148, 163, 184, 0.34);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 245, 249, 0.98));
-  box-shadow: 0 26px 70px rgba(2, 6, 23, 0.4);
+  border-radius: 8px;
+  border: 1px solid rgba(100, 116, 139, 0.24);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 250, 252, 0.98)),
+    linear-gradient(135deg, rgba(79, 70, 229, 0.055), rgba(20, 184, 166, 0.04) 54%, transparent);
+  box-shadow: 0 26px 70px rgba(15, 23, 42, 0.34);
   padding: 18px;
   display: grid;
   gap: 14px;
@@ -331,8 +389,8 @@ body.canvas-resize-cursor--nesw {
 .template-picker-close {
   width: 32px;
   height: 32px;
-  border-radius: 10px;
-  border: 1px solid rgba(148, 163, 184, 0.34);
+  border-radius: 6px;
+  border: 1px solid rgba(100, 116, 139, 0.24);
   background: rgba(248, 250, 252, 0.9);
   color: #334155;
   font-weight: 700;
@@ -340,10 +398,12 @@ body.canvas-resize-cursor--nesw {
 
 .template-picker-card {
   text-align: left;
-  border-radius: 16px;
-  border: 1px solid rgba(14, 165, 233, 0.36);
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.12);
+  border-radius: 8px;
+  border: 1px solid rgba(100, 116, 139, 0.18);
+  background:
+    linear-gradient(180deg, #ffffff 0%, #f8fafc 100%),
+    linear-gradient(135deg, rgba(79, 70, 229, 0.05), transparent 62%);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
   padding: 15px 16px;
   display: grid;
   gap: 8px;
@@ -355,8 +415,8 @@ body.canvas-resize-cursor--nesw {
 
 .template-picker-card:hover {
   transform: translateY(-1px);
-  border-color: rgba(2, 132, 199, 0.5);
-  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.16);
+  border-color: rgba(79, 70, 229, 0.34);
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12);
 }
 
 .template-picker-card__badge {
@@ -384,10 +444,10 @@ body.canvas-resize-cursor--nesw {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 999px;
-  border: 1px solid rgba(14, 116, 144, 0.36);
-  background: rgba(8, 145, 178, 0.14);
-  color: #0e7490;
+  border-radius: 6px;
+  border: 1px solid rgba(79, 70, 229, 0.26);
+  background: rgba(238, 242, 255, 0.72);
+  color: #4338ca;
   padding: 6px 12px;
   font-size: 11px;
   font-weight: 700;
@@ -395,7 +455,7 @@ body.canvas-resize-cursor--nesw {
 }
 
 .template-picker-empty {
-  border-radius: 18px;
+  border-radius: 8px;
   border: 1px dashed rgba(100, 116, 139, 0.44);
   background: rgba(248, 250, 252, 0.72);
   padding: 18px;
@@ -572,7 +632,7 @@ body.canvas-resize-cursor--nesw {
   right: auto;
   bottom: 10px;
   width: var(--template-rail-width, 64px);
-  border-radius: 16px;
+  border-radius: 8px;
   border: 1px solid #9eb8d6;
   background: linear-gradient(180deg, rgba(228, 236, 246, 0.98), rgba(221, 232, 245, 0.98));
   display: grid;
@@ -590,7 +650,7 @@ body.canvas-resize-cursor--nesw {
   right: auto;
   bottom: 10px;
   width: var(--template-rail-width, 64px);
-  border-radius: 16px;
+  border-radius: 8px;
   border-color: rgba(113, 151, 195, 0.42);
   background:
     linear-gradient(180deg, rgba(247, 251, 255, 0.76), rgba(224, 235, 249, 0.78)),
@@ -605,7 +665,7 @@ body.canvas-resize-cursor--nesw {
 .template-rail__user {
   width: 52px;
   height: 52px;
-  border-radius: 16px;
+  border-radius: 8px;
   border: 1px solid transparent;
   background: transparent;
   display: grid;
@@ -682,7 +742,7 @@ body.canvas-resize-cursor--nesw {
 .template-rail__nav-btn {
   width: 42px;
   height: 42px;
-  border-radius: 12px;
+  border-radius: 8px;
   border: 1px solid #9eb8d6;
   background: rgba(248, 251, 255, 0.96);
   color: #4b6b92;
@@ -697,7 +757,7 @@ body.canvas-resize-cursor--nesw {
 .template-mode ~ .template-rail .template-rail__nav-btn {
   width: 42px;
   height: 42px;
-  border-radius: 12px;
+  border-radius: 8px;
   border-color: rgba(113, 151, 195, 0.44);
   background: rgba(255, 255, 255, 0.62);
   color: #426894;
@@ -710,7 +770,7 @@ body.canvas-resize-cursor--nesw {
 .template-mode ~ .template-rail .template-rail__profile-btn {
   width: 42px;
   height: 36px;
-  border-radius: 12px;
+  border-radius: 8px;
   border-color: rgba(113, 151, 195, 0.44);
   background: rgba(255, 255, 255, 0.62);
   color: #426894;
@@ -753,7 +813,7 @@ body.canvas-resize-cursor--nesw {
 .template-rail__meta-btn {
   width: 42px;
   height: 36px;
-  border-radius: 12px;
+  border-radius: 8px;
   border: 1px solid #9eb8d6;
   background: rgba(248, 251, 255, 0.96);
   color: #4b6b92;
@@ -803,7 +863,7 @@ body.canvas-resize-cursor--nesw {
 .template-rail__profile-btn {
   width: 42px;
   height: 36px;
-  border-radius: 12px;
+  border-radius: 8px;
   border: 1px solid #9eb8d6;
   background: rgba(248, 251, 255, 0.96);
   display: grid;
@@ -2562,19 +2622,19 @@ body.canvas-resize-cursor--nesw {
 }
 
 .canvas-root.theme-light {
-  --bg: #f3eee6;
-  --canvas-widget-bg: linear-gradient(180deg, rgba(255, 253, 248, 0.99), rgba(250, 247, 240, 0.97));
-  --canvas-widget-border: rgba(126, 111, 91, 0.24);
+  --bg: #e9eef5;
+  --canvas-widget-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 250, 252, 0.98));
+  --canvas-widget-border: rgba(100, 116, 139, 0.2);
   --canvas-widget-border-hover: rgba(79, 70, 229, 0.32);
-  --canvas-widget-header-bg: rgba(255, 253, 248, 0.88);
-  --canvas-widget-header-border: rgba(126, 111, 91, 0.17);
+  --canvas-widget-header-bg: rgba(255, 255, 255, 0.84);
+  --canvas-widget-header-border: rgba(100, 116, 139, 0.15);
   --canvas-widget-title: #0f172a;
-  --canvas-widget-shadow: 0 14px 34px rgba(73, 59, 42, 0.085), inset 0 1px 0 rgba(255, 255, 255, 0.68);
-  --canvas-widget-shadow-hover: 0 18px 42px rgba(73, 59, 42, 0.13), 0 0 0 1px rgba(79, 70, 229, 0.08);
-  --template-surface-card: linear-gradient(180deg, rgba(255, 253, 248, 0.99), rgba(250, 247, 240, 0.97));
-  --template-surface-line: rgba(126, 111, 91, 0.24);
-  --template-shadow-card: 0 14px 34px rgba(73, 59, 42, 0.085);
-  --template-shadow-card-inset: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  --canvas-widget-shadow: 0 12px 26px rgba(15, 23, 42, 0.085), inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  --canvas-widget-shadow-hover: 0 16px 34px rgba(15, 23, 42, 0.13), 0 0 0 1px rgba(79, 70, 229, 0.08);
+  --template-surface-card: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 250, 252, 0.98));
+  --template-surface-line: rgba(100, 116, 139, 0.2);
+  --template-shadow-card: 0 12px 26px rgba(15, 23, 42, 0.085);
+  --template-shadow-card-inset: inset 0 1px 0 rgba(255, 255, 255, 0.76);
   --template-text: #0f172a;
   --template-text-muted: #475569;
   color: #000;
@@ -2582,11 +2642,11 @@ body.canvas-resize-cursor--nesw {
 
 .canvas-root.theme-light .board {
   background:
-    radial-gradient(circle at 1px 1px, rgba(107, 91, 71, 0.13) 1px, transparent 1.7px) 0 0 / 28px
+    radial-gradient(circle at 1px 1px, rgba(51, 65, 85, 0.1) 1px, transparent 1.7px) 0 0 / 28px
       28px,
-    radial-gradient(circle at 1px 1px, rgba(126, 111, 91, 0.075) 1px, transparent 1.8px) 0 0 / 8px
+    radial-gradient(circle at 1px 1px, rgba(71, 85, 105, 0.055) 1px, transparent 1.8px) 0 0 / 8px
       8px,
-    linear-gradient(180deg, #f7f2ea 0%, #efe7dc 100%);
+    linear-gradient(180deg, #f8fafc 0%, #eef4fb 100%);
 }
 
 .canvas-root.theme-light .canvas-empty-guide__glow {

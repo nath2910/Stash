@@ -632,14 +632,14 @@ onBeforeUnmount(() => {
   min-width: 760px;
   height: calc(100dvh - 50px);
   overflow: hidden;
-  border-radius: 18px;
-  border: 1px solid rgba(113, 151, 195, 0.42);
+  border-radius: 8px;
+  border: 1px solid rgba(100, 116, 139, 0.22);
   background:
-    linear-gradient(180deg, rgba(247, 251, 255, 0.98), rgba(232, 240, 251, 0.98)),
-    radial-gradient(circle at 100% 0, rgba(91, 92, 226, 0.1), transparent 40%);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(241, 245, 249, 0.98)),
+    linear-gradient(135deg, rgba(79, 70, 229, 0.06), rgba(20, 184, 166, 0.035) 48%, transparent 72%);
   color: #0f172a;
   box-shadow:
-    0 24px 52px rgba(2, 6, 23, 0.34),
+    0 24px 52px rgba(15, 23, 42, 0.28),
     inset 0 1px 0 rgba(255, 255, 255, 0.78);
 }
 
@@ -695,13 +695,13 @@ onBeforeUnmount(() => {
   display: grid;
   gap: 8px;
   padding: 12px;
-  border-radius: 16px;
-  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 8px;
+  border: 1px solid rgba(100, 116, 139, 0.2);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(241, 247, 255, 0.88)),
-    radial-gradient(circle at 0 0, rgba(91, 92, 226, 0.1), transparent 52%);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 250, 252, 0.9)),
+    linear-gradient(135deg, rgba(79, 70, 229, 0.055), transparent 64%);
   box-shadow:
-    0 14px 30px rgba(31, 41, 55, 0.1),
+    0 14px 30px rgba(15, 23, 42, 0.08),
     0 1px 0 rgba(255, 255, 255, 0.78) inset;
 }
 
@@ -722,9 +722,9 @@ onBeforeUnmount(() => {
   width: 100%;
   min-height: 36px;
   padding: 0 10px;
-  border-radius: 11px;
-  border: 1px solid rgba(148, 163, 184, 0.26);
-  background: rgba(255, 255, 255, 0.7);
+  border-radius: 6px;
+  border: 1px solid rgba(100, 116, 139, 0.16);
+  background: rgba(255, 255, 255, 0.74);
   color: #334155;
   font-size: 14px;
   font-weight: 600;
@@ -733,13 +733,13 @@ onBeforeUnmount(() => {
 }
 
 .palette-float-side__item:hover {
-  border-color: rgba(91, 92, 226, 0.32);
+  border-color: rgba(79, 70, 229, 0.3);
   background: rgba(238, 242, 255, 0.74);
   transform: translateX(1px);
 }
 
 .palette-float-side__item.is-active {
-  border-color: rgba(91, 92, 226, 0.42);
+  border-color: rgba(79, 70, 229, 0.42);
   background: rgba(238, 242, 255, 0.9);
   color: #111827;
 }
@@ -747,7 +747,7 @@ onBeforeUnmount(() => {
 .palette-float-side__dot {
   width: 8px;
   height: 8px;
-  border-radius: 999px;
+  border-radius: 6px;
 }
 
 .palette-float-side__text {
@@ -776,7 +776,7 @@ onBeforeUnmount(() => {
   gap: 12px;
   padding: 18px 20px 14px;
   border-bottom: 1px solid rgba(148, 163, 184, 0.28);
-  background: rgba(255, 255, 255, 0.62);
+  background: rgba(255, 255, 255, 0.82);
 }
 
 .palette-title {
@@ -796,16 +796,16 @@ onBeforeUnmount(() => {
   margin-left: auto;
   width: 34px;
   height: 34px;
-  border-radius: 10px;
-  border: 1px solid rgba(148, 163, 184, 0.72);
-  background: rgba(226, 232, 240, 0.72);
+  border-radius: 6px;
+  border: 1px solid rgba(100, 116, 139, 0.28);
+  background: rgba(248, 250, 252, 0.9);
   display: grid;
   place-items: center;
   color: #334155;
 }
 
 .palette-close:hover {
-  border-color: rgba(59, 130, 246, 0.44);
+  border-color: rgba(79, 70, 229, 0.42);
   background: rgba(241, 245, 249, 0.86);
 }
 
@@ -817,7 +817,7 @@ onBeforeUnmount(() => {
   gap: 10px;
   padding: 12px 14px 10px;
   border-bottom: 1px solid rgba(148, 163, 184, 0.24);
-  background: rgba(241, 247, 255, 0.84);
+  background: rgba(248, 250, 252, 0.9);
   backdrop-filter: blur(8px);
 }
 
@@ -860,7 +860,7 @@ onBeforeUnmount(() => {
 
 .palette-group__count {
   padding: 2px 8px;
-  border-radius: 999px;
+  border-radius: 6px;
   font-size: 11px;
   font-weight: 700;
   color: #334155;
@@ -882,7 +882,7 @@ onBeforeUnmount(() => {
 
 .palette-loading__item {
   min-height: 200px;
-  border-radius: 14px;
+  border-radius: 8px;
   background: linear-gradient(90deg, rgba(226, 232, 240, 0.7), rgba(241, 245, 249, 0.95), rgba(226, 232, 240, 0.7));
   background-size: 220% 100%;
   animation: palette-loading 1.2s linear infinite;
@@ -891,8 +891,8 @@ onBeforeUnmount(() => {
 .palette-error,
 .palette-empty {
   border: 1px dashed rgba(148, 163, 184, 0.5);
-  border-radius: 13px;
-  background: rgba(203, 213, 225, 0.44);
+  border-radius: 8px;
+  background: rgba(248, 250, 252, 0.72);
   padding: 18px;
   width: min(100%, 1040px);
 }
@@ -920,7 +920,7 @@ onBeforeUnmount(() => {
   border-top: 1px solid rgba(148, 163, 184, 0.26);
   font-size: 12px;
   color: #475569;
-  background: rgba(241, 247, 255, 0.78);
+  background: rgba(248, 250, 252, 0.88);
 }
 
 .form-overlay {
@@ -941,11 +941,11 @@ onBeforeUnmount(() => {
   top: 50%;
   transform: translate(-50%, -50%);
   width: min(740px, calc(100vw - 24px));
-  border-radius: 18px;
-  border: 1px solid rgba(148, 163, 184, 0.36);
+  border-radius: 8px;
+  border: 1px solid rgba(100, 116, 139, 0.22);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(244, 248, 253, 0.98)),
-    radial-gradient(circle at 100% 0, rgba(91, 92, 226, 0.1), transparent 42%);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 250, 252, 0.98)),
+    linear-gradient(135deg, rgba(79, 70, 229, 0.07), transparent 64%);
   box-shadow:
     0 24px 58px rgba(15, 23, 42, 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.76);
@@ -988,8 +988,8 @@ onBeforeUnmount(() => {
 
 .form-display {
   min-height: 38px;
-  border-radius: 11px;
-  border: 1px solid rgba(148, 163, 184, 0.34);
+  border-radius: 6px;
+  border: 1px solid rgba(100, 116, 139, 0.18);
   background: rgba(255, 255, 255, 0.74);
   color: #475569;
   padding: 0 11px;
@@ -1045,18 +1045,18 @@ onBeforeUnmount(() => {
   gap: 10px;
   align-items: center;
   min-height: 74px;
-  border: 1px solid rgba(148, 163, 184, 0.32);
-  border-radius: 12px;
+  border: 1px solid rgba(100, 116, 139, 0.18);
+  border-radius: 8px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 250, 252, 0.9)),
-    radial-gradient(circle at 100% 0, rgba(91, 92, 226, 0.06), transparent 42%);
+    linear-gradient(135deg, rgba(79, 70, 229, 0.045), transparent 58%);
   padding: 12px;
   text-align: left;
   transition: border-color 130ms ease, box-shadow 130ms ease, transform 130ms ease;
 }
 
 .form-card:hover {
-  border-color: rgba(91, 92, 226, 0.36);
+  border-color: rgba(79, 70, 229, 0.34);
   box-shadow: 0 12px 26px rgba(31, 41, 55, 0.1);
   transform: translateY(-1px);
 }
@@ -1064,7 +1064,7 @@ onBeforeUnmount(() => {
 .form-card__icon {
   width: 34px;
   height: 34px;
-  border-radius: 10px;
+  border-radius: 6px;
   padding: 8px;
   background: rgba(238, 242, 255, 0.82);
 }
@@ -1085,7 +1085,7 @@ onBeforeUnmount(() => {
   position: absolute;
   right: 10px;
   top: 10px;
-  border-radius: 999px;
+  border-radius: 6px;
   background: rgba(99, 102, 241, 0.1);
   color: #4338ca;
   padding: 3px 7px;
@@ -1151,7 +1151,7 @@ onBeforeUnmount(() => {
     width: 100%;
     height: 100%;
     min-height: 0;
-    border-radius: 16px;
+    border-radius: 8px;
   }
 
   .palette-float-side {
@@ -1160,7 +1160,7 @@ onBeforeUnmount(() => {
     gap: 8px;
     overflow-x: auto;
     padding: 8px;
-    border-radius: 14px;
+    border-radius: 8px;
     box-shadow: none;
     scrollbar-width: none;
   }
@@ -1200,7 +1200,7 @@ onBeforeUnmount(() => {
   }
 
   .palette-shell {
-    border-radius: 18px 18px 0 0;
+    border-radius: 8px 8px 0 0;
     border-bottom: none;
     box-shadow:
       0 -16px 34px rgba(2, 6, 23, 0.28),
@@ -1222,7 +1222,7 @@ onBeforeUnmount(() => {
   .palette-close {
     width: 40px;
     height: 40px;
-    border-radius: 12px;
+    border-radius: 8px;
   }
 
   .palette-tools,
@@ -1247,7 +1247,7 @@ onBeforeUnmount(() => {
 
   .palette-float-side {
     margin: 0 8px;
-    border-radius: 12px;
+    border-radius: 8px;
   }
 
   .palette-float-side__item {
@@ -1267,7 +1267,7 @@ onBeforeUnmount(() => {
     transform: none;
     width: 100%;
     max-height: min(78dvh, 620px);
-    border-radius: 16px 16px 0 0;
+    border-radius: 8px 8px 0 0;
     padding: 14px;
     overflow: auto;
   }

@@ -220,51 +220,75 @@ onBeforeUnmount(() => {
   padding-right: 2px;
   display: grid;
   align-content: start;
-  gap: 6px;
+  gap: 7px;
 }
 
 .ts-row {
   min-width: 0;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   gap: 10px;
   border-radius: 8px;
-  border: 1px solid rgba(148, 163, 184, 0.22);
-  background: rgba(248, 250, 252, 0.82);
-  padding: 8px 9px;
+  border: 1px solid var(--widget-row-border, rgba(100, 116, 139, 0.16));
+  background: var(--widget-row-bg, rgba(248, 250, 252, 0.86));
+  padding: 8px 10px;
+  transition: background 140ms ease, border-color 140ms ease;
+}
+
+.ts-row:hover {
+  border-color: rgba(79, 70, 229, 0.2);
+  background: var(--widget-row-bg-hover, rgba(241, 245, 249, 0.96));
 }
 
 .ts-row__copy {
   min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
 }
 
 .ts-row__copy p {
   margin: 0;
   color: #111827;
-  font-size: 13px;
-  font-weight: 760;
+  font-size: 12px;
+  font-weight: 720;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  grid-column: 2;
 }
 
 .ts-row__copy span {
-  display: none;
+  grid-column: 1;
+  grid-row: 1;
+  width: 28px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid rgba(100, 116, 139, 0.16);
+  background: rgba(255, 255, 255, 0.74);
+  color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 780;
 }
 
 .ts-row__value {
   flex: 0 0 auto;
   color: #047857;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 800;
+  font-variant-numeric: tabular-nums;
 }
 
 .ts-more {
   min-height: 30px;
   border-radius: 8px;
-  border: 1px solid rgba(16, 185, 129, 0.28);
-  background: rgba(209, 250, 229, 0.54);
+  border: 1px solid rgba(16, 185, 129, 0.22);
+  background: rgba(209, 250, 229, 0.5);
   color: #047857;
   padding: 0 10px;
   display: inline-flex;
@@ -279,7 +303,7 @@ onBeforeUnmount(() => {
 
 .ts-more strong {
   min-width: 22px;
-  border-radius: 999px;
+  border-radius: 6px;
   background: rgba(16, 185, 129, 0.12);
   padding: 2px 7px;
   font-size: 10px;
