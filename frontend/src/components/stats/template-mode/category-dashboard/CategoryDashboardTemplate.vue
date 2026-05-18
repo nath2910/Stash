@@ -1,5 +1,10 @@
 <template>
-  <section class="category-dashboard" aria-label="Dashboard par categories" @wheel="onWheel">
+  <section
+    class="category-dashboard"
+    :class="dashboardSizeClass"
+    aria-label="Dashboard par categories"
+    @wheel="onWheel"
+  >
     <div class="category-dashboard__inner">
       <header class="category-header">
         <div class="category-header__copy">
@@ -546,14 +551,14 @@ const today = new Date()
 const currentYear = today.getFullYear()
 const currentMonthKey = formatMonthKey(today)
 const UNKNOWN_CATEGORY = 'Autre'
-const DETAILS_ROW_LIMIT = 12
-
 const selectedMonthKey = ref(normalizeInitialMonth(props.initialState))
 const selectedCategories = ref<string[]>(sanitizeCategories(props.initialState?.categories))
 const categoryDraft = ref<string[]>([...selectedCategories.value])
 const categorySearch = ref('')
 const categoryPickerOpen = ref(false)
 const activePage = ref(0)
+const viewportWidth = ref(typeof window === 'undefined' ? 1440 : window.innerWidth)
+const viewportHeight = ref(typeof window === 'undefined' ? 900 : window.innerHeight)
 const minDate = ref('')
 const maxDate = ref(formatYmd(today))
 const minMonthKey = ref('')
@@ -611,6 +616,16 @@ const periodShortLabel = computed(() => {
   const end = parseYmd(periodRange.value.to)
   return `${start.getDate()}-${end.getDate()} ${monthLabels[end.getMonth()]}`
 })
+const dashboardSizeClass = computed(() => ({
+  'is-compact-height': viewportHeight.value <= 860,
+  'is-short-height': viewportHeight.value <= 740,
+  'is-narrow-template': viewportWidth.value <= 1180,
+}))
+const detailRowLimit = computed(() => {
+  const heightLimit = viewportHeight.value <= 740 ? 4 : viewportHeight.value <= 860 ? 5 : 7
+  return viewportWidth.value <= 1100 ? Math.min(heightLimit, 5) : heightLimit
+})
+const topChartRowLimit = computed(() => (viewportHeight.value <= 740 ? 4 : 5))
 
 const items = computed(() => rawItems.value.map(normalizeItem))
 const categoryOptions = computed<CategoryOption[]>(() => {
@@ -681,14 +696,14 @@ const stockAtEnd = computed(() =>
     .map((item) => enrichItem(item, periodRange.value.to)),
 )
 const topSoldRows = computed(() =>
-  [...soldInPeriod.value].sort((a, b) => b.profit - a.profit).slice(0, DETAILS_ROW_LIMIT),
+  [...soldInPeriod.value].sort((a, b) => b.profit - a.profit).slice(0, detailRowLimit.value),
 )
 const stockPreview = computed(() =>
   [...stockAtEnd.value]
     .sort((a, b) => b.ageInDays - a.ageInDays || b.purchasePrice - a.purchasePrice)
-    .slice(0, DETAILS_ROW_LIMIT),
+    .slice(0, detailRowLimit.value),
 )
-const topProfitChartRows = computed(() => [...topSoldRows.value].slice(0, 5).reverse())
+const topProfitChartRows = computed(() => [...topSoldRows.value].slice(0, topChartRowLimit.value).reverse())
 const totals = computed(() => {
   const revenue = sum(soldInPeriod.value, (item) => item.salePrice)
   const profit = sum(soldInPeriod.value, (item) => item.profit)
@@ -1420,6 +1435,12 @@ function profitClass(value: unknown) {
   return toNumber(value) >= 0 ? 'is-positive' : 'is-negative'
 }
 
+function updateViewportSize() {
+  if (typeof window === 'undefined') return
+  viewportWidth.value = window.innerWidth
+  viewportHeight.value = window.innerHeight
+}
+
 function goToPage(index: number) {
   activePage.value = Math.max(0, Math.min(pages.length - 1, index))
 }
@@ -1636,11 +1657,14 @@ function getErrorMessage(err: unknown) {
 }
 
 onMounted(async () => {
+  updateViewportSize()
+  window.addEventListener('resize', updateViewportSize, { passive: true })
   window.addEventListener('keydown', onKeyDown)
   await loadDataset()
 })
 
 onBeforeUnmount(() => {
+  window.removeEventListener('resize', updateViewportSize)
   window.removeEventListener('keydown', onKeyDown)
 })
 </script>
@@ -2005,7 +2029,7 @@ onBeforeUnmount(() => {
 .category-kpi-grid {
   min-width: 0;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(142px, 1fr));
   gap: 12px;
 }
 
@@ -2026,6 +2050,7 @@ onBeforeUnmount(() => {
 .category-analysis-grid,
 .category-table-grid {
   min-width: 0;
+  min-height: 0;
   display: grid;
   gap: 14px;
   align-items: stretch;
@@ -2235,6 +2260,8 @@ onBeforeUnmount(() => {
 }
 
 .category-table-card {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   align-content: start;
   overflow: hidden;
 }
@@ -2656,60 +2683,421 @@ onBeforeUnmount(() => {
   .category-dashboard__inner {
     height: 100%;
     min-height: 0;
-    grid-template-rows: auto auto minmax(0, 1fr);
+    padding-top: clamp(10px, 1.4vh, 18px);
+    padding-right: clamp(12px, 1.8vw, 24px);
+    padding-bottom: clamp(10px, 1.4vh, 18px);
+    padding-left: calc(88px + clamp(12px, 1.8vw, 24px));
+    grid-template-rows: auto auto auto;
+    gap: clamp(7px, 1.05vh, 12px);
     align-content: stretch;
+  }
+
+  .category-header {
+    align-items: center;
+    gap: 12px;
+  }
+
+  .category-header__kicker {
+    margin-bottom: 4px;
+  }
+
+  .category-header h1 {
+    font-size: clamp(1.38rem, 2.15vw, 2.05rem);
+  }
+
+  .category-header p {
+    margin-top: 4px;
+    max-width: 78ch;
+    font-size: 0.86rem;
+    line-height: 1.32;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+  }
+
+  .category-controls {
+    grid-template-columns: auto minmax(238px, 292px);
+    gap: 8px;
+  }
+
+  .category-controls__category {
+    min-width: 138px;
+    padding: 8px 10px;
+  }
+
+  .category-month {
+    padding: 8px;
+    gap: 6px;
+  }
+
+  .category-month__control {
+    grid-template-columns: 32px minmax(0, 1fr) 32px;
+  }
+
+  .category-month__control button {
+    width: 32px;
+    height: 34px;
+  }
+
+  .category-month__control input {
+    height: 34px;
+    font-size: 0.92rem;
+  }
+
+  .category-page-nav {
+    grid-template-columns: 36px minmax(0, 1fr) 36px;
+    padding: 5px 7px;
+  }
+
+  .category-page-nav__arrow {
+    width: 32px;
+    height: 32px;
   }
 
   .category-stage,
   .category-pages {
-    height: 100%;
+    width: 100%;
     min-height: 0;
+    overflow: hidden;
+  }
+
+  .category-stage {
+    height: max(420px, calc(100dvh - 190px));
+  }
+
+  .category-pages {
+    height: 100%;
   }
 
   .category-page {
     height: 100%;
     min-height: 0;
-    overflow-y: auto;
+    gap: clamp(7px, 1vh, 10px);
+    align-content: stretch;
+    overflow-y: hidden;
     overflow-x: hidden;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(91, 92, 226, 0.28) transparent;
   }
 
-  .category-page::-webkit-scrollbar {
-    width: 6px;
+  .category-page--overview {
+    grid-template-rows: auto auto minmax(0, 1fr);
   }
 
-  .category-page::-webkit-scrollbar-thumb {
-    border-radius: 999px;
-    background: rgba(91, 92, 226, 0.28);
+  .category-page--analysis {
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .category-page--details {
+    grid-template-rows: auto minmax(0, 1fr) minmax(138px, 0.42fr);
+  }
+
+  .category-page__heading {
+    align-items: center;
+    gap: 10px;
+  }
+
+  .category-page__heading p {
+    margin-bottom: 2px;
+    font-size: 0.62rem;
+  }
+
+  .category-page__heading h2 {
+    font-size: 1.02rem;
+  }
+
+  .category-page__heading span {
+    max-width: 44ch;
+    font-size: 0.76rem;
+    line-height: 1.24;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  .category-kpi-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .category-kpi-grid :deep(.category-kpi) {
+    min-height: 76px;
+    padding: 9px 10px;
+    gap: 4px;
+  }
+
+  .category-kpi-grid :deep(.category-kpi__head) {
+    gap: 6px;
+  }
+
+  .category-kpi-grid :deep(.category-kpi__label) {
+    font-size: 0.58rem;
+    line-height: 1.12;
+  }
+
+  .category-kpi-grid :deep(.category-kpi__icon) {
+    width: 15px;
+    height: 15px;
+  }
+
+  .category-kpi-grid :deep(.category-kpi__value) {
+    font-size: clamp(1.02rem, 1.45vw, 1.42rem);
+  }
+
+  .category-kpi-grid :deep(.category-kpi__detail) {
+    font-size: 0.64rem;
+    line-height: 1.18;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .category-panel--hero-chart,
-  .category-panel--analysis-chart {
+  .category-panel--analysis-chart,
+  .category-panel--top-chart {
     min-height: 0;
   }
 
   .category-overview-grid,
-  .category-analysis-grid {
+  .category-analysis-grid,
+  .category-table-grid {
     height: 100%;
     min-height: 0;
+    gap: 8px;
+  }
+
+  .category-panel,
+  .category-insight-panel,
+  .category-rank-panel {
+    overflow: hidden;
+    padding: 10px;
+    gap: 8px;
+  }
+
+  .category-panel__head {
+    align-items: center;
+    gap: 8px;
+  }
+
+  .category-panel__head p {
+    margin-bottom: 2px;
+    font-size: 0.6rem;
+  }
+
+  .category-panel__head h2 {
+    font-size: 0.95rem;
+  }
+
+  .category-panel__head span {
+    padding: 4px 8px;
+    font-size: 0.64rem;
+  }
+
+  .category-chart--compact {
+    min-height: 0;
+  }
+
+  .category-insight-panel__head {
+    gap: 8px;
+  }
+
+  .category-insight-panel__head svg {
+    width: 28px;
+    height: 28px;
+    padding: 7px;
+  }
+
+  .category-insight-panel__head p {
+    margin-bottom: 1px;
+    font-size: 0.6rem;
+  }
+
+  .category-insight-panel__head h2 {
+    font-size: 0.92rem;
+  }
+
+  .category-insight-panel > strong {
+    font-size: clamp(1.08rem, 1.7vw, 1.46rem);
+  }
+
+  .category-insight-panel > span {
+    font-size: 0.76rem;
+    line-height: 1.3;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+  }
+
+  .category-insight-panel__meta {
+    gap: 6px;
+  }
+
+  .category-insight-panel__meta div,
+  .category-performance-card {
+    padding: 8px;
+    gap: 3px;
+  }
+
+  .category-insight-panel__meta small,
+  .category-performance-card span {
+    font-size: 0.58rem;
+  }
+
+  .category-insight-panel__meta b,
+  .category-performance-card strong {
+    font-size: 0.9rem;
+  }
+
+  .category-rank-panel {
+    grid-auto-rows: minmax(0, 1fr);
+    gap: 7px;
+  }
+
+  .category-performance-card p {
+    font-size: 0.66rem;
+    line-height: 1.18;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  .category-table-card {
+    min-height: 0;
+  }
+
+  .category-table-scroll {
+    height: 100%;
+    max-height: none;
+    overflow: hidden;
+  }
+
+  .category-table th {
+    position: static;
+    padding: 6px 5px;
+    font-size: 0.58rem;
+  }
+
+  .category-table td {
+    padding: 6px 5px;
+    font-size: 0.68rem;
+  }
+
+  .category-table strong {
+    line-height: 1.12;
+    -webkit-line-clamp: 1;
+  }
+
+  .category-table td span {
+    margin-top: 2px;
+    font-size: 0.62rem;
+  }
+
+  .category-age {
+    padding: 3px 6px;
+    font-size: 0.66rem;
+  }
+}
+
+@media (min-width: 961px) {
+  .category-dashboard.is-compact-height {
+    --category-template-gap: 7px;
+  }
+
+  .category-dashboard.is-compact-height .category-dashboard__inner {
+    padding-top: 9px;
+    padding-bottom: 9px;
+  }
+
+  .category-dashboard.is-compact-height .category-header__kicker {
+    display: none;
+  }
+
+  .category-dashboard.is-compact-height .category-header p {
+    font-size: 0.78rem;
+  }
+
+  .category-dashboard.is-compact-height .category-month__head {
+    display: none;
+  }
+
+  .category-dashboard.is-compact-height .category-page-nav {
+    padding-block: 4px;
+  }
+
+  .category-dashboard.is-compact-height .category-kpi-grid :deep(.category-kpi) {
+    min-height: 68px;
+    padding: 7px 8px;
+  }
+
+  .category-dashboard.is-compact-height .category-kpi-grid :deep(.category-kpi__value) {
+    font-size: clamp(0.96rem, 1.25vw, 1.22rem);
+  }
+
+  .category-dashboard.is-compact-height .category-panel,
+  .category-dashboard.is-compact-height .category-insight-panel,
+  .category-dashboard.is-compact-height .category-rank-panel {
+    padding: 8px;
+    gap: 6px;
+  }
+
+  .category-dashboard.is-short-height .category-header p,
+  .category-dashboard.is-short-height .category-page__heading span,
+  .category-dashboard.is-short-height .category-panel__head p,
+  .category-dashboard.is-short-height .category-kpi-grid :deep(.category-kpi__detail) {
+    display: none;
+  }
+
+  .category-dashboard.is-short-height .category-header h1 {
+    font-size: 1.28rem;
+  }
+
+  .category-dashboard.is-short-height .category-controls__category,
+  .category-dashboard.is-short-height .category-month__control button,
+  .category-dashboard.is-short-height .category-month__control input {
+    height: 30px;
+    min-height: 30px;
+  }
+
+  .category-dashboard.is-short-height .category-month {
+    padding: 6px;
+  }
+
+  .category-dashboard.is-short-height .category-page-nav__arrow {
+    width: 28px;
+    height: 28px;
+  }
+
+  .category-dashboard.is-short-height .category-page-nav {
+    grid-template-columns: 32px minmax(0, 1fr) 32px;
+  }
+
+  .category-dashboard.is-short-height .category-page {
+    gap: 6px;
+  }
+
+  .category-dashboard.is-short-height .category-kpi-grid {
+    gap: 6px;
+  }
+
+  .category-dashboard.is-short-height .category-kpi-grid :deep(.category-kpi) {
+    min-height: 54px;
+    padding: 6px 7px;
+  }
+
+  .category-dashboard.is-short-height .category-panel__head h2,
+  .category-dashboard.is-short-height .category-page__heading h2 {
+    font-size: 0.86rem;
+  }
+
+  .category-dashboard.is-short-height .category-insight-panel > span {
+    -webkit-line-clamp: 2;
   }
 }
 
 @media (max-width: 1200px) {
   .category-controls {
-    grid-template-columns: 1fr;
-  }
-
-  .category-kpi-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 1100px) {
-  .category-overview-grid,
-  .category-analysis-grid,
-  .category-table-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -2732,6 +3120,12 @@ onBeforeUnmount(() => {
   .category-month,
   .category-controls__category {
     width: 100%;
+  }
+
+  .category-overview-grid,
+  .category-analysis-grid,
+  .category-table-grid {
+    grid-template-columns: 1fr;
   }
 }
 
