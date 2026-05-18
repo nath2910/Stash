@@ -92,75 +92,118 @@ const heatValues = computed(() => {
     ]
   })
 })
+const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
+const layoutWidth = computed(() => Math.max(Number(props.widgetWidth ?? 0), 1))
+const layoutHeight = computed(() => Math.max(Number(props.widgetHeight ?? 0), 1))
+const denseMode = computed(() => layoutWidth.value < 560 || layoutHeight.value < 300)
 
-const option = computed(() => ({
-  backgroundColor: 'transparent',
-  grid: { left: 72, right: 10, top: 12, bottom: 34 },
-  xAxis: {
-    type: 'category',
-    data: xLabels.value,
-    axisLine: { lineStyle: { color: 'rgba(148, 163, 184, 0.36)' } },
-    axisLabel: { color: '#64748b', fontSize: 10, interval: 0 },
-    axisTick: { show: false },
-  },
-  yAxis: {
-    type: 'category',
-    data: yLabels,
-    axisLine: { show: false },
-    axisTick: { show: false },
-    axisLabel: { color: '#64748b', fontSize: 10 },
-  },
-  visualMap: {
-    min: 0,
-    max: 100,
-    orient: 'horizontal',
-    left: 'center',
-    bottom: 2,
-    itemWidth: 90,
-    itemHeight: 10,
-    text: ['Eleve', 'Faible'],
-    textStyle: { color: '#64748b', fontSize: 10 },
-    inRange: {
-      color: ['#22c55e', '#f59e0b', '#f43f5e'],
+function formatAxisLabel(label) {
+  const text = String(label ?? '').trim()
+  const limit = denseMode.value ? 10 : 14
+  if (text.length <= limit) return text
+  return `${text.slice(0, Math.max(1, limit - 1))}...`
+}
+
+const option = computed(() => {
+  const axisFont = clamp(
+    Math.round(Math.min(layoutWidth.value * 0.013, layoutHeight.value * 0.032)),
+    9,
+    12,
+  )
+  const showVisualMap = layoutHeight.value >= 320 && layoutWidth.value >= 520
+
+  return {
+    backgroundColor: 'transparent',
+    grid: {
+      left: clamp(Math.round(layoutWidth.value * 0.11), 58, 92),
+      right: clamp(Math.round(layoutWidth.value * 0.025), 10, 24),
+      top: clamp(Math.round(layoutHeight.value * 0.05), 10, 20),
+      bottom: showVisualMap ? 42 : clamp(Math.round(layoutHeight.value * 0.09), 26, 34),
+      containLabel: false,
     },
-    calculable: false,
-  },
-  tooltip: {
-    position: 'top',
-    confine: true,
-    backgroundColor: 'rgba(255,255,255,0.98)',
-    borderColor: 'rgba(148,163,184,0.32)',
-    textStyle: { color: '#0f172a', fontSize: 12, fontWeight: 600 },
-    extraCssText: 'border-radius:10px;box-shadow:0 12px 28px rgba(15,23,42,0.14);',
-    formatter: (params) => {
-      const value = params?.value?.[2] ?? 0
-      return `${yLabels[params?.value?.[1] ?? 0]} - ${xLabels.value[params?.value?.[0] ?? 0]}<br/>Risque: ${value}`
+    xAxis: {
+      type: 'category',
+      data: xLabels.value,
+      axisLine: { lineStyle: { color: 'rgba(148, 163, 184, 0.28)' } },
+      axisLabel: {
+        color: '#64748b',
+        fontSize: axisFont,
+        fontWeight: 650,
+        interval: 0,
+        hideOverlap: true,
+        formatter: (value) => formatAxisLabel(value),
+      },
+      axisTick: { show: false },
     },
-  },
-  series: [
-    {
-      type: 'heatmap',
-      data: heatValues.value,
-      label: {
-        show: true,
-        fontSize: 10,
-        color: '#ffffff',
-        formatter: ({ value }) => `${value[2]}`,
-      },
-      itemStyle: {
-        borderColor: 'rgba(248, 250, 252, 0.86)',
-        borderWidth: 1.4,
-        borderRadius: 6,
-      },
-      emphasis: {
-        itemStyle: {
-          borderColor: '#111827',
-          borderWidth: 2,
+    yAxis: {
+      type: 'category',
+      data: yLabels,
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: {
+        color: '#64748b',
+        fontSize: axisFont,
+        fontWeight: 650,
+        formatter: (value) => {
+          const text = String(value ?? '')
+          return denseMode.value ? text.split(' ')[0] : text
         },
       },
     },
-  ],
-}))
+    visualMap: {
+      show: showVisualMap,
+      min: 0,
+      max: 100,
+      orient: 'horizontal',
+      left: 'center',
+      bottom: 4,
+      itemWidth: clamp(Math.round(layoutWidth.value * 0.12), 64, 110),
+      itemHeight: 8,
+      text: ['Eleve', 'Faible'],
+      textStyle: { color: '#64748b', fontSize: axisFont },
+      inRange: {
+        color: ['#22c55e', '#f59e0b', '#f43f5e'],
+      },
+      calculable: false,
+    },
+    tooltip: {
+      position: 'top',
+      confine: true,
+      backgroundColor: 'rgba(255,255,255,0.98)',
+      borderColor: 'rgba(148,163,184,0.32)',
+      textStyle: { color: '#0f172a', fontSize: 12, fontWeight: 600 },
+      extraCssText: 'border-radius:10px;box-shadow:0 12px 28px rgba(15,23,42,0.14);',
+      formatter: (params) => {
+        const value = params?.value?.[2] ?? 0
+        return `${yLabels[params?.value?.[1] ?? 0]} - ${xLabels.value[params?.value?.[0] ?? 0]}<br/>Risque: ${value}`
+      },
+    },
+    series: [
+      {
+        type: 'heatmap',
+        data: heatValues.value,
+        label: {
+          show: !denseMode.value || layoutHeight.value >= 240,
+          fontSize: axisFont,
+          fontWeight: 780,
+          color: '#ffffff',
+          formatter: ({ value }) => `${value[2]}`,
+        },
+        itemStyle: {
+          borderColor: 'rgba(248, 250, 252, 0.9)',
+          borderWidth: denseMode.value ? 1.5 : 2,
+          borderRadius: 6,
+        },
+        emphasis: {
+          itemStyle: {
+            borderColor: '#111827',
+            borderWidth: 2,
+          },
+        },
+      },
+    ],
+  }
+})
 </script>
 
 <style scoped>

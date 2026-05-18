@@ -6,7 +6,6 @@
     surface="distribution"
     :loading="loading"
     :error="error"
-    :auto-height="props.autoHeight"
     :widget-width="props.widgetWidth"
     :widget-height="props.widgetHeight"
     :widget-base-width="props.widgetBaseWidth"
@@ -140,6 +139,10 @@ const layoutHeight = computed(() => {
 
 const compactMode = computed(() => layoutWidth.value < 680 || layoutHeight.value < 340)
 const denseMode = computed(() => layoutWidth.value < 560 || layoutHeight.value < 300)
+const axisFont = computed(() =>
+  clamp(Math.round(Math.min(layoutWidth.value * 0.0135, layoutHeight.value * 0.032)), 9, 12),
+)
+const valueLabelVisible = computed(() => layoutWidth.value >= 480 && layoutHeight.value >= 220)
 
 const items = computed(() => rankItems.value)
 const chartHeight = computed(() => {
@@ -178,6 +181,46 @@ const rows = computed(() =>
   }),
 )
 
+const longestLabel = computed(() =>
+  rows.value.reduce((max, row) => Math.max(max, String(row.label ?? '').length), 0),
+)
+
+const barGrid = computed(() => ({
+  left: clamp(
+    Math.round(longestLabel.value * axisFont.value * 0.5 + 28),
+    72,
+    layoutWidth.value < 560 ? 128 : 176,
+  ),
+  right: valueLabelVisible.value ? clamp(Math.round(layoutWidth.value * 0.1), 44, 96) : 16,
+  top: clamp(Math.round(layoutHeight.value * 0.03), 8, 18),
+  bottom: clamp(Math.round(layoutHeight.value * 0.05), 12, 28),
+  containLabel: false,
+}))
+
+const tileGrid = computed(() => {
+  const count = Math.max(rows.value.length, 1)
+  if (count <= 1) return { columns: 1, rows: 1 }
+  const ratio = Math.max(layoutWidth.value / Math.max(layoutHeight.value, 1), 0.8)
+  const maxColumns = denseMode.value ? 4 : 6
+  const columns = clamp(Math.ceil(Math.sqrt(count * ratio)), 2, Math.min(maxColumns, count))
+  const gridRows = Math.ceil(count / columns)
+  return { columns, rows: gridRows }
+})
+
+function formatTileLabel(label) {
+  const text = String(label ?? '').trim()
+  const limit = denseMode.value ? 9 : 14
+  if (text.length <= limit) return text
+  return `${text.slice(0, Math.max(1, limit - 1))}...`
+}
+
+function formatAxisLabel(label) {
+  const text = String(label ?? '').trim()
+  const limit = denseMode.value ? 14 : 20
+  if (text.length <= limit) return text
+  return `${text.slice(0, Math.max(1, limit - 1))}...`
+}
+
 const option = computed(() => {
   const labels = items.value.map((i) => i.label)
   const values = items.value.map((i) => i.value)
@@ -197,20 +240,20 @@ const option = computed(() => {
           `${name}<br/>${formatEUR(value)} - ${percent}%`,
       },
       legend: {
-        show: true,
+        show: !denseMode.value && layoutHeight.value >= 250,
         type: 'scroll',
         bottom: 0,
         itemWidth: 8,
         itemHeight: 8,
-        textStyle: { color: '#64748b', fontSize: 10, fontWeight: 600 },
+        textStyle: { color: '#64748b', fontSize: axisFont.value, fontWeight: 650 },
         pageIconColor: '#94a3b8',
         pageTextStyle: { color: '#64748b' },
       },
       series: [
         {
           type: 'pie',
-          radius: ['42%', '68%'],
-          center: ['50%', '43%'],
+          radius: denseMode.value ? ['46%', '76%'] : ['42%', '68%'],
+          center: ['50%', denseMode.value ? '50%' : '43%'],
           label: { show: false },
           labelLine: { show: false },
           animationDurationUpdate: 0,
@@ -226,6 +269,11 @@ const option = computed(() => {
   }
 
   if (props.view === 'treemap') {
+    const labelFont = clamp(
+      Math.round(Math.min(layoutWidth.value * 0.013, layoutHeight.value * 0.032)),
+      9,
+      13,
+    )
     return {
       backgroundColor: 'transparent',
       tooltip: {
@@ -237,12 +285,33 @@ const option = computed(() => {
       series: [
         {
           type: 'treemap',
+          left: 0,
+          right: 0,
+          top: 0,
+          bottom: 0,
+          width: '100%',
+          height: '100%',
           roam: false,
           nodeClick: false,
           breadcrumb: { show: false },
-          label: { show: true, formatter: '{b}\n{c}' },
+          squareRatio: layoutWidth.value >= layoutHeight.value ? 1.55 : 0.95,
+          label: {
+            show: true,
+            color: '#ffffff',
+            fontSize: labelFont,
+            fontWeight: 780,
+            lineHeight: Math.round(labelFont * 1.16),
+            overflow: 'truncate',
+            formatter: ({ name, value }) =>
+              `${formatTileLabel(name)}\n${formatEUR(value, { compact: true })}`,
+          },
           upperLabel: { show: false },
-          itemStyle: { borderColor: 'rgba(248,250,252,0.9)', borderWidth: 2, gapWidth: 2 },
+          itemStyle: {
+            borderColor: 'rgba(255,255,255,0.92)',
+            borderWidth: 2,
+            gapWidth: denseMode.value ? 2 : 3,
+            borderRadius: 6,
+          },
           data: rows.value.map((r) => ({
             name: r.label,
             value: r.value,
@@ -254,8 +323,9 @@ const option = computed(() => {
   }
 
   if (props.view === 'heatmap') {
-    const stackRows = rows.value.filter((row) => row.value > 0)
-    const totalValue = total.value > 0 ? total.value : 1
+    const { columns, rows: gridRows } = tileGrid.value
+    const x = Array.from({ length: columns }, (_, index) => String(index + 1))
+    const y = Array.from({ length: gridRows }, (_, index) => String(index + 1))
 
     return {
       backgroundColor: 'transparent',
@@ -263,68 +333,61 @@ const option = computed(() => {
         trigger: 'item',
         confine: true,
         transitionDuration: 0,
-        formatter: (p) => {
-          const row = rows.value.find((entry) => entry.label === p?.seriesName)
-          if (!row) return ''
-          return `${row.label}<br/>${row.valueText} - ${row.pct}%`
-        },
+        backgroundColor: 'rgba(255,255,255,0.98)',
+        borderColor: 'rgba(148,163,184,0.32)',
+        textStyle: { color: '#0f172a', fontSize: 12, fontWeight: 600 },
+        extraCssText: 'border-radius:10px;box-shadow:0 12px 28px rgba(15,23,42,0.14);',
+        formatter: (p) => `${p?.name ?? ''}<br/>${formatEUR(p?.value?.[2] ?? 0)}`,
       },
-      grid: { left: 14, right: 14, top: 8, bottom: 28, containLabel: true },
+      grid: { left: 4, right: 4, top: 4, bottom: 4, containLabel: false },
       xAxis: {
-        type: 'value',
-        min: 0,
-        max: totalValue,
-        splitNumber: 4,
-        axisLabel: {
-          color: '#64748b',
-          fontSize: 10,
-          formatter: (v) => `${Math.round((v / totalValue) * 100)}%`,
-        },
-        axisLine: { lineStyle: { color: '#cbd5e1' } },
-        axisTick: { show: false, alignWithLabel: true },
-        splitLine: { lineStyle: { color: 'rgba(148,163,184,0.18)' } },
+        type: 'category',
+        data: x,
+        axisLabel: { show: false },
+        axisLine: { show: false },
+        axisTick: { show: false },
+        splitArea: { show: false },
       },
       yAxis: {
         type: 'category',
-        data: ['Profit'],
-        axisLabel: { color: '#64748b', fontSize: 10 },
-        axisLine: { lineStyle: { color: '#cbd5e1' } },
+        data: y,
+        inverse: true,
+        axisLabel: { show: false },
+        axisLine: { show: false },
         axisTick: { show: false },
+        splitArea: { show: false },
       },
-      series: stackRows.map((row, index) => {
-        const isFirst = index === 0
-        const isLast = index === stackRows.length - 1
-        return {
-          type: 'bar',
-          stack: 'profit-share',
-          name: row.label,
-          barWidth: denseMode.value ? 28 : 34,
-          data: [row.value],
+      series: [
+        {
+          type: 'heatmap',
+          data: rows.value.map((row, index) => ({
+            name: row.label,
+            value: [index % columns, Math.floor(index / columns), row.value],
+            itemStyle: { color: row.color },
+          })),
           itemStyle: {
-            color: row.color,
-            borderColor: 'rgba(248,250,252,0.9)',
-            borderWidth: 1.5,
-            borderRadius: [
-              isLast ? 10 : 0,
-              isLast ? 10 : 0,
-              isFirst ? 10 : 0,
-              isFirst ? 10 : 0,
-            ],
+            borderColor: 'rgba(255,255,255,0.9)',
+            borderWidth: denseMode.value ? 2 : 3,
+            borderRadius: 6,
           },
           label: {
-            show: row.pct >= 12,
-            position: 'inside',
-            color: 'rgba(2,6,23,0.82)',
-            fontWeight: 700,
-            fontSize: denseMode.value ? 9 : 10,
-            formatter: () => `${row.valueText}`,
+            show: true,
+            color: '#ffffff',
+            fontSize: axisFont.value,
+            fontWeight: 780,
+            lineHeight: Math.round(axisFont.value * 1.16),
+            formatter: (p) => {
+              const value = formatEUR(p.value?.[2] ?? 0, { compact: true })
+              return denseMode.value ? value : `${formatTileLabel(p?.name ?? '')}\n${value}`
+            },
           },
           emphasis: {
-            focus: 'series',
-            itemStyle: { opacity: 0.92 },
+            itemStyle: {
+              opacity: 0.92,
+            },
           },
-        }
-      }),
+        },
+      ],
     }
   }
 
@@ -338,32 +401,52 @@ const option = computed(() => {
       textStyle: { color: '#0f172a', fontSize: 12, fontWeight: 600 },
       extraCssText: 'border-radius:10px;box-shadow:0 12px 28px rgba(15,23,42,0.14);',
     },
-    grid: { left: 90, right: 20, top: 6, bottom: 18, containLabel: true },
+    grid: barGrid.value,
     xAxis: {
       type: 'value',
-      axisLabel: { color: '#64748b', fontSize: 10 },
+      axisLabel: {
+        color: '#64748b',
+        fontSize: axisFont.value,
+        fontWeight: 650,
+        formatter: (value) => formatEUR(value, { compact: true, digits: 1 }),
+      },
+      axisLine: { show: false },
+      axisTick: { show: false },
       splitLine: { lineStyle: { color: 'rgba(148,163,184,0.18)' } },
     },
     yAxis: {
       type: 'category',
       data: labels,
-      axisLabel: { color: '#334155', fontSize: 11 },
+      axisLabel: {
+        color: '#334155',
+        fontSize: axisFont.value,
+        fontWeight: 700,
+        formatter: (value) => formatAxisLabel(value),
+      },
       axisTick: { show: false },
-      axisLine: { lineStyle: { color: '#cbd5e1' } },
+      axisLine: { show: false },
     },
     series: [
       {
         type: 'bar',
         data: values.map((v, i) => ({
           value: v,
-          itemStyle: { borderRadius: [8, 8, 8, 8], color: rows.value[i]?.color },
+          itemStyle: {
+            color: rows.value[i]?.color,
+            borderRadius: [8, 8, 8, 8],
+          },
         })),
-        barWidth: 14,
+        barWidth: clamp(
+          Math.round((layoutHeight.value / Math.max(rows.value.length, 1)) * 0.18),
+          denseMode.value ? 10 : 14,
+          28,
+        ),
         label: {
-          show: true,
+          show: valueLabelVisible.value,
           position: 'right',
-          color: '#E2E8F0',
-          fontSize: 11,
+          color: '#334155',
+          fontSize: axisFont.value,
+          fontWeight: 750,
           formatter: (p) => formatEUR(p.value, { compact: true }),
         },
       },

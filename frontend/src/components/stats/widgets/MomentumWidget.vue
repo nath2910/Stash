@@ -87,6 +87,10 @@ const velocity = computed(() => {
 const score = computed(() => Math.max(-100, Math.min(100, velocity.value)))
 const scoreNormalized = computed(() => Math.round((score.value + 100) / 2))
 const scoreText = computed(() => `${Math.round(score.value)} pts`)
+const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
+const layoutWidth = computed(() => Math.max(Number(props.widgetWidth ?? 0), 1))
+const layoutHeight = computed(() => Math.max(Number(props.widgetHeight ?? 0), 1))
+const denseMode = computed(() => layoutWidth.value < 520 || layoutHeight.value < 270)
 const trendText = computed(() => {
   const value = Number(kpi.value.value || 0)
   const formatted =
@@ -112,33 +116,39 @@ const gaugeOption = computed(() => ({
       min: 0,
       max: 100,
       splitNumber: 5,
+      radius: denseMode.value ? '88%' : '94%',
+      center: ['50%', denseMode.value ? '55%' : '54%'],
       pointer: {
-        length: '55%',
-        width: 5,
+        length: denseMode.value ? '48%' : '55%',
+        width: denseMode.value ? 4 : 5,
       },
       progress: {
         show: true,
-        width: 14,
+        width: denseMode.value ? 10 : 14,
         itemStyle: {
           color: score.value >= 0 ? '#22c55e' : '#f43f5e',
         },
       },
       axisLine: {
         lineStyle: {
-          width: 14,
+          width: denseMode.value ? 10 : 14,
           color: [[1, 'rgba(148, 163, 184, 0.24)']],
         },
       },
-      axisLabel: { color: '#64748b' },
+      axisLabel: {
+        show: !denseMode.value,
+        color: '#64748b',
+        fontSize: clamp(Math.round(Math.min(layoutWidth.value * 0.012, layoutHeight.value * 0.03)), 9, 11),
+      },
       axisTick: { show: false },
       splitLine: { show: false },
       detail: {
         show: true,
         formatter: () => scoreText.value,
         color: '#111827',
-        fontSize: 18,
+        fontSize: clamp(Math.round(Math.min(layoutWidth.value * 0.042, layoutHeight.value * 0.075)), 14, 22),
         fontWeight: 800,
-        offsetCenter: [0, '38%'],
+        offsetCenter: [0, denseMode.value ? '34%' : '38%'],
       },
       data: [{ value: scoreNormalized.value }],
     },
@@ -185,6 +195,8 @@ const sparkOption = computed(() => ({
 
 .momentum-gauge,
 .momentum-spark {
+  width: 100%;
+  height: 100%;
   min-height: 0;
 }
 

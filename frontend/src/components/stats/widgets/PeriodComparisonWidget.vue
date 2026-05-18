@@ -100,51 +100,89 @@ const currentText = computed(() => formatMetric(currentValue.value))
 const previousText = computed(() => formatMetric(previousValue.value))
 const deltaText = computed(() => signFmt(deltaPct.value))
 const deltaClass = computed(() => (deltaPct.value >= 0 ? 'is-good' : 'is-low'))
+const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
+const layoutWidth = computed(() => Math.max(Number(props.widgetWidth ?? 0), 1))
+const layoutHeight = computed(() => Math.max(Number(props.widgetHeight ?? 0), 1))
 
-const option = computed(() => ({
-  backgroundColor: 'transparent',
-  grid: { left: 40, right: 14, top: 20, bottom: 26, containLabel: true },
-  tooltip: {
-    trigger: 'axis',
-    confine: true,
-    transitionDuration: 0,
-    backgroundColor: 'rgba(255,255,255,0.98)',
-    borderColor: 'rgba(148,163,184,0.32)',
-    textStyle: { color: '#0f172a', fontSize: 12, fontWeight: 600 },
-    extraCssText: 'border-radius:10px;box-shadow:0 12px 28px rgba(15,23,42,0.14);',
-  },
-  xAxis: {
-    type: 'category',
-    data: ['Precedent', 'Actuel'],
-    axisLine: { lineStyle: { color: 'rgba(148, 163, 184, 0.32)' } },
-    axisLabel: { color: '#64748b', fontSize: 11 },
-    axisTick: { show: false },
-  },
-  yAxis: {
-    type: 'value',
-    axisLabel: { color: '#64748b', fontSize: 10 },
-    splitLine: { lineStyle: { color: 'rgba(148, 163, 184, 0.18)' } },
-  },
-  series: [
-    {
-      type: 'bar',
-      barWidth: 34,
-      itemStyle: {
-        color: '#cbd5e1',
-        borderRadius: [8, 8, 0, 0],
+const option = computed(() => {
+  const axisFont = clamp(
+    Math.round(Math.min(layoutWidth.value * 0.012, layoutHeight.value * 0.034)),
+    9,
+    12,
+  )
+  const labelVisible = layoutWidth.value >= 420 && layoutHeight.value >= 210
+
+  return {
+    backgroundColor: 'transparent',
+    grid: {
+      left: clamp(Math.round(layoutWidth.value * 0.045), 34, 68),
+      right: clamp(Math.round(layoutWidth.value * 0.025), 12, 28),
+      top: labelVisible ? clamp(Math.round(layoutHeight.value * 0.08), 18, 34) : 10,
+      bottom: clamp(Math.round(layoutHeight.value * 0.09), 26, 44),
+      containLabel: true,
+    },
+    tooltip: {
+      trigger: 'axis',
+      confine: true,
+      transitionDuration: 0,
+      backgroundColor: 'rgba(255,255,255,0.98)',
+      borderColor: 'rgba(148,163,184,0.32)',
+      textStyle: { color: '#0f172a', fontSize: 12, fontWeight: 600 },
+      extraCssText: 'border-radius:10px;box-shadow:0 12px 28px rgba(15,23,42,0.14);',
+    },
+    xAxis: {
+      type: 'category',
+      data: ['Precedent', 'Actuel'],
+      axisLine: { lineStyle: { color: 'rgba(148, 163, 184, 0.32)' } },
+      axisLabel: { color: '#64748b', fontSize: axisFont, fontWeight: 650 },
+      axisTick: { show: false },
+    },
+    yAxis: {
+      type: 'value',
+      axisLabel: {
+        color: '#64748b',
+        fontSize: axisFont,
+        fontWeight: 650,
+        formatter: (value) => formatMetric(value),
       },
-      data: [previousValue.value, currentValue.value],
+      axisLine: { show: false },
+      axisTick: { show: false },
+      splitLine: { lineStyle: { color: 'rgba(148, 163, 184, 0.18)' } },
     },
-    {
-      type: 'line',
-      symbolSize: 8,
-      smooth: true,
-      lineStyle: { color: accent, width: 2 },
-      itemStyle: { color: accent },
-      data: [previousValue.value, currentValue.value],
-    },
-  ],
-}))
+    series: [
+      {
+        type: 'bar',
+        barWidth: clamp(Math.round(layoutWidth.value * 0.04), 22, 44),
+        data: [
+          {
+            value: previousValue.value,
+            itemStyle: { color: '#94a3b8', borderRadius: [8, 8, 0, 0] },
+          },
+          {
+            value: currentValue.value,
+            itemStyle: { color: accent, borderRadius: [8, 8, 0, 0] },
+          },
+        ],
+        label: {
+          show: labelVisible,
+          position: 'top',
+          color: '#334155',
+          fontSize: axisFont,
+          fontWeight: 750,
+          formatter: (params) => formatMetric(params.value),
+        },
+      },
+      {
+        type: 'line',
+        symbolSize: clamp(Math.round(layoutWidth.value * 0.008), 6, 9),
+        smooth: true,
+        lineStyle: { color: accent, width: 2 },
+        itemStyle: { color: accent },
+        data: [previousValue.value, currentValue.value],
+      },
+    ],
+  }
+})
 </script>
 
 <style scoped>

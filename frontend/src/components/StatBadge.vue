@@ -1,5 +1,6 @@
 ﻿<template>
   <div
+    ref="badgeRef"
     class="stat-badge"
     :class="[
       variant === 'dashboard' ? 'stat-badge--dashboard' : 'stat-badge--default',
@@ -11,11 +12,11 @@
       <p class="stat-badge__label">
         {{ label }}
       </p>
-      <div class="stat-badge__value-row">
-        <p class="stat-badge__value" :class="valueClasses">
+      <div ref="valueRowRef" class="stat-badge__value-row">
+        <p ref="valueRef" class="stat-badge__value" :class="valueClasses" :style="valueStyle">
           <slot>{{ value }}</slot>
         </p>
-        <span v-if="unit" class="stat-badge__unit">
+        <span v-if="unit" ref="unitRef" class="stat-badge__unit">
           {{ unit }}
         </span>
       </div>
@@ -27,7 +28,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 interface Props {
   label: string
@@ -39,6 +40,13 @@ interface Props {
 
 const props = defineProps<Props>()
 const toneName = computed(() => props.tone || 'default')
+const badgeRef = ref<HTMLElement | null>(null)
+const valueRowRef = ref<HTMLElement | null>(null)
+const valueRef = ref<HTMLElement | null>(null)
+const unitRef = ref<HTMLElement | null>(null)
+const fittedFontSize = ref('')
+let resizeObserver: ResizeObserver | null = null
+let fitRaf: number | null = null
 
 const valueClasses = computed(() => {
   switch (props.tone) {
@@ -52,6 +60,77 @@ const valueClasses = computed(() => {
       return 'text-slate-100'
   }
 })
+
+const valueStyle = computed(() =>
+  props.variant === 'dashboard' && fittedFontSize.value
+    ? { fontSize: fittedFontSize.value }
+    : undefined,
+)
+
+function scheduleValueFit() {
+  if (fitRaf != null) return
+  fitRaf = window.requestAnimationFrame(() => {
+    fitRaf = null
+    fitDashboardValue()
+  })
+}
+
+async function fitDashboardValue() {
+  if (props.variant !== 'dashboard') {
+    fittedFontSize.value = ''
+    return
+  }
+
+  await nextTick()
+
+  const row = valueRowRef.value
+  const valueEl = valueRef.value
+  if (!row || !valueEl) return
+
+  const hasUnit = Boolean(props.unit)
+  const maxPx = hasUnit ? 30.4 : 37.6
+  const minPx = 11.5
+  const rowStyle = window.getComputedStyle(row)
+  const gapPx = hasUnit ? Number.parseFloat(rowStyle.columnGap || rowStyle.gap || '0') || 0 : 0
+  const unitWidth = hasUnit ? (unitRef.value?.getBoundingClientRect().width ?? 0) : 0
+  const availableWidth = Math.max(24, row.clientWidth - unitWidth - gapPx)
+
+  valueEl.style.fontSize = `${maxPx}px`
+  const naturalWidth = valueEl.scrollWidth
+  if (!Number.isFinite(naturalWidth) || naturalWidth <= 0) {
+    fittedFontSize.value = ''
+    return
+  }
+
+  const nextPx =
+    naturalWidth > availableWidth
+      ? Math.max(minPx, Math.floor((maxPx * availableWidth * 0.97) / naturalWidth))
+      : maxPx
+
+  fittedFontSize.value = `${nextPx}px`
+}
+
+onMounted(() => {
+  resizeObserver = new ResizeObserver(scheduleValueFit)
+  if (badgeRef.value) resizeObserver.observe(badgeRef.value)
+  if (valueRowRef.value) resizeObserver.observe(valueRowRef.value)
+  scheduleValueFit()
+})
+
+onBeforeUnmount(() => {
+  resizeObserver?.disconnect()
+  resizeObserver = null
+  if (fitRaf != null) {
+    window.cancelAnimationFrame(fitRaf)
+    fitRaf = null
+  }
+})
+
+watch(
+  () => [props.value, props.unit, props.variant],
+  () => scheduleValueFit(),
+  { flush: 'post' },
+)
 </script>
 
 <style scoped>

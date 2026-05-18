@@ -170,10 +170,8 @@ const cardStyle = computed(() => {
   height: 100%;
   min-width: 0;
   min-height: 0;
-  overflow: auto;
-  padding-right: 2px;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(100, 116, 139, 0.28) transparent;
+  overflow: hidden;
+  padding-right: 0;
 }
 .widget-card.is-auto .widget-card__slot {
   height: auto;

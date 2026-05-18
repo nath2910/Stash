@@ -358,12 +358,8 @@ const hoverPoint = computed(() => {
   }
 })
 
-const chartHeight = computed(() => {
-  return Math.max(72, Math.round(props.layout.height))
-})
-
 const chartShellStyle = computed(() => ({
-  minHeight: `${chartHeight.value}px`,
+  minHeight: '0px',
 }))
 
 const chartGrid = computed(() => {
@@ -559,7 +555,7 @@ const layoutVars = computed(() => {
   height: 100%;
   min-height: 0;
   display: grid;
-  grid-template-rows: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
   gap: var(--npt-gap);
   overflow: hidden;
 }

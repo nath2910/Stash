@@ -155,6 +155,10 @@ const layoutHeight = computed(() => {
 })
 const compactMode = computed(() => layoutWidth.value < 700 || layoutHeight.value < 360)
 const denseMode = computed(() => layoutWidth.value < 560 || layoutHeight.value < 300)
+const axisFont = computed(() =>
+  clamp(Math.round(Math.min(layoutWidth.value * 0.014, layoutHeight.value * 0.034)), 9, 12),
+)
+const valueLabelVisible = computed(() => layoutWidth.value >= 420 && layoutHeight.value >= 200)
 
 const palette = ['#F59E0B', '#F97316', '#22C55E', '#3B82F6', '#A855F7', '#EC4899']
 const pickColor = (index) => palette[index % palette.length]
@@ -179,6 +183,29 @@ const rows = computed(() =>
   }),
 )
 
+const longestLabel = computed(() =>
+  rows.value.reduce((max, row) => Math.max(max, String(row.prettyLabel ?? '').length), 0),
+)
+
+const barGrid = computed(() => ({
+  left: clamp(
+    Math.round(longestLabel.value * axisFont.value * 0.54 + 28),
+    66,
+    layoutWidth.value < 560 ? 118 : 160,
+  ),
+  right: valueLabelVisible.value ? clamp(Math.round(layoutWidth.value * 0.08), 34, 76) : 14,
+  top: clamp(Math.round(layoutHeight.value * 0.03), 8, 18),
+  bottom: clamp(Math.round(layoutHeight.value * 0.04), 10, 24),
+  containLabel: false,
+}))
+
+function formatTileLabel(label) {
+  const text = String(label ?? '').trim()
+  const limit = denseMode.value ? 9 : 14
+  if (text.length <= limit) return text
+  return `${text.slice(0, Math.max(1, limit - 1))}...`
+}
+
 const chartHeight = computed(() => {
   const reserved = props.view === 'pie' ? 96 : 156
   const available = Math.max(layoutHeight.value - reserved, 120)
@@ -198,6 +225,11 @@ const option = computed(() => {
   const values = rows.value.map((row) => row.value)
 
   if (props.view === 'treemap') {
+    const labelFont = clamp(
+      Math.round(Math.min(layoutWidth.value * 0.013, layoutHeight.value * 0.032)),
+      9,
+      13,
+    )
     return {
       backgroundColor: 'transparent',
       tooltip: {
@@ -213,12 +245,32 @@ const option = computed(() => {
       series: [
         {
           type: 'treemap',
+          left: 0,
+          right: 0,
+          top: 0,
+          bottom: 0,
+          width: '100%',
+          height: '100%',
           roam: false,
           nodeClick: false,
           breadcrumb: { show: false },
-          label: { show: true, formatter: '{b}\n{c}' },
+          squareRatio: layoutWidth.value >= layoutHeight.value ? 1.55 : 0.95,
+          label: {
+            show: true,
+            color: '#ffffff',
+            fontSize: labelFont,
+            fontWeight: 780,
+            lineHeight: Math.round(labelFont * 1.16),
+            overflow: 'truncate',
+            formatter: ({ name, value }) => `${formatTileLabel(name)}\n${cfg.format(value)}`,
+          },
           upperLabel: { show: false },
-          itemStyle: { borderColor: 'rgba(248,250,252,0.9)', borderWidth: 2, gapWidth: 2 },
+          itemStyle: {
+            borderColor: 'rgba(255,255,255,0.92)',
+            borderWidth: 2,
+            gapWidth: denseMode.value ? 2 : 3,
+            borderRadius: 6,
+          },
           data: rows.value.map((row) => ({
             name: row.prettyLabel,
             value: row.value,
@@ -240,18 +292,25 @@ const option = computed(() => {
         textStyle: { color: '#0f172a', fontSize: 12, fontWeight: 600 },
         extraCssText: 'border-radius:10px;box-shadow:0 12px 28px rgba(15,23,42,0.14);',
       },
-      grid: { left: 92, right: 20, top: 10, bottom: 8, containLabel: true },
+      grid: barGrid.value,
       xAxis: {
         type: 'value',
-        axisLabel: { color: '#64748b', fontSize: 10 },
+        axisLabel: {
+          color: '#64748b',
+          fontSize: axisFont.value,
+          fontWeight: 650,
+          formatter: (value) => cfg.format(value),
+        },
+        axisLine: { show: false },
+        axisTick: { show: false },
         splitLine: { lineStyle: { color: 'rgba(148,163,184,0.18)' } },
       },
       yAxis: {
         type: 'category',
         data: labels,
-        axisLabel: { color: '#334155', fontSize: 11 },
+        axisLabel: { color: '#334155', fontSize: axisFont.value, fontWeight: 700 },
         axisTick: { show: false },
-        axisLine: { lineStyle: { color: '#cbd5e1' } },
+        axisLine: { show: false },
       },
       series: [
         {
@@ -260,12 +319,17 @@ const option = computed(() => {
             value,
             itemStyle: { color: rows.value[index]?.color, borderRadius: [8, 8, 8, 8] },
           })),
-          barWidth: 16,
+          barWidth: clamp(
+            Math.round((layoutHeight.value / Math.max(rows.value.length, 1)) * 0.18),
+            denseMode.value ? 10 : 14,
+            28,
+          ),
           label: {
-            show: true,
+            show: valueLabelVisible.value,
             position: 'right',
             color: '#334155',
-            fontSize: 11,
+            fontSize: axisFont.value,
+            fontWeight: 750,
             formatter: (p) => cfg.format(p.value),
           },
         },
@@ -286,20 +350,20 @@ const option = computed(() => {
       formatter: ({ name, value, percent }) => `${name}<br/>${cfg.tooltip(value)} - ${percent}%`,
     },
     legend: {
-      show: true,
+      show: !denseMode.value && layoutHeight.value >= 250,
       type: 'scroll',
       bottom: 0,
       itemWidth: 8,
       itemHeight: 8,
-      textStyle: { color: '#64748b', fontSize: 10, fontWeight: 600 },
+      textStyle: { color: '#64748b', fontSize: axisFont.value, fontWeight: 650 },
       pageIconColor: '#94a3b8',
       pageTextStyle: { color: '#64748b' },
     },
     series: [
       {
         type: 'pie',
-        radius: ['42%', '68%'],
-        center: ['50%', '43%'],
+        radius: denseMode.value ? ['46%', '76%'] : ['42%', '68%'],
+        center: ['50%', denseMode.value ? '50%' : '43%'],
         label: { show: false },
         labelLine: { show: false },
         animationDurationUpdate: 0,

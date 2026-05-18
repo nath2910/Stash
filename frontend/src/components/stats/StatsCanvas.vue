@@ -22,8 +22,11 @@
         <div class="template-picker-panel" @click.stop>
           <div class="template-picker-head">
             <div>
-              <div class="template-picker-kicker">Mode template</div>
-              <h3 class="template-picker-title">Selectionne ton template</h3>
+              <div class="template-picker-kicker">Bibliotheque templates</div>
+              <h3 class="template-picker-title">Choisis une vue prete a piloter</h3>
+              <p class="template-picker-subtitle">
+                Des layouts preconfigures pour analyser ton activite sans repartir de zero.
+              </p>
             </div>
             <button
               type="button"
@@ -31,22 +34,42 @@
               aria-label="Fermer"
               @click="closeTemplatePicker"
             >
-              x
+              <span class="close-x" aria-hidden="true"></span>
             </button>
           </div>
 
-          <button
-            v-for="item in templatePickerItems"
-            :key="item.id"
-            type="button"
-            class="template-picker-card"
-            @click="applyTemplate(item)"
-          >
-            <div class="template-picker-card__badge">{{ item.badge }}</div>
-            <div class="template-picker-card__title">{{ item.title }}</div>
-            <p class="template-picker-card__desc">{{ item.description }}</p>
-            <span class="template-picker-card__cta">Appliquer</span>
-          </button>
+          <div v-if="templatePickerItems.length" class="template-picker-list">
+            <button
+              v-for="item in templatePickerItems"
+              :key="item.id"
+              type="button"
+              class="template-picker-card"
+              :class="{ 'is-active': item.id === activeTemplateId }"
+              :data-template="item.id"
+              @click="applyTemplate(item)"
+            >
+              <div class="template-picker-card__preview" aria-hidden="true">
+                <span class="template-picker-card__preview-kpi"></span>
+                <span class="template-picker-card__preview-chart"></span>
+                <span class="template-picker-card__preview-row"></span>
+                <span class="template-picker-card__preview-row is-short"></span>
+              </div>
+              <div class="template-picker-card__body">
+                <div class="template-picker-card__topline">
+                  <span class="template-picker-card__badge">{{ item.badge }}</span>
+                  <span v-if="item.id === activeTemplateId" class="template-picker-card__status">
+                    Actif
+                  </span>
+                </div>
+                <div class="template-picker-card__title">{{ item.title }}</div>
+                <p class="template-picker-card__desc">{{ item.description }}</p>
+                <span class="template-picker-card__cta">
+                  <span>Appliquer</span>
+                  <span aria-hidden="true">-></span>
+                </span>
+              </div>
+            </button>
+          </div>
 
           <div v-if="!templatePickerItems.length" class="template-picker-empty" role="status">
             <div class="template-picker-empty__title">Aucun template disponible</div>

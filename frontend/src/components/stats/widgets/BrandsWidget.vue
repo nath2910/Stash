@@ -7,7 +7,6 @@
     surface="distribution"
     :loading="loading"
     :error="error"
-    :auto-height="props.autoHeight"
     :widget-width="layoutWidth"
     :widget-height="layoutHeight"
     :widget-base-width="props.widgetBaseWidth"
@@ -110,6 +109,34 @@ const desiredChartHeight = computed(() => {
 const currentChartHeight = computed(() =>
   clamp(Math.round(layoutHeight.value - cardChromeHeight.value), 96, 900),
 )
+const denseMode = computed(() => layoutWidth.value < 560 || layoutHeight.value < 300)
+const axisFont = computed(() =>
+  clamp(Math.round(Math.min(layoutWidth.value * 0.014, layoutHeight.value * 0.034)), 9, 12),
+)
+const valueLabelVisible = computed(() => layoutWidth.value >= 420 && layoutHeight.value >= 190)
+const longestLabel = computed(() =>
+  visibleItems.value.reduce((max, item) => Math.max(max, String(item.label ?? '').length), 0),
+)
+const barGrid = computed(() => ({
+  left: clamp(
+    Math.round(longestLabel.value * axisFont.value * 0.52 + 30),
+    70,
+    layoutWidth.value < 560 ? 124 : 178,
+  ),
+  right: valueLabelVisible.value ? clamp(Math.round(layoutWidth.value * 0.08), 34, 76) : 14,
+  top: clamp(Math.round(layoutHeight.value * 0.03), 8, 18),
+  bottom: clamp(Math.round(layoutHeight.value * 0.05), 12, 28),
+  containLabel: false,
+}))
+const tileGrid = computed(() => {
+  const count = Math.max(visibleItems.value.length, 1)
+  if (count <= 1) return { columns: 1, rows: 1 }
+  const ratio = Math.max(layoutWidth.value / Math.max(layoutHeight.value, 1), 0.8)
+  const maxColumns = denseMode.value ? 4 : 6
+  const columns = clamp(Math.ceil(Math.sqrt(count * ratio)), 2, Math.min(maxColumns, count))
+  const rows = Math.ceil(count / columns)
+  return { columns, rows }
+})
 
 const recommendedWidgetHeight = computed(() => {
   const widgetHeader = 44
@@ -142,12 +169,24 @@ function formatLabel(label) {
   return `${text.slice(0, 17)}...`
 }
 
+function formatTileLabel(label) {
+  const text = String(label ?? '').trim()
+  const limit = denseMode.value ? 9 : 14
+  if (text.length <= limit) return text
+  return `${text.slice(0, Math.max(1, limit - 1))}...`
+}
+
 const option = computed(() => {
   const items = visibleItems.value
   const labels = items.map((i) => i.label)
   const values = items.map((i) => i.nb)
 
   if (props.view === 'treemap') {
+    const labelFont = clamp(
+      Math.round(Math.min(layoutWidth.value * 0.013, layoutHeight.value * 0.032)),
+      9,
+      13,
+    )
     return {
       backgroundColor: 'transparent',
       tooltip: {
@@ -163,12 +202,32 @@ const option = computed(() => {
       series: [
         {
           type: 'treemap',
+          left: 0,
+          right: 0,
+          top: 0,
+          bottom: 0,
+          width: '100%',
+          height: '100%',
           roam: false,
           nodeClick: false,
           breadcrumb: { show: false },
-          label: { show: true, formatter: '{b}\n{c}' },
+          squareRatio: layoutWidth.value >= layoutHeight.value ? 1.55 : 0.95,
+          label: {
+            show: true,
+            color: '#ffffff',
+            fontSize: labelFont,
+            fontWeight: 780,
+            lineHeight: Math.round(labelFont * 1.16),
+            overflow: 'truncate',
+            formatter: ({ name, value }) => `${formatTileLabel(name)}\n${formatNumber(value)}`,
+          },
           upperLabel: { show: false },
-          itemStyle: { borderColor: 'rgba(248,250,252,0.9)', borderWidth: 2, gapWidth: 2 },
+          itemStyle: {
+            borderColor: 'rgba(255,255,255,0.92)',
+            borderWidth: 2,
+            gapWidth: denseMode.value ? 2 : 3,
+            borderRadius: 6,
+          },
           data: items.map((r, i) => ({
             name: r.label,
             value: r.nb,
@@ -180,6 +239,10 @@ const option = computed(() => {
   }
 
   if (props.view === 'heatmap') {
+    const { columns, rows } = tileGrid.value
+    const x = Array.from({ length: columns }, (_, index) => String(index + 1))
+    const y = Array.from({ length: rows }, (_, index) => String(index + 1))
+
     return {
       backgroundColor: 'transparent',
       tooltip: {
@@ -195,34 +258,47 @@ const option = computed(() => {
           return `${p?.name ?? ''}<br/>${formatNumber(v)} ventes`
         },
       },
-      grid: { left: 62, right: 12, top: 8, bottom: 26, containLabel: true },
+      grid: { left: 4, right: 4, top: 4, bottom: 4, containLabel: false },
       xAxis: {
         type: 'category',
-        data: labels,
-        axisLabel: { color: '#334155', fontSize: 10, interval: 0 },
-        axisLine: { lineStyle: { color: '#cbd5e1' } },
+        data: x,
+        axisLabel: { show: false },
+        axisLine: { show: false },
         axisTick: { show: false },
+        splitArea: { show: false },
       },
       yAxis: {
         type: 'category',
-        data: ['Ventes'],
-        axisLabel: { color: '#64748b', fontSize: 10 },
-        axisLine: { lineStyle: { color: '#cbd5e1' } },
+        data: y,
+        inverse: true,
+        axisLabel: { show: false },
+        axisLine: { show: false },
         axisTick: { show: false },
+        splitArea: { show: false },
       },
       series: [
         {
           type: 'heatmap',
           data: labels.map((label, i) => ({
-            value: [i, 0, values[i] ?? 0],
+            name: label,
+            value: [i % columns, Math.floor(i / columns), values[i] ?? 0],
             itemStyle: { color: getBrandColor(label) },
           })),
-          itemStyle: { borderColor: 'rgba(248,250,252,0.88)', borderWidth: 1 },
+          itemStyle: {
+            borderColor: 'rgba(255,255,255,0.9)',
+            borderWidth: denseMode.value ? 2 : 3,
+            borderRadius: 6,
+          },
           label: {
             show: true,
             color: '#ffffff',
-            fontSize: 10,
-            formatter: (p) => formatNumber(p.value?.[2] ?? 0),
+            fontSize: axisFont.value,
+            fontWeight: 780,
+            lineHeight: Math.round(axisFont.value * 1.16),
+            formatter: (p) => {
+              const value = formatNumber(p.value?.[2] ?? 0)
+              return denseMode.value ? value : `${formatTileLabel(p?.name ?? '')}\n${value}`
+            },
           },
           emphasis: { disabled: true },
         },
@@ -248,18 +324,12 @@ const option = computed(() => {
         return `${point.name}<br/>${formatNumber(value)} ventes`
       },
     },
-    grid: {
-      left: clamp(Math.round(layoutWidth.value * 0.2), 94, 186),
-      right: 16,
-      top: effectiveRows.value <= 2 ? 4 : 8,
-      bottom: 18,
-      containLabel: false,
-    },
+    grid: barGrid.value,
     xAxis: {
       type: 'value',
       boundaryGap: [0, 0.06],
       minInterval: 1,
-      axisLabel: { color: '#64748b', fontSize: 10 },
+      axisLabel: { color: '#64748b', fontSize: axisFont.value, fontWeight: 650 },
       axisLine: { show: false },
       axisTick: { show: false },
       splitNumber: 4,
@@ -271,7 +341,8 @@ const option = computed(() => {
       inverse: true,
       axisLabel: {
         color: '#334155',
-        fontSize: 11,
+        fontSize: axisFont.value,
+        fontWeight: 700,
         margin: 12,
         formatter: (value) => formatLabel(value),
       },
@@ -288,9 +359,17 @@ const option = computed(() => {
         })),
         barWidth: clamp(
           Math.round((currentChartHeight.value / Math.max(effectiveRows.value, 1)) * 0.42),
-          14,
+          denseMode.value ? 10 : 14,
           28,
         ),
+        label: {
+          show: valueLabelVisible.value,
+          position: 'right',
+          color: '#334155',
+          fontSize: axisFont.value,
+          fontWeight: 750,
+          formatter: (p) => formatNumber(p.value),
+        },
       },
     ],
   }

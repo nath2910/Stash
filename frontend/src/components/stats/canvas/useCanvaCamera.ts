@@ -119,6 +119,12 @@ export function useCanvasCamera(
     return el.parentElement
   }
 
+  function shouldIgnoreWheelZoomTarget(target: EventTarget | null) {
+    const el = eventElement(target)
+    if (!el) return false
+    return Boolean(closestFrom(el, 'input, textarea, select, option, [contenteditable="true"]'))
+  }
+
   function getRects() {
     const vp = viewportEl.value
     const board = boardEl.value
@@ -568,15 +574,16 @@ export function useCanvasCamera(
       if (!panzoom) return
 
       const target = htmlElementFrom(e.target)
-      if (shouldIgnorePanTarget(e.target)) return
-      if (findScrollableAncestor(target, vp)) return
-
       const isZoomGesture = e.ctrlKey || e.metaKey
       if (isZoomGesture || shouldZoomFromWheel(e)) {
+        if (shouldIgnoreWheelZoomTarget(e.target)) return
         e.preventDefault()
         zoomWithWheel(e)
         return
       }
+
+      if (shouldIgnorePanTarget(e.target)) return
+      if (findScrollableAncestor(target, vp)) return
 
       e.preventDefault()
       cancelWheelZoom()

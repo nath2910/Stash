@@ -23,7 +23,16 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-const formattedStockValue = computed(() =>
-  String(Math.round(props.valeurStock)).replace(/\B(?=(\d{3})+(?!\d))/g, ' '),
-)
+const compactNumberFormatter = new Intl.NumberFormat('fr-FR', {
+  notation: 'compact',
+  maximumFractionDigits: 1,
+})
+
+const formattedStockValue = computed(() => {
+  const value = Math.max(0, Math.round(Number(props.valeurStock) || 0))
+  if (value < 10_000) {
+    return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+  }
+  return compactNumberFormatter.format(value).replace(/\s+/g, ' ')
+})
 </script>
