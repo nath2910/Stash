@@ -188,8 +188,8 @@
             @pointercancel="resetPointerDrag"
             @lostpointercapture="resetPointerDrag"
           >
-            <div class="category-pages" :style="pageTrackStyle">
-              <article class="category-page category-page--overview" aria-label="Vue d'ensemble">
+            <div class="category-pages">
+              <article v-if="activePage === 0" class="category-page category-page--overview" aria-label="Vue d'ensemble">
                 <div class="category-page__heading">
                   <div>
                     <p>Vue d'ensemble</p>
@@ -253,7 +253,7 @@
                 </div>
               </article>
 
-              <article class="category-page category-page--analysis" aria-label="Analyse des categories">
+              <article v-if="activePage === 1" class="category-page category-page--analysis" aria-label="Analyse des categories">
                 <div class="category-page__heading">
                   <div>
                     <p>{{ isMultiCategory ? 'Comparaison' : 'Analyse detaillee' }}</p>
@@ -289,7 +289,7 @@
                 </div>
               </article>
 
-              <article class="category-page category-page--details" aria-label="Details et top performances">
+              <article v-if="activePage === 2" class="category-page category-page--details" aria-label="Details et top performances">
                 <div class="category-page__heading">
                   <div>
                     <p>Details</p>
@@ -606,9 +606,6 @@ const selectedMonthNumber = computed(() => Number(selectedMonthKey.value.slice(5
 const selectedMonthLabel = computed(() => formatMonthLong(selectedMonthKey.value))
 const periodRange = computed(() => buildMonthRange(selectedMonthKey.value))
 const currentPage = computed(() => pages[activePage.value] ?? pages[0])
-const pageTrackStyle = computed(() => ({
-  transform: `translate3d(-${activePage.value * 100}%, 0, 0)`,
-}))
 const canGoPreviousMonth = computed(() => !minMonthKey.value || selectedMonthKey.value > minMonthKey.value)
 const canGoNextMonth = computed(() => !maxMonthKey.value || selectedMonthKey.value < maxMonthKey.value)
 const periodShortLabel = computed(() => {
@@ -1751,7 +1748,7 @@ onBeforeUnmount(() => {
 .category-controls {
   flex: 0 0 auto;
   display: grid;
-  grid-template-columns: auto minmax(260px, 315px);
+  grid-template-columns: repeat(2, minmax(260px, 315px));
   gap: 10px;
   align-items: stretch;
 }
@@ -1767,36 +1764,79 @@ onBeforeUnmount(() => {
 }
 
 .category-controls__category {
-  min-width: 154px;
-  padding: 10px 12px;
-  color: #4338ca;
-  display: grid;
-  grid-template-columns: 18px minmax(0, 1fr) auto;
-  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  box-sizing: border-box;
+  padding: 7px 9px 7px 11px;
+  color: #4f46e5;
+  display: inline-flex;
+  gap: 10px;
   align-items: center;
-  font-size: 0.78rem;
-  font-weight: 780;
+  font-size: 0.88rem;
+  font-weight: 840;
   text-align: left;
+  align-self: stretch;
+  justify-self: stretch;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease,
+    background 160ms ease;
 }
 
 .category-controls__category svg {
-  width: 17px;
-  height: 17px;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  box-sizing: content-box;
+  padding: 5px;
+  border-radius: 10px;
+  background: rgba(79, 70, 229, 0.1);
+  color: #4f46e5;
+  stroke-width: 2.15;
 }
 
 .category-controls__category span {
+  flex: 1 1 auto;
   min-width: 0;
   white-space: nowrap;
 }
 
 .category-controls__category strong {
-  min-width: 28px;
+  min-width: 30px;
+  height: 30px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 999px;
-  background: #eef2ff;
-  color: #3730a3;
-  padding: 4px 7px;
-  font-size: 0.72rem;
+  background: linear-gradient(135deg, #5b5ce2, #4338ca);
+  color: #ffffff;
+  padding: 0 9px;
+  box-shadow: 0 8px 18px rgba(79, 70, 229, 0.22);
+  font-size: 0.78rem;
+  line-height: 1;
   text-align: center;
+}
+
+.category-controls__category:not(:disabled):hover {
+  border-color: rgba(79, 70, 229, 0.38);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(242, 244, 255, 0.96));
+  box-shadow:
+    0 16px 34px rgba(31, 41, 55, 0.12),
+    0 0 0 3px rgba(79, 70, 229, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  transform: translateY(-1px);
+}
+
+.category-controls__category:focus-visible {
+  outline: none;
+  border-color: rgba(79, 70, 229, 0.5);
+  box-shadow:
+    0 14px 34px rgba(31, 41, 55, 0.1),
+    0 0 0 3px rgba(79, 70, 229, 0.16);
 }
 
 .category-controls__category:disabled {
@@ -1805,7 +1845,8 @@ onBeforeUnmount(() => {
 }
 
 .category-month {
-  width: min(315px, 100%);
+  width: 100%;
+  box-sizing: border-box;
   padding: 10px;
   display: grid;
   gap: 8px;
@@ -1971,17 +2012,13 @@ onBeforeUnmount(() => {
 }
 
 .category-pages {
+  width: 100%;
   height: auto;
   min-height: 0;
-  display: flex;
-  transition:
-    transform 320ms cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 180ms ease;
-  will-change: transform;
+  display: block;
 }
 
 .category-page {
-  flex: 0 0 100%;
   width: 100%;
   min-width: 0;
   min-height: 0;
@@ -2717,13 +2754,29 @@ onBeforeUnmount(() => {
   }
 
   .category-controls {
-    grid-template-columns: auto minmax(238px, 292px);
+    grid-template-columns: repeat(2, minmax(238px, 292px));
     gap: 8px;
   }
 
   .category-controls__category {
-    min-width: 138px;
-    padding: 8px 10px;
+    min-width: 0;
+    min-height: 42px;
+    padding: 6px 8px 6px 10px;
+    gap: 8px;
+    font-size: 0.82rem;
+  }
+
+  .category-controls__category svg {
+    width: 16px;
+    height: 16px;
+    padding: 5px;
+  }
+
+  .category-controls__category strong {
+    min-width: 28px;
+    height: 28px;
+    padding: 0 8px;
+    font-size: 0.74rem;
   }
 
   .category-month {
@@ -3053,11 +3106,30 @@ onBeforeUnmount(() => {
     font-size: 1.28rem;
   }
 
-  .category-dashboard.is-short-height .category-controls__category,
   .category-dashboard.is-short-height .category-month__control button,
   .category-dashboard.is-short-height .category-month__control input {
     height: 30px;
     min-height: 30px;
+  }
+
+  .category-dashboard.is-short-height .category-controls__category {
+    min-height: 42px;
+    padding: 4px 7px;
+    gap: 7px;
+  }
+
+  .category-dashboard.is-short-height .category-controls__category svg {
+    width: 14px;
+    height: 14px;
+    padding: 4px;
+    border-radius: 8px;
+  }
+
+  .category-dashboard.is-short-height .category-controls__category strong {
+    min-width: 24px;
+    height: 24px;
+    padding: 0 7px;
+    font-size: 0.7rem;
   }
 
   .category-dashboard.is-short-height .category-month {
