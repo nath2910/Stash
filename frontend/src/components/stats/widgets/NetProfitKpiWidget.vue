@@ -1,39 +1,14 @@
 <template>
-  <section class="npk-root" :class="layoutClass" :style="layoutVars">
-    <header class="npk-head">
-      <p class="npk-overline">Periode analysee</p>
-      <p class="npk-period" :title="periodText">{{ periodText }}</p>
-    </header>
-
-    <section class="npk-main" :class="`is-${valueTone}`">
-      <p class="npk-main__label">{{ primaryLabel }}</p>
-      <p class="npk-value">{{ valueText }}</p>
-      <div v-if="showPrimaryComparison" class="npk-delta" :class="`is-${deltaTone}`">
-        <span class="npk-delta__value">{{ deltaValueText }}</span>
-        <span class="npk-delta__pct">{{ deltaPctText }}</span>
-        <span class="npk-delta__meta">vs periode precedente</span>
-      </div>
-      <p v-else class="npk-main__meta">{{ primaryMeta }}</p>
-    </section>
-
-    <section v-if="secondaryCards.length" class="npk-secondary" :class="secondaryGridClass">
-      <article
-        v-for="card in secondaryCards"
-        :key="card.key"
-        class="npk-card"
-        :class="`is-${card.tone}`"
-      >
-        <p class="npk-card__label">{{ card.label }}</p>
-        <p class="npk-card__value">{{ card.value }}</p>
-        <p v-if="card.meta" class="npk-card__meta">{{ card.meta }}</p>
-      </article>
-    </section>
+  <section class="npk-root" :class="[layoutClass, `is-${valueTone}`]" :style="layoutVars">
+    <span class="npk-accent" aria-hidden="true"></span>
+    <p class="npk-value">{{ valueText }}</p>
   </section>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import { formatEUR, formatNumber, formatPct } from '@/utils/formatters'
+import { fitKpiValueSize } from './_parts/kpiTextFit'
 
 type Bucket = 'day' | 'week' | 'month'
 type Tone = 'positive' | 'negative' | 'neutral'
@@ -329,32 +304,17 @@ const layoutClass = computed(() => ({
 }))
 
 const layoutVars = computed(() => {
-  if (isSalesOnly.value) {
-    const valueSize = clamp(
-      Math.round(Math.min(props.layout.width * 0.22, props.layout.height * 0.42)),
-      34,
-      72,
-    )
-    return {
-      '--npk-gap': `${clamp(Math.round(Math.min(props.layout.width * 0.012, props.layout.height * 0.028)), 4, 7)}px`,
-      '--npk-main-size': `${valueSize}px`,
-      '--npk-label-size': `${clamp(Math.round(Math.min(props.layout.width * 0.013, props.layout.height * 0.034)), 9, 11)}px`,
-      '--npk-sub-size': `${clamp(Math.round(Math.min(props.layout.width * 0.017, props.layout.height * 0.048)), 11, 13)}px`,
-      '--npk-card-size': '13px',
-    }
-  }
-
-  const mainSize = clamp(
-    Math.round(Math.min(props.layout.width * 0.08, props.layout.height * 0.27)),
-    24,
-    54,
-  )
-  const mainLen = valueText.value.replace(/\s+/g, '').length
-  const lenScale = mainLen >= 12 ? 0.78 : mainLen >= 10 ? 0.9 : 1
+  const mainSize = fitKpiValueSize(valueText.value, props.layout.width, props.layout.height, {
+    min: 22,
+    max: 76,
+    paddingX: Math.max(54, props.layout.width * 0.3),
+    paddingY: Math.max(18, props.layout.height * 0.2),
+    heightRatio: 0.48,
+  })
 
   return {
-    '--npk-gap': `${clamp(Math.round(Math.min(props.layout.width * 0.012, props.layout.height * 0.045)), 4, 8)}px`,
-    '--npk-main-size': `${clamp(Math.round(mainSize * lenScale), 22, 54)}px`,
+    '--npk-gap': `${clamp(Math.round(Math.min(props.layout.width * 0.018, props.layout.height * 0.04)), 4, 7)}px`,
+    '--npk-main-size': `${mainSize}px`,
     '--npk-label-size': `${clamp(Math.round(Math.min(props.layout.width * 0.015, props.layout.height * 0.05)), 10, 12)}px`,
     '--npk-sub-size': `${clamp(Math.round(Math.min(props.layout.width * 0.018, props.layout.height * 0.06)), 11, 14)}px`,
     '--npk-card-size': `${clamp(Math.round(Math.min(props.layout.width * 0.024, props.layout.height * 0.075)), 13, 19)}px`,
@@ -369,229 +329,48 @@ const layoutVars = computed(() => {
   display: grid;
   grid-template-rows: auto auto;
   gap: var(--npk-gap);
-  align-content: start;
+  place-content: center;
+  justify-items: center;
   overflow: hidden;
 }
 
 .npk-root.has-secondary {
-  grid-template-rows: auto auto auto;
-  align-content: start;
-}
-
-.npk-head {
-  min-width: 0;
-  display: grid;
-  gap: 1px;
-}
-
-.npk-overline {
-  margin: 0;
-  font-size: var(--npk-label-size);
-  text-transform: uppercase;
-  letter-spacing: 0.09em;
-  font-weight: 700;
-  color: #64748b;
-}
-
-.npk-period {
-  margin: 0;
-  font-size: var(--npk-sub-size);
-  color: #475569;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.npk-main {
-  min-width: 0;
-  border-radius: 8px;
-  border: 1px solid rgba(148, 163, 184, 0.24);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(248, 250, 252, 0.7)),
-    radial-gradient(circle at 12% 0%, rgba(91, 92, 226, 0.08), transparent 55%);
-  padding: 8px 10px;
-  display: grid;
-  align-content: start;
-  gap: 4px;
-}
-
-.npk-main.is-positive {
-  border-color: rgba(16, 185, 129, 0.28);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(240, 253, 244, 0.68)),
-    radial-gradient(circle at 12% 0%, rgba(16, 185, 129, 0.1), transparent 58%);
-}
-
-.npk-main.is-negative {
-  border-color: rgba(225, 29, 72, 0.26);
-}
-
-.npk-main__label {
-  margin: 0;
-  font-size: var(--npk-label-size);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  font-weight: 700;
-  color: #64748b;
-}
-
-.npk-main__meta {
-  margin: 0;
-  font-size: var(--npk-label-size);
-  color: #64748b;
+  grid-template-rows: auto auto;
 }
 
 .npk-value {
   margin: 0;
   font-size: var(--npk-main-size);
-  line-height: 0.94;
+  line-height: 0.98;
   letter-spacing: 0;
   font-weight: 820;
   color: #111827;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
+  text-overflow: clip;
 }
 
-.npk-delta {
-  display: inline-flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 3px 6px;
-}
-
-.npk-delta__value {
-  font-size: var(--npk-sub-size);
-  font-weight: 730;
-  color: #334155;
-}
-
-.npk-delta__pct,
-.npk-delta__meta {
-  font-size: var(--npk-label-size);
-  color: #64748b;
-}
-
-.npk-delta.is-positive .npk-delta__value,
-.npk-delta.is-positive .npk-delta__pct {
+.npk-root.is-positive .npk-value {
   color: #047857;
 }
 
-.npk-delta.is-negative .npk-delta__value,
-.npk-delta.is-negative .npk-delta__pct {
+.npk-root.is-negative .npk-value {
   color: #be123c;
 }
 
-.npk-secondary {
-  min-height: 0;
-  display: grid;
-  gap: var(--npk-gap);
-  align-items: start;
-  align-content: start;
-}
-
-.npk-secondary--one {
-  grid-template-columns: 1fr;
-}
-
-.npk-secondary--two {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.npk-card {
-  min-width: 0;
-  border-radius: 8px;
-  border: 1px solid rgba(148, 163, 184, 0.22);
-  background: rgba(248, 250, 252, 0.78);
-  padding: 6px 8px;
-  display: grid;
-  gap: 2px;
-}
-
-.npk-card__label {
-  margin: 0;
-  font-size: var(--npk-label-size);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: #64748b;
-}
-
-.npk-card__value {
-  margin: 0;
-  font-size: var(--npk-card-size);
-  line-height: 1;
-  letter-spacing: 0;
-  font-weight: 700;
-  color: #111827;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.npk-card__meta {
-  margin: 0;
-  font-size: var(--npk-label-size);
-  color: #64748b;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.npk-card.is-positive .npk-card__value {
-  color: #047857;
-}
-
-.npk-card.is-negative .npk-card__value {
-  color: #be123c;
-}
-
-.npk-root.is-compact .npk-main {
-  padding: 7px 9px;
+.npk-accent {
+  display: block;
+  width: clamp(36px, 18%, 64px);
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #5b5ce2, rgba(37, 99, 235, 0.72));
+  box-shadow: 0 8px 18px rgba(91, 92, 226, 0.16);
 }
 
 .npk-root.is-sales-only {
   grid-template-rows: auto auto;
   gap: clamp(8px, calc(var(--npk-gap) * 1.4), 12px);
-}
-
-.npk-root.is-sales-only .npk-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 0 1px;
-}
-
-.npk-root.is-sales-only .npk-overline {
-  letter-spacing: 0.08em;
-}
-
-.npk-root.is-sales-only .npk-period {
-  max-width: 58%;
-  text-align: right;
-}
-
-.npk-root.is-sales-only .npk-main {
-  min-height: 0;
-  padding: clamp(10px, 4.2%, 16px);
-  gap: clamp(4px, 1.8%, 8px);
-}
-
-.npk-root.is-sales-only .npk-main__label {
-  letter-spacing: 0.08em;
-}
-
-.npk-root.is-sales-only .npk-main__meta {
-  font-size: var(--npk-sub-size);
-}
-
-.npk-root.is-tiny .npk-main {
-  gap: 4px;
-}
-
-.npk-root.is-tiny .npk-delta {
-  gap: 2px 6px;
 }
 
 .npk-root.is-tiny .npk-secondary {

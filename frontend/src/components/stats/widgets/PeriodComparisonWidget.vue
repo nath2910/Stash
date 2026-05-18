@@ -151,17 +151,18 @@ const option = computed(() => ({
 .comparison-grid {
   height: 100%;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 220px;
-  gap: 10px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
 }
 
 .comparison-chart {
+  width: 100%;
+  height: 100%;
   min-height: 0;
 }
 
 .comparison-side {
-  display: grid;
-  gap: 8px;
+  display: none;
 }
 
 .comparison-kpi {

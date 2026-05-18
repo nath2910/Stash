@@ -118,7 +118,8 @@ const visibleItems = computed(() => items.value.slice(0, Math.max(1, Number(prop
   height: 100%;
   overflow: auto;
   display: grid;
-  gap: 8px;
+  align-content: start;
+  gap: 6px;
 }
 
 .alert-empty {
@@ -133,33 +134,38 @@ const visibleItems = computed(() => items.value.slice(0, Math.max(1, Number(prop
   border-radius: 8px;
   border: 1px solid rgba(148, 163, 184, 0.24);
   background: rgba(248, 250, 252, 0.82);
-  padding: 10px;
+  padding: 8px 9px;
   display: grid;
-  gap: 5px;
+  gap: 3px;
 }
 
 .alert-card header {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
 }
 
 .alert-card strong {
   font-size: 13px;
+  line-height: 1.25;
   color: #111827;
 }
 
 .alert-card p {
   font-size: 12px;
   color: #64748b;
-  line-height: 1.35;
+  line-height: 1.3;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
 }
 
 .alert-pill {
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  padding: 3px 7px;
+  padding: 2px 6px;
   border-radius: 999px;
 }
 

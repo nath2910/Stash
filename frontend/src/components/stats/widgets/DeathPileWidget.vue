@@ -224,12 +224,12 @@ const toLabel = computed(() =>
   height: 100%;
   min-height: 0;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  gap: 8px;
+  grid-template-rows: minmax(0, 1fr);
+  gap: 0;
 }
 
 .dp-header {
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -253,14 +253,12 @@ const toLabel = computed(() =>
   height: 100%;
   min-height: 0;
   display: grid;
-  grid-template-rows: auto minmax(0, 1.35fr) auto minmax(0, 1fr);
-  gap: 8px;
+  grid-template-rows: minmax(0, 1fr);
+  gap: 0;
   align-content: stretch;
 }
 .dp-note {
-  font-size: 11px;
-  color: #64748b;
-  letter-spacing: 0.02em;
+  display: none;
 }
 .dp-chart {
   width: 100%;
@@ -268,10 +266,7 @@ const toLabel = computed(() =>
   min-height: 0;
 }
 .dp-scale {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: 2px;
+  display: none;
 }
 .dp-scale-title {
   font-size: 9px;
@@ -302,10 +297,7 @@ const toLabel = computed(() =>
   letter-spacing: 0.04em;
 }
 .dp-legend {
-  min-height: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
+  display: none;
 }
 .dp-list {
   min-height: 100%;
@@ -380,7 +372,7 @@ const toLabel = computed(() =>
 }
 
 .is-compact .dp-body {
-  grid-template-rows: auto minmax(0, 1.2fr) auto minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
 }
 
 .is-dense .dp-row {

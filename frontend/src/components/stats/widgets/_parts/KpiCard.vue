@@ -17,14 +17,14 @@
       :style="kpiStyle"
     >
       <span class="kpi-card__accent" aria-hidden="true"></span>
-      <div class="kpi-card__value" :class="{ truncate: isShort }">{{ valueText }}</div>
-      <div v-if="showMeta" class="kpi-card__meta">
+      <div class="kpi-card__value">{{ valueText }}</div>
+      <div v-if="displayMeta" class="kpi-card__meta">
         <span v-if="deltaText" class="kpi-card__delta" :class="deltaToneClass">
           {{ deltaText }}
         </span>
         <span v-if="hint" class="kpi-card__hint">{{ hint }}</span>
       </div>
-      <Sparkline v-if="showSpark" class="kpi-card__spark" :data="spark" :color="accent" />
+      <Sparkline v-if="displaySpark" class="kpi-card__spark" :data="spark" :color="accent" />
       <div v-if="hasDetails" class="kpi-card__details">
         <slot />
       </div>
@@ -36,6 +36,7 @@
 import { computed, useSlots } from 'vue'
 import WidgetCard from './WidgetCard.vue'
 import Sparkline from './Sparkline.vue'
+import { fitKpiValueSize } from './kpiTextFit'
 
 const props = defineProps({
   title: String,
@@ -55,7 +56,9 @@ const props = defineProps({
   deltaClass: { type: String, default: '' },
   hint: { type: String, default: '' },
   spark: { type: Array, default: () => [] },
-  showDetails: { type: Boolean, default: true },
+  showDetails: { type: Boolean, default: false },
+  showMeta: { type: Boolean, default: false },
+  showSparkline: { type: Boolean, default: false },
 })
 
 const slots = useSlots()
@@ -63,19 +66,15 @@ const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
 
 const isShort = computed(() => Number(props.widgetHeight ?? 0) < 205)
 const isTiny = computed(() => Number(props.widgetHeight ?? 0) < 155 || Number(props.widgetWidth ?? 0) < 300)
-const valueLength = computed(() => String(props.valueText ?? '').replace(/\s+/g, '').length)
-const valueScale = computed(() => {
-  const len = valueLength.value
-  if (len >= 16) return 0.56
-  if (len >= 13) return 0.66
-  if (len >= 10) return 0.82
-  return 1
-})
 const sparkValues = computed(() => (Array.isArray(props.spark) ? props.spark : []))
-const showSpark = computed(
-  () => props.showDetails !== false && sparkValues.value.length > 1 && !isTiny.value && Number(props.widgetHeight ?? 0) >= 210,
+const displaySpark = computed(
+  () =>
+    props.showSparkline === true &&
+    sparkValues.value.length > 1 &&
+    !isTiny.value &&
+    Number(props.widgetHeight ?? 0) >= 210,
 )
-const showMeta = computed(() => Boolean(props.deltaText || props.hint) && !isTiny.value)
+const displayMeta = computed(() => props.showMeta === true && Boolean(props.deltaText || props.hint) && !isTiny.value)
 const hasDetails = computed(
   () => props.showDetails !== false && Boolean(slots.default) && !isTiny.value && Number(props.widgetHeight ?? 0) >= 230,
 )
@@ -89,12 +88,17 @@ const deltaToneClass = computed(() => {
 const kpiStyle = computed(() => {
   const width = Number(props.widgetWidth ?? 0) || 520
   const height = Number(props.widgetHeight ?? 0) || 240
-  const valueBase = Math.min(width * 0.24, height * 0.48)
-  const valueSize = clamp(Math.round(valueBase * valueScale.value), 30, 64)
   const padding = clamp(Math.round(Math.min(width * 0.024, height * 0.1)), 8, 16)
-  const topPadding = clamp(Math.round(height * 0.026), 3, 8)
-  const rowGap = clamp(Math.round(height * 0.035), 5, 9)
+  const topPadding = clamp(Math.round(height * 0.018), 2, 6)
+  const rowGap = clamp(Math.round(height * 0.026), 4, 7)
   const metaSize = clamp(Math.round(Math.min(width * 0.034, height * 0.07)), 11, 13)
+  const valueSize = fitKpiValueSize(props.valueText, width, height, {
+    min: 22,
+    max: 72,
+    paddingX: Math.max(50, width * 0.28),
+    paddingY: Math.max(18, height * 0.18),
+    heightRatio: 0.5,
+  })
 
   return {
     '--kpi-value-size': `${valueSize}px`,
@@ -115,7 +119,7 @@ const kpiStyle = computed(() => {
   min-height: 0;
   display: grid;
   grid-template-rows: auto auto auto auto minmax(0, auto);
-  align-content: start;
+  align-content: center;
   justify-items: center;
   gap: var(--kpi-gap);
   padding: var(--kpi-top-padding) var(--kpi-padding) var(--kpi-padding);
@@ -126,7 +130,7 @@ const kpiStyle = computed(() => {
 .kpi-card__accent {
   position: relative;
   display: block;
-  width: clamp(52px, 20%, 84px);
+  width: clamp(36px, 18%, 64px);
   height: 3px;
   border-radius: 999px;
   background: linear-gradient(90deg, var(--kpi-accent), color-mix(in srgb, var(--kpi-accent) 62%, #2563eb));
@@ -137,14 +141,14 @@ const kpiStyle = computed(() => {
 .kpi-card__value {
   max-width: 100%;
   font-size: var(--kpi-value-size);
-  line-height: 0.96;
+  line-height: 0.98;
   font-family: var(--template-title-font, var(--font-display, "Poppins", sans-serif));
   font-weight: 820;
   letter-spacing: 0;
   color: var(--template-text, #111827);
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
+  text-overflow: clip;
   font-variant-numeric: tabular-nums;
 }
 
@@ -219,7 +223,7 @@ const kpiStyle = computed(() => {
 }
 
 .kpi-card--tiny .kpi-card__accent {
-  width: min(48px, 24%);
+  width: min(38px, 24%);
 }
 
 .kpi-card--tiny .kpi-card__value {

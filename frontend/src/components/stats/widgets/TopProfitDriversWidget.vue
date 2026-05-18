@@ -161,7 +161,7 @@ const chartHeight = computed(() => {
   const target = base + count * per
   return clamp(Math.min(available, target), 168, 360)
 })
-const chartStyle = computed(() => ({ height: `${chartHeight.value}px`, minHeight: '0px' }))
+const chartStyle = computed(() => ({ height: '100%', minHeight: '0px' }))
 
 const total = computed(() => items.value.reduce((acc, i) => acc + Number(i.value ?? 0), 0))
 const rows = computed(() =>
@@ -196,11 +196,21 @@ const option = computed(() => {
         formatter: ({ name, value, percent }) =>
           `${name}<br/>${formatEUR(value)} - ${percent}%`,
       },
+      legend: {
+        show: true,
+        type: 'scroll',
+        bottom: 0,
+        itemWidth: 8,
+        itemHeight: 8,
+        textStyle: { color: '#64748b', fontSize: 10, fontWeight: 600 },
+        pageIconColor: '#94a3b8',
+        pageTextStyle: { color: '#64748b' },
+      },
       series: [
         {
           type: 'pie',
-          radius: ['45%', '78%'],
-          center: ['50%', '50%'],
+          radius: ['42%', '68%'],
+          center: ['50%', '43%'],
           label: { show: false },
           labelLine: { show: false },
           animationDurationUpdate: 0,
@@ -375,12 +385,12 @@ const toLabel = computed(() =>
   height: 100%;
   min-height: 0;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  gap: 8px;
+  grid-template-rows: minmax(0, 1fr);
+  gap: 0;
 }
 
 .tp-header {
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -403,25 +413,24 @@ const toLabel = computed(() =>
 .tp-main {
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(200px, 1fr) minmax(260px, 1.1fr);
-  gap: 14px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
   align-items: stretch;
 }
 .tp-stack {
   min-height: 0;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  gap: 12px;
-  align-content: start;
+  grid-template-rows: minmax(0, 1fr);
+  gap: 0;
+  align-content: stretch;
 }
 .tp-chart {
   width: 100%;
+  height: 100%;
   min-height: 0;
 }
 .tp-legend {
-  margin-top: 0;
-  min-height: 0;
-  overflow: hidden;
+  display: none;
 }
 .tp-stack .tp-legend {
   padding-top: 8px;

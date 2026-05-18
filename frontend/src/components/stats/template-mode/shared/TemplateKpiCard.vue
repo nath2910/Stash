@@ -12,7 +12,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-type TemplateKpiNamespace = 'annual' | 'monthly'
+type TemplateKpiNamespace = 'annual' | 'monthly' | 'category'
 type TemplateKpiTone = 'primary' | 'profit' | 'warning' | 'neutral'
 
 const props = withDefaults(

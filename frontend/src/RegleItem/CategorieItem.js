@@ -10,15 +10,14 @@ export const METADATA_FIELDS = {
     { key: 'size', label: 'Pointure', placeholder: '42 EU' },
     { key: 'sku', label: 'SKU', placeholder: 'DZ5485-612' },
     { key: 'colorway', label: 'Coloris', placeholder: 'University Red/White' },
-    { key: 'condition', label: 'Etat', placeholder: 'DS / VNDS / Used' },
+    { key: 'condition', label: 'Etat', placeholder: 'DS / Used' },
     { key: 'boxCondition', label: 'Etat boite', placeholder: 'OG all / Damagee' },
   ],
   POKEMON_CARD: [
     { key: 'set', label: 'Set', placeholder: '151 / Base Set' },
     { key: 'language', label: 'Langue', placeholder: 'FR / EN / JP' },
     { key: 'rarity', label: 'Rareté', placeholder: 'Secret Rare' },
-    { key: 'condition', label: 'Condition', placeholder: 'NM / LP / HP' },
-    { key: 'grade', label: 'Grade', placeholder: 'PSA 9 / BGS 9.5' },
+    { key: 'condition', label: 'Condition', placeholder: 'NEUF / TRES BON ETAT / BON ETAT' },
   ],
   TICKET: [
     { key: 'eventDate', label: "Date de l'evenement", placeholder: '2026-05-01' },

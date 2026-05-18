@@ -1,21 +1,29 @@
 <template>
-  <div class="grid grid-cols-1 gap-3 min-[430px]:grid-cols-2 md:grid-cols-4">
-    <StatBadge label="Nombre total d'item achete" :value="totalPaires" />
-    <StatBadge label="En stock" tone="success" :value="nbEnStock" />
-    <StatBadge label="Vendues" tone="accent" :value="nbVendues" />
-    <StatBadge label="Valeur stock" :value="valeurStock.toFixed(2)" unit="EUR" />
+  <div class="grid h-full grid-cols-1 gap-3 sm:grid-cols-3">
+    <StatBadge label="Total achete" :value="totalPaires" variant="dashboard" />
+    <StatBadge label="En stock" tone="success" :value="nbEnStock" variant="dashboard" />
+    <StatBadge
+      label="Valeur stock"
+      tone="accent"
+      :value="formattedStockValue"
+      unit="EUR"
+      variant="dashboard"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import StatBadge from '@/components/StatBadge.vue'
 
 interface Props {
   totalPaires: number
   nbEnStock: number
-  nbVendues: number
   valeurStock: number
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
+const formattedStockValue = computed(() =>
+  String(Math.round(props.valeurStock)).replace(/\B(?=(\d{3})+(?!\d))/g, ' '),
+)
 </script>

@@ -166,21 +166,17 @@ const option = computed(() => ({
 .bridge-wrap {
   height: 100%;
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr);
 }
 
 .bridge-chart {
+  width: 100%;
+  height: 100%;
   min-height: 0;
 }
 
 .bridge-foot {
-  margin-top: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  font-size: 11px;
-  color: #64748b;
+  display: none;
 }
 
 .bridge-foot span {

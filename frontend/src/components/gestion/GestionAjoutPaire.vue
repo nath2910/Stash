@@ -6,7 +6,9 @@
       <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" @click.self="handleClose"></div>
 
       <!-- modal -->
-      <div class="relative z-10 flex min-h-full items-end justify-center p-0 sm:items-center sm:p-4">
+      <div
+        class="relative z-10 flex min-h-full items-end justify-center p-0 sm:items-center sm:p-4"
+      >
         <div
           class="modal-card w-full max-w-3xl max-h-[100dvh] rounded-t-2xl rounded-b-none border border-gray-700 bg-gray-800 shadow-2xl sm:max-h-[85vh] sm:rounded-2xl"
           @click.stop
@@ -121,9 +123,7 @@
                   required
                   class="w-full rounded-lg border border-gray-600 bg-gray-900 text-gray-100 px-3 py-2.5 text-sm placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500"
                 />
-                <p class="mt-1 text-xs text-gray-500">
-                  Determine la quantite voulue.
-                </p>
+                <p class="mt-1 text-xs text-gray-500">Determine la quantite voulue.</p>
               </div>
 
               <!-- Prix retail -->
@@ -217,7 +217,9 @@
             </div>
 
             <!-- Footer -->
-            <div class="modal-footer-sticky flex flex-col-reverse gap-2 border-t border-gray-700 pt-4 sm:flex-row sm:items-center sm:justify-end">
+            <div
+              class="modal-footer-sticky flex flex-col-reverse gap-2 border-t border-gray-700 pt-4 sm:flex-row sm:items-center sm:justify-end"
+            >
               <button
                 type="button"
                 @click="handleClose"
@@ -255,7 +257,7 @@ import { computed, ref, watch } from 'vue'
 import SnkVenteServices from '@/services/SnkVenteServices.js'
 import { useAuthStore } from '@/store/authStore'
 import CompactDateInput from '@/components/ui/CompactDateInput.vue'
-import { ITEM_TYPES, METADATA_FIELDS, typeLabel } from '@/constants/itemTypes'
+import { ITEM_TYPES, METADATA_FIELDS, typeLabel } from '@/RegleItem/CategorieItem'
 
 const emit = defineEmits(['close', 'added'])
 

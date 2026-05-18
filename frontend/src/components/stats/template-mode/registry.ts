@@ -2,10 +2,12 @@ import { defineAsyncComponent, type Component } from 'vue'
 
 export const ANNUAL_DASHBOARD_TEMPLATE_ID = 'annual-dashboard'
 export const MONTHLY_DASHBOARD_TEMPLATE_ID = 'monthly-dashboard'
+export const CATEGORY_DASHBOARD_TEMPLATE_ID = 'category-dashboard'
 
 export type TemplateId =
   | typeof ANNUAL_DASHBOARD_TEMPLATE_ID
   | typeof MONTHLY_DASHBOARD_TEMPLATE_ID
+  | typeof CATEGORY_DASHBOARD_TEMPLATE_ID
 
 export type TemplateDefinition = {
   id: TemplateId
@@ -32,6 +34,15 @@ export const TEMPLATE_DEFINITIONS = [
     description: 'Pilotage mois par mois avec KPI, tendances quotidiennes, achats et top ventes.',
     component: defineAsyncComponent(
       () => import('./monthly-dashboard/MonthlyDashboardTemplate.vue'),
+    ),
+  },
+  {
+    id: CATEGORY_DASHBOARD_TEMPLATE_ID,
+    badge: 'Vue categories',
+    title: 'Statistiques par categories',
+    description: 'Analyse mensuelle filtree sur une ou plusieurs categories, avec comparaison et top items.',
+    component: defineAsyncComponent(
+      () => import('./category-dashboard/CategoryDashboardTemplate.vue'),
     ),
   },
 ] satisfies TemplateDefinition[]

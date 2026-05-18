@@ -359,12 +359,7 @@ const hoverPoint = computed(() => {
 })
 
 const chartHeight = computed(() => {
-  const headerBudget = props.layout.tiny ? 70 : props.layout.mode === 'compact' ? 82 : 94
-  const footerBudget = showFooter.value ? 78 : 0
-  const available = Math.round(props.layout.height - headerBudget - footerBudget - 8)
-  const floor = props.layout.tiny ? 88 : props.layout.mode === 'compact' ? 118 : 168
-  if (available < floor) return Math.max(props.layout.tiny ? 72 : 96, available)
-  return Math.min(available, 560)
+  return Math.max(72, Math.round(props.layout.height))
 })
 
 const chartShellStyle = computed(() => ({
@@ -564,9 +559,14 @@ const layoutVars = computed(() => {
   height: 100%;
   min-height: 0;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr);
   gap: var(--npt-gap);
   overflow: hidden;
+}
+
+.npt-head,
+.npt-footer {
+  display: none;
 }
 
 .npt-head {
@@ -649,9 +649,10 @@ const layoutVars = computed(() => {
 .npt-chart-shell {
   position: relative;
   min-height: 0;
+  height: 100%;
   border-radius: 8px;
-  border: 1px solid rgba(148, 163, 184, 0.22);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(248, 250, 252, 0.64));
+  border: 0;
+  background: transparent;
   overflow: hidden;
 }
 

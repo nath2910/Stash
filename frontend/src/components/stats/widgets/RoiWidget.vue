@@ -103,6 +103,7 @@ import StatsServices from '@/services/StatsServices'
 import { normalizeKpi, normalizeRank, prevPeriod } from '@/services/statsAdapters'
 import { formatDateFR, formatEUR, formatPct } from '@/utils/formatters'
 import WidgetCard from './_parts/WidgetCard.vue'
+import { fitKpiValueSize } from './_parts/kpiTextFit'
 
 const props = defineProps({
   from: String,
@@ -296,12 +297,19 @@ const layoutClass = computed(() => ({
 
 const roiVars = computed(() => {
   const scale = visualScale.value
+  const valueSize = fitKpiValueSize(roiText.value, safeWidth.value, safeHeight.value, {
+    min: 22,
+    max: 76,
+    paddingX: Math.max(54, safeWidth.value * 0.3),
+    paddingY: Math.max(18, safeHeight.value * 0.2),
+    heightRatio: 0.48,
+  })
 
   return {
     '--roi-gap': `${clamp(Math.round(12 * scale), 8, 18)}px`,
     '--roi-panel-pad': `${clamp(Math.round(11 * scale), 9, 18)}px`,
     '--roi-panel-radius': `${clamp(Math.round(12 * scale), 10, 18)}px`,
-    '--roi-kpi-size': `${clamp(Math.round(36 * scale), 24, 62)}px`,
+    '--roi-kpi-size': `${valueSize}px`,
     '--roi-title-size': `${clamp(Math.round(11 * scale), 10, 14)}px`,
     '--roi-body-size': `${clamp(Math.round(13 * scale), 11, 16)}px`,
     '--roi-meta-size': `${clamp(Math.round(12 * scale), 10, 14)}px`,
@@ -690,6 +698,55 @@ const roiVars = computed(() => {
 
 .roi-root.is-dense .roi-header-period__text {
   font-size: 10px;
+}
+
+.roi-root {
+  grid-template-rows: minmax(0, 1fr);
+  place-items: center;
+}
+
+.roi-summary-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr;
+  place-items: center;
+}
+
+.roi-tile--hero {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+  place-items: center;
+  text-align: center;
+}
+
+.roi-tile-head,
+.roi-delta-row,
+.roi-tile--goal,
+.roi-breakdown-panel {
+  display: none;
+}
+
+.roi-tile--hero::before {
+  content: '';
+  display: block;
+  width: clamp(36px, 18%, 64px);
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--roi-positive), rgba(34, 197, 94, 0.72));
+  box-shadow: 0 8px 18px rgba(16, 185, 129, 0.14);
+}
+
+.roi-main-value {
+  max-width: 100%;
+  font-size: var(--roi-kpi-size);
+  line-height: 0.98;
+  font-weight: 820;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
 }
 
 @keyframes roi-fade {

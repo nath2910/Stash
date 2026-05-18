@@ -349,7 +349,6 @@
           <PlusSquare class="h-4 w-4" />
         </button>
         <button
-          v-if="!templateActive"
           type="button"
           class="template-rail__meta-btn"
           :data-tooltip="'Personnaliser profils'"
@@ -576,6 +575,7 @@ import {
 } from 'lucide-vue-next'
 
 import {
+  KPI_TILE_WIDGET_TYPES,
   WIDGET_DEFS,
   cloneWidgetProps,
   getCategoryColor,
@@ -1068,12 +1068,8 @@ function minSizeFor(w: Widget) {
       h: textWidgetMinimumHeight(w),
     }
   }
-  if (
-    w.type === 'netProfit' &&
-    String(w.props?.view ?? '') === 'number' &&
-    String(w.props?.kpiVariant ?? '') === 'sales'
-  ) {
-    return { w: 220, h: 220 }
+  if (isSimpleKpiTile(w)) {
+    return { w: KPI_TILE_MIN_SIZE, h: KPI_TILE_MIN_SIZE }
   }
   return {
     w: def?.minSize?.w ?? MIN_W,
@@ -1088,12 +1084,8 @@ function maxSizeFor(w: Widget) {
       h: BOARD_H,
     }
   }
-  if (
-    w.type === 'netProfit' &&
-    String(w.props?.view ?? '') === 'number' &&
-    String(w.props?.kpiVariant ?? '') === 'sales'
-  ) {
-    return { w: 320, h: 320 }
+  if (isSimpleKpiTile(w)) {
+    return { w: KPI_TILE_MAX_SIZE, h: KPI_TILE_MAX_SIZE }
   }
   const def = getWidgetDef(w.type)
   const baseW = Math.max(Number(def?.defaultSize?.w ?? w.w ?? MIN_W), 1)
@@ -1108,18 +1100,7 @@ function maxSizeFor(w: Widget) {
   }
 }
 
-const SQUARE_KPI_WIDGET_TYPES = new Set([
-  'activeListings',
-  'asp',
-  'avgDaysToSell',
-  'avgMargin',
-  'cashFlow',
-  'goalProgress',
-  'inventoryValue',
-  'roi',
-  'sellThrough',
-  'varianceToTarget',
-])
+const SQUARE_KPI_WIDGET_TYPES = new Set(KPI_TILE_WIDGET_TYPES)
 
 function isSquareKpiWidget(widget: Pick<Widget, 'type' | 'props'> | null | undefined) {
   const type = String(widget?.type ?? '')
@@ -1562,6 +1543,31 @@ const defaultLayout = (): Widget[] => {
   return []
 }
 
+const KPI_TILE_SIZE = 180
+const KPI_TILE_MIN_SIZE = 160
+const KPI_TILE_MAX_SIZE = 260
+const KPI_TILE_NORMALIZED_FLAG = 'kpiTileNormalizedV1'
+const SIMPLE_KPI_TYPES = new Set(KPI_TILE_WIDGET_TYPES)
+
+function isSimpleKpiTile(widget: Pick<Widget, 'type' | 'props'>) {
+  if (widget.type === 'grossRevenue' || widget.type === 'netProfit') {
+    return String(widget.props?.view ?? 'line') === 'number'
+  }
+  return SIMPLE_KPI_TYPES.has(widget.type)
+}
+
+function markKpiTileNormalized(widget: Widget) {
+  widget.props = { ...(widget.props ?? {}), [KPI_TILE_NORMALIZED_FLAG]: true }
+}
+
+function normalizeSimpleKpiTile(widget: Widget) {
+  if (!isSimpleKpiTile(widget)) return
+  if ((widget.props as any)?.[KPI_TILE_NORMALIZED_FLAG] === true) return
+  widget.w = KPI_TILE_SIZE
+  widget.h = KPI_TILE_SIZE
+  markKpiTileNormalized(widget)
+}
+
 function normalizeLayout(raw: unknown): Widget[] | null {
   if (!Array.isArray(raw)) return null
 
@@ -1665,6 +1671,8 @@ function normalizeLayout(raw: unknown): Widget[] | null {
     if (isTextWidget(w)) {
       fitWidgetToContent(w)
     }
+
+    normalizeSimpleKpiTile(w)
 
     clampWidget(w)
     list.push(w)
@@ -5556,9 +5564,9 @@ function applyWidgetVariantSize(widget: Widget, view?: string) {
   if (widget.type !== 'grossRevenue' && widget.type !== 'netProfit') return
   if (widget.type === 'netProfit') {
     if (view === 'number') {
-      const isSalesKpi = String(widget.props?.kpiVariant ?? '') === 'sales'
-      widget.w = isSalesKpi ? 240 : 300
-      widget.h = isSalesKpi ? 240 : 300
+      widget.w = KPI_TILE_SIZE
+      widget.h = KPI_TILE_SIZE
+      markKpiTileNormalized(widget)
       return
     }
     if (view === 'line') {
@@ -5568,8 +5576,9 @@ function applyWidgetVariantSize(widget: Widget, view?: string) {
     return
   }
   if (view === 'number') {
-    widget.w = 240
-    widget.h = 240
+    widget.w = KPI_TILE_SIZE
+    widget.h = KPI_TILE_SIZE
+    markKpiTileNormalized(widget)
     return
   }
   if (view === 'line') {
@@ -5606,6 +5615,12 @@ function addWidget(payload: string | { type: string; view?: string; props?: Reco
 
   if (title) {
     w.title = title
+  }
+
+  if (isSimpleKpiTile(w)) {
+    w.w = KPI_TILE_SIZE
+    w.h = KPI_TILE_SIZE
+    markKpiTileNormalized(w)
   }
 
   const p = camera.boardPointFromViewportCenter()

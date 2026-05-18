@@ -353,7 +353,7 @@ import {
   Settings,
   Trash2,
 } from 'lucide-vue-next'
-import { getCategoryColor, getWidgetDef } from '../widgetRegistry'
+import { KPI_TILE_WIDGET_TYPES, getCategoryColor, getWidgetDef } from '../widgetRegistry'
 
 type Widget = {
   id: string
@@ -441,18 +441,7 @@ const textAlignOptions: Array<{
   { value: 'center', title: 'Aligner au centre', icon: AlignCenter },
   { value: 'right', title: 'Aligner a droite', icon: AlignRight },
 ]
-const KPI_DISPLAY_WIDGET_TYPES = new Set([
-  'activeListings',
-  'asp',
-  'avgDaysToSell',
-  'avgMargin',
-  'cashFlow',
-  'goalProgress',
-  'inventoryValue',
-  'roi',
-  'sellThrough',
-  'varianceToTarget',
-])
+const KPI_DISPLAY_WIDGET_TYPES = new Set(KPI_TILE_WIDGET_TYPES)
 
 function isKpiDisplayWidget(widget: Widget | null | undefined) {
   const type = String(widget?.type ?? '')
@@ -616,10 +605,10 @@ const kpiTitleSize = computed(() => {
   const width = Number(liveWidgetWidth.value || props.widget?.w || 320)
   const height = Number(props.widget?.h ?? 140)
   const titleLength = String(props.widget?.title ?? '').replace(/\s+/g, '').length
-  const lengthScale = titleLength > 22 ? 0.74 : titleLength > 16 ? 0.84 : titleLength > 12 ? 0.92 : 1
-  const raw = Math.min(width * 0.09, height * 0.15) * lengthScale
-  if (width < 180) return Math.max(12, Math.min(16, Math.round(raw)))
-  return Math.max(13, Math.min(22, Math.round(raw)))
+  const lengthScale = titleLength > 22 ? 0.72 : titleLength > 16 ? 0.82 : titleLength > 12 ? 0.9 : 1
+  const raw = Math.min(width * 0.07, height * 0.1) * lengthScale
+  if (width < 180) return Math.max(10, Math.min(13, Math.round(raw)))
+  return Math.max(11, Math.min(15, Math.round(raw)))
 })
 const fullHeaderActionsWidth = computed(() => {
   const buttonSize = 34
@@ -668,7 +657,7 @@ const shouldAutoHeight = computed(
   () => isTextWidget.value && props.widget?.props?.autoHeight !== false,
 )
 const DEFAULT_HEADER_HEIGHT = 38
-const KPI_HEADER_HEIGHT = 48
+const KPI_HEADER_HEIGHT = 40
 const headerOffset = computed(() => {
   if (!showHeader.value) return 0
   return isKpiDisplayWidget(props.widget) ? KPI_HEADER_HEIGHT : DEFAULT_HEADER_HEIGHT
@@ -742,6 +731,7 @@ const mergedProps = computed(() => {
   const sizing = contentSizing.value
   const logicalWidth = isTextWidget.value ? sizing.renderWidth : sizing.baseWidth
   const logicalHeight = isTextWidget.value ? sizing.renderHeight : sizing.baseHeight
+  delete p.kpiTileNormalizedV1
   delete p.from
   delete p.to
   p.widgetWidth = logicalWidth
@@ -1316,6 +1306,7 @@ function onRootKeydown(event: KeyboardEvent) {
   position: absolute;
   border-radius: 8px;
   overflow: visible;
+  font-family: var(--font-ui, var(--font-sans, "Poppins", sans-serif));
   background: var(--canvas-widget-bg, rgba(10, 15, 26, 0.88));
   border: 1px solid var(--canvas-widget-border, rgba(148, 163, 184, 0.2));
   box-shadow: var(--canvas-widget-shadow, 0 4px 14px rgba(2, 6, 23, 0.18));
@@ -1788,12 +1779,12 @@ function onRootKeydown(event: KeyboardEvent) {
   --template-title-font: var(--font-display, "Poppins", sans-serif);
   border-radius: 8px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.94)),
-    radial-gradient(circle at 100% 0, rgba(91, 92, 226, 0.08), transparent 36%);
-  border-color: rgba(148, 163, 184, 0.3);
+    linear-gradient(180deg, rgba(255, 253, 248, 0.99), rgba(250, 247, 240, 0.96)),
+    radial-gradient(circle at 100% 0, rgba(91, 92, 226, 0.055), transparent 36%);
+  border-color: rgba(126, 111, 91, 0.24);
   box-shadow:
-    0 14px 34px rgba(31, 41, 55, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+    0 14px 34px rgba(73, 59, 42, 0.075),
+    inset 0 1px 0 rgba(255, 255, 255, 0.76);
 }
 
 .widget--gross-revenue:hover {
@@ -1817,8 +1808,8 @@ function onRootKeydown(event: KeyboardEvent) {
 }
 
 .widget--gross-revenue .widget__header {
-  border-bottom-color: rgba(148, 163, 184, 0.18);
-  background: rgba(255, 255, 255, 0.5);
+  border-bottom-color: rgba(126, 111, 91, 0.14);
+  background: rgba(255, 253, 248, 0.54);
 }
 
 .widget--gross-revenue .title {
@@ -1860,18 +1851,18 @@ function onRootKeydown(event: KeyboardEvent) {
 }
 
 .widget--kpi-display {
-  --kpi-header-height: 48px;
+  --kpi-header-height: 40px;
   --template-text: #111827;
   --template-text-muted: #64748b;
   --template-title-font: var(--font-display, "Poppins", sans-serif);
   border-radius: 8px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(248, 250, 252, 0.94)),
-    radial-gradient(circle at 100% 0, rgba(91, 92, 226, 0.07), transparent 38%);
-  border-color: rgba(148, 163, 184, 0.28);
+    linear-gradient(180deg, rgba(255, 253, 248, 0.99), rgba(250, 247, 240, 0.96)),
+    radial-gradient(circle at 100% 0, rgba(91, 92, 226, 0.045), transparent 38%);
+  border-color: rgba(126, 111, 91, 0.22);
   box-shadow:
-    0 14px 32px rgba(31, 41, 55, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.74);
+    0 14px 32px rgba(73, 59, 42, 0.075),
+    inset 0 1px 0 rgba(255, 255, 255, 0.78);
 }
 
 .widget--kpi-display:hover {
@@ -1897,11 +1888,11 @@ function onRootKeydown(event: KeyboardEvent) {
 
 .widget--kpi-display .widget__header {
   height: var(--kpi-header-height);
-  justify-content: center;
-  padding: 5px 12px;
+  justify-content: flex-start;
+  padding: 7px 10px 3px 12px;
   overflow: visible;
   border-bottom: 0;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(255, 255, 255, 0));
+  background: transparent;
 }
 
 .widget--kpi-display .widget__body {
@@ -1914,21 +1905,21 @@ function onRootKeydown(event: KeyboardEvent) {
 }
 
 .widget--kpi-display .widget__title {
-  justify-content: center;
+  justify-content: flex-start;
   gap: 0;
-  text-align: center;
-  padding: 0 6px;
+  text-align: left;
+  padding: 0 34px 0 0;
 }
 
 .widget--kpi-display .title {
   width: 100%;
-  color: #111827;
+  color: #64748b;
   font-family: var(--template-title-font);
   font-size: var(--kpi-title-size, 18px);
-  line-height: 1.08;
-  font-weight: 860;
-  letter-spacing: 0;
-  text-transform: none;
+  line-height: 1.12;
+  font-weight: 780;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   display: -webkit-box;
   white-space: normal;
   -webkit-line-clamp: 2;
@@ -1942,7 +1933,11 @@ function onRootKeydown(event: KeyboardEvent) {
 }
 
 .widget--kpi-display .widget__actions {
-  display: none;
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  gap: 4px;
+  margin-left: 0;
 }
 
 .widget--kpi-display .iconbtn {

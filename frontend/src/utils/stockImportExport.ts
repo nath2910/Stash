@@ -1,4 +1,4 @@
-import { METADATA_FIELDS, typeLabel } from '@/constants/itemTypes'
+import { METADATA_FIELDS, typeLabel } from '@/RegleItem/CategorieItem'
 
 export type CsvRow = Record<string, any>
 export type ImportMapping = Record<string, string>
@@ -289,19 +289,25 @@ function parseMetadata(value: unknown) {
 
 function buildMetadataFromColumns(row: CsvRow, headers: string[], typeValue: string | null) {
   const metadata: Record<string, string> = {}
-  const normalizedType = String(typeValue || '').trim().toUpperCase()
+  const normalizedType = String(typeValue || '')
+    .trim()
+    .toUpperCase()
   const metadataFields = [
     ...EXPORT_METADATA_COLUMNS,
-    ...Object.values(METADATA_FIELDS).flat().map((field: any) => ({
-      key: field.key,
-      header: field.label,
-    })),
+    ...Object.values(METADATA_FIELDS)
+      .flat()
+      .map((field: any) => ({
+        key: field.key,
+        header: field.label,
+      })),
   ]
 
   const allowedKeys =
     normalizedType && METADATA_FIELDS[normalizedType as keyof typeof METADATA_FIELDS]
       ? new Set(
-          METADATA_FIELDS[normalizedType as keyof typeof METADATA_FIELDS].map((field: any) => field.key),
+          METADATA_FIELDS[normalizedType as keyof typeof METADATA_FIELDS].map(
+            (field: any) => field.key,
+          ),
         )
       : null
 
@@ -330,7 +336,9 @@ export function isJsonFile(file: File) {
 }
 
 export function extractTableFrom2D(rows2D: any[][]): ParsedTable {
-  const headerIndex = rows2D.findIndex((row) => (row || []).filter((cell) => String(cell).trim()).length >= 2)
+  const headerIndex = rows2D.findIndex(
+    (row) => (row || []).filter((cell) => String(cell).trim()).length >= 2,
+  )
   if (headerIndex === -1) return { headers: [], rows: [] }
 
   const rawHeaders = rows2D[headerIndex] || []
@@ -351,7 +359,9 @@ export function extractTableFrom2D(rows2D: any[][]): ParsedTable {
 }
 
 export function tableFromObjectRows(items: any[]): ParsedTable {
-  const objectRows = items.filter((item) => item && typeof item === 'object' && !Array.isArray(item))
+  const objectRows = items.filter(
+    (item) => item && typeof item === 'object' && !Array.isArray(item),
+  )
   if (!objectRows.length) return { headers: [], rows: [] }
 
   const headers = Array.from(
@@ -449,7 +459,15 @@ export function resolveImportMapping(headers: string[]) {
     'sneaker',
     'sneakers',
   ])
-  const brand = findHeader(headers, ['marque', 'brand', 'fabricant', 'manufacturer', 'maker', 'categorie', 'category'])
+  const brand = findHeader(headers, [
+    'marque',
+    'brand',
+    'fabricant',
+    'manufacturer',
+    'maker',
+    'categorie',
+    'category',
+  ])
   const retail = findHeader(headers, [
     'prix retail',
     'PrixRetail',
@@ -503,7 +521,14 @@ export function resolveImportMapping(headers: string[]) {
     'acquisition',
     'date',
   ])
-  const dateVente = findHeader(headers, ['date vente', 'date de vente', 'sold date', 'sale date', 'resell date', 'sold at'])
+  const dateVente = findHeader(headers, [
+    'date vente',
+    'date de vente',
+    'sold date',
+    'sale date',
+    'resell date',
+    'sold at',
+  ])
   const mapping = {
     name,
     brand,
@@ -515,11 +540,27 @@ export function resolveImportMapping(headers: string[]) {
     type: findHeader(headers, ['type', 'type item', "type d'item"]),
     metadata: findHeader(headers, ['metadata', 'meta']),
     size: findHeader(headers, ['pointure', 'taille', 'size', 'eu size', 'us size', 'uk size']),
-    sku: findHeader(headers, ['sku', 'reference', 'reference produit', 'product id', 'id produit', 'ref', 'style code', 'code']),
+    sku: findHeader(headers, [
+      'sku',
+      'reference',
+      'reference produit',
+      'product id',
+      'id produit',
+      'ref',
+      'style code',
+      'code',
+    ]),
     condition: findHeader(headers, ['etat', 'condition', 'state', 'status', 'statut']),
     colorway: findHeader(headers, ['coloris', 'colorway', 'couleur']),
     boxCondition: findHeader(headers, ['etat boite', 'box condition', 'boite']),
-    quantity: findHeader(headers, ['quantite', 'quantite stock', 'qty', 'quantity', 'stock', 'nombre']),
+    quantity: findHeader(headers, [
+      'quantite',
+      'quantite stock',
+      'qty',
+      'quantity',
+      'stock',
+      'nombre',
+    ]),
     supplier: findHeader(headers, ['fournisseur', 'supplier', 'source', 'vendeur', 'seller']),
   }
 
@@ -569,10 +610,12 @@ export function recognizedImportHeaders(headers: string[], mapping: ImportMappin
   const recognized = new Set(Object.values(mapping).filter(Boolean))
   const metadataFields = [
     ...EXPORT_METADATA_COLUMNS,
-    ...Object.values(METADATA_FIELDS).flat().map((field: any) => ({
-      key: field.key,
-      header: field.label,
-    })),
+    ...Object.values(METADATA_FIELDS)
+      .flat()
+      .map((field: any) => ({
+        key: field.key,
+        header: field.label,
+      })),
   ]
 
   metadataFields.forEach((field) => {
@@ -588,7 +631,9 @@ function isEmptyImportRow(row: CsvRow, headers: string[]) {
 }
 
 function normalizeItemType(value: unknown) {
-  const raw = String(value ?? '').trim().toUpperCase()
+  const raw = String(value ?? '')
+    .trim()
+    .toUpperCase()
   if (!raw) return null
   const cleaned = raw
     .replace(/[\s-]+/g, '_')
@@ -625,7 +670,10 @@ function parseOptionalDate(row: CsvRow, column: string, label: string, errors: s
 }
 
 function compactDescription(parts: Array<string | null>) {
-  const value = parts.map((part) => String(part ?? '').trim()).filter(Boolean).join(' | ')
+  const value = parts
+    .map((part) => String(part ?? '').trim())
+    .filter(Boolean)
+    .join(' | ')
   if (!value) return null
   return value.length > 500 ? `${value.slice(0, 497)}...` : value
 }
@@ -685,7 +733,9 @@ function buildPreviewItem(row: CsvRow, headers: string[], mapping: ImportMapping
     ...(readCell(row, mapping.sku) ? { sku: readCell(row, mapping.sku) } : {}),
     ...(readCell(row, mapping.condition) ? { condition: readCell(row, mapping.condition) } : {}),
     ...(readCell(row, mapping.colorway) ? { colorway: readCell(row, mapping.colorway) } : {}),
-    ...(readCell(row, mapping.boxCondition) ? { boxCondition: readCell(row, mapping.boxCondition) } : {}),
+    ...(readCell(row, mapping.boxCondition)
+      ? { boxCondition: readCell(row, mapping.boxCondition) }
+      : {}),
   } as Record<string, string>
   if (typeValue === 'SNEAKER' && mapping.size && !metadata.size) {
     errors.push('Taille manquante')
@@ -731,7 +781,9 @@ export function analyzeImportRows(
 ): ImportPreview {
   const mapping = normalizeMapping(headers, mappingOverride ?? resolveImportMapping(headers))
   const recognizedHeaders = recognizedImportHeaders(headers, mapping)
-  const unknownHeaders = headers.filter((header) => String(header).trim() && !recognizedHeaders.has(header))
+  const unknownHeaders = headers.filter(
+    (header) => String(header).trim() && !recognizedHeaders.has(header),
+  )
   const payload: ImportPayloadItem[] = []
   const previewRows: ImportPreviewRow[] = []
   const existingKeys = existingDuplicateKeys(existingRows)

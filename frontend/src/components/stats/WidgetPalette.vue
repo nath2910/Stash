@@ -627,7 +627,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .palette-shell {
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   width: min(1200px, calc(100vw - 340px));
   min-width: 760px;
   height: calc(100dvh - 50px);
@@ -662,15 +662,32 @@ onBeforeUnmount(() => {
 
 .palette-scroll {
   overflow: auto;
+  min-height: 0;
+  max-height: 100%;
   overscroll-behavior: contain;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(91, 92, 226, 0.5) rgba(203, 213, 225, 0.36);
 }
 
 .palette-scroll::-webkit-scrollbar {
-  width: 0;
-  height: 0;
-  display: none;
+  width: 10px;
+  height: 10px;
+}
+
+.palette-scroll::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: rgba(203, 213, 225, 0.36);
+}
+
+.palette-scroll::-webkit-scrollbar-thumb {
+  border: 2px solid rgba(241, 247, 255, 0.9);
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(91, 92, 226, 0.58), rgba(14, 165, 233, 0.5));
+}
+
+.palette-scroll::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(91, 92, 226, 0.72), rgba(14, 165, 233, 0.64));
 }
 
 .palette-float-side {

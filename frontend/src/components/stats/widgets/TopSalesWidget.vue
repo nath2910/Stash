@@ -219,7 +219,8 @@ onBeforeUnmount(() => {
   overflow: auto;
   padding-right: 2px;
   display: grid;
-  gap: 8px;
+  align-content: start;
+  gap: 6px;
 }
 
 .ts-row {
@@ -227,11 +228,11 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   border-radius: 8px;
   border: 1px solid rgba(148, 163, 184, 0.22);
   background: rgba(248, 250, 252, 0.82);
-  padding: 9px 10px;
+  padding: 8px 9px;
 }
 
 .ts-row__copy {
@@ -249,8 +250,7 @@ onBeforeUnmount(() => {
 }
 
 .ts-row__copy span {
-  color: #64748b;
-  font-size: 11px;
+  display: none;
 }
 
 .ts-row__value {
@@ -261,20 +261,20 @@ onBeforeUnmount(() => {
 }
 
 .ts-more {
-  min-height: 34px;
-  border-radius: 999px;
+  min-height: 30px;
+  border-radius: 8px;
   border: 1px solid rgba(16, 185, 129, 0.28);
   background: rgba(209, 250, 229, 0.54);
   color: #047857;
-  padding: 0 12px;
+  padding: 0 10px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  text-transform: none;
 }
 
 .ts-more strong {

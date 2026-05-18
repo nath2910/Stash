@@ -28,7 +28,9 @@ function readStoredTheme() {
 }
 
 function inferSystemTheme() {
-  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return FALLBACK_THEME
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+    return FALLBACK_THEME
+  }
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
 

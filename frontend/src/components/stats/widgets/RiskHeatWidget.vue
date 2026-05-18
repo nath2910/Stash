@@ -167,20 +167,18 @@ const option = computed(() => ({
 .risk-wrap {
   height: 100%;
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
-  gap: 8px;
+  grid-template-rows: minmax(0, 1fr);
+  gap: 0;
 }
 
 .risk-chart {
+  width: 100%;
+  height: 100%;
   min-height: 0;
 }
 
 .risk-legend {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 11px;
-  color: #64748b;
+  display: none;
 }
 
 .risk-legend span {

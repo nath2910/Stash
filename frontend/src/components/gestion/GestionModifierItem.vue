@@ -5,7 +5,9 @@
       <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" @click.self="close"></div>
 
       <!-- modal -->
-      <div class="relative z-10 flex min-h-full items-end justify-center p-0 sm:items-center sm:p-4">
+      <div
+        class="relative z-10 flex min-h-full items-end justify-center p-0 sm:items-center sm:p-4"
+      >
         <div
           class="modal-card w-full max-w-3xl max-h-[100dvh] rounded-t-2xl rounded-b-none border border-gray-700 bg-gray-800 shadow-2xl sm:max-h-[85vh] sm:rounded-2xl"
         >
@@ -95,7 +97,9 @@
 
               <!-- Prix retail -->
               <div>
-                <label class="block text-sm font-medium text-gray-200 mb-2">Prix Retail (EUR)</label>
+                <label class="block text-sm font-medium text-gray-200 mb-2"
+                  >Prix Retail (EUR)</label
+                >
                 <input
                   type="number"
                   v-model.number="form.prixRetail"
@@ -108,7 +112,9 @@
 
               <!-- Prix revente -->
               <div>
-                <label class="block text-sm font-medium text-gray-200 mb-2">Prix Revente (EUR)</label>
+                <label class="block text-sm font-medium text-gray-200 mb-2"
+                  >Prix Revente (EUR)</label
+                >
                 <input
                   type="number"
                   v-model.number="form.prixResell"
@@ -207,7 +213,8 @@
                   <div>
                     <p class="text-gray-100">{{ att.filename }}</p>
                     <p class="text-[11px] text-gray-400">
-                      {{ formatSize(att.sizeBytes) }} • {{ att.mimeType || 'application/octet-stream' }}
+                      {{ formatSize(att.sizeBytes) }} •
+                      {{ att.mimeType || 'application/octet-stream' }}
                     </p>
                   </div>
                   <div class="flex items-center gap-2">
@@ -233,7 +240,9 @@
             </div>
 
             <!-- Footer actions -->
-            <div class="modal-footer-sticky flex flex-col-reverse gap-2 border-t border-gray-700 pt-4 sm:flex-row sm:items-center sm:justify-end">
+            <div
+              class="modal-footer-sticky flex flex-col-reverse gap-2 border-t border-gray-700 pt-4 sm:flex-row sm:items-center sm:justify-end"
+            >
               <button
                 type="button"
                 @click="close"
@@ -262,7 +271,7 @@
 import { ref, watch, computed } from 'vue'
 import SnkVenteServices from '@/services/SnkVenteServices.js'
 import CompactDateInput from '@/components/ui/CompactDateInput.vue'
-import { ITEM_TYPES, METADATA_FIELDS, typeLabel } from '@/constants/itemTypes'
+import { ITEM_TYPES, METADATA_FIELDS, typeLabel } from '@/RegleItem/CategorieItem'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false }, // v-model
@@ -397,7 +406,7 @@ const loadAttachments = async (id) => {
     attachments.value = Array.isArray(data) ? data : []
   } catch (e) {
     console.error('Load attachments failed', e)
-    attachmentError.value = "Impossible de charger les pièces jointes"
+    attachmentError.value = 'Impossible de charger les pièces jointes'
   }
 }
 

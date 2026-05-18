@@ -103,7 +103,10 @@
       </article>
     </div>
 
-    <div v-else class="rounded-xl border border-gray-700/70 bg-gray-900/40 px-4 py-8 text-center text-sm text-gray-400 md:hidden">
+    <div
+      v-else
+      class="rounded-xl border border-gray-700/70 bg-gray-900/40 px-4 py-8 text-center text-sm text-gray-400 md:hidden"
+    >
       Aucun item a afficher pour le moment.
     </div>
 
@@ -261,7 +264,7 @@
 import { computed } from 'vue'
 import { formatDateFR, formatEUR } from '@/utils/formatters'
 import { profitOf } from '@/utils/snkVente'
-import { typeLabel } from '@/constants/itemTypes'
+import { typeLabel } from '@/RegleItem/CategorieItem'
 
 const props = defineProps({
   snkVentes: { type: Array, required: true },

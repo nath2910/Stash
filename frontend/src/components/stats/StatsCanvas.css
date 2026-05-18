@@ -1,21 +1,21 @@
 .canvas-root {
-  --bg: #edf3fb;
-  --canvas-board-base: #eaf2fc;
-  --canvas-board-surface: #f7fbff;
-  --canvas-board-grid: rgba(15, 23, 42, 0.055);
-  --canvas-board-grid-strong: rgba(99, 102, 241, 0.075);
-  --canvas-widget-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 247, 255, 0.96));
-  --canvas-widget-border: rgba(100, 116, 139, 0.24);
+  --bg: #f3eee6;
+  --canvas-board-base: #efe7dc;
+  --canvas-board-surface: #f6f1e9;
+  --canvas-board-grid: rgba(79, 70, 55, 0.055);
+  --canvas-board-grid-strong: rgba(107, 91, 71, 0.085);
+  --canvas-widget-bg: linear-gradient(180deg, rgba(255, 253, 248, 0.99), rgba(250, 247, 240, 0.97));
+  --canvas-widget-border: rgba(126, 111, 91, 0.22);
   --canvas-widget-border-hover: rgba(91, 92, 226, 0.28);
-  --canvas-widget-header-bg: rgba(255, 255, 255, 0.68);
-  --canvas-widget-header-border: rgba(148, 163, 184, 0.22);
+  --canvas-widget-header-bg: rgba(255, 253, 248, 0.74);
+  --canvas-widget-header-border: rgba(126, 111, 91, 0.16);
   --canvas-widget-title: #111827;
-  --canvas-widget-shadow: 0 14px 34px rgba(31, 41, 55, 0.09), inset 0 1px 0 rgba(255, 255, 255, 0.74);
-  --canvas-widget-shadow-hover: 0 18px 42px rgba(31, 41, 55, 0.12), 0 0 0 1px rgba(91, 92, 226, 0.06);
-  --template-surface-card: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 247, 255, 0.96));
-  --template-surface-line: rgba(148, 163, 184, 0.28);
-  --template-shadow-card: 0 14px 34px rgba(31, 41, 55, 0.09);
-  --template-shadow-card-inset: inset 0 1px 0 rgba(255, 255, 255, 0.68);
+  --canvas-widget-shadow: 0 14px 34px rgba(73, 59, 42, 0.075), inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  --canvas-widget-shadow-hover: 0 18px 42px rgba(73, 59, 42, 0.11), 0 0 0 1px rgba(91, 92, 226, 0.06);
+  --template-surface-card: linear-gradient(180deg, rgba(255, 253, 248, 0.99), rgba(250, 247, 240, 0.97));
+  --template-surface-line: rgba(126, 111, 91, 0.22);
+  --template-shadow-card: 0 14px 34px rgba(73, 59, 42, 0.075);
+  --template-shadow-card-inset: inset 0 1px 0 rgba(255, 255, 255, 0.72);
   --template-text: #111827;
   --template-text-muted: #64748b;
   --stats-top-gap: max(16px, env(safe-area-inset-top, 0px) + 10px);
@@ -1231,8 +1231,8 @@ body.canvas-resize-cursor--nesw {
   opacity: 0.35;
   z-index: 2;
   background:
-    linear-gradient(transparent 23px, rgba(148, 163, 184, 0.08) 24px) 0 0 / 24px 24px,
-    linear-gradient(90deg, transparent 23px, rgba(148, 163, 184, 0.08) 24px) 0 0 / 24px 24px;
+    linear-gradient(transparent 23px, rgba(126, 111, 91, 0.075) 24px) 0 0 / 24px 24px,
+    linear-gradient(90deg, transparent 23px, rgba(126, 111, 91, 0.075) 24px) 0 0 / 24px 24px;
   mix-blend-mode: scréen;
 }
 
@@ -2562,19 +2562,19 @@ body.canvas-resize-cursor--nesw {
 }
 
 .canvas-root.theme-light {
-  --bg: #edf3fb;
-  --canvas-widget-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 247, 255, 0.97));
-  --canvas-widget-border: rgba(100, 116, 139, 0.26);
+  --bg: #f3eee6;
+  --canvas-widget-bg: linear-gradient(180deg, rgba(255, 253, 248, 0.99), rgba(250, 247, 240, 0.97));
+  --canvas-widget-border: rgba(126, 111, 91, 0.24);
   --canvas-widget-border-hover: rgba(79, 70, 229, 0.32);
-  --canvas-widget-header-bg: rgba(248, 250, 252, 0.9);
-  --canvas-widget-header-border: rgba(100, 116, 139, 0.2);
+  --canvas-widget-header-bg: rgba(255, 253, 248, 0.88);
+  --canvas-widget-header-border: rgba(126, 111, 91, 0.17);
   --canvas-widget-title: #0f172a;
-  --canvas-widget-shadow: 0 14px 34px rgba(15, 23, 42, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.62);
-  --canvas-widget-shadow-hover: 0 18px 42px rgba(15, 23, 42, 0.16), 0 0 0 1px rgba(79, 70, 229, 0.08);
-  --template-surface-card: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 247, 255, 0.96));
-  --template-surface-line: rgba(100, 116, 139, 0.28);
-  --template-shadow-card: 0 14px 34px rgba(15, 23, 42, 0.12);
-  --template-shadow-card-inset: inset 0 1px 0 rgba(255, 255, 255, 0.68);
+  --canvas-widget-shadow: 0 14px 34px rgba(73, 59, 42, 0.085), inset 0 1px 0 rgba(255, 255, 255, 0.68);
+  --canvas-widget-shadow-hover: 0 18px 42px rgba(73, 59, 42, 0.13), 0 0 0 1px rgba(79, 70, 229, 0.08);
+  --template-surface-card: linear-gradient(180deg, rgba(255, 253, 248, 0.99), rgba(250, 247, 240, 0.97));
+  --template-surface-line: rgba(126, 111, 91, 0.24);
+  --template-shadow-card: 0 14px 34px rgba(73, 59, 42, 0.085);
+  --template-shadow-card-inset: inset 0 1px 0 rgba(255, 255, 255, 0.72);
   --template-text: #0f172a;
   --template-text-muted: #475569;
   color: #000;
@@ -2582,11 +2582,11 @@ body.canvas-resize-cursor--nesw {
 
 .canvas-root.theme-light .board {
   background:
-    radial-gradient(circle at 1px 1px, rgba(37, 99, 235, 0.12) 1px, transparent 1.7px) 0 0 / 28px
+    radial-gradient(circle at 1px 1px, rgba(107, 91, 71, 0.13) 1px, transparent 1.7px) 0 0 / 28px
       28px,
-    radial-gradient(circle at 1px 1px, rgba(100, 116, 139, 0.08) 1px, transparent 1.8px) 0 0 / 8px
+    radial-gradient(circle at 1px 1px, rgba(126, 111, 91, 0.075) 1px, transparent 1.8px) 0 0 / 8px
       8px,
-    linear-gradient(180deg, #f7fbff 0%, #eaf2fc 100%);
+    linear-gradient(180deg, #f7f2ea 0%, #efe7dc 100%);
 }
 
 .canvas-root.theme-light .canvas-empty-guide__glow {
@@ -2652,8 +2652,8 @@ body.canvas-resize-cursor--nesw {
 .canvas-root.theme-light .edit-grid {
   mix-blend-mode: multiply;
   background:
-    linear-gradient(transparent 23px, rgba(100, 116, 139, 0.12) 24px) 0 0 / 24px 24px,
-    linear-gradient(90deg, transparent 23px, rgba(100, 116, 139, 0.12) 24px) 0 0 / 24px 24px;
+    linear-gradient(transparent 23px, rgba(126, 111, 91, 0.11) 24px) 0 0 / 24px 24px,
+    linear-gradient(90deg, transparent 23px, rgba(126, 111, 91, 0.11) 24px) 0 0 / 24px 24px;
 }
 
 .canvas-root.theme-light .drag-assist-line--edge {

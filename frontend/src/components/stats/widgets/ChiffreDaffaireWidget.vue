@@ -49,6 +49,7 @@ import StatsServices from '@/services/StatsServices'
 import { normalizeKpi, normalizeSeries, parseYmdLocal } from '@/services/statsAdapters'
 import { formatEUR } from '@/utils/formatters'
 import WidgetCard from './_parts/WidgetCard.vue'
+import { fitKpiValueSize } from './_parts/kpiTextFit'
 
 const props = defineProps({
   from: String,
@@ -136,13 +137,13 @@ const pointsCount = computed(() => series.value.length || 0)
 const totalText = computed(() => formatEUR(totalValue.value, { compact: true }))
 
 const layoutVars = computed(() => {
-  const heroLen = totalText.value.replace(/\s+/g, '').length
-  const heroScale = heroLen >= 12 ? 0.72 : heroLen >= 10 ? 0.84 : 1
-  const heroSize = clamp(
-    Math.round(Math.min(layoutWidth.value * 0.09, layoutHeight.value * 0.36) * heroScale),
-    34,
-    68,
-  )
+  const heroSize = fitKpiValueSize(totalText.value, layoutWidth.value, layoutHeight.value, {
+    min: 22,
+    max: 76,
+    paddingX: Math.max(54, layoutWidth.value * 0.3),
+    paddingY: Math.max(18, layoutHeight.value * 0.2),
+    heightRatio: 0.48,
+  })
 
   return {
     '--gr-hero-size': `${heroSize}px`,
@@ -353,7 +354,7 @@ function diffMonths(a, b) {
 .gr-value-only {
   display: grid;
   grid-template-rows: auto auto;
-  align-content: start;
+  align-content: center;
   justify-items: center;
   gap: clamp(7px, 4%, 12px);
   padding: clamp(6px, 4%, 14px) clamp(12px, 5%, 22px) clamp(10px, 5%, 20px);
@@ -376,13 +377,13 @@ function diffMonths(a, b) {
   max-width: 100%;
   color: var(--gr-text);
   font-family: var(--template-title-font, var(--font-display, "Poppins", sans-serif));
-  font-size: clamp(2rem, var(--gr-hero-size), 4rem);
+  font-size: var(--gr-hero-size);
   line-height: 1;
   font-weight: 820;
   letter-spacing: 0;
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
+  text-overflow: clip;
 }
 
 .gr-chart-only {

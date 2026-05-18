@@ -136,18 +136,19 @@ watch(() => [props.from, props.to, props.categories, props.types], load)
   height: 100%;
   overflow: auto;
   display: grid;
-  gap: 8px;
+  align-content: start;
+  gap: 6px;
 }
 
 .check-item {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 10px;
-  align-items: flex-start;
+  gap: 8px;
+  align-items: center;
   border-radius: 8px;
   border: 1px solid rgba(148, 163, 184, 0.24);
   background: rgba(248, 250, 252, 0.82);
-  padding: 10px;
+  padding: 8px 9px;
 }
 
 .check-item.done {
@@ -156,18 +157,16 @@ watch(() => [props.from, props.to, props.categories, props.types], load)
 }
 
 .check-item input {
-  margin-top: 4px;
+  margin: 0;
 }
 
 .check-item strong {
   font-size: 13px;
+  line-height: 1.25;
   color: #111827;
 }
 
 .check-item p {
-  margin-top: 4px;
-  font-size: 12px;
-  color: #64748b;
-  line-height: 1.35;
+  display: none;
 }
 </style>

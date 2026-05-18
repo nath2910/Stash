@@ -132,7 +132,14 @@ const gaugeOption = computed(() => ({
       axisLabel: { color: '#64748b' },
       axisTick: { show: false },
       splitLine: { show: false },
-      detail: { show: false },
+      detail: {
+        show: true,
+        formatter: () => scoreText.value,
+        color: '#111827',
+        fontSize: 18,
+        fontWeight: 800,
+        offsetCenter: [0, '38%'],
+      },
       data: [{ value: scoreNormalized.value }],
     },
   ],
@@ -172,8 +179,8 @@ const sparkOption = computed(() => ({
 .momentum-grid {
   height: 100%;
   display: grid;
-  grid-template-columns: 180px minmax(0, 1fr);
-  gap: 10px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
 }
 
 .momentum-gauge,
@@ -182,9 +189,7 @@ const sparkOption = computed(() => ({
 }
 
 .momentum-side {
-  display: grid;
-  gap: 8px;
-  align-content: start;
+  display: none;
 }
 
 .momentum-score {

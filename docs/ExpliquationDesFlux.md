@@ -7,15 +7,6 @@ Dans ce document:
 - "DB" = PostgreSQL.
 - "Service" = couche metier backend.
 
-Rappel pedagogique JS:
-- Une fonction `async` retourne une *Promise*.
-- `await` dit "attends la reponse avant de continuer".
-- `ref(...)` en Vue cree une valeur reactive (`x.value`).
-- `computed(...)` calcule automatiquement une valeur derivee reactive.
-- `watch(...)` execute une action quand une valeur reactive change.
-
----
-
 ## 2) Flux Auth locale (email/mot de passe)
 
 ### 2.1 Login nominal

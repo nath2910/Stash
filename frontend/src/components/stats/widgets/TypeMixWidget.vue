@@ -190,7 +190,7 @@ const chartHeight = computed(() => {
   }
   return clamp(available, 120, 270)
 })
-const chartStyle = computed(() => ({ height: `${chartHeight.value}px`, minHeight: '0px' }))
+const chartStyle = computed(() => ({ height: '100%', minHeight: '0px' }))
 
 const option = computed(() => {
   const cfg = metricConfig[props.metric] ?? metricConfig.profit
@@ -285,11 +285,21 @@ const option = computed(() => {
       extraCssText: 'border-radius:10px;box-shadow:0 12px 28px rgba(15,23,42,0.14);',
       formatter: ({ name, value, percent }) => `${name}<br/>${cfg.tooltip(value)} - ${percent}%`,
     },
+    legend: {
+      show: true,
+      type: 'scroll',
+      bottom: 0,
+      itemWidth: 8,
+      itemHeight: 8,
+      textStyle: { color: '#64748b', fontSize: 10, fontWeight: 600 },
+      pageIconColor: '#94a3b8',
+      pageTextStyle: { color: '#64748b' },
+    },
     series: [
       {
         type: 'pie',
-        radius: ['45%', '78%'],
-        center: ['50%', '50%'],
+        radius: ['42%', '68%'],
+        center: ['50%', '43%'],
         label: { show: false },
         labelLine: { show: false },
         animationDurationUpdate: 0,
@@ -317,12 +327,12 @@ const toLabel = computed(() =>
   height: 100%;
   min-height: 0;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  gap: 8px;
+  grid-template-rows: minmax(0, 1fr);
+  gap: 0;
 }
 
 .tm-head {
-  display: flex;
+  display: none;
   flex-wrap: wrap;
   gap: 8px;
   justify-content: space-between;
@@ -353,24 +363,23 @@ const toLabel = computed(() =>
 .tm-split {
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) minmax(220px, 1.1fr);
-  gap: 14px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
   align-items: stretch;
 }
 .tm-stack {
   min-height: 0;
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
-  gap: 8px;
+  grid-template-rows: minmax(0, 1fr);
+  gap: 0;
 }
 .tm-chart {
   width: 100%;
+  height: 100%;
   min-height: 0;
 }
 .tm-legend {
-  margin-top: 0;
-  min-height: 0;
-  overflow: hidden;
+  display: none;
 }
 .tm-list {
   min-height: 0;

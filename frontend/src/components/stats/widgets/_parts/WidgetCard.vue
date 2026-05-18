@@ -65,16 +65,16 @@ const isTiny = computed(() => Number(props.widgetWidth ?? 0) > 0 && Number(props
 
 const cardStyle = computed(() => {
   const headerBase = Math.min(props.widgetWidth * 0.018, props.widgetHeight * 0.16)
-  const titleSize = clamp(Math.round(headerBase), 13, 24)
+  const titleSize = clamp(Math.round(headerBase), 12, 18)
   const subtitleSize = clamp(Math.round(titleSize * 0.72), 10, 15)
   const padding = clamp(
-    Math.round(Math.min(props.widgetWidth * 0.02, props.widgetHeight * 0.08)),
-    10,
-    26,
+    Math.round(Math.min(props.widgetWidth * 0.018, props.widgetHeight * 0.055)),
+    8,
+    16,
   )
   const dot = clamp(Math.round(titleSize * 0.48), 6, 11)
   const status = clamp(Math.round(titleSize * 0.82), 11, 20)
-  const radius = clamp(Math.round(Math.min(props.widgetWidth * 0.024, props.widgetHeight * 0.13)), 10, 18)
+  const radius = 8
 
   return {
     '--widget-card-title-size': `${titleSize}px`,
@@ -173,22 +173,22 @@ const cardStyle = computed(() => {
 .widget-card__subtitle {
   font-size: var(--widget-card-subtitle-size);
   color: var(--template-text-muted, rgba(203, 213, 225, 0.78));
-  letter-spacing: 0.03em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  font-weight: 620;
-  opacity: 0.72;
+  font-weight: 720;
+  opacity: 0.78;
 }
 
 .widget-card__title {
   font-size: var(--widget-card-title-size);
   line-height: 1.14;
-  font-weight: 660;
+  font-weight: 760;
   color: var(--template-text, rgba(248, 250, 252, 0.98));
   font-family: var(--template-title-font, var(--font-display, "Poppins", sans-serif));
 }
 
 .widget-card__dot {
-  width: calc(var(--widget-card-dot-size) + 4px);
+  width: calc(var(--widget-card-dot-size) + 12px);
   height: 3px;
   border-radius: 999px;
   opacity: 0.68;
@@ -205,7 +205,7 @@ const cardStyle = computed(() => {
 }
 
 .widget-card.is-narrow .widget-card__zoom {
-  padding: max(10px, calc(var(--widget-card-padding) - 4px));
+  padding: max(8px, calc(var(--widget-card-padding) - 3px));
 }
 
 .widget-card.is-narrow .widget-card__head {
