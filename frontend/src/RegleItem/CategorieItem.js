@@ -1,9 +1,17 @@
-export const ITEM_TYPES = [
-  { value: 'SNEAKER', label: 'Sneaker' },
+export const DEFAULT_ITEM_TYPES = [
+  { value: 'SNEAKER', label: 'Sneakers' },
   { value: 'POKEMON_CARD', label: 'Pokemon' },
-  { value: 'TICKET', label: 'Ticket' },
+  { value: 'TICKET', label: 'Tickets' },
   { value: 'OTHER', label: 'Autre' },
 ]
+
+export const ITEM_TYPES = DEFAULT_ITEM_TYPES
+
+export const ITEM_TYPE_KEYS = DEFAULT_ITEM_TYPES.map((item) => item.value)
+
+export const DEFAULT_ITEM_TYPE_LABELS = Object.fromEntries(
+  DEFAULT_ITEM_TYPES.map((item) => [item.value, item.label]),
+)
 
 export const METADATA_FIELDS = {
   SNEAKER: [
@@ -31,4 +39,4 @@ export const METADATA_FIELDS = {
 }
 
 export const typeLabel = (type) =>
-  (ITEM_TYPES.find((t) => t.value === type)?.label || 'Autre').toUpperCase()
+  (DEFAULT_ITEM_TYPES.find((t) => t.value === type)?.label || 'Autre').toUpperCase()

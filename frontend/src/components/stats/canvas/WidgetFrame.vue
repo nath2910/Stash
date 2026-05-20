@@ -17,11 +17,15 @@
         'group-selected': groupSelected,
         'widget--tight': widget.props?.tight,
         'widget--text': widget.type === 'textTitle' || widget.type === 'textBlock',
+        'widget--shape': isShapeWidget,
+        'widget--rectangle-shape': widget.type === 'rectangleShape',
         'widget--roi': widget.type === 'roi',
         'widget--net-profit': widget.type === 'netProfit',
         'widget--gross-revenue': widget.type === 'grossRevenue',
-        'widget--gross-revenue-kpi': widget.type === 'grossRevenue' && widget.props?.view !== 'line',
-        'widget--gross-revenue-chart': widget.type === 'grossRevenue' && widget.props?.view === 'line',
+        'widget--gross-revenue-kpi':
+          widget.type === 'grossRevenue' && widget.props?.view !== 'line',
+        'widget--gross-revenue-chart':
+          widget.type === 'grossRevenue' && widget.props?.view === 'line',
         'widget--kpi-display': isKpiDisplayWidget(widget),
         'widget--headerless': !showHeader,
         'is-text-active': textActive,
@@ -35,17 +39,72 @@
       @keydown="onRootKeydown"
     >
       <div class="widget__surface" :style="surfaceLayoutStyle">
-      <div v-if="showHeader" class="widget__header drag-handle" :style="headerStyle">
-        <div class="widget__title">
-          <span class="dot" :style="dotStyle" />
-          <span class="title">{{ widget.title }}</span>
-          <span v-if="editMode" class="drag-grip" aria-hidden="true" />
+        <div v-if="showHeader" class="widget__header drag-handle" :style="headerStyle">
+          <div class="widget__title">
+            <span class="dot" :style="dotStyle" />
+            <span class="title">{{ widget.title }}</span>
+            <span v-if="editMode" class="drag-grip" aria-hidden="true" />
+          </div>
+
+          <div
+            v-if="shouldShowWidgetControls"
+            class="widget__actions"
+            :class="{ 'widget__actions--compact': compactActions }"
+            @pointerdown.stop
+          >
+            <template v-if="!compactActions">
+              <button
+                v-for="action in availableWidgetActions"
+                :key="action.key"
+                type="button"
+                class="iconbtn"
+                :class="{ 'is-danger': action.tone === 'danger' }"
+                :title="action.title"
+                :aria-label="action.title"
+                @click.stop="runWidgetAction(action.key)"
+              >
+                <component :is="action.icon" class="w-4 h-4" />
+              </button>
+            </template>
+            <template v-else>
+              <button
+                type="button"
+                class="iconbtn iconbtn--menu"
+                :aria-expanded="isActionMenuOpen ? 'true' : 'false'"
+                aria-label="Plus d actions"
+                title="Plus d actions"
+                @click.stop="toggleActionMenu"
+              >
+                <MoreHorizontal class="w-4 h-4" />
+              </button>
+              <div
+                v-if="isActionMenuOpen"
+                class="widget-action-menu panzoom-exclude"
+                role="menu"
+                aria-label="Actions du widget"
+                @pointerdown.stop
+              >
+                <button
+                  v-for="action in availableWidgetActions"
+                  :key="action.key"
+                  type="button"
+                  class="widget-action-menu__item"
+                  :class="{ 'is-danger': action.tone === 'danger' }"
+                  role="menuitem"
+                  :aria-label="action.title"
+                  @click.stop="runWidgetAction(action.key)"
+                >
+                  <component :is="action.icon" class="w-4 h-4" />
+                  <span>{{ action.label }}</span>
+                </button>
+              </div>
+            </template>
+          </div>
         </div>
 
         <div
-          v-if="shouldShowWidgetControls"
-          class="widget__actions"
-          :class="{ 'widget__actions--compact': compactActions }"
+          v-if="shouldShowFloatingControls"
+          class="widget__floating-actions panzoom-exclude"
           @pointerdown.stop
         >
           <template v-if="!compactActions">
@@ -53,7 +112,7 @@
               v-for="action in availableWidgetActions"
               :key="action.key"
               type="button"
-              class="iconbtn"
+              class="iconbtn iconbtn--glass"
               :class="{ 'is-danger': action.tone === 'danger' }"
               :title="action.title"
               :aria-label="action.title"
@@ -65,7 +124,7 @@
           <template v-else>
             <button
               type="button"
-              class="iconbtn iconbtn--menu"
+              class="iconbtn iconbtn--glass iconbtn--menu"
               :aria-expanded="isActionMenuOpen ? 'true' : 'false'"
               aria-label="Plus d actions"
               title="Plus d actions"
@@ -75,7 +134,7 @@
             </button>
             <div
               v-if="isActionMenuOpen"
-              class="widget-action-menu panzoom-exclude"
+              class="widget-action-menu widget-action-menu--floating panzoom-exclude"
               role="menu"
               aria-label="Actions du widget"
               @pointerdown.stop
@@ -96,202 +155,183 @@
             </div>
           </template>
         </div>
-      </div>
 
-      <div
-        v-if="shouldShowFloatingControls"
-        class="widget__floating-actions panzoom-exclude"
-        @pointerdown.stop
-      >
-        <template v-if="!compactActions">
-          <button
-            v-for="action in availableWidgetActions"
-            :key="action.key"
-            type="button"
-            class="iconbtn iconbtn--glass"
-            :class="{ 'is-danger': action.tone === 'danger' }"
-            :title="action.title"
-            :aria-label="action.title"
-            @click.stop="runWidgetAction(action.key)"
-          >
-            <component :is="action.icon" class="w-4 h-4" />
-          </button>
-        </template>
-        <template v-else>
-          <button
-            type="button"
-            class="iconbtn iconbtn--glass iconbtn--menu"
-            :aria-expanded="isActionMenuOpen ? 'true' : 'false'"
-            aria-label="Plus d actions"
-            title="Plus d actions"
-            @click.stop="toggleActionMenu"
-          >
-            <MoreHorizontal class="w-4 h-4" />
-          </button>
-          <div
-            v-if="isActionMenuOpen"
-            class="widget-action-menu widget-action-menu--floating panzoom-exclude"
-            role="menu"
-            aria-label="Actions du widget"
-            @pointerdown.stop
-          >
-            <button
-              v-for="action in availableWidgetActions"
-              :key="action.key"
-              type="button"
-              class="widget-action-menu__item"
-              :class="{ 'is-danger': action.tone === 'danger' }"
-              role="menuitem"
-              :aria-label="action.title"
-              @click.stop="runWidgetAction(action.key)"
-            >
-              <component :is="action.icon" class="w-4 h-4" />
-              <span>{{ action.label }}</span>
-            </button>
-          </div>
-        </template>
-      </div>
-
-      <div
-        v-if="uiActive && editMode && isTextWidget && !isFullscreen"
-        class="text-toolbar panzoom-exclude"
-        role="toolbar"
-        aria-label="Outils de texte"
-        @pointerdown.stop
-      >
-        <select
-          class="text-toolbar__select"
-          :value="String(widget.props?.fontFamily ?? 'poppins')"
-          aria-label="Police du texte"
-          @change="emitTextProp('fontFamily', ($event.target as HTMLSelectElement).value)"
+        <div
+          v-if="uiActive && editMode && isTextWidget && !isFullscreen"
+          class="text-toolbar panzoom-exclude"
+          role="toolbar"
+          aria-label="Outils de texte"
+          @pointerdown.stop
         >
-          <option v-for="font in textFonts" :key="font.value" :value="font.value">
-            {{ font.label }}
-          </option>
-        </select>
-        <input
-          class="text-toolbar__size"
-          type="number"
-          :value="Number(widget.props?.fontSize ?? defaultFontSize)"
-          :min="isTitleWidget ? 16 : 12"
-          :max="620"
-          aria-label="Taille du texte"
-          @input="emitTextProp('fontSize', Number(($event.target as HTMLInputElement).value || defaultFontSize))"
-        />
-        <button
-          type="button"
-          class="text-toolbar__btn"
-          :class="{ 'is-active': String(widget.props?.weight ?? defaultWeight) === 'bold' || String(widget.props?.weight ?? defaultWeight) === 'heavy' }"
-          :aria-pressed="String(widget.props?.weight ?? defaultWeight) === 'bold' || String(widget.props?.weight ?? defaultWeight) === 'heavy'"
-          aria-label="Activer gras"
-          @click="toggleBold"
-        >
-          B
-        </button>
-        <div class="text-toolbar__align">
+          <select
+            class="text-toolbar__select"
+            :value="String(widget.props?.fontFamily ?? 'poppins')"
+            aria-label="Police du texte"
+            @change="emitTextProp('fontFamily', ($event.target as HTMLSelectElement).value)"
+          >
+            <option v-for="font in textFonts" :key="font.value" :value="font.value">
+              {{ font.label }}
+            </option>
+          </select>
+          <input
+            class="text-toolbar__size"
+            type="number"
+            :value="Number(widget.props?.fontSize ?? defaultFontSize)"
+            :min="isTitleWidget ? 16 : 12"
+            :max="620"
+            aria-label="Taille du texte"
+            @input="
+              emitTextProp(
+                'fontSize',
+                Number(($event.target as HTMLInputElement).value || defaultFontSize),
+              )
+            "
+          />
           <button
             type="button"
-            class="text-toolbar__btn text-toolbar__align-toggle"
-            :class="{ 'is-active': isAlignMenuOpen }"
-            :aria-expanded="isAlignMenuOpen"
-            aria-label="Alignement du texte"
-            @click.stop="toggleAlignMenu"
+            class="text-toolbar__btn"
+            :class="{
+              'is-active':
+                String(widget.props?.weight ?? defaultWeight) === 'bold' ||
+                String(widget.props?.weight ?? defaultWeight) === 'heavy',
+            }"
+            :aria-pressed="
+              String(widget.props?.weight ?? defaultWeight) === 'bold' ||
+              String(widget.props?.weight ?? defaultWeight) === 'heavy'
+            "
+            aria-label="Activer gras"
+            @click="toggleBold"
           >
-            <component :is="currentTextAlignOption.icon" class="w-4 h-4" />
-            <ChevronDown class="text-toolbar__align-caret w-3.5 h-3.5" :class="{ 'is-open': isAlignMenuOpen }" />
+            B
           </button>
-          <div
-            v-if="isAlignMenuOpen"
-            class="text-toolbar__align-menu"
-            role="menu"
-            aria-label="Options d'alignement"
-            @pointerdown.stop
-          >
+          <div class="text-toolbar__align">
             <button
-              v-for="align in textAlignOptions"
-              :key="align.value"
               type="button"
-              class="text-toolbar__align-option"
-              role="menuitemradio"
-              :aria-checked="currentTextAlign === align.value"
-              :class="{ 'is-active': currentTextAlign === align.value }"
-              :title="align.title"
-              :aria-label="align.title"
-              @click.stop="applyTextAlign(align.value)"
+              class="text-toolbar__btn text-toolbar__align-toggle"
+              :class="{ 'is-active': isAlignMenuOpen }"
+              :aria-expanded="isAlignMenuOpen"
+              aria-label="Alignement du texte"
+              @click.stop="toggleAlignMenu"
             >
-              <component :is="align.icon" class="w-4 h-4" />
+              <component :is="currentTextAlignOption.icon" class="w-4 h-4" />
+              <ChevronDown
+                class="text-toolbar__align-caret w-3.5 h-3.5"
+                :class="{ 'is-open': isAlignMenuOpen }"
+              />
             </button>
-          </div>
-        </div>
-        <input
-          class="text-toolbar__color"
-          type="color"
-          :value="String(widget.props?.color ?? defaultColor)"
-          aria-label="Couleur du texte"
-          @input="emitTextProp('color', ($event.target as HTMLInputElement).value)"
-        />
-        <span class="text-toolbar__sep" aria-hidden="true"></span>
-        <div class="text-toolbar__actions">
-          <button
-            type="button"
-            class="text-toolbar__iconbtn"
-            title="Dupliquer"
-            aria-label="Dupliquer"
-            @click.stop="$emit('duplicate')"
-          >
-            <Copy class="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            class="text-toolbar__iconbtn text-toolbar__delete"
-            title="Suppr"
-            aria-label="Supprimer ce widget"
-            @click.stop="emitRemoveWidget"
-          >
-            <Trash2 class="w-4 h-4" />
-            <span>Suppr</span>
-          </button>
-        </div>
-      </div>
-
-      <div
-        ref="bodyEl"
-        class="widget__body"
-        :class="{ 'widget__body--auto': shouldAutoHeight, 'widget__body--no-header': !showHeader }"
-        :style="bodyStyle"
-      >
-        <div class="widget__content-scale" :style="contentLayoutStyle">
-          <div
-            ref="contentInnerEl"
-            class="widget__content-inner"
-            @dblclick.stop="onWidgetBodyDoubleClick"
-          >
-            <component
-              v-if="!isInlineTextEditing"
-              :is="comp"
-              :from="from"
-              :to="to"
-              v-bind="mergedProps"
-              @view-change="onWidgetViewChange"
-            />
             <div
-              v-else
-              ref="inlineEditorEl"
-              class="text-inline-editor"
-              :style="inlineEditorStyle"
-              contenteditable="true"
-              role="textbox"
-              aria-multiline="true"
-              aria-label="Edition de texte"
-              @input="onInlineEditorInput"
-              @keydown="onInlineEditorKeydown"
-              @blur="onInlineEditorBlur"
-              @paste="onInlineEditorPaste"
+              v-if="isAlignMenuOpen"
+              class="text-toolbar__align-menu"
+              role="menu"
+              aria-label="Options d'alignement"
               @pointerdown.stop
-            />
+            >
+              <button
+                v-for="align in textAlignOptions"
+                :key="align.value"
+                type="button"
+                class="text-toolbar__align-option"
+                role="menuitemradio"
+                :aria-checked="currentTextAlign === align.value"
+                :class="{ 'is-active': currentTextAlign === align.value }"
+                :title="align.title"
+                :aria-label="align.title"
+                @click.stop="applyTextAlign(align.value)"
+              >
+                <component :is="align.icon" class="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+          <input
+            class="text-toolbar__color"
+            type="color"
+            :value="String(widget.props?.color ?? defaultColor)"
+            aria-label="Couleur du texte"
+            @input="emitTextProp('color', ($event.target as HTMLInputElement).value)"
+          />
+          <button
+            type="button"
+            class="text-toolbar__btn"
+            title="Rotation -90 deg"
+            aria-label="Rotation -90 deg"
+            @click="rotateText(-90)"
+          >
+            <RotateCcw class="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            class="text-toolbar__btn"
+            title="Rotation +90 deg"
+            aria-label="Rotation +90 deg"
+            @click="rotateText(90)"
+          >
+            <RotateCw class="w-4 h-4" />
+          </button>
+          <span class="text-toolbar__sep" aria-hidden="true"></span>
+          <div class="text-toolbar__actions">
+            <button
+              type="button"
+              class="text-toolbar__iconbtn"
+              title="Dupliquer"
+              aria-label="Dupliquer"
+              @click.stop="$emit('duplicate')"
+            >
+              <Copy class="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              class="text-toolbar__iconbtn text-toolbar__delete"
+              title="Suppr"
+              aria-label="Supprimer ce widget"
+              @click.stop="emitRemoveWidget"
+            >
+              <Trash2 class="w-4 h-4" />
+              <span>Suppr</span>
+            </button>
           </div>
         </div>
-      </div>
+
+        <div
+          ref="bodyEl"
+          class="widget__body"
+          :class="{
+            'widget__body--auto': shouldAutoHeight,
+            'widget__body--no-header': !showHeader,
+          }"
+          :style="bodyStyle"
+        >
+          <div class="widget__content-scale" :style="contentLayoutStyle">
+            <div
+              ref="contentInnerEl"
+              class="widget__content-inner"
+              @dblclick.stop="onWidgetBodyDoubleClick"
+            >
+              <component
+                v-if="!isInlineTextEditing"
+                :is="comp"
+                :from="from"
+                :to="to"
+                v-bind="mergedProps"
+                @view-change="onWidgetViewChange"
+              />
+              <div
+                v-else
+                ref="inlineEditorEl"
+                class="text-inline-editor"
+                :style="inlineEditorStyle"
+                contenteditable="true"
+                role="textbox"
+                aria-multiline="true"
+                aria-label="Edition de texte"
+                @input="onInlineEditorInput"
+                @keydown="onInlineEditorKeydown"
+                @blur="onInlineEditorBlur"
+                @paste="onInlineEditorPaste"
+                @pointerdown.stop
+              />
+            </div>
+          </div>
+        </div>
       </div>
 
       <div v-if="uiActive && editMode && !isFullscreen" class="widget__resize-overlay">
@@ -350,10 +390,13 @@ import {
   ChevronDown,
   Copy,
   MoreHorizontal,
+  RotateCcw,
+  RotateCw,
   Settings,
   Trash2,
 } from 'lucide-vue-next'
 import { KPI_TILE_WIDGET_TYPES, getCategoryColor, getWidgetDef } from '../widgetRegistry'
+import { normalizeWidgetRotation, resolveWidgetRotation } from './widgetTransform'
 
 type Widget = {
   id: string
@@ -402,9 +445,10 @@ const emit = defineEmits<{
 const isTextWidget = computed(
   () => props.widget?.type === 'textTitle' || props.widget?.type === 'textBlock',
 )
+const isShapeWidget = computed(() => props.widget?.type === 'rectangleShape')
 const isRoiWidget = computed(() => props.widget?.type === 'roi')
-const showHeader = computed(() => !isTextWidget.value)
-const showFloatingActions = computed(() => false)
+const showHeader = computed(() => !isTextWidget.value && !isShapeWidget.value)
+const showFloatingActions = computed(() => isShapeWidget.value)
 const shouldShowWidgetControls = computed(
   () =>
     props.uiActive &&
@@ -485,8 +529,10 @@ const currentTextAlign = computed<'left' | 'center' | 'right'>(() => {
   return 'left'
 })
 const currentTextAlignOption = computed(
-  () => textAlignOptions.find((align) => align.value === currentTextAlign.value) ?? textAlignOptions[0],
+  () =>
+    textAlignOptions.find((align) => align.value === currentTextAlign.value) ?? textAlignOptions[0],
 )
+const currentTextRotation = computed(() => resolveWidgetRotation(props.widget))
 
 type WidgetActionKey = 'duplicate' | 'settings' | 'remove'
 type WidgetAction = {
@@ -516,7 +562,8 @@ const availableWidgetActions = computed<WidgetAction[]>(() => {
 })
 
 function resolveTextFontSize() {
-  const fallback = Number(props.widget?.props?.fontSize ?? defaultFontSize.value) || defaultFontSize.value
+  const fallback =
+    Number(props.widget?.props?.fontSize ?? defaultFontSize.value) || defaultFontSize.value
   const min = isTitleWidget.value ? 16 : 12
   const max = 620
   return Math.max(min, Math.min(max, Math.round(fallback)))
@@ -578,7 +625,8 @@ const inlineEditorStyle = computed(() => {
 })
 const textUiScale = computed(() => {
   if (!isTextWidget.value) return 1
-  const raw = Number(props.widget?.props?.fontSize ?? defaultFontSize.value) || defaultFontSize.value
+  const raw =
+    Number(props.widget?.props?.fontSize ?? defaultFontSize.value) || defaultFontSize.value
   const base = isTitleWidget.value ? 52 : 17
   return Math.max(1, Math.min(raw / Math.max(base, 1), 2.4))
 })
@@ -830,6 +878,9 @@ const visibleHandles = computed(() => {
 })
 
 const edgeHandles = computed(() => {
+  if (isShapeWidget.value) {
+    return handles.filter((handle) => ['n', 's', 'e', 'w'].includes(handle.dir))
+  }
   // Text widgets keep Canva-like side rails (left/right) for width resize.
   if (isTextWidget.value) {
     return handles.filter((handle) => handle.dir === 'e' || handle.dir === 'w')
@@ -841,9 +892,11 @@ const edgeHandles = computed(() => {
 const resizeHintText = computed(() =>
   isTextWidget.value
     ? 'Coins: taille du texte'
-    : isRoiWidget.value
-      ? 'Coins: zoom uniforme | Alt: centre'
-      : 'Coins: zoom uniforme | Alt: centre',
+    : isShapeWidget.value
+      ? 'Cotes: largeur/hauteur | Coins: echelle'
+      : isRoiWidget.value
+        ? 'Coins: zoom uniforme | Alt: centre'
+        : 'Coins: zoom uniforme | Alt: centre',
 )
 
 function onResizeHandleDown(dir: ResizeDir, event: PointerEvent) {
@@ -932,6 +985,11 @@ function toggleAlignMenu() {
 function applyTextAlign(value: 'left' | 'center' | 'right') {
   emitTextProp('align', value)
   isAlignMenuOpen.value = false
+}
+
+function rotateText(delta: number) {
+  if (!props.editMode || !isTextWidget.value) return
+  emitTextProp('rotation', normalizeWidgetRotation(currentTextRotation.value + delta))
 }
 
 function placeCaretAtEnd(el: HTMLElement) {
@@ -1116,7 +1174,8 @@ function beginResizePreview(el: HTMLElement) {
   const width = Number(el.offsetWidth)
   const height = Number(el.offsetHeight)
   const measuredWidth = Number.isFinite(width) && width > 0 ? width : Number(props.widget?.w ?? 1)
-  const measuredHeight = Number.isFinite(height) && height > 0 ? height : Number(props.widget?.h ?? 1)
+  const measuredHeight =
+    Number.isFinite(height) && height > 0 ? height : Number(props.widget?.h ?? 1)
   const currentBodyHeight = readBodyRenderHeight(measuredHeight)
 
   resizeBaseWidth.value = Math.max(
@@ -1327,7 +1386,13 @@ watch(
 )
 
 watch(
-  () => [props.widget?.w, props.widget?.h, props.widget?.id, isFullscreen.value, headerOffset.value],
+  () => [
+    props.widget?.w,
+    props.widget?.h,
+    props.widget?.id,
+    isFullscreen.value,
+    headerOffset.value,
+  ],
   () => {
     scheduleWidgetSizeMeasure()
   },
@@ -1430,7 +1495,7 @@ function onRootKeydown(event: KeyboardEvent) {
   position: absolute;
   border-radius: 8px;
   overflow: visible;
-  font-family: var(--font-ui, var(--font-sans, "Poppins", sans-serif));
+  font-family: var(--font-ui, var(--font-sans, 'Poppins', sans-serif));
   background: var(--canvas-widget-bg, rgba(10, 15, 26, 0.88));
   border: 1px solid var(--canvas-widget-border, rgba(148, 163, 184, 0.2));
   box-shadow: var(--canvas-widget-shadow, 0 4px 14px rgba(2, 6, 23, 0.18));
@@ -1464,6 +1529,36 @@ function onRootKeydown(event: KeyboardEvent) {
   border-radius: inherit;
   overflow: hidden;
   background: inherit;
+}
+.widget--shape {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  contain: layout;
+}
+.widget--shape .widget__surface {
+  overflow: visible;
+  background: transparent;
+}
+.widget--shape .widget__body {
+  height: 100%;
+  overflow: visible;
+}
+.widget--shape:hover,
+.widget--shape.drag-armed,
+.widget--shape.is-resizing,
+.widget--shape.is-dragging {
+  border-color: rgba(79, 70, 229, 0.34);
+  box-shadow:
+    0 0 0 1px rgba(79, 70, 229, 0.18),
+    0 12px 26px rgba(15, 23, 42, 0.1);
+}
+.widget--shape.is-selected {
+  border-color: rgba(79, 70, 229, 0.58);
+  box-shadow:
+    0 0 0 1px rgba(79, 70, 229, 0.42),
+    0 0 0 4px rgba(79, 70, 229, 0.08),
+    0 14px 28px rgba(15, 23, 42, 0.12);
 }
 .widget--text {
   background: transparent;
@@ -1759,11 +1854,7 @@ function onRootKeydown(event: KeyboardEvent) {
   width: 4px;
   left: 16px;
   border-radius: 999px;
-  background: linear-gradient(
-    180deg,
-    rgba(248, 250, 252, 1),
-    rgba(226, 232, 240, 1)
-  );
+  background: linear-gradient(180deg, rgba(248, 250, 252, 1), rgba(226, 232, 240, 1));
   box-shadow:
     0 0 0 1px rgba(59, 130, 246, 0.22),
     0 0 8px rgba(96, 165, 250, 0.22),
@@ -1919,7 +2010,7 @@ function onRootKeydown(event: KeyboardEvent) {
 .widget--gross-revenue {
   --template-text: #111827;
   --template-text-muted: #64748b;
-  --template-title-font: var(--font-display, "Poppins", sans-serif);
+  --template-title-font: var(--font-display, 'Poppins', sans-serif);
   border-radius: 8px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 250, 252, 0.98)),
@@ -1965,8 +2056,8 @@ function onRootKeydown(event: KeyboardEvent) {
 
 .widget--gross-revenue .drag-grip {
   opacity: 0.28;
-  background:
-    radial-gradient(circle, rgba(100, 116, 139, 0.68) 1px, transparent 1.5px) 0 0 / 6px 6px;
+  background: radial-gradient(circle, rgba(100, 116, 139, 0.68) 1px, transparent 1.5px) 0 0 / 6px
+    6px;
 }
 
 .widget--gross-revenue .widget__actions {
@@ -1997,7 +2088,7 @@ function onRootKeydown(event: KeyboardEvent) {
   --kpi-header-height: 40px;
   --template-text: #111827;
   --template-text-muted: #64748b;
-  --template-title-font: var(--font-display, "Poppins", sans-serif);
+  --template-title-font: var(--font-display, 'Poppins', sans-serif);
   border-radius: 8px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 250, 252, 0.98)),
@@ -2144,8 +2235,8 @@ function onRootKeydown(event: KeyboardEvent) {
   height: 10px;
   border-radius: 5px;
   opacity: 0.24;
-  background:
-    radial-gradient(circle, rgba(100, 116, 139, 0.58) 1px, transparent 1.5px) 0 0 / 5px 5px;
+  background: radial-gradient(circle, rgba(100, 116, 139, 0.58) 1px, transparent 1.5px) 0 0 / 5px
+    5px;
 }
 
 .widget__actions {
@@ -2201,6 +2292,21 @@ function onRootKeydown(event: KeyboardEvent) {
   transition:
     opacity 140ms ease,
     transform 140ms ease;
+}
+.widget[data-edit='true']:hover .widget__floating-actions,
+.widget.is-selected .widget__floating-actions,
+.widget.is-resizing .widget__floating-actions,
+.widget.drag-armed .widget__floating-actions,
+.widget:focus-within .widget__floating-actions {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+.widget:not([data-edit='true']) .widget__floating-actions,
+.widget.is-ui-inactive .widget__floating-actions {
+  opacity: 0;
+  transform: translateY(-2px);
+  pointer-events: none;
 }
 .iconbtn {
   width: calc(30px * var(--action-ui-scale, 1));
@@ -2320,8 +2426,12 @@ function onRootKeydown(event: KeyboardEvent) {
 .widget__body:not(.widget__body--auto) > :deep(*) {
   height: 100%;
 }
-.widget[data-edit='true']:not(.widget--text):not(.is-fullscreen) .widget__content-inner :deep(.echarts),
-.widget[data-edit='true']:not(.widget--text):not(.is-fullscreen) .widget__content-inner :deep(canvas),
+.widget[data-edit='true']:not(.widget--text):not(.is-fullscreen)
+  .widget__content-inner
+  :deep(.echarts),
+.widget[data-edit='true']:not(.widget--text):not(.is-fullscreen)
+  .widget__content-inner
+  :deep(canvas),
 .widget[data-edit='true']:not(.widget--text):not(.is-fullscreen) .widget__content-inner :deep(svg) {
   pointer-events: none;
 }
@@ -2424,8 +2534,6 @@ function onRootKeydown(event: KeyboardEvent) {
   outline-offset: 2px;
   border-radius: 10px;
 }
-
-
 
 .widget__resize-overlay {
   position: absolute;
@@ -2537,11 +2645,7 @@ function onRootKeydown(event: KeyboardEvent) {
   width: 4px;
   left: 16px;
   border-radius: 999px;
-  background: linear-gradient(
-    180deg,
-    rgba(248, 250, 252, 1),
-    rgba(226, 232, 240, 1)
-  );
+  background: linear-gradient(180deg, rgba(248, 250, 252, 1), rgba(226, 232, 240, 1));
   box-shadow:
     0 0 0 1px rgba(59, 130, 246, 0.22),
     0 0 8px rgba(96, 165, 250, 0.22),
@@ -2686,7 +2790,7 @@ function onRootKeydown(event: KeyboardEvent) {
   height: 7px;
 }
 
-.widget--text[data-edit="true"] .resize-handle--corner {
+.widget--text[data-edit='true'] .resize-handle--corner {
   --handle-scale: 0.84;
   opacity: 0;
   pointer-events: none;
@@ -2720,7 +2824,7 @@ function onRootKeydown(event: KeyboardEvent) {
   transform: translate(-50%, 50%) scale(var(--handle-scale));
 }
 
-.widget--text[data-edit="true"] .resize-handle--corner {
+.widget--text[data-edit='true'] .resize-handle--corner {
   opacity: 0;
   --handle-scale: 0.84;
   pointer-events: none;
@@ -2739,7 +2843,7 @@ function onRootKeydown(event: KeyboardEvent) {
   pointer-events: auto;
 }
 
-.widget[data-edit="true"]:hover .resize-rail,
+.widget[data-edit='true']:hover .resize-rail,
 .widget.is-resizing .resize-rail,
 .widget.drag-armed .resize-rail,
 .widget:focus-within .resize-rail {
@@ -2785,15 +2889,15 @@ function onRootKeydown(event: KeyboardEvent) {
   opacity: 0.18;
 }
 
-.widget--text[data-edit="true"] .resize-handle,
-.widget--text[data-edit="true"] .resize-edge {
+.widget--text[data-edit='true'] .resize-handle,
+.widget--text[data-edit='true'] .resize-edge {
   opacity: 0;
   --handle-scale: 0.84;
   pointer-events: none;
 }
 
-.widget--text[data-text-active="true"] .resize-handle,
-.widget--text[data-text-active="true"] .resize-edge,
+.widget--text[data-text-active='true'] .resize-handle,
+.widget--text[data-text-active='true'] .resize-edge,
 .widget--text.is-resizing .resize-handle,
 .widget--text.is-resizing .resize-edge {
   --handle-scale: 1;
@@ -2838,7 +2942,7 @@ function onRootKeydown(event: KeyboardEvent) {
   white-space: nowrap;
 }
 
-.widget[data-edit="true"]:hover .resize-meta,
+.widget[data-edit='true']:hover .resize-meta,
 .widget.is-resizing .resize-meta,
 .widget.drag-armed .resize-meta,
 .widget:focus-within .resize-meta {

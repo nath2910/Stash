@@ -23,6 +23,11 @@ const META_BY_TYPE: Record<string, WidgetPaletteMeta> = {
     dataType: 'text',
     preview: { kind: 'text', label: 'Bloc texte', legend: ['Texte descriptif'] },
   },
+  rectangleShape: {
+    tags: ['shape', 'rectangle', 'background'],
+    dataType: 'mixed',
+    preview: { kind: 'treemap', label: 'Rectangle' },
+  },
   netProfit: {
     tags: ['kpi', 'trend', 'profit'],
     dataType: 'finance',
@@ -276,8 +281,18 @@ const META_BY_TYPE: Record<string, WidgetPaletteMeta> = {
 }
 
 const METRIC_VARIANTS = {
-  netProfit: { label: 'Bénéfice net', hint: 'Profit net sur la periode', unit: 'EUR', target: 12000 },
-  grossRevenue: { label: "Chiffre d'affaires", hint: 'CA sur la periode', unit: 'EUR', target: 42000 },
+  netProfit: {
+    label: 'Bénéfice net',
+    hint: 'Profit net sur la periode',
+    unit: 'EUR',
+    target: 12000,
+  },
+  grossRevenue: {
+    label: "Chiffre d'affaires",
+    hint: 'CA sur la periode',
+    unit: 'EUR',
+    target: 42000,
+  },
   cashAvailable: { label: 'Cash disponible', hint: 'Cash mobilisable', unit: 'EUR', target: 12000 },
   avgMargin: { label: 'Marge moyenne', hint: 'Marge moyenne par vente', unit: '%', target: 28 },
   roi: { label: 'ROI moyen', hint: 'Retour sur investissement', unit: '%', target: 35 },
@@ -417,7 +432,9 @@ const SELECTION_BY_TYPE: Record<string, WidgetDisplayGroup[]> = {
       key: 'number',
       label: 'KPI',
       hint: 'Stock',
-      variants: [{ key: 'value', label: 'Valeur du stock', hint: "Capital immobilise a la date choisie" }],
+      variants: [
+        { key: 'value', label: 'Valeur du stock', hint: 'Capital immobilise a la date choisie' },
+      ],
     },
   ],
   sellThrough: [
@@ -425,7 +442,9 @@ const SELECTION_BY_TYPE: Record<string, WidgetDisplayGroup[]> = {
       key: 'number',
       label: 'KPI',
       hint: 'Vitesse de stock',
-      variants: [{ key: 'rate', label: 'Taux d’écoulement', hint: 'Part du stock vendu vs objectif' }],
+      variants: [
+        { key: 'rate', label: 'Taux d’écoulement', hint: 'Part du stock vendu vs objectif' },
+      ],
     },
   ],
   avgDaysToSell: [
@@ -433,7 +452,9 @@ const SELECTION_BY_TYPE: Record<string, WidgetDisplayGroup[]> = {
       key: 'number',
       label: 'KPI',
       hint: 'Rotation',
-      variants: [{ key: 'days', label: 'Délai moyen avant vente', hint: 'Temps moyen entre achat et vente' }],
+      variants: [
+        { key: 'days', label: 'Délai moyen avant vente', hint: 'Temps moyen entre achat et vente' },
+      ],
     },
   ],
   activeListings: [
@@ -449,7 +470,9 @@ const SELECTION_BY_TYPE: Record<string, WidgetDisplayGroup[]> = {
       key: 'number',
       label: 'KPI',
       hint: 'Prix de vente',
-      variants: [{ key: 'avg', label: 'Prix moyen de vente', hint: 'Prix de vente moyen sur la periode' }],
+      variants: [
+        { key: 'avg', label: 'Prix moyen de vente', hint: 'Prix de vente moyen sur la periode' },
+      ],
     },
   ],
   cashFlow: [
@@ -457,7 +480,9 @@ const SELECTION_BY_TYPE: Record<string, WidgetDisplayGroup[]> = {
       key: 'number',
       label: 'KPI',
       hint: 'Tresorerie',
-      variants: [{ key: 'available', label: 'Cash disponible', hint: 'Cash mobilisable pour le stock' }],
+      variants: [
+        { key: 'available', label: 'Cash disponible', hint: 'Cash mobilisable pour le stock' },
+      ],
     },
   ],
   goalProgress: [
@@ -517,25 +542,57 @@ const SELECTION_BY_TYPE: Record<string, WidgetDisplayGroup[]> = {
       key: 'bars',
       label: 'Barres',
       hint: 'Classement lisible',
-      variants: [{ key: 'bars', label: 'Top profit en barres', hint: 'Top elements par contribution', view: 'bars', props: { view: 'bars' } }],
+      variants: [
+        {
+          key: 'bars',
+          label: 'Top profit en barres',
+          hint: 'Top elements par contribution',
+          view: 'bars',
+          props: { view: 'bars' },
+        },
+      ],
     },
     {
       key: 'pie',
       label: 'Donut',
       hint: 'Repartition',
-      variants: [{ key: 'pie', label: 'Repartition du profit', hint: 'Part de chaque driver', view: 'pie', props: { view: 'pie' } }],
+      variants: [
+        {
+          key: 'pie',
+          label: 'Repartition du profit',
+          hint: 'Part de chaque driver',
+          view: 'pie',
+          props: { view: 'pie' },
+        },
+      ],
     },
     {
       key: 'treemap',
       label: 'Treemap',
       hint: 'Surface relative',
-      variants: [{ key: 'treemap', label: 'Treemap profit', hint: 'Comparer par surface', view: 'treemap', props: { view: 'treemap' } }],
+      variants: [
+        {
+          key: 'treemap',
+          label: 'Treemap profit',
+          hint: 'Comparer par surface',
+          view: 'treemap',
+          props: { view: 'treemap' },
+        },
+      ],
     },
     {
       key: 'heatmap',
       label: 'Heatmap',
       hint: 'Intensites',
-      variants: [{ key: 'heatmap', label: 'Heatmap profit', hint: 'Concentration des gains', view: 'heatmap', props: { view: 'heatmap' } }],
+      variants: [
+        {
+          key: 'heatmap',
+          label: 'Heatmap profit',
+          hint: 'Concentration des gains',
+          view: 'heatmap',
+          props: { view: 'heatmap' },
+        },
+      ],
     },
   ],
   brands: [
@@ -543,19 +600,43 @@ const SELECTION_BY_TYPE: Record<string, WidgetDisplayGroup[]> = {
       key: 'bars',
       label: 'Barres',
       hint: 'Volume par marque',
-      variants: [{ key: 'bars', label: 'Top marques en barres', hint: 'Classement par volume', view: 'bars', props: { view: 'bars' } }],
+      variants: [
+        {
+          key: 'bars',
+          label: 'Top marques en barres',
+          hint: 'Classement par volume',
+          view: 'bars',
+          props: { view: 'bars' },
+        },
+      ],
     },
     {
       key: 'treemap',
       label: 'Treemap',
       hint: 'Surface relative',
-      variants: [{ key: 'treemap', label: 'Treemap marques', hint: 'Comparer les marques', view: 'treemap', props: { view: 'treemap' } }],
+      variants: [
+        {
+          key: 'treemap',
+          label: 'Treemap marques',
+          hint: 'Comparer les marques',
+          view: 'treemap',
+          props: { view: 'treemap' },
+        },
+      ],
     },
     {
       key: 'heatmap',
       label: 'Heatmap',
       hint: 'Intensites',
-      variants: [{ key: 'heatmap', label: 'Heatmap marques', hint: 'Concentration de volume', view: 'heatmap', props: { view: 'heatmap' } }],
+      variants: [
+        {
+          key: 'heatmap',
+          label: 'Heatmap marques',
+          hint: 'Concentration de volume',
+          view: 'heatmap',
+          props: { view: 'heatmap' },
+        },
+      ],
     },
   ],
   typeMix: [
@@ -564,9 +645,27 @@ const SELECTION_BY_TYPE: Record<string, WidgetDisplayGroup[]> = {
       label: 'Donut',
       hint: 'Repartition',
       variants: [
-        { key: 'profit-pie', label: 'Repartition du profit', hint: 'Profit par type', view: 'pie', props: { view: 'pie', metric: 'profit' } },
-        { key: 'sold-pie', label: 'Repartition des ventes', hint: 'Ventes par type', view: 'pie', props: { view: 'pie', metric: 'sold' } },
-        { key: 'stock-pie', label: 'Repartition du stock', hint: 'Stock par type', view: 'pie', props: { view: 'pie', metric: 'stock' } },
+        {
+          key: 'profit-pie',
+          label: 'Repartition du profit',
+          hint: 'Profit par type',
+          view: 'pie',
+          props: { view: 'pie', metric: 'profit' },
+        },
+        {
+          key: 'sold-pie',
+          label: 'Repartition des ventes',
+          hint: 'Ventes par type',
+          view: 'pie',
+          props: { view: 'pie', metric: 'sold' },
+        },
+        {
+          key: 'stock-pie',
+          label: 'Repartition du stock',
+          hint: 'Stock par type',
+          view: 'pie',
+          props: { view: 'pie', metric: 'stock' },
+        },
       ],
     },
     {
@@ -574,9 +673,27 @@ const SELECTION_BY_TYPE: Record<string, WidgetDisplayGroup[]> = {
       label: 'Barres',
       hint: 'Comparer les types',
       variants: [
-        { key: 'profit-bars', label: 'Profit par type', hint: 'Barres de contribution', view: 'bars', props: { view: 'bars', metric: 'profit' } },
-        { key: 'sold-bars', label: 'Ventes par type', hint: 'Barres de volume', view: 'bars', props: { view: 'bars', metric: 'sold' } },
-        { key: 'stock-bars', label: 'Stock par type', hint: 'Barres de stock', view: 'bars', props: { view: 'bars', metric: 'stock' } },
+        {
+          key: 'profit-bars',
+          label: 'Profit par type',
+          hint: 'Barres de contribution',
+          view: 'bars',
+          props: { view: 'bars', metric: 'profit' },
+        },
+        {
+          key: 'sold-bars',
+          label: 'Ventes par type',
+          hint: 'Barres de volume',
+          view: 'bars',
+          props: { view: 'bars', metric: 'sold' },
+        },
+        {
+          key: 'stock-bars',
+          label: 'Stock par type',
+          hint: 'Barres de stock',
+          view: 'bars',
+          props: { view: 'bars', metric: 'stock' },
+        },
       ],
     },
     {
@@ -584,8 +701,20 @@ const SELECTION_BY_TYPE: Record<string, WidgetDisplayGroup[]> = {
       label: 'Treemap',
       hint: 'Surface relative',
       variants: [
-        { key: 'profit-treemap', label: 'Treemap profit', hint: 'Contribution par type', view: 'treemap', props: { view: 'treemap', metric: 'profit' } },
-        { key: 'stock-treemap', label: 'Treemap stock', hint: 'Stock par type', view: 'treemap', props: { view: 'treemap', metric: 'stock' } },
+        {
+          key: 'profit-treemap',
+          label: 'Treemap profit',
+          hint: 'Contribution par type',
+          view: 'treemap',
+          props: { view: 'treemap', metric: 'profit' },
+        },
+        {
+          key: 'stock-treemap',
+          label: 'Treemap stock',
+          hint: 'Stock par type',
+          view: 'treemap',
+          props: { view: 'treemap', metric: 'stock' },
+        },
       ],
     },
   ],
@@ -594,7 +723,9 @@ const SELECTION_BY_TYPE: Record<string, WidgetDisplayGroup[]> = {
       key: 'list',
       label: 'Liste courte',
       hint: 'Classement',
-      variants: [{ key: 'profit', label: 'Top ventes par benefice', hint: 'Produits les plus rentables' }],
+      variants: [
+        { key: 'profit', label: 'Top ventes par benefice', hint: 'Produits les plus rentables' },
+      ],
     },
   ],
   deathPile: [
@@ -602,7 +733,9 @@ const SELECTION_BY_TYPE: Record<string, WidgetDisplayGroup[]> = {
       key: 'bars',
       label: 'Barres',
       hint: 'Aging stock',
-      variants: [{ key: 'aging', label: 'Stock dormant par age', hint: 'Articles immobilises par tranche' }],
+      variants: [
+        { key: 'aging', label: 'Stock dormant par age', hint: 'Articles immobilises par tranche' },
+      ],
     },
   ],
   profitBridge: [
@@ -610,7 +743,9 @@ const SELECTION_BY_TYPE: Record<string, WidgetDisplayGroup[]> = {
       key: 'bars',
       label: 'Barres',
       hint: 'Bridge',
-      variants: [{ key: 'bridge', label: 'Bridge de profit', hint: 'Contribution entre deux periodes' }],
+      variants: [
+        { key: 'bridge', label: 'Bridge de profit', hint: 'Contribution entre deux periodes' },
+      ],
     },
   ],
   riskHeat: [
@@ -618,7 +753,9 @@ const SELECTION_BY_TYPE: Record<string, WidgetDisplayGroup[]> = {
       key: 'heatmap',
       label: 'Heatmap',
       hint: 'Risque',
-      variants: [{ key: 'risk', label: 'Carte des risques', hint: 'Concentration stock et profit' }],
+      variants: [
+        { key: 'risk', label: 'Carte des risques', hint: 'Concentration stock et profit' },
+      ],
     },
   ],
   alertFeed: [

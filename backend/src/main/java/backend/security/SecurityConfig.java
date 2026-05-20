@@ -65,6 +65,8 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
               "/oauth2/**",
               "/login/**",
               "/billing/webhook",
+              "/delivery/mail-accounts/gmail/callback",
+              "/delivery/webhooks/aftership",
               "/error"
           ).permitAll()
           .anyRequest().authenticated()

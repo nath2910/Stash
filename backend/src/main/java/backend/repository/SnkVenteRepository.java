@@ -236,7 +236,7 @@ public interface SnkVenteRepository extends JpaRepository<SnkVente, Integer> {
     WHERE t.user_id = :userId
       AND t.date_vente IS NOT NULL
       AND t.date_vente BETWEEN :start AND :end
-      AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
+      AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Sans sous-categorie') = ANY(:categories))
       AND (:typesAll = true OR COALESCE(t.type, 'OTHER') = ANY(:types))
       AND t.prix_resell IS NOT NULL
       AND t.prix_retail IS NOT NULL
@@ -298,7 +298,7 @@ List<LabelCount> topItemsByCategorie(
   FROM public.tableauventes t
   WHERE t.user_id = :userId
     AND t.date_vente BETWEEN :start AND :end
-    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Sans sous-categorie') = ANY(:categories))
     AND (:typesAll = true OR COALESCE(t.type, 'OTHER') = ANY(:types))
     AND t.prix_resell IS NOT NULL
 """, nativeQuery = true)
@@ -315,7 +315,7 @@ BigDecimal caBetween(@Param("userId") Long userId,
   FROM public.tableauventes t
   WHERE t.user_id = :userId
     AND t.date_vente BETWEEN :start AND :end
-    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Sans sous-categorie') = ANY(:categories))
     AND (:typesAll = true OR COALESCE(t.type, 'OTHER') = ANY(:types))
     AND t.prix_resell IS NOT NULL
     AND t.prix_retail IS NOT NULL
@@ -333,7 +333,7 @@ BigDecimal profitBetween(@Param("userId") Long userId,
   FROM public.tableauventes t
   WHERE t.user_id = :userId
     AND t.date_vente BETWEEN :start AND :end
-    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Sans sous-categorie') = ANY(:categories))
     AND (:typesAll = true OR COALESCE(t.type, 'OTHER') = ANY(:types))
     AND t.prix_resell IS NOT NULL
     AND t.prix_retail IS NOT NULL
@@ -351,7 +351,7 @@ BigDecimal costBetween(@Param("userId") Long userId,
   FROM public.tableauventes t
   WHERE t.user_id = :userId
     AND t.date_vente BETWEEN :start AND :end
-    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Sans sous-categorie') = ANY(:categories))
     AND (:typesAll = true OR COALESCE(t.type, 'OTHER') = ANY(:types))
 """, nativeQuery = true)
 long countSoldBetween(@Param("userId") Long userId,
@@ -367,7 +367,7 @@ long countSoldBetween(@Param("userId") Long userId,
   FROM public.tableauventes t
   WHERE t.user_id = :userId
     AND t.date_vente IS NULL
-    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Sans sous-categorie') = ANY(:categories))
     AND (:typesAll = true OR COALESCE(t.type, 'OTHER') = ANY(:types))
 """, nativeQuery = true)
 long countInStock(@Param("userId") Long userId,
@@ -381,7 +381,7 @@ long countInStock(@Param("userId") Long userId,
   FROM public.tableauventes t
   WHERE t.user_id = :userId
     AND t.date_vente IS NULL
-    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Sans sous-categorie') = ANY(:categories))
     AND (:typesAll = true OR COALESCE(t.type, 'OTHER') = ANY(:types))
 """, nativeQuery = true)
 BigDecimal stockValue(@Param("userId") Long userId,
@@ -413,7 +413,7 @@ LocalDate minVenteDate(@Param("userId") Long userId);
     AND t.date_achat IS NOT NULL
     AND t.date_achat <= :asOf
     AND (t.date_vente IS NULL OR t.date_vente > :asOf)
-    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Sans sous-categorie') = ANY(:categories))
     AND (:typesAll = true OR COALESCE(t.type, 'OTHER') = ANY(:types))
 """, nativeQuery = true)
 long countInStockAt(@Param("userId") Long userId,
@@ -430,7 +430,7 @@ long countInStockAt(@Param("userId") Long userId,
     AND t.date_achat IS NOT NULL
     AND t.date_achat <= :asOf
     AND (t.date_vente IS NULL OR t.date_vente > :asOf)
-    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Sans sous-categorie') = ANY(:categories))
     AND (:typesAll = true OR COALESCE(t.type, 'OTHER') = ANY(:types))
 """, nativeQuery = true)
 BigDecimal stockValueAt(@Param("userId") Long userId,
@@ -447,7 +447,7 @@ BigDecimal stockValueAt(@Param("userId") Long userId,
   FROM public.tableauventes t
   WHERE t.user_id = :userId
     AND t.date_vente BETWEEN :start AND :end
-    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Sans sous-categorie') = ANY(:categories))
     AND (:typesAll = true OR COALESCE(t.type, 'OTHER') = ANY(:types))
     AND t.prix_resell IS NOT NULL
   GROUP BY bucket
@@ -468,7 +468,7 @@ List<TimePointRow> timeseriesDay(@Param("userId") Long userId,
   FROM public.tableauventes t
   WHERE t.user_id = :userId
     AND t.date_vente BETWEEN :start AND :end
-    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Sans sous-categorie') = ANY(:categories))
     AND (:typesAll = true OR COALESCE(t.type, 'OTHER') = ANY(:types))
     AND t.prix_resell IS NOT NULL
   GROUP BY bucket
@@ -489,7 +489,7 @@ List<TimePointRow> timeseriesWeek(@Param("userId") Long userId,
   FROM public.tableauventes t
   WHERE t.user_id = :userId
     AND t.date_vente BETWEEN :start AND :end
-    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Sans sous-categorie') = ANY(:categories))
     AND (:typesAll = true OR COALESCE(t.type, 'OTHER') = ANY(:types))
     AND t.prix_resell IS NOT NULL
   GROUP BY bucket
@@ -512,7 +512,7 @@ List<TimePointRow> timeseriesMonth(@Param("userId") Long userId,
   FROM public.tableauventes t
   WHERE t.user_id = :userId
     AND t.date_vente BETWEEN :start AND :end
-    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Sans sous-categorie') = ANY(:categories))
     AND (:typesAll = true OR COALESCE(t.type, 'OTHER') = ANY(:types))
     AND t.prix_resell IS NOT NULL
   GROUP BY bucket
@@ -535,7 +535,7 @@ List<TimePointFullRow> timeseriesDayFull(@Param("userId") Long userId,
   FROM public.tableauventes t
   WHERE t.user_id = :userId
     AND t.date_vente BETWEEN :start AND :end
-    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Sans sous-categorie') = ANY(:categories))
     AND (:typesAll = true OR COALESCE(t.type, 'OTHER') = ANY(:types))
     AND t.prix_resell IS NOT NULL
   GROUP BY bucket
@@ -558,7 +558,7 @@ List<TimePointFullRow> timeseriesWeekFull(@Param("userId") Long userId,
   FROM public.tableauventes t
   WHERE t.user_id = :userId
     AND t.date_vente BETWEEN :start AND :end
-    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Sans sous-categorie') = ANY(:categories))
     AND (:typesAll = true OR COALESCE(t.type, 'OTHER') = ANY(:types))
     AND t.prix_resell IS NOT NULL
   GROUP BY bucket
@@ -580,7 +580,7 @@ List<TimePointFullRow> timeseriesMonthFull(@Param("userId") Long userId,
     AND t.date_vente BETWEEN :start AND :end
     AND t.date_vente IS NOT NULL
     AND t.date_achat IS NOT NULL
-    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Sans sous-categorie') = ANY(:categories))
     AND (:typesAll = true OR COALESCE(t.type, 'OTHER') = ANY(:types))
   GROUP BY bucket
   ORDER BY bucket
@@ -601,7 +601,7 @@ List<AvgDaysRow> avgDaysToSellDay(@Param("userId") Long userId,
     AND t.date_vente BETWEEN :start AND :end
     AND t.date_vente IS NOT NULL
     AND t.date_achat IS NOT NULL
-    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Sans sous-categorie') = ANY(:categories))
     AND (:typesAll = true OR COALESCE(t.type, 'OTHER') = ANY(:types))
   GROUP BY bucket
   ORDER BY bucket
@@ -622,7 +622,7 @@ List<AvgDaysRow> avgDaysToSellWeek(@Param("userId") Long userId,
     AND t.date_vente BETWEEN :start AND :end
     AND t.date_vente IS NOT NULL
     AND t.date_achat IS NOT NULL
-    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Sans sous-categorie') = ANY(:categories))
     AND (:typesAll = true OR COALESCE(t.type, 'OTHER') = ANY(:types))
   GROUP BY bucket
   ORDER BY bucket
@@ -642,7 +642,7 @@ List<AvgDaysRow> avgDaysToSellMonth(@Param("userId") Long userId,
     AND t.date_vente BETWEEN :start AND :end
     AND t.date_vente IS NOT NULL
     AND t.date_achat IS NOT NULL
-    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Sans sous-categorie') = ANY(:categories))
     AND (:typesAll = true OR COALESCE(t.type, 'OTHER') = ANY(:types))
 """, nativeQuery = true)
 Double avgDaysToSellBetween(@Param("userId") Long userId,
@@ -659,7 +659,7 @@ Double avgDaysToSellBetween(@Param("userId") Long userId,
   FROM public.tableauventes t
   WHERE t.user_id = :userId
     AND t.date_vente BETWEEN :start AND :end
-    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Sans sous-categorie') = ANY(:categories))
     AND (:typesAll = true OR COALESCE(t.type, 'OTHER') = ANY(:types))
   GROUP BY COALESCE(t.type, 'OTHER')
   ORDER BY value DESC, label ASC
@@ -680,7 +680,7 @@ List<LabelLongRow> soldCountByType(@Param("userId") Long userId,
     AND t.date_achat IS NOT NULL
     AND t.date_achat <= :asOf
     AND (t.date_vente IS NULL OR t.date_vente > :asOf)
-    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Sans sous-categorie') = ANY(:categories))
     AND (:typesAll = true OR COALESCE(t.type, 'OTHER') = ANY(:types))
   GROUP BY COALESCE(t.type, 'OTHER')
   ORDER BY value DESC, label ASC
@@ -698,7 +698,7 @@ List<LabelLongRow> stockCountByTypeAt(@Param("userId") Long userId,
   FROM public.tableauventes t
   WHERE t.user_id = :userId
     AND t.date_vente BETWEEN :start AND :end
-    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Sans sous-categorie') = ANY(:categories))
     AND (:typesAll = true OR COALESCE(t.type, 'OTHER') = ANY(:types))
     AND t.prix_resell IS NOT NULL
     AND t.prix_retail IS NOT NULL
@@ -729,7 +729,7 @@ List<LabelValueRow> profitByType(@Param("userId") Long userId,
     WHERE t.user_id = :userId
       AND t.date_vente IS NULL
       AND t.date_achat IS NOT NULL
-      AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
+      AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Sans sous-categorie') = ANY(:categories))
       AND (:typesAll = true OR COALESCE(t.type, 'OTHER') = ANY(:types))
   ) s
   GROUP BY s.label
@@ -760,7 +760,7 @@ List<LabelValueRow> deathPileAge(@Param("userId") Long userId,
   FROM public.tableauventes t
   WHERE t.user_id = :userId
     AND t.date_vente BETWEEN :start AND :end
-    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Sans sous-categorie') = ANY(:categories))
     AND (:typesAll = true OR COALESCE(t.type, 'OTHER') = ANY(:types))
     AND t.prix_resell IS NOT NULL
     AND t.prix_retail IS NOT NULL
@@ -785,20 +785,20 @@ List<LabelValueRow> topBrandsProfit(@Param("userId") Long userId,
 @Query(value = """
   SELECT
     CASE
-      WHEN t.categorie IS NULL OR trim(t.categorie) = '' THEN 'Autre'
+      WHEN t.categorie IS NULL OR trim(t.categorie) = '' THEN 'Sans sous-categorie'
       ELSE t.categorie
     END AS label,
     SUM(COALESCE(t.prix_resell,0) - COALESCE(t.prix_retail,0)) AS value
   FROM public.tableauventes t
   WHERE t.user_id = :userId
     AND t.date_vente BETWEEN :start AND :end
-    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Sans sous-categorie') = ANY(:categories))
     AND (:typesAll = true OR COALESCE(t.type, 'OTHER') = ANY(:types))
     AND t.prix_resell IS NOT NULL
     AND t.prix_retail IS NOT NULL
   GROUP BY
     CASE
-      WHEN t.categorie IS NULL OR trim(t.categorie) = '' THEN 'Autre'
+      WHEN t.categorie IS NULL OR trim(t.categorie) = '' THEN 'Sans sous-categorie'
       ELSE t.categorie
     END
   ORDER BY value DESC
@@ -826,7 +826,7 @@ List<LabelValueRow> topCategoriesProfit(@Param("userId") Long userId,
   FROM public.tableauventes t
   WHERE t.user_id = :userId
     AND t.date_vente BETWEEN :start AND :end
-    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Autre') = ANY(:categories))
+    AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Sans sous-categorie') = ANY(:categories))
     AND (:typesAll = true OR COALESCE(t.type, 'OTHER') = ANY(:types))
   GROUP BY
     CASE
@@ -850,14 +850,14 @@ List<LabelCount> brandBreakdownSales(@Param("userId") Long userId,
 @Query("""
   SELECT DISTINCT
     CASE
-      WHEN v.categorie IS NULL OR trim(v.categorie) = '' THEN 'Autre'
+      WHEN v.categorie IS NULL OR trim(v.categorie) = '' THEN 'Sans sous-categorie'
       ELSE v.categorie
     END
   FROM SnkVente v
   WHERE v.user.id = :userId
   ORDER BY
     CASE
-      WHEN v.categorie IS NULL OR trim(v.categorie) = '' THEN 'Autre'
+      WHEN v.categorie IS NULL OR trim(v.categorie) = '' THEN 'Sans sous-categorie'
       ELSE v.categorie
     END
 """)
@@ -866,7 +866,7 @@ List<String> distinctCategories(@Param("userId") Long userId);
 @Query("""
   SELECT DISTINCT
     CASE
-      WHEN v.categorie IS NULL OR trim(v.categorie) = '' THEN 'Autre'
+      WHEN v.categorie IS NULL OR trim(v.categorie) = '' THEN 'Sans sous-categorie'
       ELSE v.categorie
     END
   FROM SnkVente v
@@ -877,7 +877,7 @@ List<String> distinctCategories(@Param("userId") Long userId);
     )
   ORDER BY
     CASE
-      WHEN v.categorie IS NULL OR trim(v.categorie) = '' THEN 'Autre'
+      WHEN v.categorie IS NULL OR trim(v.categorie) = '' THEN 'Sans sous-categorie'
       ELSE v.categorie
     END
 """)

@@ -88,6 +88,21 @@ app:
     max-size-bytes: ${APP_STORAGE_MAX_BYTES:10485760}
   notifications:
     generation-cron: ${APP_NOTIFICATIONS_GENERATION_CRON:0 15 3 * * *}
+  delivery:
+    scan-fixed-delay-ms: ${APP_DELIVERY_SCAN_FIXED_DELAY_MS:300000}
+    scan-batch-size: ${APP_DELIVERY_SCAN_BATCH_SIZE:25}
+    gmail-redirect-uri: ${APP_DELIVERY_GMAIL_REDIRECT_URI:http://localhost:8080/delivery/mail-accounts/gmail/callback}
+    token-encryption-key: ${APP_TOKEN_ENCRYPTION_KEY:}
+    tracking-provider: ${APP_DELIVERY_TRACKING_PROVIDER:DIRECT}
+    tracking-refresh-fixed-delay-ms: ${APP_DELIVERY_TRACKING_REFRESH_FIXED_DELAY_MS:900000}
+    tracking-refresh-batch-size: ${APP_DELIVERY_TRACKING_REFRESH_BATCH_SIZE:50}
+    laposte-api-key: ${LAPOSTE_API_KEY:}
+    laposte-tracking-base-url: ${LAPOSTE_TRACKING_BASE_URL:https://api.laposte.fr/suivi/v2/idships}
+    mondial-relay-enseigne: ${MONDIAL_RELAY_ENSEIGNE:${MONDIAL_RELAY_CUSTOMER_ID:}}
+    mondial-relay-private-key: ${MONDIAL_RELAY_PRIVATE_KEY:${MONDIAL_RELAY_PASSWORD:}}
+    mondial-relay-endpoint: ${MONDIAL_RELAY_ENDPOINT:https://www.mondialrelay.fr/WebService/WebService.asmx}
+    aftership-api-key: ${AFTERSHIP_API_KEY:}
+    aftership-webhook-secret: ${AFTERSHIP_WEBHOOK_SECRET:}
 
 stripe:
   secret-key: ${STRIPE_SECRET_KEY:}

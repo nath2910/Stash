@@ -12,12 +12,7 @@
     @contextmenu="onCanvasContextMenu"
   >
     <teleport to="body">
-      <div
-        v-if="templatePickerOpen"
-        class="template-picker-modal"
-        role="dialog"
-        aria-modal="true"
-      >
+      <div v-if="templatePickerOpen" class="template-picker-modal" role="dialog" aria-modal="true">
         <div class="template-picker-backdrop" @click="closeTemplatePicker"></div>
         <div class="template-picker-panel" @click.stop>
           <div class="template-picker-head">
@@ -84,202 +79,246 @@
     <!-- Canvas -->
     <template v-if="!templateActive">
       <div ref="viewportEl" class="viewport">
-      <div v-if="editMode" class="edit-grid" aria-hidden="true"></div>
-      <div
-        v-if="snapGuides.x !== null"
-        class="snap-guide snap-guide--x"
-        :style="{ left: `${snapGuides.x}px` }"
-        aria-hidden="true"
-      ></div>
-      <div
-        v-if="snapGuides.y !== null"
-        class="snap-guide snap-guide--y"
-        :style="{ top: `${snapGuides.y}px` }"
-        aria-hidden="true"
-      ></div>
-      <div
-        v-if="dragAssistLines.length || dragAssistGaps.length"
-        class="drag-assist-overlay"
-        aria-hidden="true"
-      >
+        <div v-if="editMode" class="edit-grid" aria-hidden="true"></div>
         <div
-          v-for="line in dragAssistLines"
-          :key="line.id"
-          class="drag-assist-line"
-          :class="[
-            `drag-assist-line--${line.orientation}`,
-            `drag-assist-line--${line.kind}`,
-            { 'is-board': line.source === 'board' },
-          ]"
-          :style="dragAssistLineStyle(line)"
-        ></div>
-        <div
-          v-for="gap in dragAssistGaps"
-          :key="gap.id"
-          class="drag-assist-gap"
-          :class="`drag-assist-gap--${gap.orientation}`"
-          :style="dragAssistGapStyle(gap)"
-        >
-          <span class="drag-assist-gap__label">{{ gap.label }}</span>
-        </div>
-      </div>
-      <div ref="boardEl" class="board">
-        <div
-          v-if="marqueeSelectionStyle"
-          class="marquee-selection"
-          :style="marqueeSelectionStyle"
+          v-if="snapGuides.x !== null"
+          class="snap-guide snap-guide--x"
+          :style="{ left: `${snapGuides.x}px` }"
           aria-hidden="true"
         ></div>
-        <WidgetFrame
-          v-for="w in visibleWidgets"
-          :key="w.id"
-          v-memo="widgetMemoDeps(w)"
-          :widget="w"
-          :canvas-scale="scale"
-          :edit-mode="editMode"
-          :selected="isWidgetSelected(w.id) && !isGroupSelectionActive"
-          :group-selected="isGroupSelectionActive && isWidgetSelected(w.id)"
-          :drag-armed="dragArmedId === w.id"
-          :text-active="activeTextWidgetId === w.id"
-          :ui-active="!isRouteLeaving"
-          :settings-available="isWidgetSettingsAvailable(w)"
-          :comp="getComp(w.type)"
-          :from="widgetFrom(w)"
-          :to="widgetTo(w)"
-          :style="widgetStyle(w)"
-          :ref="(c: any) => setWidgetRef(w.id, c)"
-          @activate="setActiveTextWidget(w.id)"
-          @dragStart="startDrag(w.id, $event)"
-          @resizeStart="startResize(w.id, $event.dir, $event.event)"
-          @textPropsChange="updateTextWidgetProps(w.id, $event)"
-          @propsPatch="updateWidgetProps(w.id, $event)"
-          @textScaleStart="startTextScale(w.id, $event)"
-          @fullscreen-change="onWidgetFullscreenChange"
-          @autoResize="autoResize(w.id, $event)"
-          @duplicate="duplicateWidget(w.id)"
-          @settings="openSettings(w)"
-          @remove="onWidgetRemove(w.id)"
-        />
         <div
-          v-if="groupSelectionFrameStyle"
-          class="group-selection-frame"
-          :style="groupSelectionFrameStyle"
+          v-if="snapGuides.y !== null"
+          class="snap-guide snap-guide--y"
+          :style="{ top: `${snapGuides.y}px` }"
+          aria-hidden="true"
+        ></div>
+        <div
+          v-if="dragAssistLines.length || dragAssistGaps.length"
+          class="drag-assist-overlay"
           aria-hidden="true"
         >
-          <button
-            v-for="h in GROUP_RESIZE_HANDLES"
-            :key="`group-resize-${h.dir}`"
-            type="button"
-            class="group-selection-handle"
-            :class="`group-selection-handle--${h.dir}`"
-            :title="h.title"
-            :aria-label="h.title"
-            @pointerdown.stop.prevent="onGroupResizeHandleDown(h.dir, $event)"
+          <div
+            v-for="line in dragAssistLines"
+            :key="line.id"
+            class="drag-assist-line"
+            :class="[
+              `drag-assist-line--${line.orientation}`,
+              `drag-assist-line--${line.kind}`,
+              { 'is-board': line.source === 'board' },
+            ]"
+            :style="dragAssistLineStyle(line)"
+          ></div>
+          <div
+            v-for="gap in dragAssistGaps"
+            :key="gap.id"
+            class="drag-assist-gap"
+            :class="`drag-assist-gap--${gap.orientation}`"
+            :style="dragAssistGapStyle(gap)"
           >
-            <span class="group-selection-handle__dot"></span>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div
-      v-if="showCanvasEmptyGuide"
-      class="canvas-empty-guide panzoom-exclude"
-      role="region"
-      aria-label="Guide de demarrage du canvas"
-      @pointerdown.stop
-      @pointerup.stop
-    >
-      <div class="canvas-empty-guide__glow" aria-hidden="true"></div>
-      <article class="canvas-empty-guide__card panzoom-exclude" @pointerdown.stop @pointerup.stop @click.stop>
-        <div class="canvas-empty-guide__kicker">Canvas libre</div>
-        <h2 class="canvas-empty-guide__title">Ton dashboard est pret a etre construit</h2>
-        <p class="canvas-empty-guide__lead">
-          Commence par ajouter tes widgets, ajuste ta periode, puis organise la feuille comme un vrai
-          board de pilotage.
-        </p>
-
-        <div class="canvas-empty-guide__steps">
-          <div class="canvas-empty-guide-step">
-            <span class="canvas-empty-guide-step__icon">
-              <LayoutGrid class="h-4 w-4" />
-            </span>
-            <div class="canvas-empty-guide-step__content">
-              <strong>1. Ajoute tes blocs clefs</strong>
-              <p>CA, profit, top ventes, stock: assemble tes KPI en quelques clics.</p>
-            </div>
+            <span class="drag-assist-gap__label">{{ gap.label }}</span>
           </div>
-          <div class="canvas-empty-guide-step">
-            <span class="canvas-empty-guide-step__icon">
+        </div>
+        <div ref="boardEl" class="board">
+          <div
+            v-if="marqueeSelectionStyle"
+            class="marquee-selection"
+            :style="marqueeSelectionStyle"
+            aria-hidden="true"
+          ></div>
+          <WidgetFrame
+            v-for="w in visibleWidgets"
+            :key="w.id"
+            v-memo="widgetMemoDeps(w)"
+            :widget="w"
+            :canvas-scale="scale"
+            :edit-mode="editMode"
+            :selected="isWidgetSelected(w.id) && !isGroupSelectionActive"
+            :group-selected="isGroupSelectionActive && isWidgetSelected(w.id)"
+            :drag-armed="dragArmedId === w.id"
+            :text-active="activeTextWidgetId === w.id"
+            :ui-active="!isRouteLeaving"
+            :settings-available="isWidgetSettingsAvailable(w)"
+            :comp="getComp(w.type)"
+            :from="widgetFrom(w)"
+            :to="widgetTo(w)"
+            :style="widgetStyle(w)"
+            :ref="(c: any) => setWidgetRef(w.id, c)"
+            @activate="setActiveTextWidget(w.id)"
+            @dragStart="startDrag(w.id, $event)"
+            @resizeStart="startResize(w.id, $event.dir, $event.event)"
+            @textPropsChange="updateTextWidgetProps(w.id, $event)"
+            @propsPatch="updateWidgetProps(w.id, $event)"
+            @textScaleStart="startTextScale(w.id, $event)"
+            @fullscreen-change="onWidgetFullscreenChange"
+            @autoResize="autoResize(w.id, $event)"
+            @duplicate="duplicateWidget(w.id)"
+            @settings="openSettings(w)"
+            @remove="onWidgetRemove(w.id)"
+          />
+          <div
+            v-if="groupSelectionToolbarStyle"
+            class="group-selection-toolbar panzoom-exclude"
+            :style="groupSelectionToolbarStyle"
+            role="toolbar"
+            aria-label="Actions de selection multiple"
+            @pointerdown.stop
+            @click.stop
+          >
+            <button
+              type="button"
+              class="group-selection-toolbar__btn"
+              title="Dupliquer la selection"
+              aria-label="Dupliquer la selection"
+              @click.stop="duplicateSelectedWidgets"
+            >
+              <Copy class="h-4 w-4" />
+            </button>
+            <label class="group-selection-date" title="Date commune">
               <CalendarRange class="h-4 w-4" />
-            </span>
-            <div class="canvas-empty-guide-step__content">
-              <strong>2. Regle ta plage de dates</strong>
-              <p>Utilise la barre laterale pour passer de la vue jour au suivi mensuel.</p>
-            </div>
+              <input
+                :value="groupDateDraft"
+                type="date"
+                :min="minDate"
+                :max="maxDate"
+                aria-label="Date commune"
+                @input="onGroupDateInput"
+              />
+            </label>
+            <button
+              type="button"
+              class="group-selection-toolbar__btn group-selection-toolbar__btn--primary"
+              :disabled="!canApplyGroupDate"
+              title="Appliquer la date"
+              aria-label="Appliquer la date a la selection"
+              @click.stop="applyGroupDateToSelection"
+            >
+              <Check class="h-4 w-4" />
+            </button>
           </div>
-          <div class="canvas-empty-guide-step">
-            <span class="canvas-empty-guide-step__icon">
-              <Target class="h-4 w-4" />
-            </span>
-            <div class="canvas-empty-guide-step__content">
-              <strong>3. Cadre ton espace d'analyse</strong>
-              <p>Centre, zoome, puis aligne tes widgets pour une lecture rapide et propre.</p>
-            </div>
+          <div
+            v-if="groupSelectionFrameStyle"
+            class="group-selection-frame"
+            :style="groupSelectionFrameStyle"
+            aria-hidden="true"
+          >
+            <button
+              v-for="h in GROUP_RESIZE_HANDLES"
+              :key="`group-resize-${h.dir}`"
+              type="button"
+              class="group-selection-handle"
+              :class="`group-selection-handle--${h.dir}`"
+              :title="h.title"
+              :aria-label="h.title"
+              @pointerdown.stop.prevent="onGroupResizeHandleDown(h.dir, $event)"
+            >
+              <span class="group-selection-handle__dot"></span>
+            </button>
           </div>
         </div>
+      </div>
 
-        <div class="canvas-empty-guide__actions">
-          <button
-            type="button"
-            class="canvas-empty-guide__btn canvas-empty-guide__btn--primary panzoom-exclude"
-            @pointerdown.stop
-            @pointerup.stop.prevent="onEmptyGuideAddWidget"
-            @click.stop.prevent="onEmptyGuideAddWidget"
-          >
-            <PlusSquare class="h-4 w-4" />
-            <span>{{ emptyGuidePrimaryActionLabel }}</span>
-          </button>
-          <button
-            type="button"
-            class="canvas-empty-guide__btn panzoom-exclude"
-            @pointerdown.stop
-            @pointerup.stop.prevent="onEmptyGuideOpenTemplate"
-            @click.stop.prevent="onEmptyGuideOpenTemplate"
-          >
-            <BarChart3 class="h-4 w-4" />
-            <span>Voir les templates</span>
-          </button>
-        </div>
+      <div
+        v-if="showCanvasEmptyGuide"
+        class="canvas-empty-guide panzoom-exclude"
+        role="region"
+        aria-label="Guide de demarrage du canvas"
+        @pointerdown.stop
+        @pointerup.stop
+      >
+        <div class="canvas-empty-guide__glow" aria-hidden="true"></div>
+        <article
+          class="canvas-empty-guide__card panzoom-exclude"
+          @pointerdown.stop
+          @pointerup.stop
+          @click.stop
+        >
+          <div class="canvas-empty-guide__kicker">Canvas libre</div>
+          <h2 class="canvas-empty-guide__title">Ton dashboard est pret a etre construit</h2>
+          <p class="canvas-empty-guide__lead">
+            Commence par ajouter tes widgets, ajuste ta periode, puis organise la feuille comme un
+            vrai board de pilotage.
+          </p>
 
-      </article>
-    </div>
+          <div class="canvas-empty-guide__steps">
+            <div class="canvas-empty-guide-step">
+              <span class="canvas-empty-guide-step__icon">
+                <LayoutGrid class="h-4 w-4" />
+              </span>
+              <div class="canvas-empty-guide-step__content">
+                <strong>1. Ajoute tes blocs clefs</strong>
+                <p>CA, profit, top ventes, stock: assemble tes KPI en quelques clics.</p>
+              </div>
+            </div>
+            <div class="canvas-empty-guide-step">
+              <span class="canvas-empty-guide-step__icon">
+                <CalendarRange class="h-4 w-4" />
+              </span>
+              <div class="canvas-empty-guide-step__content">
+                <strong>2. Regle ta plage de dates</strong>
+                <p>Utilise la barre laterale pour passer de la vue jour au suivi mensuel.</p>
+              </div>
+            </div>
+            <div class="canvas-empty-guide-step">
+              <span class="canvas-empty-guide-step__icon">
+                <Target class="h-4 w-4" />
+              </span>
+              <div class="canvas-empty-guide-step__content">
+                <strong>3. Cadre ton espace d'analyse</strong>
+                <p>Centre, zoome, puis aligne tes widgets pour une lecture rapide et propre.</p>
+              </div>
+            </div>
+          </div>
 
-    <!-- Palette -->
-    <WidgetPalette
-      v-if="paletteOpen"
-      :open="paletteOpen"
-      :groups="paletteGroups"
-      @close="paletteOpen = false"
-      @add="addWidget"
-    />
+          <div class="canvas-empty-guide__actions">
+            <button
+              type="button"
+              class="canvas-empty-guide__btn canvas-empty-guide__btn--primary panzoom-exclude"
+              @pointerdown.stop
+              @pointerup.stop.prevent="onEmptyGuideAddWidget"
+              @click.stop.prevent="onEmptyGuideAddWidget"
+            >
+              <PlusSquare class="h-4 w-4" />
+              <span>{{ emptyGuidePrimaryActionLabel }}</span>
+            </button>
+            <button
+              type="button"
+              class="canvas-empty-guide__btn panzoom-exclude"
+              @pointerdown.stop
+              @pointerup.stop.prevent="onEmptyGuideOpenTemplate"
+              @click.stop.prevent="onEmptyGuideOpenTemplate"
+            >
+              <BarChart3 class="h-4 w-4" />
+              <span>Voir les templates</span>
+            </button>
+          </div>
+        </article>
+      </div>
 
-    <!-- Settings -->
-    <WidgetSettingsModal
-      v-if="settingsOpen && shouldShowWidgetSettings"
-      :open="settingsOpen"
-      :title="settingsTitle"
-      :fields="settingsFields"
-      :model="settingsModel"
-      :min-date="minDate"
-      :max-date="maxDate"
-      @close="closeSettings"
-      @save="applySettings"
-    />
+      <!-- Palette -->
+      <WidgetPalette
+        v-if="paletteOpen"
+        :open="paletteOpen"
+        :groups="paletteGroups"
+        @close="paletteOpen = false"
+        @add="addWidget"
+      />
 
-    <Transition name="save-toast">
-      <div v-if="showSaveToast" class="save-toast" role="status">Layout enregistre</div>
-    </Transition>
+      <!-- Settings -->
+      <WidgetSettingsModal
+        v-if="settingsOpen && shouldShowWidgetSettings"
+        :open="settingsOpen"
+        :title="settingsTitle"
+        :fields="settingsFields"
+        :model="settingsModel"
+        :min-date="minDate"
+        :max-date="maxDate"
+        @close="closeSettings"
+        @save="applySettings"
+      />
+
+      <Transition name="save-toast">
+        <div v-if="showSaveToast" class="save-toast" role="status">Layout enregistre</div>
+      </Transition>
     </template>
     <div v-else class="template-mode">
       <component
@@ -413,18 +452,38 @@
         <div class="template-rail-date-popover__inputs">
           <label class="template-rail-date-field">
             <span>Du</span>
-            <input :value="localFrom" type="date" :min="minDate" :max="maxDate" @input="onRailFromInput" />
+            <input
+              :value="localFrom"
+              type="date"
+              :min="minDate"
+              :max="maxDate"
+              @input="onRailFromInput"
+            />
           </label>
           <label class="template-rail-date-field">
             <span>Au</span>
-            <input :value="localTo" type="date" :min="minDate" :max="maxDate" @input="onRailToInput" />
+            <input
+              :value="localTo"
+              type="date"
+              :min="minDate"
+              :max="maxDate"
+              @input="onRailToInput"
+            />
           </label>
         </div>
         <div class="template-rail-date-popover__quick">
-          <button type="button" class="template-rail-date-chip" @click="applyQuickPreset('today')">Auj.</button>
-          <button type="button" class="template-rail-date-chip" @click="applyQuickPreset('month')">Mois</button>
-          <button type="button" class="template-rail-date-chip" @click="applyQuickPreset('ytd')">YTD</button>
-          <button type="button" class="template-rail-date-chip" @click="applyQuickPreset('year')">Annee</button>
+          <button type="button" class="template-rail-date-chip" @click="applyQuickPreset('today')">
+            Auj.
+          </button>
+          <button type="button" class="template-rail-date-chip" @click="applyQuickPreset('month')">
+            Mois
+          </button>
+          <button type="button" class="template-rail-date-chip" @click="applyQuickPreset('ytd')">
+            YTD
+          </button>
+          <button type="button" class="template-rail-date-chip" @click="applyQuickPreset('year')">
+            Annee
+          </button>
         </div>
       </div>
     </aside>
@@ -500,9 +559,7 @@
           </div>
 
           <div class="profile-grid">
-            <div class="profile-help">
-              Ces noms apparaissent dans la barre laterale.
-            </div>
+            <div class="profile-help">Ces noms apparaissent dans la barre laterale.</div>
 
             <section class="profile-card">
               <div class="profile-head">
@@ -578,17 +635,30 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, toRefs, watch } from 'vue'
+import {
+  computed,
+  defineAsyncComponent,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  toRefs,
+  watch,
+} from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import WidgetFrame from './canvas/WidgetFrame.vue'
 import TemplateEmptyLayout from './template-mode/TemplateEmptyLayout.vue'
 import { useCanvasCamera } from './canvas/useCanvaCamera'
 import { useCanvasShortcuts } from './canvas/useCanvasShortcuts'
+import { buildCommonDatePatch, duplicateWidgetGroup } from './canvas/widgetBatchActions'
+import { buildWidgetTransform, resolveWidgetRotation } from './canvas/widgetTransform'
 import {
   Home,
   BarChart3,
   Boxes,
   CalendarRange,
+  Check,
+  Copy,
   LayoutTemplate,
   Paintbrush,
   LayoutGrid,
@@ -609,6 +679,11 @@ import { getWidgetPaletteMeta, getWidgetSelectionMeta } from './palette/widgetPa
 import { useTheme } from '@/composables/useTheme'
 import { useAuthStore } from '@/store/authStore'
 import StatsServices from '@/services/StatsServices'
+import {
+  isItemCategoryAlias,
+  readStoredItemCategories,
+  resolveItemTypeOptions,
+} from '@/RegleItem/itemCategoryStore'
 import {
   DEFAULT_TEMPLATE_ID,
   TEMPLATE_DEFINITIONS,
@@ -668,10 +743,13 @@ const route = useRoute()
 const router = useRouter()
 const { theme } = useTheme()
 const themeMode = computed(() => (theme.value === 'light' ? 'light' : 'dark'))
-const isStatsDashboardRoute = computed(() => route.name === 'stats' || route.path.startsWith('/stats'))
+const isStatsDashboardRoute = computed(
+  () => route.name === 'stats' || route.path.startsWith('/stats'),
+)
 const isRouteLeaving = ref(false)
 // Chaque utilisateur a une cle de layout isolee; guest reste en stockage local.
 const userId = computed(() => user.value?.id ?? 'guest')
+const categoryLabels = ref(readStoredItemCategories(userId.value))
 
 const PROFILE_COLORS = { p1: '#22C55E', p2: '#3B82F6', p3: '#F59E0B' }
 const DEFAULT_PROFILE_NAMES = { p1: 'Profil 1', p2: 'Profil 2', p3: 'Profil 3' }
@@ -718,17 +796,12 @@ const minDate = ref('')
 const maxDate = ref('')
 const settingsCategories = ref<string[]>([])
 const categoriesCache = new Map<string, string[]>()
-const ITEM_TYPE_OPTIONS = [
-  { label: 'Sneakers', value: 'SNEAKER' },
-  { label: 'Cartes', value: 'POKEMON_CARD' },
-  { label: 'Tickets', value: 'TICKET' },
-  { label: 'Autres', value: 'OTHER' },
-]
-
 const categoryOptions = computed(() =>
-  settingsCategories.value.map((c) => ({ label: c, value: c })),
+  settingsCategories.value
+    .filter((c) => !isItemCategoryAlias(c, categoryLabels.value))
+    .map((c) => ({ label: c, value: c })),
 )
-const typeOptions = computed(() => ITEM_TYPE_OPTIONS)
+const typeOptions = computed(() => resolveItemTypeOptions(categoryLabels.value))
 
 /* ===== Mode edition/fige ===== */
 // Le mode edition est stocke par utilisateur pour eviter les fuites d'etat UI.
@@ -780,7 +853,10 @@ function dispatchTemplateMode(active: boolean) {
   )
 }
 
-function getProfileTemplateState(bundle: LayoutBundle, profileId: string): ProfileTemplateState | null {
+function getProfileTemplateState(
+  bundle: LayoutBundle,
+  profileId: string,
+): ProfileTemplateState | null {
   const picked = pickProfileId(profileId)
   const saved = bundle.profileTemplates?.[picked]
   return normalizeProfileTemplateState(saved)
@@ -791,7 +867,11 @@ function writeActiveProfileTemplateState(bundle: LayoutBundle) {
   bundle.profileTemplates = bundle.profileTemplates ?? {}
   const templateId = sanitizeTemplateId(activeTemplateId.value)
   if (templateActive.value && templateId) {
-    const states = setTemplateState(activeTemplateStates.value, templateId, activeTemplateState.value)
+    const states = setTemplateState(
+      activeTemplateStates.value,
+      templateId,
+      activeTemplateState.value,
+    )
     activeTemplateStates.value = states
     bundle.profileTemplates[picked] = {
       active: true,
@@ -838,6 +918,9 @@ function applyTemplate(item?: TemplateDefinition) {
   templatePickerOpen.value = false
   paletteOpen.value = false
   closeSettings()
+  detachAllInteract()
+  widgets.value = []
+  widgetStyleCache.clear()
   setSpacePanState(false)
   syncPanzoomExclude(false)
   dispatchTemplateMode(true)
@@ -1111,6 +1194,14 @@ function maxSizeFor(w: Widget) {
     return { w: KPI_TILE_MAX_SIZE, h: KPI_TILE_MAX_SIZE }
   }
   const def = getWidgetDef(w.type)
+  if (def?.kind === 'shape') {
+    const maxCfgW = Number(def?.maxSize?.w ?? Number.NaN)
+    const maxCfgH = Number(def?.maxSize?.h ?? Number.NaN)
+    return {
+      w: Number.isFinite(maxCfgW) && maxCfgW > 0 ? Math.min(maxCfgW, BOARD_W) : BOARD_W,
+      h: Number.isFinite(maxCfgH) && maxCfgH > 0 ? Math.min(maxCfgH, BOARD_H) : BOARD_H,
+    }
+  }
   const baseW = Math.max(Number(def?.defaultSize?.w ?? w.w ?? MIN_W), 1)
   const baseH = Math.max(Number(def?.defaultSize?.h ?? w.h ?? MIN_H), 1)
   const maxCfgW = Number(def?.maxSize?.w ?? Number.NaN)
@@ -1133,7 +1224,14 @@ function isSquareKpiWidget(widget: Pick<Widget, 'type' | 'props'> | null | undef
   return SQUARE_KPI_WIDGET_TYPES.has(type)
 }
 
-function squareResizeSide(width: number, height: number, minW: number, minH: number, maxW: number, maxH: number) {
+function squareResizeSide(
+  width: number,
+  height: number,
+  minW: number,
+  minH: number,
+  maxW: number,
+  maxH: number,
+) {
   const minSide = Math.max(minW, minH)
   const maxSide = Math.min(maxW, maxH)
   return clamp(Math.min(width, height), minSide, maxSide)
@@ -1187,10 +1285,7 @@ const TEXT_FONT_STACKS: Record<string, string> = {
 }
 
 function textWidgetFontFamily(widget: Widget) {
-  return (
-    TEXT_FONT_STACKS[String(widget.props?.fontFamily ?? 'poppins')] ??
-    TEXT_FONT_STACKS.poppins
-  )
+  return TEXT_FONT_STACKS[String(widget.props?.fontFamily ?? 'poppins')] ?? TEXT_FONT_STACKS.poppins
 }
 
 function textWidgetFontBounds(widget: Widget) {
@@ -1415,6 +1510,10 @@ function fitTextWidgetToRenderedContent(
   options: { preserveWidth?: boolean } = {},
 ) {
   if (!isTextWidget(widget) || !el) return
+  if (resolveWidgetRotation(widget) !== 0) {
+    clampWidget(widget)
+    return
+  }
   const body = el.querySelector('.widget__body') as HTMLElement | null
   const header = el.querySelector('.widget__header') as HTMLElement | null
   const headerTitle = el.querySelector('.widget__title') as HTMLElement | null
@@ -1526,7 +1625,15 @@ const layoutKey = computed(() => `${STORAGE_KEY_PREFIX}_${userId.value}`)
 const widgets = ref<Widget[]>([])
 const widgetStyleCache = new Map<
   string,
-  { x: number; y: number; w: number; h: number; z: number; style: Record<string, string | number> }
+  {
+    x: number
+    y: number
+    w: number
+    h: number
+    z: number
+    rotation: number
+    style: Record<string, string | number>
+  }
 >()
 const widgetById = computed(() => {
   const map = new Map<string, Widget>()
@@ -1631,6 +1738,8 @@ function normalizeLayout(raw: unknown): Widget[] | null {
           ? def.title
           : nextTitle
 
+    const hasStoredSize = Number.isFinite((item as any)?.w) && Number.isFinite((item as any)?.h)
+    const rawProps = cloneWidgetProps((item as any)?.props ?? {})
     const w: Widget = {
       id:
         typeof (item as any)?.id === 'string'
@@ -1645,8 +1754,16 @@ function normalizeLayout(raw: unknown): Widget[] | null {
       z: Number.isFinite((item as any)?.z) ? Number((item as any).z) : list.length + 1,
       props: {
         ...cloneWidgetProps(def.defaultProps),
-        ...cloneWidgetProps((item as any)?.props ?? {}),
+        ...rawProps,
       },
+    }
+
+    if (isTextWidget(w)) {
+      const rotation = resolveWidgetRotation({
+        ...(item as Record<string, unknown>),
+        props: rawProps,
+      })
+      w.props = { ...(w.props ?? {}), rotation }
     }
 
     if (def.type === 'grossRevenue') {
@@ -1691,7 +1808,7 @@ function normalizeLayout(raw: unknown): Widget[] | null {
       w.props = { ...(w.props ?? {}), autoHeight: true }
     }
 
-    if (isTextWidget(w)) {
+    if (isTextWidget(w) && !hasStoredSize) {
       fitWidgetToContent(w)
     }
 
@@ -1938,6 +2055,7 @@ function scheduleRemoteSave(payload: unknown = layoutBundle.value) {
 function widgetStyle(w: Widget) {
   const rect = liveWidgetRect(w)
   const z = Number(w.z ?? 1)
+  const rotation = isTextWidget(w) ? resolveWidgetRotation(w) : 0
   const cached = widgetStyleCache.get(w.id)
   if (
     cached &&
@@ -1945,7 +2063,8 @@ function widgetStyle(w: Widget) {
     cached.y === rect.y &&
     cached.w === rect.w &&
     cached.h === rect.h &&
-    cached.z === z
+    cached.z === z &&
+    cached.rotation === rotation
   ) {
     return cached.style
   }
@@ -1953,7 +2072,8 @@ function widgetStyle(w: Widget) {
   const style = {
     width: `${rect.w}px`,
     height: `${rect.h}px`,
-    transform: `translate3d(${rect.x}px, ${rect.y}px, 0)`,
+    transform: buildWidgetTransform(rect.x, rect.y, rotation),
+    transformOrigin: rotation ? 'center center' : 'top left',
     zIndex: z,
   }
   widgetStyleCache.set(w.id, {
@@ -1962,6 +2082,7 @@ function widgetStyle(w: Widget) {
     w: rect.w,
     h: rect.h,
     z,
+    rotation,
     style,
   })
   return style
@@ -2014,7 +2135,9 @@ const paletteOpen = ref(false)
 const fullscreenActive = ref(false)
 const shouldShowStatsRail = computed(() => !fullscreenActive.value && !isRouteLeaving.value)
 const isCanvasEffectivelyEmpty = computed(
-  () => widgets.value.length === 0 || (widgets.value.length === 1 && widgets.value[0]?.id === 'textBlock_welcome'),
+  () =>
+    widgets.value.length === 0 ||
+    (widgets.value.length === 1 && widgets.value[0]?.id === 'textBlock_welcome'),
 )
 const showCanvasEmptyGuide = computed(
   () =>
@@ -2042,7 +2165,7 @@ function onEmptyGuideOpenTemplate() {
   openTemplatePicker()
 }
 
-const PALETTE_ORDER = ['Texte', 'Finance', 'Stock', 'Performance', 'Decision', 'Bonus']
+const PALETTE_ORDER = ['Texte', 'Formes', 'Finance', 'Stock', 'Performance', 'Decision', 'Bonus']
 const paletteGroups = computed(() => {
   const grouped = new Map<string, Array<Record<string, unknown>>>()
   for (const w of WIDGET_DEFS) {
@@ -2087,6 +2210,7 @@ const dragArmedId = ref<string | null>(null)
 const activeTextWidgetId = ref<string | null>(null)
 const selectedWidgetIds = ref<string[]>([])
 const selectedWidgetIdSet = computed(() => new Set(selectedWidgetIds.value))
+const groupDateDraft = ref(localTo.value || localFrom.value)
 const marqueeSelection = ref<{
   startX: number
   startY: number
@@ -2095,6 +2219,30 @@ const marqueeSelection = ref<{
   additive: boolean
 } | null>(null)
 const isGroupSelectionActive = computed(() => editMode.value && selectedWidgetIds.value.length > 1)
+const groupDateCompatibleCount = computed(() => {
+  const date = groupDateDraft.value || localTo.value || localFrom.value
+  if (!date || !isGroupSelectionActive.value) return 0
+  return selectedWidgetIds.value.reduce((count, id) => {
+    const widget = getWidgetById(id)
+    if (!widget) return count
+    return buildCommonDatePatch(getWidgetDef(widget.type), date) ? count + 1 : count
+  }, 0)
+})
+const canApplyGroupDate = computed(
+  () =>
+    isGroupSelectionActive.value &&
+    Boolean(groupDateDraft.value) &&
+    groupDateCompatibleCount.value > 0,
+)
+
+watch(
+  () => [localFrom.value, localTo.value],
+  () => {
+    if (!groupDateDraft.value) {
+      groupDateDraft.value = localTo.value || localFrom.value
+    }
+  },
+)
 
 const GROUP_RESIZE_HANDLES: Array<{ dir: ResizeDir; title: string }> = [
   { dir: 'ne', title: 'Redimensionner le groupe (coin haut droit)' },
@@ -2303,6 +2451,47 @@ const groupSelectionFrameStyle = computed(() => {
   }
 })
 
+const groupSelectionToolbarStyle = computed(() => {
+  interactionTick.value
+  if (!isGroupSelectionActive.value) return null
+  const bounds = selectedGroupBounds()
+  if (!bounds) return null
+  const toolbarTop = bounds.top >= 56 ? bounds.top - 52 : bounds.bottom + 12
+  return {
+    left: `${clamp(bounds.left, 0, BOARD_W - 520)}px`,
+    top: `${clamp(toolbarTop, 0, BOARD_H - 44)}px`,
+    zIndex: String(bounds.maxZ + 32),
+  }
+})
+
+function onGroupDateInput(event: Event) {
+  const input = event.target as HTMLInputElement | null
+  groupDateDraft.value = input?.value ?? ''
+}
+
+function applyGroupDateToSelection() {
+  if (!editMode.value || !isGroupSelectionActive.value) return
+  const date = clampDate(groupDateDraft.value || localTo.value || localFrom.value)
+  if (!date) return
+
+  let changed = false
+  for (const id of selectedWidgetIds.value) {
+    const widget = getWidgetById(id)
+    if (!widget) continue
+    const patch = buildCommonDatePatch(getWidgetDef(widget.type), date)
+    if (!patch) continue
+    widget.props = {
+      ...(widget.props ?? {}),
+      ...patch,
+    }
+    changed = true
+  }
+
+  if (!changed) return
+  groupDateDraft.value = date
+  scheduleSave()
+}
+
 function onGroupResizeHandleDown(dir: ResizeDir, event: PointerEvent) {
   if (!isGroupSelectionActive.value) return
   const anchorId = selectedWidgetIds.value[0]
@@ -2432,10 +2621,11 @@ const settingsDef = computed(() =>
 )
 
 const settingsTitle = computed(() => settingsWidget.value?.title ?? 'Reglages')
-const SIMPLE_TEXT_SETTINGS = new Set(['content', 'fontSize', 'align', 'color'])
-const SIMPLE_COMMON_HIDDEN_SETTINGS = new Set(['types'])
+const SIMPLE_TEXT_SETTINGS = new Set(['content', 'fontSize', 'rotation', 'align', 'color'])
+const SIMPLE_COMMON_HIDDEN_SETTINGS = new Set<string>()
 const isWidgetInEditMode = computed(
-  () => isStatsDashboardRoute.value && editMode.value && !templateActive.value && !isRouteLeaving.value,
+  () =>
+    isStatsDashboardRoute.value && editMode.value && !templateActive.value && !isRouteLeaving.value,
 )
 
 function simplifySettingsFields(widget: Widget | null, fields: Array<Record<string, unknown>>) {
@@ -2478,17 +2668,17 @@ function buildSettingsFieldsForWidget(
     ? [
         {
           key: 'categories',
-          label: 'Categories',
+          label: 'Sous-categories',
           type: 'multiselect',
           options: categoryOptions.value,
-          placeholder: 'Toutes categories',
+          placeholder: 'Toutes sous-categories',
         },
         {
           key: 'types',
-          label: "Types d'items",
+          label: 'Categories principales',
           type: 'multiselect',
           options: typeOptions.value,
-          placeholder: 'Tous types',
+          placeholder: 'Toutes categories',
         },
       ]
     : []
@@ -3247,7 +3437,7 @@ function setWidgetRef(id: string, c: any) {
     if (dragState) {
       dragState.el = nextEl
       nextEl.classList.add('is-dragging')
-      applyWidgetTransform(nextEl, dragState.x, dragState.y)
+      applyWidgetTransform(nextEl, dragState.x, dragState.y, dragState.widget)
     }
 
     const resizeState = resizeStates.get(id)
@@ -3263,6 +3453,7 @@ function setWidgetRef(id: string, c: any) {
         resizeState.y,
         resizeState.w,
         resizeState.h,
+        resizeState.widget,
       )
       if (resizeState.isText) {
         applyTextWidgetPreviewFont(nextEl, resizeState.previewFontSize)
@@ -3283,6 +3474,7 @@ function setWidgetRef(id: string, c: any) {
         groupMember.y,
         groupMember.w,
         groupMember.h,
+        groupMember.widget,
       )
       if (groupMember.isText) {
         applyTextWidgetPreviewFont(nextEl, groupMember.previewFontSize)
@@ -3295,17 +3487,30 @@ function setWidgetRef(id: string, c: any) {
 function applyWidgetDOM(el: HTMLElement, w: Widget) {
   el.style.width = `${w.w}px`
   el.style.height = `${w.h}px`
-  el.style.transform = `translate3d(${w.x}px, ${w.y}px, 0)`
+  const rotation = isTextWidget(w) ? resolveWidgetRotation(w) : 0
+  el.style.transform = buildWidgetTransform(w.x, w.y, rotation)
+  el.style.transformOrigin = rotation ? 'center center' : 'top left'
 }
 
-function applyWidgetTransform(el: HTMLElement, x: number, y: number) {
-  el.style.transform = `translate3d(${x}px, ${y}px, 0)`
+function applyWidgetTransform(el: HTMLElement, x: number, y: number, widget?: Widget | null) {
+  const rotation = widget && isTextWidget(widget) ? resolveWidgetRotation(widget) : 0
+  el.style.transform = buildWidgetTransform(x, y, rotation)
+  el.style.transformOrigin = rotation ? 'center center' : 'top left'
 }
 
-function applyWidgetDOMRect(el: HTMLElement, x: number, y: number, w: number, h: number) {
+function applyWidgetDOMRect(
+  el: HTMLElement,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  widget?: Widget | null,
+) {
   el.style.width = `${w}px`
   el.style.height = `${h}px`
-  el.style.transform = `translate3d(${x}px, ${y}px, 0)`
+  const rotation = widget && isTextWidget(widget) ? resolveWidgetRotation(widget) : 0
+  el.style.transform = buildWidgetTransform(x, y, rotation)
+  el.style.transformOrigin = rotation ? 'center center' : 'top left'
 }
 
 function applyWidgetResizePreview(
@@ -3316,14 +3521,16 @@ function applyWidgetResizePreview(
   y: number,
   w: number,
   h: number,
+  widget?: Widget | null,
 ) {
-  applyWidgetDOMRect(el, x, y, Math.max(w, 1), Math.max(h, 1))
+  applyWidgetDOMRect(el, x, y, Math.max(w, 1), Math.max(h, 1), widget)
 }
 
 function textPreviewEl(el: HTMLElement | null) {
-  return el?.querySelector<HTMLElement>(
-    '.text-title-copy, .text-block-copy, .text-inline-editor',
-  ) ?? null
+  return (
+    el?.querySelector<HTMLElement>('.text-title-copy, .text-block-copy, .text-inline-editor') ??
+    null
+  )
 }
 
 function applyTextWidgetPreviewFont(el: HTMLElement | null, fontSize: number | null) {
@@ -3931,7 +4138,7 @@ function scheduleDragApply(state: DragState) {
   state.raf = requestAnimationFrame(() => {
     state.raf = null
     if (state.el) {
-      applyWidgetTransform(state.el, state.x, state.y)
+      applyWidgetTransform(state.el, state.x, state.y, state.widget)
     }
     if (activeDragIds.length > 0) {
       bumpInteractionTick()
@@ -3975,6 +4182,7 @@ function scheduleGroupResizeApply(state: GroupResizeState) {
         member.y,
         member.w,
         member.h,
+        member.widget,
       )
       if (member.isText) {
         applyTextWidgetPreviewFont(member.el, member.previewFontSize)
@@ -4004,6 +4212,7 @@ function scheduleResizeApply(state: ResizeState) {
       state.y,
       state.w,
       state.h,
+      state.widget,
     )
     if (state.isText) {
       applyTextWidgetPreviewFont(state.el, state.previewFontSize)
@@ -4551,16 +4760,8 @@ function finishGroupResize() {
   for (const member of state.members) {
     member.el?.classList.remove('is-resizing')
     const fineSnap = true
-    const snappedW = clamp(
-      fineSnap ? Math.round(member.w) : snap(member.w),
-      member.minW,
-      BOARD_W,
-    )
-    const snappedH = clamp(
-      fineSnap ? Math.round(member.h) : snap(member.h),
-      member.minH,
-      BOARD_H,
-    )
+    const snappedW = clamp(fineSnap ? Math.round(member.w) : snap(member.w), member.minW, BOARD_W)
+    const snappedH = clamp(fineSnap ? Math.round(member.h) : snap(member.h), member.minH, BOARD_H)
     member.widget.x = clamp(fineSnap ? Math.round(member.x) : snap(member.x), 0, BOARD_W - snappedW)
     member.widget.y = clamp(fineSnap ? Math.round(member.y) : snap(member.y), 0, BOARD_H - snappedH)
     member.widget.w = snappedW
@@ -5127,7 +5328,14 @@ function finishResize(id: string) {
   let snappedW = clamp(fineSnap ? Math.round(state.w) : snap(state.w), state.minW, state.maxW)
   let snappedH = clamp(fineSnap ? Math.round(state.h) : snap(state.h), state.minH, state.maxH)
   if (isSquareKpiWidget(w)) {
-    const side = squareResizeSide(snappedW, snappedH, state.minW, state.minH, state.maxW, state.maxH)
+    const side = squareResizeSide(
+      snappedW,
+      snappedH,
+      state.minW,
+      state.minH,
+      state.maxW,
+      state.maxH,
+    )
     snappedW = side
     snappedH = side
   }
@@ -5416,6 +5624,7 @@ watch(
   userId,
   async () => {
     const expectedUserId = String(userId.value)
+    categoryLabels.value = readStoredItemCategories(expectedUserId)
     clearPendingSaves()
     loadEditMode()
     detachAllInteract()
@@ -5442,6 +5651,12 @@ watch(
   },
   { immediate: false },
 )
+
+function onItemCategoriesChange(event: Event) {
+  const detail = (event as CustomEvent)?.detail || {}
+  if (String(detail.userId || 'guest') !== String(userId.value || 'guest')) return
+  categoryLabels.value = readStoredItemCategories(userId.value)
+}
 
 async function loadDateBounds() {
   try {
@@ -5599,6 +5814,51 @@ function duplicateWidget(id: string) {
   scheduleSave()
 }
 
+function duplicateSelectedWidgets() {
+  if (!editMode.value) return
+  if (!isGroupSelectionActive.value) return
+  const sources = selectedWidgetIds.value
+    .map((id) => getWidgetById(id))
+    .filter((widget): widget is Widget => Boolean(widget))
+  if (sources.length < 2) return
+
+  const zStart = Math.max(zTop, ...widgets.value.map((widget) => Number(widget.z ?? 0)))
+  const result = duplicateWidgetGroup(sources, {
+    createId: (type) => createWidgetId(type),
+    cloneProps: cloneWidgetProps,
+    boardWidth: BOARD_W,
+    boardHeight: BOARD_H,
+    offset: GRID * 6,
+    zStart,
+  })
+  const duplicates = result.duplicates
+  if (!duplicates.length) return
+
+  zTop = Math.max(zTop, result.nextZ)
+  for (const duplicate of duplicates) {
+    clampWidget(duplicate)
+  }
+
+  widgets.value.push(...duplicates)
+  setSelectedWidgets(duplicates.map((duplicate) => duplicate.id))
+  dragArmedId.value = duplicates[0]?.id ?? null
+  setActiveTextWidget(null)
+  scheduleVisibleRectUpdate()
+
+  const textDuplicates = duplicates.filter((duplicate) => isTextWidget(duplicate))
+  if (textDuplicates.length) {
+    nextTick(() => {
+      for (const duplicate of textDuplicates) {
+        fitTextWidgetAfterRender(duplicate, widgetEls.get(duplicate.id) ?? null, {
+          preserveWidth: shouldPreserveTextWidth(duplicate, 'duplicate'),
+        })
+      }
+    })
+  }
+
+  scheduleSave()
+}
+
 function resetLayout() {
   if (!editMode.value) return
 
@@ -5647,7 +5907,11 @@ function applyWidgetVariantSize(widget: Widget, view?: string) {
   }
 }
 
-function addWidget(payload: string | { type: string; view?: string; props?: Record<string, unknown>; title?: string }) {
+function addWidget(
+  payload:
+    | string
+    | { type: string; view?: string; props?: Record<string, unknown>; title?: string },
+) {
   if (!editMode.value) return
   paletteOpen.value = false
 
@@ -5803,6 +6067,7 @@ onMounted(async () => {
   window.addEventListener('keydown', onSelectionKeyDown, { capture: true })
   window.addEventListener('keyup', onCanvasKeyUp, { capture: true })
   window.addEventListener('blur', onWindowBlur)
+  window.addEventListener('snk:item-categories-change', onItemCategoriesChange)
   window.addEventListener('pointerdown', onRailDateGlobalPointerDown)
   window.addEventListener('keydown', onRailDateGlobalKeyDown)
   document.addEventListener('visibilitychange', onVisibilityChange)
@@ -5879,6 +6144,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('keydown', onSelectionKeyDown, true)
   window.removeEventListener('keyup', onCanvasKeyUp, true)
   window.removeEventListener('blur', onWindowBlur)
+  window.removeEventListener('snk:item-categories-change', onItemCategoriesChange)
   window.removeEventListener('pointerdown', onRailDateGlobalPointerDown)
   window.removeEventListener('keydown', onRailDateGlobalKeyDown)
   document.removeEventListener('visibilitychange', onVisibilityChange)
@@ -5950,4 +6216,3 @@ function saveProfileEditor() {
 </script>
 
 <style src="./StatsCanvas.css"></style>
-

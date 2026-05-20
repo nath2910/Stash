@@ -719,11 +719,16 @@ public class StatsService {
 
   private List<String> normalizeCategories(List<String> categories) {
     if (categories == null) return null;
-    var cleaned = categories.stream()
-        .filter(c -> c != null && !c.trim().isEmpty())
-        .map(String::trim)
-        .distinct()
-        .toList();
+    var cleaned = new ArrayList<String>();
+    for (String category : categories) {
+      if (category == null || category.trim().isEmpty()) continue;
+      String trimmed = category.trim();
+      cleaned.add(trimmed);
+      if ("Autre".equalsIgnoreCase(trimmed)) {
+        cleaned.add("Sans sous-categorie");
+      }
+    }
+    cleaned = new ArrayList<>(cleaned.stream().distinct().toList());
     return cleaned.isEmpty() ? null : cleaned;
   }
 
@@ -782,7 +787,7 @@ public class StatsService {
       return category.trim();
     }
     ItemType type = item.getType();
-    if (type == ItemType.POKEMON_CARD) return "Cartes";
+    if (type == ItemType.POKEMON_CARD) return "Pokemon";
     if (type == ItemType.TICKET) return "Tickets";
     if (type == ItemType.OTHER) return "Autres";
     return "Sneakers";

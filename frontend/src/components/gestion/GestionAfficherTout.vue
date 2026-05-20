@@ -56,12 +56,20 @@
         </div>
 
         <div class="mt-3 flex items-center justify-between gap-2">
-          <span
-            class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide"
-            :class="typeBadgeClass(vente.type)"
-          >
-            {{ typeLabelDisplay(vente.type) }}
-          </span>
+          <div class="flex min-w-0 flex-wrap items-center gap-2">
+            <span
+              class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide"
+              :class="typeBadgeClass(vente.type)"
+            >
+              {{ typeLabelDisplay(vente.type) }}
+            </span>
+            <span
+              v-if="subcategoryLabel(vente)"
+              class="inline-flex max-w-[11rem] items-center rounded-full border border-gray-700 bg-gray-950/60 px-2 py-0.5 text-[11px] font-medium text-gray-300"
+            >
+              <span class="truncate">{{ subcategoryLabel(vente) }}</span>
+            </span>
+          </div>
           <span
             class="text-sm font-semibold"
             :class="profit(vente) >= 0 ? 'text-emerald-400' : 'text-red-400'"
@@ -138,6 +146,11 @@
               type
             </th>
             <th
+              class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-400"
+            >
+              sous-categorie
+            </th>
+            <th
               class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-400"
             >
               prix_retail
@@ -202,6 +215,10 @@
               </span>
             </td>
 
+            <td class="px-4 py-3 text-xs text-gray-300">
+              {{ subcategoryLabel(vente) || '--' }}
+            </td>
+
             <td class="px-4 py-3 text-right">
               {{ formatCurrency(vente.prixRetail ?? vente.prix_retail) }}
             </td>
@@ -250,7 +267,7 @@
           </tr>
 
           <tr v-if="!snkVentes.length">
-            <td :colspan="selectable ? 9 : 8" class="px-4 py-8 text-center text-sm text-gray-400">
+            <td :colspan="selectable ? 10 : 9" class="px-4 py-8 text-center text-sm text-gray-400">
               Aucun item a afficher pour le moment.
             </td>
           </tr>
@@ -261,10 +278,11 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { formatDateFR, formatEUR } from '@/utils/formatters'
 import { profitOf } from '@/utils/snkVente'
-import { typeLabel } from '@/RegleItem/CategorieItem'
+import { isItemCategoryAlias, itemTypeLabel, readStoredItemCategories } from '@/RegleItem/itemCategoryStore'
+import { useAuthStore } from '@/store/authStore'
 
 const props = defineProps({
   snkVentes: { type: Array, required: true },
@@ -277,6 +295,9 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['edit', 'update:modelValue'])
+const authStore = useAuthStore()
+const currentUserId = computed(() => authStore.user?.value?.id ?? authStore.user?.id ?? 'guest')
+const categoryLabels = ref(readStoredItemCategories(currentUserId.value))
 
 const isSelected = (id) => props.modelValue.includes(id)
 
@@ -316,6 +337,10 @@ const formatCurrency = (val) => {
 const formatDate = (val) => formatDateFR(val, { fallback: '--' })
 
 const profit = (vente) => profitOf(vente)
+const subcategoryLabel = (vente) => {
+  const label = String(vente?.categorie ?? '').trim()
+  return isItemCategoryAlias(label, categoryLabels.value) ? '' : label
+}
 const typeBadgeClass = (type) => {
   switch (type) {
     case 'TICKET':
@@ -328,5 +353,26 @@ const typeBadgeClass = (type) => {
       return 'bg-purple-500/10 text-purple-200 border border-purple-400/60'
   }
 }
-const typeLabelDisplay = (type) => typeLabel(type || 'SNEAKER')
+const typeLabelDisplay = (type) => itemTypeLabel(type || 'SNEAKER', categoryLabels.value).toUpperCase()
+
+watch(
+  () => currentUserId.value,
+  (userId) => {
+    categoryLabels.value = readStoredItemCategories(userId)
+  },
+)
+
+function onCategoryLabelsChange(event) {
+  const detail = event?.detail || {}
+  if (String(detail.userId || 'guest') !== String(currentUserId.value || 'guest')) return
+  categoryLabels.value = readStoredItemCategories(currentUserId.value)
+}
+
+onMounted(() => {
+  window.addEventListener('snk:item-categories-change', onCategoryLabelsChange)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('snk:item-categories-change', onCategoryLabelsChange)
+})
 </script>

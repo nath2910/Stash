@@ -2,24 +2,26 @@
   <div class="min-h-screen text-slate-100">
     <div class="relative w-full app-page-stack">
       <header
-        class="rounded-[28px] border border-slate-800/80 bg-gradient-to-br from-slate-900/95 via-slate-900/85 to-slate-950/80 px-6 py-6 shadow-2xl backdrop-blur sm:px-8"
+        class="rounded-[24px] border border-slate-700/60 bg-slate-900/70 px-5 py-5 shadow-xl shadow-slate-950/20 backdrop-blur sm:px-7"
       >
-        <div class="flex flex-wrap items-start justify-between gap-6">
-          <div class="space-y-3">
-            <p class="text-xs uppercase tracking-[0.35em] text-violet-300/80">Backoffice Stash</p>
-            <h1 class="text-3xl font-semibold text-white sm:text-4xl">Gestion des ventes</h1>
-            <p class="text-base text-slate-400">
+        <div class="flex flex-wrap items-end justify-between gap-4">
+          <div class="space-y-2">
+            <p class="text-[11px] uppercase tracking-[0.3em] text-violet-300/80">
+              Backoffice Stash
+            </p>
+            <h1 class="text-2xl font-semibold text-white sm:text-3xl">Gestion des ventes</h1>
+            <p class="max-w-2xl text-sm text-slate-400 sm:text-base">
               Ajoute, modifie, recherche, selectionne et supprime en un seul endroit.
             </p>
           </div>
-          <div class="flex flex-wrap gap-2 text-xs">
+          <div class="hidden flex-wrap gap-2 text-xs md:flex">
             <span
-              class="inline-flex items-center rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1 text-slate-300"
+              class="inline-flex items-center rounded-full border border-slate-700/80 bg-slate-800/70 px-3 py-1 text-slate-300"
             >
               Inventaire centralise
             </span>
             <span
-              class="inline-flex items-center rounded-full border border-violet-400/30 bg-violet-400/10 px-3 py-1 text-violet-200"
+              class="inline-flex items-center rounded-full border border-violet-300/25 bg-violet-400/10 px-3 py-1 text-violet-200"
             >
               Actions rapides
             </span>
@@ -27,326 +29,389 @@
         </div>
       </header>
 
-      <section class="space-y-6">
-        <div class="relative z-30 grid gap-6 xl:grid-cols-[0.78fr_1.22fr]">
-          <div
-            class="relative z-40 overflow-visible rounded-3xl border border-slate-800/80 bg-gradient-to-b from-slate-900/95 via-slate-900/80 to-slate-950/70 p-4 shadow-2xl backdrop-blur sm:p-5"
+      <div class="flex justify-center">
+        <nav
+          class="inline-flex rounded-full border border-slate-700/70 bg-slate-900/65 p-1 shadow-lg shadow-slate-950/20 backdrop-blur"
+          aria-label="Sous-onglets gestion"
+        >
+          <button
+            type="button"
+            class="min-w-[118px] rounded-full px-4 py-2 text-sm font-semibold transition"
+            :class="
+              activeGestionTab === 'inventory'
+                ? 'bg-slate-100 text-slate-950 shadow-sm'
+                : 'text-slate-300 hover:bg-slate-800/70 hover:text-white'
+            "
+            @click="setGestionTab('inventory')"
           >
-            <StockSummaryRow
-              :total-paires="totalPaires"
-              :nb-en-stock="nbEnStock"
-              :valeur-stock="valeurStock"
-            />
-          </div>
-          <div
-            class="rounded-3xl border border-slate-800/80 bg-gradient-to-b from-slate-900/95 via-slate-900/80 to-slate-950/70 p-4 shadow-2xl backdrop-blur sm:p-5"
+            Inventaire
+          </button>
+          <button
+            type="button"
+            class="min-w-[138px] rounded-full px-4 py-2 text-sm font-semibold transition"
+            :class="
+              activeGestionTab === 'delivery'
+                ? 'bg-slate-100 text-slate-950 shadow-sm'
+                : 'text-slate-300 hover:bg-slate-800/70 hover:text-white'
+            "
+            @click="setGestionTab('delivery')"
           >
-            <div class="flex items-center justify-between">
-              <div>
-                <h2 class="text-base font-semibold text-white">Recherche rapide</h2>
-                <p class="text-xs text-slate-400">Nom, categorie, description.</p>
-              </div>
-            </div>
-            <div ref="filterRoot" class="relative mt-3">
-              <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <div class="min-w-0 flex-1">
-                  <SearchBarre v-model="searchTerm" />
-                </div>
-                <button
-                  type="button"
-                  class="inline-flex h-12 items-center justify-center gap-2 rounded-full border px-4 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-violet-500/30"
-                  :class="
-                    activeFilterCount
-                      ? 'border-violet-400/60 bg-violet-500/15 text-violet-100 shadow-lg shadow-violet-950/20'
-                      : 'border-slate-700 bg-slate-900/80 text-slate-200 hover:border-slate-500 hover:bg-slate-800/80'
-                  "
-                  :aria-expanded="filterPanelOpen"
-                  aria-controls="gestion-filter-panel"
-                  @click="toggleFilterPanel"
-                >
-                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M3 5h18M6 12h12M10 19h4"
-                    />
-                  </svg>
-                  <span>Filtres</span>
-                  <span
-                    v-if="activeFilterCount"
-                    class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-violet-400 px-1.5 text-[11px] font-bold text-slate-950"
-                  >
-                    {{ activeFilterCount }}
-                  </span>
-                </button>
-              </div>
+            Suivi Livraison
+          </button>
+        </nav>
+      </div>
 
-              <div v-if="activeFilterChips.length" class="mt-3 flex flex-wrap items-center gap-2">
-                <button
-                  v-for="chip in activeFilterChips"
-                  :key="chip.key"
-                  type="button"
-                  class="inline-flex items-center gap-1.5 rounded-full border border-slate-700/80 bg-slate-950/70 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:border-violet-400/60 hover:text-white"
-                  @click="removeActiveFilter(chip)"
-                >
-                  <span>{{ chip.label }}</span>
-                  <span class="text-slate-500" aria-hidden="true">&times;</span>
-                </button>
-                <button
-                  type="button"
-                  class="text-xs font-semibold text-slate-400 underline-offset-4 transition hover:text-white hover:underline"
-                  @click="resetFilters"
-                >
-                  Tout effacer
-                </button>
-              </div>
-
-              <Transition
-                enter-active-class="transition duration-150 ease-out"
-                enter-from-class="opacity-0 translate-y-1 scale-[0.99]"
-                enter-to-class="opacity-100 translate-y-0 scale-100"
-                leave-active-class="transition duration-100 ease-in"
-                leave-from-class="opacity-100 translate-y-0 scale-100"
-                leave-to-class="opacity-0 translate-y-1 scale-[0.99]"
+      <Transition name="gestion-tab-view" mode="out-in">
+        <div :key="activeGestionTab">
+          <section v-if="activeGestionTab === 'inventory'" class="space-y-5">
+            <div class="relative z-30 grid gap-6 xl:grid-cols-[0.78fr_1.22fr]">
+              <div
+                class="relative z-40 overflow-visible rounded-[24px] border border-slate-700/70 bg-slate-900/70 p-4 shadow-xl shadow-slate-950/20 backdrop-blur sm:p-5"
               >
-                <div
-                  v-if="filterPanelOpen"
-                  id="gestion-filter-panel"
-                  class="gestion-filter-panel absolute right-0 top-[calc(100%+0.75rem)] z-40 w-full rounded-2xl border border-slate-700/80 bg-slate-950/95 p-4 shadow-2xl shadow-slate-950/70 backdrop-blur-xl sm:w-[760px] sm:max-w-[calc(100vw-3rem)]"
-                  @keydown.esc.stop.prevent="filterPanelOpen = false"
-                >
-                  <div class="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <h3 class="text-sm font-semibold text-white">Filtres de liste</h3>
-                      <p class="mt-1 text-xs text-slate-400">
-                        Combine recherche, statut, categories et dates.
-                      </p>
-                    </div>
-                    <span class="rounded-full bg-slate-900 px-3 py-1 text-xs text-slate-300">
-                      {{ filteredPreviewCount }} item(s)
-                    </span>
+                <StockSummaryRow
+                  :total-paires="totalPaires"
+                  :nb-en-stock="nbEnStock"
+                  :valeur-stock="valeurStock"
+                />
+              </div>
+              <div
+                class="rounded-[24px] border border-slate-700/70 bg-slate-900/70 p-4 shadow-xl shadow-slate-950/20 backdrop-blur sm:p-5"
+              >
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h2 class="text-base font-semibold text-white">Recherche rapide</h2>
+                    <p class="text-xs text-slate-400">Nom, sous-categorie, description.</p>
                   </div>
-
-                  <div class="mt-4 grid gap-4">
-                    <section v-if="categoryOptions.length" class="grid gap-2">
-                      <div class="flex items-center justify-between gap-3">
-                        <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-                          Categorie
-                        </p>
-                        <button
-                          v-if="draftFilters.categories.length"
-                          type="button"
-                          class="text-[11px] font-semibold text-slate-500 transition hover:text-slate-200"
-                          @click="draftFilters.categories = []"
-                        >
-                          Effacer
-                        </button>
-                      </div>
-                      <div class="gestion-filter-options-scroll flex max-h-28 flex-wrap gap-2 overflow-y-auto pr-1">
-                        <button
-                          v-for="option in categoryOptions"
-                          :key="option.value"
-                          type="button"
-                          class="rounded-full border px-3 py-1.5 text-xs font-semibold transition"
-                          :class="
-                            draftFilters.categories.includes(option.value)
-                              ? filterActiveClass
-                              : filterIdleClass
-                          "
-                          @click="toggleDraftCategory(option.value)"
-                        >
-                          {{ option.label }}
-                        </button>
-                      </div>
-                    </section>
-
-                    <div class="grid gap-4 md:grid-cols-2">
-                      <section class="grid gap-2">
-                        <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-                          Statut
-                        </p>
-                        <div class="grid grid-cols-3 gap-2">
-                          <button
-                            v-for="option in statusOptions"
-                            :key="option.value"
-                            type="button"
-                            class="rounded-xl border px-3 py-2 text-xs font-semibold transition"
-                            :class="
-                              draftFilters.status === option.value
-                                ? filterActiveClass
-                                : filterIdleClass
-                            "
-                            @click="draftFilters.status = option.value"
-                          >
-                            {{ option.label }}
-                          </button>
-                        </div>
-                      </section>
-
-                      <section class="grid gap-2">
-                        <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-                          Tri
-                        </p>
-                        <div class="grid grid-cols-3 gap-2">
-                          <button
-                            v-for="option in sortOptions"
-                            :key="option.value"
-                            type="button"
-                            class="rounded-xl border px-3 py-2 text-xs font-semibold transition"
-                            :class="
-                              draftFilters.sort === option.value ? filterActiveClass : filterIdleClass
-                            "
-                            @click="draftFilters.sort = option.value"
-                          >
-                            {{ option.label }}
-                          </button>
-                        </div>
-                      </section>
+                </div>
+                <div ref="filterRoot" class="relative mt-3">
+                  <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <div class="min-w-0 flex-1">
+                      <SearchBarre v-model="searchTerm" />
                     </div>
-
-                    <div class="grid gap-3 lg:grid-cols-2">
-                      <section
-                        v-for="dateFilter in dateFilterSections"
-                        :key="dateFilter.key"
-                        class="rounded-2xl border border-slate-800 bg-slate-900/70 p-3"
-                      >
-                        <div class="flex items-center justify-between gap-3">
-                          <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-                            {{ dateFilter.label }}
-                          </p>
-                          <button
-                            v-if="isDateFilterDraftActive(dateFilter.key)"
-                            type="button"
-                            class="text-[11px] font-semibold text-slate-500 transition hover:text-slate-200"
-                            @click="clearDraftDateFilter(dateFilter.key)"
-                          >
-                            Effacer
-                          </button>
-                        </div>
-
-                        <div class="mt-2 grid grid-cols-4 gap-1.5">
-                          <button
-                            v-for="option in dateModeOptions"
-                            :key="`${dateFilter.key}-${option.value}`"
-                            type="button"
-                            class="rounded-lg border px-2 py-1.5 text-[11px] font-semibold transition"
-                            :class="
-                              draftFilters[dateFilter.key].mode === option.value
-                                ? filterActiveClass
-                                : filterIdleClass
-                            "
-                            @click="setDraftDateMode(dateFilter.key, option.value)"
-                          >
-                            {{ option.label }}
-                          </button>
-                        </div>
-
-                        <div
-                          v-if="draftFilters[dateFilter.key].mode !== 'all'"
-                          class="mt-3 grid gap-2 sm:grid-cols-2"
-                        >
-                          <CompactDateInput
-                            v-if="showDateFromInput(draftFilters[dateFilter.key].mode)"
-                            v-model="draftFilters[dateFilter.key].from"
-                            :label="dateFromLabel(draftFilters[dateFilter.key].mode)"
-                            size="md"
-                          />
-                          <CompactDateInput
-                            v-if="showDateToInput(draftFilters[dateFilter.key].mode)"
-                            v-model="draftFilters[dateFilter.key].to"
-                            :label="dateToLabel(draftFilters[dateFilter.key].mode)"
-                            size="md"
-                          />
-                        </div>
-                        <p v-else class="mt-3 text-xs text-slate-500">Aucune contrainte de date.</p>
-                      </section>
-                    </div>
-                  </div>
-
-                  <div class="mt-4 flex flex-col-reverse gap-2 border-t border-slate-800 pt-4 sm:flex-row sm:items-center sm:justify-end">
                     <button
                       type="button"
-                      class="rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-300 transition hover:border-slate-500 hover:bg-slate-800"
+                      class="inline-flex h-10 items-center justify-center gap-2 rounded-full border px-3.5 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-violet-500/30"
+                      :class="
+                        activeFilterCount
+                          ? 'border-violet-400/60 bg-violet-500/15 text-violet-100 shadow-lg shadow-violet-950/20'
+                          : 'border-slate-700 bg-slate-900/80 text-slate-200 hover:border-slate-500 hover:bg-slate-800/80'
+                      "
+                      :aria-expanded="filterPanelOpen"
+                      aria-controls="gestion-filter-panel"
+                      @click="toggleFilterPanel"
+                    >
+                      <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M3 5h18M6 12h12M10 19h4"
+                        />
+                      </svg>
+                      <span>Filtres</span>
+                      <span
+                        v-if="activeFilterCount"
+                        class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-violet-400 px-1.5 text-[11px] font-bold text-slate-950"
+                      >
+                        {{ activeFilterCount }}
+                      </span>
+                    </button>
+                  </div>
+
+                  <div
+                    v-if="activeFilterChips.length"
+                    class="mt-3 flex flex-wrap items-center gap-2"
+                  >
+                    <button
+                      v-for="chip in activeFilterChips"
+                      :key="chip.key"
+                      type="button"
+                      class="inline-flex items-center gap-1.5 rounded-full border border-slate-700/80 bg-slate-950/70 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:border-violet-400/60 hover:text-white"
+                      @click="removeActiveFilter(chip)"
+                    >
+                      <span>{{ chip.label }}</span>
+                      <span class="text-slate-500" aria-hidden="true">&times;</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="text-xs font-semibold text-slate-400 underline-offset-4 transition hover:text-white hover:underline"
                       @click="resetFilters"
                     >
-                      Reinitialiser
+                      Tout effacer
                     </button>
+                  </div>
+
+                  <Transition
+                    enter-active-class="transition duration-150 ease-out"
+                    enter-from-class="opacity-0 translate-y-1 scale-[0.99]"
+                    enter-to-class="opacity-100 translate-y-0 scale-100"
+                    leave-active-class="transition duration-100 ease-in"
+                    leave-from-class="opacity-100 translate-y-0 scale-100"
+                    leave-to-class="opacity-0 translate-y-1 scale-[0.99]"
+                  >
+                    <div
+                      v-if="filterPanelOpen"
+                      id="gestion-filter-panel"
+                      class="gestion-filter-panel absolute right-0 top-[calc(100%+0.75rem)] z-40 w-full rounded-2xl border border-slate-700/80 bg-slate-950/95 p-4 shadow-2xl shadow-slate-950/70 backdrop-blur-xl sm:w-[760px] sm:max-w-[calc(100vw-3rem)]"
+                      @keydown.esc.stop.prevent="filterPanelOpen = false"
+                    >
+                      <div class="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <h3 class="text-sm font-semibold text-white">Filtres de liste</h3>
+                          <p class="mt-1 text-xs text-slate-400">
+                            Combine recherche, statut, sous-categories et dates.
+                          </p>
+                        </div>
+                        <span class="rounded-full bg-slate-900 px-3 py-1 text-xs text-slate-300">
+                          {{ filteredPreviewCount }} item(s)
+                        </span>
+                      </div>
+
+                      <div class="mt-4 grid gap-4">
+                        <section v-if="categoryOptions.length" class="grid gap-2">
+                          <div class="flex items-center justify-between gap-3">
+                            <p
+                              class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400"
+                            >
+                              Sous-categorie
+                            </p>
+                            <button
+                              v-if="draftFilters.categories.length"
+                              type="button"
+                              class="text-[11px] font-semibold text-slate-500 transition hover:text-slate-200"
+                              @click="draftFilters.categories = []"
+                            >
+                              Effacer
+                            </button>
+                          </div>
+                          <div
+                            class="gestion-filter-options-scroll flex max-h-28 flex-wrap gap-2 overflow-y-auto pr-1"
+                          >
+                            <button
+                              v-for="option in categoryOptions"
+                              :key="option.value"
+                              type="button"
+                              class="rounded-full border px-3 py-1.5 text-xs font-semibold transition"
+                              :class="
+                                draftFilters.categories.includes(option.value)
+                                  ? filterActiveClass
+                                  : filterIdleClass
+                              "
+                              @click="toggleDraftCategory(option.value)"
+                            >
+                              {{ option.label }}
+                            </button>
+                          </div>
+                        </section>
+
+                        <div class="grid gap-4 md:grid-cols-2">
+                          <section class="grid gap-2">
+                            <p
+                              class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400"
+                            >
+                              Statut
+                            </p>
+                            <div class="grid grid-cols-3 gap-2">
+                              <button
+                                v-for="option in statusOptions"
+                                :key="option.value"
+                                type="button"
+                                class="rounded-xl border px-3 py-2 text-xs font-semibold transition"
+                                :class="
+                                  draftFilters.status === option.value
+                                    ? filterActiveClass
+                                    : filterIdleClass
+                                "
+                                @click="draftFilters.status = option.value"
+                              >
+                                {{ option.label }}
+                              </button>
+                            </div>
+                          </section>
+
+                          <section class="grid gap-2">
+                            <p
+                              class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400"
+                            >
+                              Tri
+                            </p>
+                            <div class="grid grid-cols-3 gap-2">
+                              <button
+                                v-for="option in sortOptions"
+                                :key="option.value"
+                                type="button"
+                                class="rounded-xl border px-3 py-2 text-xs font-semibold transition"
+                                :class="
+                                  draftFilters.sort === option.value
+                                    ? filterActiveClass
+                                    : filterIdleClass
+                                "
+                                @click="draftFilters.sort = option.value"
+                              >
+                                {{ option.label }}
+                              </button>
+                            </div>
+                          </section>
+                        </div>
+
+                        <div class="grid gap-3 lg:grid-cols-2">
+                          <section
+                            v-for="dateFilter in dateFilterSections"
+                            :key="dateFilter.key"
+                            class="rounded-2xl border border-slate-800 bg-slate-900/70 p-3"
+                          >
+                            <div class="flex items-center justify-between gap-3">
+                              <p
+                                class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400"
+                              >
+                                {{ dateFilter.label }}
+                              </p>
+                              <button
+                                v-if="isDateFilterDraftActive(dateFilter.key)"
+                                type="button"
+                                class="text-[11px] font-semibold text-slate-500 transition hover:text-slate-200"
+                                @click="clearDraftDateFilter(dateFilter.key)"
+                              >
+                                Effacer
+                              </button>
+                            </div>
+
+                            <div class="mt-2 grid grid-cols-4 gap-1.5">
+                              <button
+                                v-for="option in dateModeOptions"
+                                :key="`${dateFilter.key}-${option.value}`"
+                                type="button"
+                                class="rounded-lg border px-2 py-1.5 text-[11px] font-semibold transition"
+                                :class="
+                                  draftFilters[dateFilter.key].mode === option.value
+                                    ? filterActiveClass
+                                    : filterIdleClass
+                                "
+                                @click="setDraftDateMode(dateFilter.key, option.value)"
+                              >
+                                {{ option.label }}
+                              </button>
+                            </div>
+
+                            <div
+                              v-if="draftFilters[dateFilter.key].mode !== 'all'"
+                              class="mt-3 grid gap-2 sm:grid-cols-2"
+                            >
+                              <CompactDateInput
+                                v-if="showDateFromInput(draftFilters[dateFilter.key].mode)"
+                                v-model="draftFilters[dateFilter.key].from"
+                                :label="dateFromLabel(draftFilters[dateFilter.key].mode)"
+                                size="md"
+                              />
+                              <CompactDateInput
+                                v-if="showDateToInput(draftFilters[dateFilter.key].mode)"
+                                v-model="draftFilters[dateFilter.key].to"
+                                :label="dateToLabel(draftFilters[dateFilter.key].mode)"
+                                size="md"
+                              />
+                            </div>
+                            <p v-else class="mt-3 text-xs text-slate-500">
+                              Aucune contrainte de date.
+                            </p>
+                          </section>
+                        </div>
+                      </div>
+
+                      <div
+                        class="mt-4 flex flex-col-reverse gap-2 border-t border-slate-800 pt-4 sm:flex-row sm:items-center sm:justify-end"
+                      >
+                        <button
+                          type="button"
+                          class="rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-300 transition hover:border-slate-500 hover:bg-slate-800"
+                          @click="resetFilters"
+                        >
+                          Reinitialiser
+                        </button>
+                        <button
+                          type="button"
+                          class="rounded-xl bg-violet-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-400/40"
+                          @click="applyDraftFilters"
+                        >
+                          Appliquer
+                        </button>
+                      </div>
+                    </div>
+                  </Transition>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tableau -->
+            <div
+              class="relative z-0 overflow-hidden rounded-[24px] border border-slate-700/70 bg-slate-900/70 shadow-xl shadow-slate-950/20 backdrop-blur"
+            >
+              <!-- Header tableau -->
+              <div
+                class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800/80 px-4 py-4 sm:px-6"
+              >
+                <!-- Gauche : titre -->
+                <div>
+                  <h2 class="text-lg font-semibold text-slate-100 leading-tight">
+                    Liste des items
+                  </h2>
+                  <p class="text-xs text-slate-400">
+                    {{ filteredVentes.length }} item(s) trouvee(s)
+                    <span v-if="selectedIds.length">
+                      - {{ selectedIds.length }} selectionnee(s)
+                    </span>
+                  </p>
+                </div>
+
+                <!-- Droite : actions -->
+                <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
+                  <GestionActionsPanel @vente-ajoutee="handleVenteAjoutee" />
+                  <div class="[&_button:hover]:bg-red-900">
                     <button
                       type="button"
-                      class="rounded-xl bg-violet-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-400/40"
-                      @click="applyDraftFilters"
+                      class="w-full whitespace-nowrap rounded-full border border-red-400/40 bg-red-500/10 px-3.5 py-2 text-xs font-semibold text-red-100 transition hover:border-red-300/70 hover:bg-red-500/20 disabled:opacity-60 sm:w-auto"
+                      @click="openDeleteBulk"
                     >
-                      Appliquer
+                      Supprimer un item
                     </button>
                   </div>
                 </div>
-              </Transition>
-            </div>
-          </div>
-        </div>
+              </div>
 
-        <!-- Tableau -->
-        <div
-          class="relative z-0 rounded-3xl border border-slate-800/80 bg-gradient-to-b from-slate-900/95 via-slate-900/80 to-slate-950/70 shadow-2xl backdrop-blur overflow-hidden"
-        >
-          <!-- Header tableau -->
-          <div
-            class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800/80 px-4 py-4 sm:px-6"
-          >
-            <!-- Gauche : titre -->
-            <div>
-              <h2 class="text-lg font-semibold text-slate-100 leading-tight">Liste des items</h2>
-              <p class="text-xs text-slate-400">
-                {{ filteredVentes.length }} item(s) trouvee(s)
-                <span v-if="selectedIds.length"> - {{ selectedIds.length }} selectionnee(s) </span>
-              </p>
-            </div>
-
-            <!-- Droite : actions -->
-            <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
-              <GestionActionsPanel @vente-ajoutee="handleVenteAjoutee" />
-              <div class="[&_button:hover]:bg-red-900">
-                <button
-                  type="button"
-                  class="w-full whitespace-nowrap rounded bg-red-600 px-4 py-2 text-xs text-white transition disabled:opacity-60 sm:w-auto"
-                  @click="openDeleteBulk"
-                >
-                  Supprimer un item
-                </button>
+              <!-- Liste -->
+              <div class="p-4">
+                <div class="max-h-[68vh] overflow-y-auto pr-1 sm:max-h-[560px] sm:pr-2">
+                  <afficherTout
+                    :snkVentes="filteredVentes"
+                    selectable
+                    v-model="selectedIds"
+                    @edit="openEditModal"
+                  />
+                </div>
               </div>
             </div>
-          </div>
+          </section>
 
-          <!-- Liste -->
-          <div class="p-4">
-            <div class="max-h-[68vh] overflow-y-auto pr-1 sm:max-h-[560px] sm:pr-2">
-              <afficherTout
-                :snkVentes="filteredVentes"
-                selectable
-                v-model="selectedIds"
-                @edit="openEditModal"
-              />
-            </div>
-          </div>
+          <DeliveryTrackingPanel v-else />
         </div>
-      </section>
+      </Transition>
 
-      <!-- Edition -->
-      <EditVenteModal v-model="showEditModal" :vente="venteToEdit" @saved="handleVenteUpdated" />
+      <template v-if="activeGestionTab === 'inventory'">
+        <!-- Edition -->
+        <EditVenteModal v-model="showEditModal" :vente="venteToEdit" @saved="handleVenteUpdated" />
 
-      <!-- Delete modal (unique) -->
-      <SupprimerModal
-        v-if="showDeleteModal"
-        :snkVentes="snkVentes"
-        :selectedIds="selectedIds"
-        :defaultMode="deleteMode"
-        @close="showDeleteModal = false"
-        @deleted="handleDeleted"
-      />
-      <div class="[&_button:hover]:bg-gray-800">
-        <CsvImportExportWidget :filteredRows="filteredVentes" @imported="reloadVentes" />
-      </div>
+        <!-- Delete modal (unique) -->
+        <SupprimerModal
+          v-if="showDeleteModal"
+          :snkVentes="snkVentes"
+          :selectedIds="selectedIds"
+          :defaultMode="deleteMode"
+          @close="showDeleteModal = false"
+          @deleted="handleDeleted"
+        />
+        <div class="[&_button:hover]:bg-gray-800">
+          <CsvImportExportWidget :filteredRows="filteredVentes" @imported="reloadVentes" />
+        </div>
+      </template>
     </div>
   </div>
 </template>
@@ -364,8 +429,9 @@ import afficherTout from '@/components/gestion/GestionAfficherTout.vue'
 import EditVenteModal from '@/components/gestion/GestionModifierItem.vue'
 import SupprimerModal from '@/components/gestion/GestionSupprimerModal.vue'
 import CsvImportExportWidget from '@/components/gestion/CsvImportExportWidget.vue'
+import DeliveryTrackingPanel from '@/components/gestion/DeliveryTrackingPanel.vue'
 import { isVendue, prixRetailOf } from '@/utils/snkVente'
-import { typeLabel } from '@/RegleItem/CategorieItem'
+import { isItemCategoryAlias, itemTypeLabel, readStoredItemCategories } from '@/RegleItem/itemCategoryStore'
 
 const snkVentes = ref([])
 const searchTerm = ref('')
@@ -382,8 +448,12 @@ const pendingOpenItemId = ref(null)
 
 const { user } = useAuthStore()
 const currentUser = user
+const currentUserId = computed(() => currentUser.value?.id ?? 'guest')
+const categoryLabels = ref(readStoredItemCategories(currentUserId.value))
 const route = useRoute()
 const router = useRouter()
+const tabFromRoute = () => (route.query?.tab === 'delivery' ? 'delivery' : 'inventory')
+const activeGestionTab = ref(tabFromRoute())
 
 const EMPTY_CATEGORY_VALUE = '__empty_category__'
 const filterActiveClass = 'border-violet-400/70 bg-violet-500/15 text-violet-100'
@@ -414,6 +484,19 @@ const dateFilterSections = [
   { key: 'dateVente', label: 'Date de vente' },
 ]
 
+const setGestionTab = (tab) => {
+  const nextTab = tab === 'delivery' ? 'delivery' : 'inventory'
+  activeGestionTab.value = nextTab
+
+  const nextQuery = { ...route.query }
+  if (nextTab === 'delivery') {
+    nextQuery.tab = 'delivery'
+  } else {
+    delete nextQuery.tab
+  }
+  router.replace({ query: nextQuery }).catch(() => {})
+}
+
 const emptyFilters = () => ({
   categories: [],
   status: 'all',
@@ -440,11 +523,12 @@ const normalizeText = (value) =>
 
 const categoryValueOf = (vente) => {
   const raw = String(vente?.categorie ?? '').trim()
+  if (isItemCategoryAlias(raw, categoryLabels.value)) return EMPTY_CATEGORY_VALUE
   return raw ? normalizeText(raw) : EMPTY_CATEGORY_VALUE
 }
 
 const categoryLabelOf = (value) =>
-  value === EMPTY_CATEGORY_VALUE ? 'Sans categorie' : String(value)
+  value === EMPTY_CATEGORY_VALUE ? 'Sans sous-categorie' : String(value)
 
 const categoryOptions = computed(() => {
   const options = new Map()
@@ -455,7 +539,7 @@ const categoryOptions = computed(() => {
     const rawLabel = String(vente?.categorie ?? '').trim()
     options.set(value, {
       value,
-      label: value === EMPTY_CATEGORY_VALUE ? 'Sans categorie' : rawLabel,
+      label: value === EMPTY_CATEGORY_VALUE ? 'Sans sous-categorie' : rawLabel,
     })
   }
 
@@ -552,9 +636,10 @@ const venteMatchesSearch = (vente, term) => {
   if (!term) return true
   const idStr = String(vente.id ?? '')
   const name = String(vente.nomItem ?? vente.nom_item ?? '').toLowerCase()
-  const cat = String(vente.categorie ?? '').toLowerCase()
+  const rawCat = String(vente.categorie ?? '').trim()
+  const cat = isItemCategoryAlias(rawCat, categoryLabels.value) ? '' : rawCat.toLowerCase()
   const desc = String(vente.description ?? '').toLowerCase()
-  const type = typeLabel(vente.type || 'SNEAKER').toLowerCase()
+  const type = itemTypeLabel(vente.type || 'SNEAKER', categoryLabels.value).toLowerCase()
   return (
     idStr.includes(term) ||
     name.includes(term) ||
@@ -565,7 +650,8 @@ const venteMatchesSearch = (vente, term) => {
 }
 
 const venteMatchesFilters = (vente, filters) => {
-  if (filters.categories.length && !filters.categories.includes(categoryValueOf(vente))) return false
+  if (filters.categories.length && !filters.categories.includes(categoryValueOf(vente)))
+    return false
   if (filters.status === 'stock' && isVendue(vente)) return false
   if (filters.status === 'sold' && !isVendue(vente)) return false
   if (!dateMatches(vente.dateAchat ?? vente.date_achat, filters.dateAchat)) return false
@@ -678,6 +764,27 @@ const chargerVentes = async () => {
 }
 
 onMounted(chargerVentes)
+
+watch(
+  () => currentUserId.value,
+  (userId) => {
+    categoryLabels.value = readStoredItemCategories(userId)
+  },
+)
+
+const onCategoryLabelsChange = (event) => {
+  const detail = event?.detail || {}
+  if (String(detail.userId || 'guest') !== String(currentUserId.value || 'guest')) return
+  categoryLabels.value = readStoredItemCategories(currentUserId.value)
+}
+
+onMounted(() => {
+  window.addEventListener('snk:item-categories-change', onCategoryLabelsChange)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('snk:item-categories-change', onCategoryLabelsChange)
+})
 
 const onDocumentPointerDown = (event) => {
   if (!filterPanelOpen.value) return
@@ -844,6 +951,13 @@ const tryOpenPendingItem = () => {
 }
 
 watch(
+  () => route.query.tab,
+  () => {
+    activeGestionTab.value = tabFromRoute()
+  },
+)
+
+watch(
   () => route.query.openItemId,
   () => {
     pendingOpenItemId.value = parseOpenItemIdFromQuery()
@@ -858,6 +972,23 @@ watch(
 .gestion-filter-options-scroll {
   scrollbar-width: thin;
   scrollbar-color: rgba(139, 92, 246, 0.55) rgba(15, 23, 42, 0.35);
+}
+
+.gestion-tab-view-enter-active,
+.gestion-tab-view-leave-active {
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease;
+}
+
+.gestion-tab-view-enter-from {
+  opacity: 0;
+  transform: translateY(4px);
+}
+
+.gestion-tab-view-leave-to {
+  opacity: 0;
+  transform: translateY(-2px);
 }
 
 .gestion-filter-panel {

@@ -16,28 +16,44 @@ import {
   Radar,
   Bell,
   ListChecks,
+  Square,
 } from 'lucide-vue-next'
 
 const TextTitleWidget = defineAsyncComponent(() => import('./widgets/TextTitleWidget.vue'))
 const TextBlockWidget = defineAsyncComponent(() => import('./widgets/TextBlockWidget.vue'))
+const RectangleShapeWidget = defineAsyncComponent(
+  () => import('./widgets/RectangleShapeWidget.vue'),
+)
 const NetProfitWidget = defineAsyncComponent(() => import('./widgets/NetProfitWidget.vue'))
 const RoiWidget = defineAsyncComponent(() => import('./widgets/RoiWidget.vue'))
 const GrossRevenueWidget = defineAsyncComponent(() => import('./widgets/ChiffreDaffaireWidget.vue'))
 const AvgMarginWidget = defineAsyncComponent(() => import('./widgets/AvgMarginWidget.vue'))
-const InventoryValueWidget = defineAsyncComponent(() => import('./widgets/InventoryValueWidget.vue'))
+const InventoryValueWidget = defineAsyncComponent(
+  () => import('./widgets/InventoryValueWidget.vue'),
+)
 const SellThroughWidget = defineAsyncComponent(() => import('./widgets/SellThroughWidget.vue'))
 const AvgDaysToSellWidget = defineAsyncComponent(() => import('./widgets/AvgDaysToSellWidget.vue'))
 const DeathPileWidget = defineAsyncComponent(() => import('./widgets/DeathPileWidget.vue'))
-const ActiveListingsWidget = defineAsyncComponent(() => import('./widgets/ActiveListingsWidget.vue'))
-const TopProfitDriversWidget = defineAsyncComponent(() => import('./widgets/TopProfitDriversWidget.vue'))
+const ActiveListingsWidget = defineAsyncComponent(
+  () => import('./widgets/ActiveListingsWidget.vue'),
+)
+const TopProfitDriversWidget = defineAsyncComponent(
+  () => import('./widgets/TopProfitDriversWidget.vue'),
+)
 const AspWidget = defineAsyncComponent(() => import('./widgets/AspWidget.vue'))
 const CashFlowWidget = defineAsyncComponent(() => import('./widgets/CashFlowWidget.vue'))
 const GoalProgressWidget = defineAsyncComponent(() => import('./widgets/GoalProgressWidget.vue'))
-const VarianceToTargetWidget = defineAsyncComponent(() => import('./widgets/VarianceToTargetWidget.vue'))
-const PeriodComparisonWidget = defineAsyncComponent(() => import('./widgets/PeriodComparisonWidget.vue'))
+const VarianceToTargetWidget = defineAsyncComponent(
+  () => import('./widgets/VarianceToTargetWidget.vue'),
+)
+const PeriodComparisonWidget = defineAsyncComponent(
+  () => import('./widgets/PeriodComparisonWidget.vue'),
+)
 const ProfitBridgeWidget = defineAsyncComponent(() => import('./widgets/ProfitBridgeWidget.vue'))
 const AlertFeedWidget = defineAsyncComponent(() => import('./widgets/AlertFeedWidget.vue'))
-const ActionChecklistWidget = defineAsyncComponent(() => import('./widgets/ActionChecklistWidget.vue'))
+const ActionChecklistWidget = defineAsyncComponent(
+  () => import('./widgets/ActionChecklistWidget.vue'),
+)
 const MomentumWidget = defineAsyncComponent(() => import('./widgets/MomentumWidget.vue'))
 const RiskHeatWidget = defineAsyncComponent(() => import('./widgets/RiskHeatWidget.vue'))
 const BrandsWidget = defineAsyncComponent(() => import('./widgets/BrandsWidget.vue'))
@@ -46,6 +62,7 @@ const TypeMixWidget = defineAsyncComponent(() => import('./widgets/TypeMixWidget
 
 export const CATEGORY_COLORS = {
   Texte: { color: '#a855f7', glow: 'rgba(168, 85, 247, 0.2)' },
+  Formes: { color: '#64748b', glow: 'rgba(100, 116, 139, 0.2)' },
   Finance: { color: '#22c55e', glow: 'rgba(34, 197, 94, 0.2)' },
   Stock: { color: '#38bdf8', glow: 'rgba(56, 189, 248, 0.2)' },
   Performance: { color: '#f59e0b', glow: 'rgba(245, 158, 11, 0.22)' },
@@ -98,6 +115,7 @@ export const WIDGET_DEFS = [
       italic: false,
       underline: false,
       color: '#111827',
+      rotation: 0,
       padding: 'md',
       tight: true,
       autoHeight: true,
@@ -106,6 +124,15 @@ export const WIDGET_DEFS = [
     settings: [
       { key: 'content', label: 'Texte', type: 'text' },
       { key: 'fontSize', label: 'Taille', type: 'number', min: 16, max: 620, step: 2, unit: 'px' },
+      {
+        key: 'rotation',
+        label: 'Rotation',
+        type: 'number',
+        min: -180,
+        max: 180,
+        step: 15,
+        unit: 'deg',
+      },
       {
         key: 'align',
         label: 'Alignement',
@@ -141,6 +168,7 @@ export const WIDGET_DEFS = [
       italic: false,
       underline: false,
       color: '#334155',
+      rotation: 0,
       padding: 'md',
       autoHeight: true,
     },
@@ -148,6 +176,15 @@ export const WIDGET_DEFS = [
     settings: [
       { key: 'content', label: 'Texte', type: 'textarea' },
       { key: 'fontSize', label: 'Taille', type: 'number', min: 12, max: 620, step: 1, unit: 'px' },
+      {
+        key: 'rotation',
+        label: 'Rotation',
+        type: 'number',
+        min: -180,
+        max: 180,
+        step: 15,
+        unit: 'deg',
+      },
       {
         key: 'align',
         label: 'Alignement',
@@ -159,6 +196,54 @@ export const WIDGET_DEFS = [
         ],
       },
       { key: 'color', label: 'Couleur', type: 'color', help: 'Couleur du texte' },
+    ],
+  },
+  {
+    type: 'rectangleShape',
+    title: 'Rectangle',
+    category: 'Formes',
+    help: 'Rectangle ou carre personnalisable',
+    icon: Square,
+    component: RectangleShapeWidget,
+    formPicker: false,
+    forms: [],
+    kind: 'shape',
+    defaultSize: { w: 360, h: 220 },
+    minSize: { w: 24, h: 24 },
+    maxSize: { w: 2000, h: 2000 },
+    defaultProps: {
+      fillEnabled: true,
+      fillColor: '#ffffff',
+      borderEnabled: true,
+      borderColor: '#cbd5e1',
+      borderWidth: 1,
+      cornerRadius: 8,
+      autoHeight: false,
+    },
+    hideGlobalRange: true,
+    settings: [
+      { key: 'fillEnabled', label: 'Fond visible', type: 'toggle' },
+      { key: 'fillColor', label: 'Couleur de fond', type: 'color' },
+      { key: 'borderEnabled', label: 'Bordure visible', type: 'toggle' },
+      { key: 'borderColor', label: 'Couleur bordure', type: 'color' },
+      {
+        key: 'borderWidth',
+        label: 'Epaisseur bordure',
+        type: 'number',
+        min: 0,
+        max: 32,
+        step: 1,
+        unit: 'px',
+      },
+      {
+        key: 'cornerRadius',
+        label: 'Rayon des coins',
+        type: 'number',
+        min: 0,
+        max: 240,
+        step: 1,
+        unit: 'px',
+      },
     ],
   },
   // 💰 Finance

@@ -54,25 +54,15 @@
           <!-- Formulaire -->
           <form class="space-y-6 overflow-hidden p-4 sm:p-6" @submit.prevent="save">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <!-- Type -->
+              <!-- Categorie principale -->
               <div class="sm:col-span-2">
-                <label class="block text-sm font-medium text-gray-200 mb-2">Type d'item</label>
-                <div class="flex flex-wrap gap-2">
-                  <button
-                    v-for="option in ITEM_TYPES"
-                    :key="option.value"
-                    type="button"
-                    @click="form.type = option.value"
-                    class="px-3 py-2 rounded-lg border text-sm transition"
-                    :class="
-                      form.type === option.value
-                        ? 'border-emerald-400 bg-emerald-400/10 text-emerald-100'
-                        : 'border-gray-600 bg-gray-900 text-gray-300 hover:border-gray-500'
-                    "
-                  >
-                    {{ option.label }}
-                  </button>
-                </div>
+                <ItemCategorySelect
+                  :model-value="form.type"
+                  :user-id="currentUserId || 'guest'"
+                  :labels="categoryLabels"
+                  @update:modelValue="setType"
+                  @labels-change="setCategoryLabels"
+                />
               </div>
 
               <!-- Nom -->
@@ -85,13 +75,13 @@
                   class="w-full rounded-lg border border-gray-600 bg-gray-900 text-gray-100 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500"
                 />
               </div>
-              <!-- Categorie -->
+              <!-- Sous-categorie -->
               <div>
-                <label class="block text-sm font-medium text-gray-200 mb-2">Categorie</label>
-                <input
-                  type="text"
+                <ItemSubcategorySelect
                   v-model="form.categorie"
-                  class="w-full rounded-lg border border-gray-600 bg-gray-900 text-gray-100 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500"
+                  :type="form.type"
+                  :user-id="currentUserId || 'guest'"
+                  :category-labels="categoryLabels"
                 />
               </div>
 
@@ -271,7 +261,11 @@
 import { ref, watch, computed } from 'vue'
 import SnkVenteServices from '@/services/SnkVenteServices.js'
 import CompactDateInput from '@/components/ui/CompactDateInput.vue'
-import { ITEM_TYPES, METADATA_FIELDS, typeLabel } from '@/RegleItem/CategorieItem'
+import ItemCategorySelect from '@/components/gestion/ItemCategorySelect.vue'
+import ItemSubcategorySelect from '@/components/gestion/ItemSubcategorySelect.vue'
+import { METADATA_FIELDS } from '@/RegleItem/CategorieItem'
+import { itemTypeLabel, readStoredItemCategories } from '@/RegleItem/itemCategoryStore'
+import { useAuthStore } from '@/store/authStore'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false }, // v-model
@@ -279,6 +273,9 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['update:modelValue', 'saved'])
+const authStore = useAuthStore()
+const currentUserId = computed(() => authStore.user?.value?.id ?? authStore.user?.id ?? null)
+const categoryLabels = ref(readStoredItemCategories(currentUserId.value || 'guest'))
 
 const loading = ref(false)
 const success = ref(false)
@@ -301,6 +298,17 @@ const form = ref({
   type: 'SNEAKER',
   metadata: {},
 })
+
+const setType = (type) => {
+  if (form.value.type === type) return
+  form.value.type = type
+  form.value.categorie = ''
+  form.value.metadata = {}
+}
+
+const setCategoryLabels = (labels) => {
+  categoryLabels.value = labels
+}
 
 // quand on recoit une vente a editer => on pre-remplit
 watch(
@@ -348,9 +356,16 @@ const cleanedMetadata = computed(() => {
   }
   return out
 })
-const currentTypeLabel = computed(() => typeLabel(form.value.type))
+const currentTypeLabel = computed(() => itemTypeLabel(form.value.type, categoryLabels.value))
 const fileAccept = computed(() =>
   form.value.type === 'TICKET' ? 'application/pdf,image/*' : 'application/pdf,image/*',
+)
+
+watch(
+  () => currentUserId.value,
+  (userId) => {
+    categoryLabels.value = readStoredItemCategories(userId || 'guest')
+  },
 )
 
 const save = async () => {

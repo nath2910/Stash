@@ -58,25 +58,15 @@
           <!-- Form -->
           <form class="space-y-6 p-4 sm:p-6" @submit.prevent="createSales">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <!-- Type -->
+              <!-- Categorie principale -->
               <div class="sm:col-span-2">
-                <label class="block text-sm font-medium text-gray-200 mb-2">Type d'item</label>
-                <div class="flex flex-wrap gap-2">
-                  <button
-                    v-for="option in ITEM_TYPES"
-                    :key="option.value"
-                    type="button"
-                    @click="form.type = option.value"
-                    class="px-3 py-2 rounded-lg border text-sm transition"
-                    :class="
-                      form.type === option.value
-                        ? 'border-emerald-400 bg-emerald-400/10 text-emerald-100'
-                        : 'border-gray-600 bg-gray-900 text-gray-300 hover:border-gray-500'
-                    "
-                  >
-                    {{ option.label }}
-                  </button>
-                </div>
+                <ItemCategorySelect
+                  :model-value="form.type"
+                  :user-id="currentUserId || 'guest'"
+                  :labels="categoryLabels"
+                  @update:modelValue="setType"
+                  @labels-change="setCategoryLabels"
+                />
               </div>
 
               <!-- Nom -->
@@ -94,17 +84,14 @@
                 />
               </div>
 
-              <!-- Categorie -->
+              <!-- Sous-categorie -->
               <div>
-                <label for="categorie" class="block text-sm font-medium text-gray-200 mb-2">
-                  Categorie
-                </label>
-                <input
-                  id="categorie"
-                  type="text"
-                  v-model.trim="form.categorie"
-                  placeholder="Jordan, Hennessy, One Piece ..."
-                  class="w-full rounded-lg border border-gray-600 bg-gray-900 text-gray-100 px-3 py-2.5 text-sm placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500"
+                <ItemSubcategorySelect
+                  v-model="form.categorie"
+                  :type="form.type"
+                  :user-id="currentUserId || 'guest'"
+                  :discovered="discoveredSubcategories"
+                  :category-labels="categoryLabels"
                 />
               </div>
 
@@ -253,11 +240,15 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import SnkVenteServices from '@/services/SnkVenteServices.js'
 import { useAuthStore } from '@/store/authStore'
 import CompactDateInput from '@/components/ui/CompactDateInput.vue'
-import { ITEM_TYPES, METADATA_FIELDS, typeLabel } from '@/RegleItem/CategorieItem'
+import ItemCategorySelect from '@/components/gestion/ItemCategorySelect.vue'
+import ItemSubcategorySelect from '@/components/gestion/ItemSubcategorySelect.vue'
+import { METADATA_FIELDS } from '@/RegleItem/CategorieItem'
+import { itemTypeLabel, readStoredItemCategories } from '@/RegleItem/itemCategoryStore'
+import { extractSubcategoriesByType } from '@/RegleItem/subcategoryStore'
 
 const emit = defineEmits(['close', 'added'])
 
@@ -270,6 +261,8 @@ const error = ref(null)
 
 const copies = ref(1)
 const keepCommonFields = ref(true)
+const discoveredSubcategories = ref({})
+const categoryLabels = ref(readStoredItemCategories(currentUserId.value || 'guest'))
 
 const getToday = () => new Date().toISOString().split('T')[0]
 
@@ -290,6 +283,17 @@ const form = ref(emptyForm())
 const requiresDateVente = computed(
   () => form.value.prixResell !== null && form.value.prixResell !== '',
 )
+
+const setType = (type) => {
+  if (form.value.type === type) return
+  form.value.type = type
+  form.value.categorie = ''
+  form.value.metadata = {}
+}
+
+const setCategoryLabels = (labels) => {
+  categoryLabels.value = labels
+}
 
 const resetState = () => {
   success.value = false
@@ -360,7 +364,29 @@ const cleanedMetadata = computed(() => {
   }
   return out
 })
-const currentTypeLabel = computed(() => typeLabel(form.value.type))
+const currentTypeLabel = computed(() => itemTypeLabel(form.value.type, categoryLabels.value))
+
+watch(
+  () => currentUserId.value,
+  (userId) => {
+    categoryLabels.value = readStoredItemCategories(userId || 'guest')
+  },
+)
+
+const loadExistingSubcategories = async () => {
+  if (!currentUserId.value) {
+    discoveredSubcategories.value = {}
+    return
+  }
+  try {
+    const { data } = await SnkVenteServices.getSnkVente()
+    discoveredSubcategories.value = extractSubcategoriesByType(Array.isArray(data) ? data : [])
+  } catch {
+    discoveredSubcategories.value = {}
+  }
+}
+
+onMounted(loadExistingSubcategories)
 
 const createSales = async () => {
   loading.value = true
@@ -387,6 +413,7 @@ const createSales = async () => {
     const prefill = keepCommonFields.value
       ? {
           nomItem: form.value.nomItem,
+          type: form.value.type,
           categorie: form.value.categorie,
           description: form.value.description,
         }
