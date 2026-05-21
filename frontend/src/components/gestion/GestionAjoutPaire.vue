@@ -380,7 +380,10 @@ const loadExistingSubcategories = async () => {
   }
   try {
     const { data } = await SnkVenteServices.getSnkVente()
-    discoveredSubcategories.value = extractSubcategoriesByType(Array.isArray(data) ? data : [])
+    discoveredSubcategories.value = extractSubcategoriesByType(
+      Array.isArray(data) ? data : [],
+      categoryLabels.value,
+    )
   } catch {
     discoveredSubcategories.value = {}
   }

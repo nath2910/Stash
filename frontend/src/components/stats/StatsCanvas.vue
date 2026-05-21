@@ -142,7 +142,7 @@
             :from="widgetFrom(w)"
             :to="widgetTo(w)"
             :style="widgetStyle(w)"
-            :ref="(c: any) => setWidgetRef(w.id, c)"
+            :ref="(c: unknown) => setWidgetRef(w.id, c)"
             @activate="setActiveTextWidget(w.id)"
             @dragStart="startDrag(w.id, $event)"
             @resizeStart="startResize(w.id, $event.dir, $event.event)"
@@ -681,6 +681,7 @@ import { useAuthStore } from '@/store/authStore'
 import StatsServices from '@/services/StatsServices'
 import {
   isItemCategoryAlias,
+  normalizeItemType,
   readStoredItemCategories,
   resolveItemTypeOptions,
 } from '@/RegleItem/itemCategoryStore'
@@ -1259,6 +1260,23 @@ function isTextWidget(widget: Pick<Widget, 'type'> | null | undefined) {
   return widget?.type === 'textTitle' || widget?.type === 'textBlock'
 }
 
+const BACK_LAYER_Z = 0
+const FOREGROUND_LAYER_MIN_Z = 1
+
+function isBackLayerWidget(widget: Pick<Widget, 'type'> | null | undefined) {
+  return widget?.type === 'rectangleShape'
+}
+
+function widgetEffectiveZ(widget: Pick<Widget, 'type' | 'z'> | null | undefined) {
+  if (isBackLayerWidget(widget)) return BACK_LAYER_Z
+  const z = Number(widget?.z ?? FOREGROUND_LAYER_MIN_Z)
+  return Number.isFinite(z) ? Math.max(FOREGROUND_LAYER_MIN_Z, z) : FOREGROUND_LAYER_MIN_Z
+}
+
+function normalizeWidgetLayer(widget: Widget) {
+  widget.z = widgetEffectiveZ(widget)
+}
+
 function shouldPreserveTextWidth(
   widget: Widget,
   mode: 'content' | 'resize' | 'scale' | 'duplicate' = 'content',
@@ -1692,7 +1710,7 @@ function markKpiTileNormalized(widget: Widget) {
 
 function normalizeSimpleKpiTile(widget: Widget) {
   if (!isSimpleKpiTile(widget)) return
-  if ((widget.props as any)?.[KPI_TILE_NORMALIZED_FLAG] === true) return
+  if ((widget.props as unknown)?.[KPI_TILE_NORMALIZED_FLAG] === true) return
   widget.w = KPI_TILE_SIZE
   widget.h = KPI_TILE_SIZE
   markKpiTileNormalized(widget)
@@ -1703,7 +1721,7 @@ function normalizeLayout(raw: unknown): Widget[] | null {
 
   const list: Widget[] = []
   for (const item of raw) {
-    let type = (item as any)?.type
+    let type = (item as unknown)?.type
     let def = getWidgetDef(type)
     if (!def && type === 'textSection') {
       type = 'textBlock'
@@ -1730,7 +1748,7 @@ function normalizeLayout(raw: unknown): Widget[] | null {
       sellThrough: ["Taux d'ecoulement", 'Taux d’écoulement', 'Sell-through'],
       varianceToTarget: ['Variance to target', 'Variance cible', "Écart à l'objectif"],
     }
-    const nextTitle = typeof (item as any)?.title === 'string' ? (item as any).title : def.title
+    const nextTitle = typeof (item as unknown)?.title === 'string' ? (item as unknown).title : def.title
     const normalizedTitle =
       legacyTitles[def.type] && nextTitle === legacyTitles[def.type]
         ? def.title
@@ -1738,20 +1756,20 @@ function normalizeLayout(raw: unknown): Widget[] | null {
           ? def.title
           : nextTitle
 
-    const hasStoredSize = Number.isFinite((item as any)?.w) && Number.isFinite((item as any)?.h)
-    const rawProps = cloneWidgetProps((item as any)?.props ?? {})
+    const hasStoredSize = Number.isFinite((item as unknown)?.w) && Number.isFinite((item as unknown)?.h)
+    const rawProps = cloneWidgetProps((item as unknown)?.props ?? {})
     const w: Widget = {
       id:
-        typeof (item as any)?.id === 'string'
-          ? (item as any).id
+        typeof (item as unknown)?.id === 'string'
+          ? (item as unknown).id
           : `${def.type}_${Date.now()}_${Math.random().toString(16).slice(2)}`,
       type: def.type,
       title: normalizedTitle,
-      x: Number.isFinite((item as any)?.x) ? Number((item as any).x) : 0,
-      y: Number.isFinite((item as any)?.y) ? Number((item as any).y) : 0,
-      w: Number.isFinite((item as any)?.w) ? Number((item as any).w) : def.defaultSize.w,
-      h: Number.isFinite((item as any)?.h) ? Number((item as any).h) : def.defaultSize.h,
-      z: Number.isFinite((item as any)?.z) ? Number((item as any).z) : list.length + 1,
+      x: Number.isFinite((item as unknown)?.x) ? Number((item as unknown).x) : 0,
+      y: Number.isFinite((item as unknown)?.y) ? Number((item as unknown).y) : 0,
+      w: Number.isFinite((item as unknown)?.w) ? Number((item as unknown).w) : def.defaultSize.w,
+      h: Number.isFinite((item as unknown)?.h) ? Number((item as unknown).h) : def.defaultSize.h,
+      z: Number.isFinite((item as unknown)?.z) ? Number((item as unknown).z) : list.length + 1,
       props: {
         ...cloneWidgetProps(def.defaultProps),
         ...rawProps,
@@ -1778,21 +1796,21 @@ function normalizeLayout(raw: unknown): Widget[] | null {
         w.w = def.defaultSize.w
         w.h = def.defaultSize.h
       }
-      const view = String((w.props as any)?.view ?? 'number')
+      const view = String((w.props as unknown)?.view ?? 'number')
       if (view !== 'line' && view !== 'number') {
-        ;(w.props as any).view = 'number'
+        ;(w.props as unknown).view = 'number'
       }
     }
 
-    if (typeof (w.props as any)?.category === 'string' && !(w.props as any)?.categories) {
-      const legacy = String((w.props as any).category || '').trim()
-      if (legacy) (w.props as any).categories = [legacy]
-      delete (w.props as any).category
+    if (typeof (w.props as unknown)?.category === 'string' && !(w.props as unknown)?.categories) {
+      const legacy = String((w.props as unknown).category || '').trim()
+      if (legacy) (w.props as unknown).categories = [legacy]
+      delete (w.props as unknown).category
     }
-    if (typeof (w.props as any)?.type === 'string' && !(w.props as any)?.types) {
-      const legacyType = String((w.props as any).type || '').trim()
-      if (legacyType) (w.props as any).types = [legacyType]
-      delete (w.props as any).type
+    if (typeof (w.props as unknown)?.type === 'string' && !(w.props as unknown)?.types) {
+      const legacyType = String((w.props as unknown).type || '').trim()
+      if (legacyType) (w.props as unknown).types = [legacyType]
+      delete (w.props as unknown).type
     }
 
     if (
@@ -1813,6 +1831,7 @@ function normalizeLayout(raw: unknown): Widget[] | null {
     }
 
     normalizeSimpleKpiTile(w)
+    normalizeWidgetLayer(w)
 
     clampWidget(w)
     list.push(w)
@@ -1846,7 +1865,7 @@ function normalizeBundle(raw: unknown): LayoutBundle {
     return map
   }
 
-  if (raw && typeof raw === 'object' && !Array.isArray(raw) && (raw as any).profiles) {
+  if (raw && typeof raw === 'object' && !Array.isArray(raw) && (raw as unknown).profiles) {
     const obj = raw as LayoutBundle
     return {
       version: Math.max(2, Number(obj.version || 1)),
@@ -1854,8 +1873,8 @@ function normalizeBundle(raw: unknown): LayoutBundle {
       profiles: obj.profiles ?? {},
       profileNames: obj.profileNames ?? {},
       profileColors: obj.profileColors ?? {},
-      ranges: normalizeRanges((obj as any).ranges),
-      profileTemplates: normalizeProfileTemplates((obj as any).profileTemplates),
+      ranges: normalizeRanges((obj as unknown).ranges),
+      profileTemplates: normalizeProfileTemplates((obj as unknown).profileTemplates),
     }
   }
 
@@ -1990,17 +2009,21 @@ async function loadLayoutFromServer(expectedUserId = String(userId.value)) {
 }
 
 function serializeWidgets() {
-  return widgets.value.map(({ id, type, title, x, y, w, h, props, z }) => ({
-    id,
-    type,
-    title,
-    x,
-    y,
-    w,
-    h,
-    props,
-    z,
-  }))
+  return widgets.value.map((widget) => {
+    normalizeWidgetLayer(widget)
+    const { id, type, title, x, y, w, h, props, z } = widget
+    return {
+      id,
+      type,
+      title,
+      x,
+      y,
+      w,
+      h,
+      props,
+      z,
+    }
+  })
 }
 
 function saveBundleNow(showToast = false) {
@@ -2054,7 +2077,7 @@ function scheduleRemoteSave(payload: unknown = layoutBundle.value) {
 
 function widgetStyle(w: Widget) {
   const rect = liveWidgetRect(w)
-  const z = Number(w.z ?? 1)
+  const z = widgetEffectiveZ(w)
   const rotation = isTextWidget(w) ? resolveWidgetRotation(w) : 0
   const cached = widgetStyleCache.get(w.id)
   if (
@@ -2109,7 +2132,7 @@ function widgetMemoDeps(w: Widget) {
     w.y,
     w.w,
     w.h,
-    Number(w.z ?? 1),
+    widgetEffectiveZ(w),
     w.props,
     editMode.value,
     dragArmedId.value === w.id,
@@ -2291,7 +2314,7 @@ function setActiveTextWidget(id: string | null) {
     activeTextWidgetId.value = null
     return
   }
-  widget.z = ++zTop
+  bringWidgetToFront(widget)
   activeTextWidgetId.value = id
 }
 
@@ -2427,7 +2450,7 @@ function selectedGroupBounds() {
     minY = Math.min(minY, rect.y)
     maxX = Math.max(maxX, rect.x + rect.w)
     maxY = Math.max(maxY, rect.y + rect.h)
-    maxZ = Math.max(maxZ, Number(widget.z ?? 1))
+    maxZ = Math.max(maxZ, widgetEffectiveZ(widget))
   }
 
   const width = Math.max(0, maxX - minX)
@@ -2437,7 +2460,7 @@ function selectedGroupBounds() {
 }
 
 const groupSelectionFrameStyle = computed(() => {
-  interactionTick.value
+  void interactionTick.value
   if (!editMode.value) return null
   const bounds = selectedGroupBounds()
   if (!bounds) return null
@@ -2452,7 +2475,7 @@ const groupSelectionFrameStyle = computed(() => {
 })
 
 const groupSelectionToolbarStyle = computed(() => {
-  interactionTick.value
+  void interactionTick.value
   if (!isGroupSelectionActive.value) return null
   const bounds = selectedGroupBounds()
   if (!bounds) return null
@@ -2642,7 +2665,7 @@ function isWidgetEditable(widget: Widget | null | undefined) {
 
 function buildSettingsFieldsForWidget(
   widget: Widget | null | undefined,
-  def: Record<string, any> | null | undefined,
+  def: Record<string, unknown> | null | undefined,
 ) {
   if (!widget || !def) return []
   const base = def?.settings ?? []
@@ -2707,14 +2730,6 @@ function isWidgetSettingsAvailable(widget: Widget | null | undefined) {
   const def = getWidgetDef(widget.type)
   return buildSettingsFieldsForWidget(widget, def).length > 0
 }
-
-const availableWidgetActions = computed(() => {
-  const widget = settingsWidget.value
-  if (!isWidgetEditable(widget)) return []
-  const actions = ['duplicate', 'remove']
-  if (isWidgetSettingsAvailable(widget)) actions.splice(1, 0, 'settings')
-  return actions
-})
 
 const shouldShowWidgetSettings = computed(
   () => isWidgetEditable(settingsWidget.value) && isWidgetSettingsAvailable(settingsWidget.value),
@@ -2940,24 +2955,27 @@ function applySettings(newModel: Record<string, unknown>) {
   const def = settingsDef.value
   const prevProps = { ...(w.props ?? {}) }
   const next = { ...(w.props ?? {}), ...newModel }
-  if (Array.isArray((next as any).categories)) {
-    ;(next as any).categories = (next as any).categories
+  if (Array.isArray((next as unknown).categories)) {
+    ;(next as unknown).categories = (next as unknown).categories
       .map((v: unknown) => String(v ?? '').trim())
       .filter((v: string) => v.length > 0)
-  } else if (typeof (next as any).categories === 'string') {
-    const v = String((next as any).categories || '').trim()
-    ;(next as any).categories = v ? [v] : []
+  } else if (typeof (next as unknown).categories === 'string') {
+    const v = String((next as unknown).categories || '').trim()
+    ;(next as unknown).categories = v ? [v] : []
   }
-  if (Array.isArray((next as any).types)) {
-    ;(next as any).types = (next as any).types
+  if (Array.isArray((next as unknown).types)) {
+    ;(next as unknown).types = (next as unknown).types
       .map((v: unknown) => String(v ?? '').trim())
       .filter((v: string) => v.length > 0)
-  } else if (typeof (next as any).types === 'string') {
-    const v = String((next as any).types || '').trim()
-    ;(next as any).types = v ? [v] : []
+      .map((v: string) => normalizeItemType(v, categoryLabels.value))
+      .filter((v: string) => v.length > 0)
+  } else if (typeof (next as unknown).types === 'string') {
+    const rawType = String((next as unknown).types || '').trim()
+    const v = rawType ? normalizeItemType(rawType, categoryLabels.value) : ''
+    ;(next as unknown).types = v ? [v] : []
   }
-  delete (next as any).category
-  delete (next as any).type
+  delete (next as unknown).category
+  delete (next as unknown).type
   const fromVal = typeof next.from === 'string' ? next.from : ''
   const toVal = typeof next.to === 'string' ? next.to : ''
   if (fromVal) next.from = clampDate(fromVal)
@@ -2971,7 +2989,6 @@ function applySettings(newModel: Record<string, unknown>) {
     next.asOf = clampDate(next.asOf)
   }
   if (!isTextWidget(w)) {
-    next.types = []
     if (def?.hideGlobalRange === true) {
       next.useGlobalRange = true
     } else {
@@ -3001,7 +3018,7 @@ function applySettings(newModel: Record<string, unknown>) {
   w.props = next
   if (!isTextWidget(w)) {
     const prevView = String(prevProps.view ?? '')
-    const nextView = String((next as any).view ?? '')
+    const nextView = String((next as unknown).view ?? '')
     if (nextView && nextView !== prevView) {
       applyWidgetVariantSize(w, nextView)
     }
@@ -3185,24 +3202,6 @@ function fitToWidgets(padding = 120, animate = true) {
   })
 }
 
-function widgetsBounds() {
-  const list = widgets.value
-  if (!list.length) return { cx: BOARD_W / 2, cy: BOARD_H / 2 }
-
-  let minX = Infinity,
-    minY = Infinity,
-    maxX = -Infinity,
-    maxY = -Infinity
-
-  for (const w of list) {
-    minX = Math.min(minX, w.x)
-    minY = Math.min(minY, w.y)
-    maxX = Math.max(maxX, w.x + w.w)
-    maxY = Math.max(maxY, w.y + w.h)
-  }
-  return { cx: (minX + maxX) / 2, cy: (minY + maxY) / 2 }
-}
-
 function centerView() {
   fitToWidgets(80, true)
   scheduleVisibleRectUpdate()
@@ -3227,7 +3226,7 @@ function zoomToFitContent() {
 
 /* ===== Drag ===== */
 const widgetEls = new Map<string, HTMLElement>()
-const widgetInstances = new Map<string, any>()
+const widgetInstances = new Map<string, unknown>()
 type SnapAnchor = 'start' | 'center' | 'end'
 type SnapAxis = 'x' | 'y'
 type ViewProjection = {
@@ -3278,6 +3277,29 @@ const snapGuides = ref<{ x: number | null; y: number | null }>({ x: null, y: nul
 const dragAssistLines = ref<DragAssistLine[]>([])
 const dragAssistGaps = ref<DragAssistGap[]>([])
 const interactionTick = ref(0)
+
+function maxForegroundZ() {
+  return widgets.value.reduce((max, widget) => {
+    if (isBackLayerWidget(widget)) return max
+    return Math.max(max, widgetEffectiveZ(widget))
+  }, zTop)
+}
+
+function nextForegroundZ() {
+  zTop = maxForegroundZ() + 1
+  return zTop
+}
+
+function bringWidgetToFront(widget: Widget | null | undefined) {
+  if (!widget) return
+  if (isBackLayerWidget(widget)) {
+    normalizeWidgetLayer(widget)
+    clearWidgetStyleCacheFor(widget.id)
+    return
+  }
+  widget.z = nextForegroundZ()
+  clearWidgetStyleCacheFor(widget.id)
+}
 
 type ResizeState = {
   x: number
@@ -3418,7 +3440,7 @@ const visibleWidgets = computed(() => {
   return widgets.value.filter((w) => pinned.has(w.id) || widgetIntersectsVisibleRect(w, rect))
 })
 
-function setWidgetRef(id: string, c: any) {
+function setWidgetRef(id: string, c: unknown) {
   // c est le composant; on garde la derniere ref DOM valide, et on ne purge
   // que lorsqu'on recoit null (demontage). Cela evite de perdre la ref pendant
   // les phases de montage/teleport et de casser le drag.
@@ -3428,7 +3450,7 @@ function setWidgetRef(id: string, c: any) {
     return
   }
   widgetInstances.set(id, c)
-  const el = (c?.root?.value ?? c?.$el ?? null) as any
+  const el = (c?.root?.value ?? c?.$el ?? null) as unknown
   if (el && el.nodeType === 1 && el.classList) {
     const nextEl = el as HTMLElement
     widgetEls.set(id, nextEl)
@@ -4269,7 +4291,7 @@ function startDrag(id: string, event: PointerEvent) {
   for (const dragId of dragIds) {
     const widget = getWidgetById(dragId)
     if (!widget) continue
-    widget.z = ++zTop
+    bringWidgetToFront(widget)
   }
   activeDragId = id
   activeDragIds = dragIds
@@ -4580,7 +4602,7 @@ function startGroupResize(ids: string[], dir: ResizeDir, event: PointerEvent) {
   }
 
   for (const member of members) {
-    member.widget.z = ++zTop
+    bringWidgetToFront(member.widget)
     member.el?.classList.add('is-resizing')
     updateResizeMetricsText(member.metricsEl, member.w, member.h)
   }
@@ -4832,7 +4854,7 @@ function startResize(id: string, dir: ResizeDir, event: PointerEvent) {
     return
   }
 
-  w.z = ++zTop
+  bringWidgetToFront(w)
   activeResizeId = id
 
   const s = Number(camera.scale.value || 1)
@@ -4915,7 +4937,7 @@ function startTextScale(id: string, event: PointerEvent) {
   event.preventDefault()
   event.stopPropagation()
   dragArmedId.value = null
-  w.z = ++zTop
+  bringWidgetToFront(w)
   setCanvasPanEnabled(false)
 
   window.addEventListener('pointermove', onTextScalePointerMove)
@@ -5790,7 +5812,7 @@ function duplicateWidget(id: string) {
     x: source.x + offset,
     y: source.y + offset,
     props: cloneWidgetProps(source.props ?? {}),
-    z: ++zTop,
+    z: source.z,
   }
 
   const placed = placeWidget(
@@ -5800,6 +5822,7 @@ function duplicateWidget(id: string) {
   )
   duplicate.x = placed.x
   duplicate.y = placed.y
+  bringWidgetToFront(duplicate)
   clampWidget(duplicate)
 
   widgets.value.push(duplicate)
@@ -5822,7 +5845,7 @@ function duplicateSelectedWidgets() {
     .filter((widget): widget is Widget => Boolean(widget))
   if (sources.length < 2) return
 
-  const zStart = Math.max(zTop, ...widgets.value.map((widget) => Number(widget.z ?? 0)))
+  const zStart = maxForegroundZ()
   const result = duplicateWidgetGroup(sources, {
     createId: (type) => createWidgetId(type),
     cloneProps: cloneWidgetProps,
@@ -5836,6 +5859,7 @@ function duplicateSelectedWidgets() {
 
   zTop = Math.max(zTop, result.nextZ)
   for (const duplicate of duplicates) {
+    bringWidgetToFront(duplicate)
     clampWidget(duplicate)
   }
 
@@ -5857,27 +5881,6 @@ function duplicateSelectedWidgets() {
   }
 
   scheduleSave()
-}
-
-function resetLayout() {
-  if (!editMode.value) return
-
-  // on ferme les modales si besoin
-  paletteOpen.value = false
-  closeSettings()
-
-  // on debranche tout et on vide
-  detachAllInteract()
-  widgets.value = []
-  widgetStyleCache.clear()
-
-  nextTick(() => {
-    // recentre la camera au milieu de la board (vu que plus de widgets)
-    centerView()
-    // save immediat (pour etre sur que le layout vide est persiste)
-    scheduleVisibleRectUpdate()
-    saveLayoutNow()
-  })
 }
 
 function applyWidgetVariantSize(widget: Widget, view?: string) {
@@ -5951,7 +5954,7 @@ function addWidget(
   const placed = placeWidget(w, p.x, p.y)
   w.x = placed.x
   w.y = placed.y
-  w.z = ++zTop
+  bringWidgetToFront(w)
   clampWidget(w)
 
   if (isTextWidget(w)) {

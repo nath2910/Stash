@@ -1,13 +1,16 @@
 package backend.service;
 
 import java.math.BigDecimal;
+import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.Year;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import java.util.regex.Pattern;
 
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.PageRequest;
@@ -19,7 +22,6 @@ import org.springframework.web.server.ResponseStatusException;
 import backend.dto.SnkVenteCreateDto;
 import backend.dto.SnkVenteImportDto;
 import backend.dto.TopVenteProjection;
-import backend.entity.ItemType;
 import backend.entity.SnkVente;
 import backend.entity.User;
 import backend.repository.SnkVenteRepository;
@@ -30,6 +32,23 @@ import backend.repository.UserRepository;
 public class snkVenteService {
 
   private static final int MAX_IMPORT_ITEMS = 500;
+  private static final String DEFAULT_ITEM_TYPE = "SNEAKER";
+  private static final int MAX_TYPE_LENGTH = 80;
+  private static final Pattern SAFE_METADATA_KEY = Pattern.compile("^[A-Za-z0-9_.-]{1,60}$");
+  private static final Map<String, String> ITEM_TYPE_ALIASES = Map.ofEntries(
+      Map.entry("SNEAKERS", "SNEAKER"),
+      Map.entry("SHOE", "SNEAKER"),
+      Map.entry("SHOES", "SNEAKER"),
+      Map.entry("CHAUSSURE", "SNEAKER"),
+      Map.entry("CHAUSSURES", "SNEAKER"),
+      Map.entry("POKEMON", "POKEMON_CARD"),
+      Map.entry("POKEMON_CARDS", "POKEMON_CARD"),
+      Map.entry("CARTE_POKEMON", "POKEMON_CARD"),
+      Map.entry("CARTES_POKEMON", "POKEMON_CARD"),
+      Map.entry("TICKETS", "TICKET"),
+      Map.entry("AUTRE", "OTHER"),
+      Map.entry("AUTRES", "OTHER")
+  );
 
   private final SnkVenteRepository snkVenteRepository;
   private final UserRepository userRepository;
@@ -214,11 +233,11 @@ public class snkVenteService {
     target.setDateVente(dateVente);
     target.setDescription(description);
     target.setCategorie(categorie);
-    target.setType(target.getType() != null ? target.getType() : ItemType.SNEAKER);
+    target.setType(normalizeItemType(target.getType()));
   }
 
   private void applyFields(SnkVente target, SnkVenteCreateDto dto) {
-    ItemType resolvedType = dto.type() != null ? dto.type() : ItemType.SNEAKER;
+    String resolvedType = normalizeItemType(dto.type());
     Map<String, Object> metadata = sanitizeMetadata(resolvedType, dto.metadata());
     applyFields(
         target,
@@ -235,7 +254,7 @@ public class snkVenteService {
   }
 
   private void applyFields(SnkVente target, SnkVente payload) {
-    ItemType resolvedType = payload.getType() != null ? payload.getType() : ItemType.SNEAKER;
+    String resolvedType = normalizeItemType(payload.getType());
     Map<String, Object> metadata = sanitizeMetadata(resolvedType, payload.getMetadata());
     applyFields(
         target,
@@ -252,7 +271,7 @@ public class snkVenteService {
   }
 
   private void applyFields(SnkVente target, SnkVenteImportDto dto) {
-    ItemType resolvedType = dto.getType() != null ? dto.getType() : ItemType.SNEAKER;
+    String resolvedType = normalizeItemType(dto.getType());
     Map<String, Object> metadata = sanitizeMetadata(resolvedType, dto.getMetadata());
     applyFields(
         target,
@@ -268,30 +287,65 @@ public class snkVenteService {
     target.setMetadata(metadata);
   }
 
-  private Map<String, Object> sanitizeMetadata(ItemType type, Map<String, Object> metadata) {
+  static String normalizeItemType(String rawType) {
+    String raw = rawType != null ? rawType.trim() : "";
+    if (raw.isEmpty()) return DEFAULT_ITEM_TYPE;
+
+    String normalized = Normalizer.normalize(raw, Normalizer.Form.NFD)
+        .replaceAll("\\p{M}", "")
+        .toUpperCase(Locale.ROOT)
+        .replaceAll("[^A-Z0-9]+", "_")
+        .replaceAll("^_+|_+$", "");
+    if (normalized.isEmpty()) return DEFAULT_ITEM_TYPE;
+
+    String aliased = ITEM_TYPE_ALIASES.getOrDefault(normalized, normalized);
+    if (aliased.length() <= MAX_TYPE_LENGTH) return aliased;
+    return aliased.substring(0, MAX_TYPE_LENGTH).replaceAll("_+$", "");
+  }
+
+  private Map<String, Object> sanitizeMetadata(String type, Map<String, Object> metadata) {
     if (metadata == null) return new HashMap<>();
     Map<String, Object> cleaned = new HashMap<>();
     metadata.forEach((k, v) -> {
       if (k == null || v == null) return;
       String key = k.trim();
       if (key.isEmpty()) return;
-      Object val = (v instanceof String s) ? s.trim() : v;
-      switch (type) {
-        case TICKET -> {
-          if (key.matches("^(eventDate|venue|section|row|seat|status)$")) cleaned.put(key, val);
-        }
-        case POKEMON_CARD -> {
-          if (key.matches("^(set|language|rarity|condition|grade)$")) cleaned.put(key, val);
-        }
-        case SNEAKER -> {
-          if (key.matches("^(size|sku|colorway|condition|boxCondition)$")) cleaned.put(key, val);
-        }
-        case OTHER -> {
-          // pas de champs imposés pour OTHER : tout est ignoré pour éviter du bruit côté BDD
-        }
-        default -> { }
-      }
+      if (!SAFE_METADATA_KEY.matcher(key).matches()) return;
+      Object val = sanitizeMetadataValue(v);
+      if (val == null) return;
+      if (isKnownMetadataKey(type, key) || isCustomType(type)) cleaned.put(key, val);
+      // OTHER metadata is ignored unless the item uses a custom type.
     });
     return cleaned;
+  }
+
+  private boolean isKnownMetadataKey(String type, String key) {
+    return switch (type) {
+      case "TICKET" -> key.matches("^(eventDate|venue|section|row|seat|status)$");
+      case "POKEMON_CARD" -> key.matches("^(set|language|rarity|condition|grade)$");
+      case "SNEAKER" -> key.matches("^(size|sku|colorway|condition|boxCondition)$");
+      default -> false;
+    };
+  }
+
+  private boolean isCustomType(String type) {
+    return !"SNEAKER".equals(type)
+        && !"POKEMON_CARD".equals(type)
+        && !"TICKET".equals(type)
+        && !"OTHER".equals(type);
+  }
+
+  private Object sanitizeMetadataValue(Object value) {
+    if (value instanceof String s) {
+      String trimmed = s.trim();
+      if (trimmed.isEmpty()) return null;
+      return trimmed.length() > 500 ? trimmed.substring(0, 500) : trimmed;
+    }
+    if (value instanceof Number || value instanceof Boolean) {
+      return value;
+    }
+    String text = String.valueOf(value).trim();
+    if (text.isEmpty()) return null;
+    return text.length() > 500 ? text.substring(0, 500) : text;
   }
 }

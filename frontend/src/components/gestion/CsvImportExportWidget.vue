@@ -281,6 +281,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue'
+import type { ParseResult } from 'papaparse'
 import SnkVenteServices from '@/services/SnkVenteServices.js'
 import {
   analyzeImportRows,
@@ -302,7 +303,7 @@ import {
  * Exporte par defaut ce que tu passes dans filteredRows.
  */
 const props = defineProps<{
-  filteredRows: any[]
+  filteredRows: unknown[]
 }>()
 
 const emit = defineEmits<{
@@ -346,13 +347,16 @@ const parsedTable = ref<ParsedTable | null>(null)
 const mappingDraft = ref<ImportMapping>({})
 let progressTimer: number | null = null
 let progressResetTimer: number | null = null
-let papaModulePromise: Promise<typeof import('papaparse')> | null = null
+type PapaModule = typeof import('papaparse')
+type PapaModuleCompat = PapaModule & { default?: PapaModule }
+
+let papaModulePromise: Promise<PapaModuleCompat> | null = null
 let xlsxModulePromise: Promise<typeof import('xlsx')> | null = null
 
 async function loadPapa() {
-  papaModulePromise ??= import('papaparse')
+  papaModulePromise ??= import('papaparse') as Promise<PapaModuleCompat>
   const module = await papaModulePromise
-  return module.default
+  return module.default ?? module
 }
 
 async function loadXlsx() {
@@ -505,8 +509,8 @@ async function parseExcel(file: File): Promise<ParsedTable> {
   const workbook = XLSX.read(buffer, { type: 'array' })
   const sheetNameWithData =
     workbook.SheetNames.find((name) => {
-      const rows = XLSX.utils.sheet_to_json<any[]>(workbook.Sheets[name], { header: 1, defval: '' }) as
-        | any[][]
+      const rows = XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets[name], { header: 1, defval: '' }) as
+        | unknown[][]
         | undefined
       if (!rows) return false
       return rows.some((row) => (row || []).some((c) => String(c).trim()))
@@ -515,7 +519,9 @@ async function parseExcel(file: File): Promise<ParsedTable> {
   const sheet = workbook.Sheets[sheetNameWithData]
   if (!sheet) return { headers: [], rows: [] }
 
-  const rows2D = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1, defval: '' }) as any[][] | undefined
+  const rows2D = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: '' }) as
+    | unknown[][]
+    | undefined
   return extractTableFrom2D(rows2D || [])
 }
 
@@ -529,7 +535,7 @@ async function parseDelimitedText(text: string): Promise<ParsedTable> {
         header: true,
         skipEmptyLines: 'greedy',
         delimiter,
-        complete: (res) => {
+        complete: (res: ParseResult<CsvRow>) => {
           resolve({
             headers: ((res.meta.fields ?? []) as string[]).filter((header) => String(header).trim()),
             rows: (res.data ?? []).filter(Boolean) as CsvRow[],
@@ -552,8 +558,8 @@ async function parseDelimitedText(text: string): Promise<ParsedTable> {
       header: false,
       skipEmptyLines: 'greedy',
       delimiter: preferredDelimiter || undefined,
-      complete: (res) => {
-        const rows2D = res.data as any[][]
+      complete: (res: ParseResult<string[]>) => {
+        const rows2D = res.data as unknown[][]
         resolve(extractTableFrom2D(rows2D || []))
       },
     })
@@ -570,7 +576,7 @@ async function parseTextContent(text: string): Promise<ParsedTable> {
     try {
       const jsonTable = parseJsonContent(content)
       if (jsonTable.headers.length >= 2) return jsonTable
-    } catch (e) {
+    } catch {
       // fallback to delimited parsing
     }
   }
@@ -613,6 +619,20 @@ function rebuildPreviewFromMapping() {
   applyPreviewFromMapping(mappingDraft.value)
 }
 
+function errorMessage(err: unknown, fallback: string) {
+  if (!err || typeof err !== 'object') return fallback
+  const error = err as {
+    response?: { data?: { message?: unknown; error?: unknown } }
+    message?: unknown
+  }
+  return (
+    String(error.response?.data?.message ?? '') ||
+    String(error.response?.data?.error ?? '') ||
+    String(error.message ?? '') ||
+    fallback
+  )
+}
+
 async function preparePreview(file: File) {
   parsing.value = true
   errorMsg.value = ''
@@ -631,16 +651,12 @@ async function preparePreview(file: File) {
 
     parsedTable.value = { headers, rows }
     applyPreviewFromMapping(resolveImportMapping(headers))
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error(err)
     preview.value = null
     parsedTable.value = null
     mappingDraft.value = {}
-    errorMsg.value =
-      err?.response?.data?.message ||
-      err?.response?.data?.error ||
-      err?.message ||
-      'Erreur analyse import'
+    errorMsg.value = errorMessage(err, 'Erreur analyse import')
   } finally {
     parsing.value = false
   }
@@ -678,13 +694,9 @@ async function importNow() {
     parsedTable.value = null
     mappingDraft.value = {}
     stopProgress(100)
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error(err)
-    errorMsg.value =
-      err?.response?.data?.message ||
-      err?.response?.data?.error ||
-      err?.message ||
-      'Erreur import'
+    errorMsg.value = errorMessage(err, 'Erreur import')
     stopProgress(0)
   } finally {
     importing.value = false

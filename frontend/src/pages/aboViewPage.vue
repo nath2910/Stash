@@ -7,7 +7,7 @@
           @click="goBack"
           class="app-touch-btn inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900/70 px-4 py-2 text-xs font-semibold text-slate-200 transition hover:border-emerald-400/50 hover:text-white"
         >
-          <span class="text-sm"><-</span>
+          <span class="text-sm">&lt;-</span>
           <span>Retour profil</span>
         </button>
         <span class="app-pill border-slate-700 bg-slate-900/70 text-slate-300">

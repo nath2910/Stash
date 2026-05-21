@@ -153,7 +153,7 @@ const recommendedWidgetHeight = computed(() => {
 
 watch(
   [recommendedWidgetHeight, () => props.autoHeight, () => props.view, itemCount, loading],
-  ([nextHeight, autoHeight, _view, _count, isLoading]) => {
+  ([nextHeight, autoHeight, , , isLoading]) => {
     if (!autoHeight || isLoading) return
     if (!Number.isFinite(nextHeight) || nextHeight <= 0) return
     if (Math.abs(nextHeight - lastAutoResizeHeight) < 8) return
@@ -228,7 +228,7 @@ const option = computed(() => {
             gapWidth: denseMode.value ? 2 : 3,
             borderRadius: 6,
           },
-          data: items.map((r, i) => ({
+          data: items.map((r) => ({
             name: r.label,
             value: r.nb,
             itemStyle: { color: getBrandColor(r.label) },

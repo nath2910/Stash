@@ -47,7 +47,7 @@
               <p class="manager-kicker">Organisation</p>
               <h3 class="manager-title">Categories principales</h3>
               <p class="manager-subtitle">
-                Renomme les familles visibles dans le formulaire sans modifier leur cle technique.
+                Ajoute tes familles globales et renomme les categories existantes.
               </p>
             </div>
             <button
@@ -59,6 +59,24 @@
               <X class="h-4 w-4" />
             </button>
           </header>
+
+          <form class="manager-add-form" @submit.prevent="addCategory">
+            <input
+              v-model.trim="newCategoryDraft"
+              type="text"
+              maxlength="40"
+              class="manager-input"
+              placeholder="Nouvelle categorie principale"
+            />
+            <button
+              type="submit"
+              class="manager-add-button"
+              :disabled="!newCategoryDraft"
+            >
+              <Plus class="h-4 w-4" />
+              <span>Ajouter</span>
+            </button>
+          </form>
 
           <div class="manager-list">
             <div
@@ -102,7 +120,9 @@
               <template v-else>
                 <button type="button" class="manager-row__main" @click="selectType(option.value)">
                   <span class="manager-row__label">{{ option.label }}</span>
-                  <span class="manager-row__meta">Base {{ option.defaultLabel }}</span>
+                  <span class="manager-row__meta">
+                    {{ option.custom ? 'Personnalisee' : `Base ${option.defaultLabel}` }}
+                  </span>
                 </button>
                 <button
                   type="button"
@@ -113,6 +133,7 @@
                   <Pencil class="h-4 w-4" />
                 </button>
                 <button
+                  v-if="!option.custom"
                   type="button"
                   class="manager-icon"
                   aria-label="Reinitialiser"
@@ -120,6 +141,15 @@
                   @click="resetLabel(option.value)"
                 >
                   <RotateCcw class="h-4 w-4" />
+                </button>
+                <button
+                  v-else
+                  type="button"
+                  class="manager-icon is-danger"
+                  aria-label="Supprimer"
+                  @click="deleteCategory(option)"
+                >
+                  <Trash2 class="h-4 w-4" />
                 </button>
               </template>
             </div>
@@ -137,15 +167,22 @@ import {
   CircleHelp,
   Package,
   Pencil,
+  Plus,
   RotateCcw,
   Settings2,
   Tag,
   Ticket,
+  Trash2,
   X,
 } from 'lucide-vue-next'
 import {
+  addItemCategory,
+  canRemoveItemCategory,
+  itemTypeLabel,
   normalizeCategoryLabel,
+  normalizeItemType,
   readStoredItemCategories,
+  removeItemCategory,
   renameItemCategory,
   resetItemCategory,
   resolveItemTypeOptions,
@@ -164,9 +201,18 @@ const managerOpen = ref(false)
 const storedLabels = ref(readStoredItemCategories(props.userId))
 const editingType = ref('')
 const editDraft = ref('')
+const newCategoryDraft = ref('')
 
 const effectiveLabels = computed(() => props.labels || storedLabels.value)
-const itemTypeOptions = computed(() => resolveItemTypeOptions(effectiveLabels.value))
+const optionLabels = computed(() => {
+  const labels = { ...(effectiveLabels.value || {}) }
+  const currentType = normalizeItemType(props.modelValue)
+  if (currentType && !labels[currentType]) {
+    labels[currentType] = itemTypeLabel(currentType, labels)
+  }
+  return labels
+})
+const itemTypeOptions = computed(() => resolveItemTypeOptions(optionLabels.value))
 
 watch(
   () => props.userId,
@@ -181,7 +227,7 @@ function persist(nextLabels) {
 }
 
 function selectType(type) {
-  emit('update:modelValue', type)
+  emit('update:modelValue', normalizeItemType(type))
 }
 
 function openManager() {
@@ -190,6 +236,7 @@ function openManager() {
 
 function closeManager() {
   managerOpen.value = false
+  newCategoryDraft.value = ''
   cancelEdit()
 }
 
@@ -213,8 +260,30 @@ function commitEdit() {
   cancelEdit()
 }
 
+function addCategory() {
+  const result = addItemCategory(effectiveLabels.value, newCategoryDraft.value)
+  if (!result.type) return
+  persist(result.labels)
+  emit('update:modelValue', result.type)
+  newCategoryDraft.value = ''
+}
+
 function resetLabel(type) {
   persist(resetItemCategory(effectiveLabels.value, type))
+}
+
+function deleteCategory(option) {
+  if (!canRemoveItemCategory(option?.value)) return
+  const nextLabels = removeItemCategory(effectiveLabels.value, option.value)
+  persist(nextLabels)
+  if (modelValueIs(option.value)) {
+    emit('update:modelValue', 'SNEAKER')
+  }
+  if (editingType.value === option.value) cancelEdit()
+}
+
+function modelValueIs(type) {
+  return normalizeItemType(props.modelValue) === normalizeItemType(type)
 }
 
 function categoryIcon(type) {
@@ -454,6 +523,39 @@ function categoryIcon(type) {
   padding: 1rem;
 }
 
+.manager-add-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.625rem;
+  border-bottom: 1px solid rgba(55, 65, 81, 0.82);
+  padding: 1rem;
+}
+
+.manager-add-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border-radius: 0.75rem;
+  background: rgb(124 58 237);
+  padding: 0.65rem 0.9rem;
+  color: white;
+  font-size: 0.84rem;
+  font-weight: 800;
+  transition:
+    background 140ms ease,
+    opacity 140ms ease;
+}
+
+.manager-add-button:hover:not(:disabled) {
+  background: rgb(147 51 234);
+}
+
+.manager-add-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.46;
+}
+
 .manager-row {
   display: flex;
   align-items: center;
@@ -534,6 +636,16 @@ function categoryIcon(type) {
   color: rgb(167 243 208);
 }
 
+.manager-icon.is-danger {
+  color: rgb(254 202 202);
+}
+
+.manager-icon.is-danger:hover:not(:disabled) {
+  border-color: rgba(248, 113, 113, 0.55);
+  background: rgba(239, 68, 68, 0.12);
+  color: rgb(254 226 226);
+}
+
 .manager-icon:disabled {
   cursor: not-allowed;
   opacity: 0.42;
@@ -562,6 +674,10 @@ function categoryIcon(type) {
 
   .manage-link {
     justify-content: center;
+  }
+
+  .manager-add-form {
+    grid-template-columns: 1fr;
   }
 }
 </style>

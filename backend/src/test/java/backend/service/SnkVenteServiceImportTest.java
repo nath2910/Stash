@@ -6,6 +6,7 @@ import backend.entity.User;
 import backend.repository.SnkVenteRepository;
 import backend.repository.UserRepository;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -69,5 +70,30 @@ class SnkVenteServiceImportTest {
     List<SnkVente> saved = captor.getValue();
     Assertions.assertEquals(1, saved.size());
     Assertions.assertEquals("Test", saved.get(0).getNomItem());
+  }
+
+  @Test
+  void importsCustomItemTypeWithoutFallingBackToOther() {
+    SnkVenteImportDto dto = new SnkVenteImportDto(
+        "Watch",
+        null,
+        null,
+        null,
+        null,
+        null,
+        "Vintage",
+        "Montres luxe",
+        Map.of("reference", "ABC-123", "unsafe key!", "ignored")
+    );
+
+    int created = service.importBulk(1L, List.of(dto));
+    Assertions.assertEquals(1, created);
+
+    ArgumentCaptor<List<SnkVente>> captor = ArgumentCaptor.forClass(List.class);
+    Mockito.verify(venteRepo).saveAll(captor.capture());
+    SnkVente saved = captor.getValue().get(0);
+    Assertions.assertEquals("MONTRES_LUXE", saved.getType());
+    Assertions.assertEquals("ABC-123", saved.getMetadata().get("reference"));
+    Assertions.assertFalse(saved.getMetadata().containsKey("unsafe key!"));
   }
 }

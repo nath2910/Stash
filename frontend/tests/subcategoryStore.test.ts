@@ -20,9 +20,9 @@ function memoryStorage(seed = {}) {
 }
 
 describe('subcategoryStore', () => {
-  it('normalizes supported item types and falls back to OTHER', () => {
+  it('normalizes supported and custom item types', () => {
     expect(normalizeItemType('SNEAKER')).toBe('SNEAKER')
-    expect(normalizeItemType('unknown')).toBe('OTHER')
+    expect(normalizeItemType('montres luxe')).toBe('MONTRES_LUXE')
   })
 
   it('deduplicates subcategories while keeping display casing', () => {
@@ -67,5 +67,19 @@ describe('subcategoryStore', () => {
     map = removeSubcategory(map, 'OTHER', 'Objet rare')
     expect(map.OTHER).not.toContain('Objet rare')
     expect(map.SNEAKER).toContain('Jordan')
+  })
+
+  it('stores subcategories for custom main categories', () => {
+    const labels = { MONTRES_LUXE: 'Montres luxe' }
+    const map = addSubcategory({}, 'MONTRES_LUXE', 'Vintage', labels)
+    expect(map.MONTRES_LUXE).toContain('Vintage')
+
+    const discovered = extractSubcategoriesByType(
+      [{ type: 'MONTRES_LUXE', categorie: 'Neuf' }],
+      labels,
+    )
+    expect(resolveSubcategoryOptions('MONTRES_LUXE', { stored: map, discovered, categoryLabels: labels })).toEqual(
+      expect.arrayContaining(['Neuf', 'Vintage']),
+    )
   })
 })

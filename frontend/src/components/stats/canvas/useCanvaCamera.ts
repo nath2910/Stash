@@ -1,4 +1,5 @@
 import Panzoom from '@panzoom/panzoom'
+import type { PanOptions, PanzoomGlobalOptions, PanzoomObject, PanzoomOptions, ZoomOptions } from '@panzoom/panzoom'
 import type { Ref } from 'vue'
 import { ref } from 'vue'
 
@@ -7,7 +8,7 @@ type InitOptions = {
   boardHeight: number
   maxScale?: number
   minScale?: number
-  contain?: any
+  contain?: PanzoomGlobalOptions['contain']
   excludeClass?: string
   panIgnoreSelector?: string
 }
@@ -53,7 +54,7 @@ export function useCanvasCamera(
   opts: InitOptions,
 ) {
   const scale = ref(1)
-  let panzoom: any = null
+  let panzoom: PanzoomObject | null = null
   let ro: ResizeObserver | null = null
   let didReady = false
   let resizeRaf: number | null = null
@@ -173,7 +174,7 @@ export function useCanvasCamera(
       pendingPanDx = 0
       pendingPanDy = 0
       if (!panzoom || (Math.abs(nextDx) < 0.01 && Math.abs(nextDy) < 0.01)) return
-      panzoom.pan(nextDx, nextDy, { relative: true, force: true } as any)
+      panzoom.pan(nextDx, nextDy, { relative: true, force: true } as PanOptions)
       onPanzoomChange()
     })
   }
@@ -181,7 +182,7 @@ export function useCanvasCamera(
   function panByNow(dx: number, dy: number) {
     if (!panzoom || !Number.isFinite(dx) || !Number.isFinite(dy)) return
     if (Math.abs(dx) < 0.01 && Math.abs(dy) < 0.01) return
-    panzoom.pan(dx, dy, { relative: true, force: true } as any)
+    panzoom.pan(dx, dy, { relative: true, force: true } as PanOptions)
     onPanzoomChange()
   }
 
@@ -289,7 +290,7 @@ export function useCanvasCamera(
     const dx = r.vpRect.width / 2 - px
     const dy = r.vpRect.height / 2 - py
 
-    panzoom.pan(dx, dy, { relative: true, force: true } as any)
+    panzoom.pan(dx, dy, { relative: true, force: true } as PanOptions)
   }
 
   function computeFitScale() {
@@ -319,7 +320,7 @@ export function useCanvasCamera(
     if (!nextFitScale) return
     fitScale = nextFitScale
     syncScaleBounds(nextFitScale)
-    panzoom.zoom(nextFitScale, { animate } as any)
+    panzoom.zoom(nextFitScale, { animate })
     if (center) centerOn(BOARD_W / 2, BOARD_H / 2)
     onPanzoomChange()
   }
@@ -330,7 +331,7 @@ export function useCanvasCamera(
     return Math.min(Math.max(targetScale, minScale), maxScale)
   }
 
-  function zoomToPoint(targetScale: number, vx: number, vy: number, options?: Record<string, unknown>) {
+  function zoomToPoint(targetScale: number, vx: number, vy: number, options?: ZoomOptions) {
     if (!panzoom) return
     const r = getRects()
     if (!r) return
@@ -341,7 +342,7 @@ export function useCanvasCamera(
         clientX: r.vpRect.left + vx,
         clientY: r.vpRect.top + vy,
       },
-      options as any,
+      options,
     )
     onPanzoomChange()
   }
@@ -534,10 +535,10 @@ export function useCanvasCamera(
     zoomToPoint(currentScale / 1.12, r.vpRect.width / 2, r.vpRect.height / 2, { animate: true })
   }
 
-  function zoomTo(targetScale: number, options?: Record<string, unknown>) {
+  function zoomTo(targetScale: number, options?: ZoomOptions) {
     const r = getRects()
     if (!r) {
-      panzoom?.zoom(targetScale, options as any)
+      panzoom?.zoom(targetScale, options)
       onPanzoomChange()
       return
     }
@@ -592,7 +593,7 @@ export function useCanvasCamera(
     }
 
     vp.addEventListener('wheel', wheelHandler, { passive: false })
-    board.addEventListener('panzoomchange', onPanzoomChange as any)
+    board.addEventListener('panzoomchange', onPanzoomChange as EventListener)
 
     pointerDownHandler = (event: PointerEvent) => {
       if (event.pointerType === 'touch') {
@@ -657,7 +658,7 @@ export function useCanvasCamera(
     window.addEventListener('pointerup', pointerUpHandler, { passive: false })
     window.addEventListener('pointercancel', pointerUpHandler, { passive: false })
 
-    panzoom.reset?.({ force: true } as any)
+    panzoom.reset?.({ force: true } as PanzoomOptions)
     applyFit(false)
     onPanzoomChange()
 
@@ -683,7 +684,7 @@ export function useCanvasCamera(
       fitScale = nextFitScale
       syncScaleBounds(nextFitScale)
       const minScale = Number(panzoom.getOptions?.().minScale ?? opts.minScale ?? 0.15)
-      panzoom.zoom(Math.max(currentScale, minScale), { force: true } as any)
+      panzoom.zoom(Math.max(currentScale, minScale), { force: true })
       centerOn(center.x, center.y)
       onPanzoomChange()
     }
@@ -726,7 +727,7 @@ export function useCanvasCamera(
       window.removeEventListener('pointerup', pointerUpHandler)
       window.removeEventListener('pointercancel', pointerUpHandler)
     }
-    if (board) board.removeEventListener('panzoomchange', onPanzoomChange as any)
+    if (board) board.removeEventListener('panzoomchange', onPanzoomChange as EventListener)
 
     panzoom?.destroy?.()
     panzoom = null

@@ -24,7 +24,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import StatsServices from '@/services/StatsServices'
 import { normalizeKpi } from '@/services/statsAdapters'
 import WidgetCard from './_parts/WidgetCard.vue'

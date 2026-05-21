@@ -452,7 +452,7 @@ const download = async (att) => {
     a.download = att.filename || 'attachment'
     a.click()
     window.URL.revokeObjectURL(url)
-  } catch (e) {
+  } catch {
     attachmentError.value = 'Téléchargement impossible'
   }
 }
@@ -462,7 +462,7 @@ const removeAttachment = async (att) => {
   try {
     await SnkVenteServices.deleteAttachment(form.value.id, att.id)
     attachments.value = attachments.value.filter((a) => a.id !== att.id)
-  } catch (e) {
+  } catch {
     attachmentError.value = 'Suppression impossible'
   }
 }

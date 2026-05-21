@@ -11,7 +11,7 @@ const props = withDefaults(
     value: string
     detail?: string
     tone?: 'primary' | 'profit' | 'warning' | 'neutral'
-    icon?: unknown
+    icon?: unknown | null
   }>(),
   {
     detail: '',

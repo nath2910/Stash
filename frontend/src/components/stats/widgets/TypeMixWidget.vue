@@ -61,10 +61,12 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import StatsServices from '@/services/StatsServices'
 import { normalizeBreakdown } from '@/services/statsAdapters'
 import { formatDateFR, formatEUR, formatNumber } from '@/utils/formatters'
+import { itemTypeLabel, readStoredItemCategories } from '@/RegleItem/itemCategoryStore'
+import { useAuthStore } from '@/store/authStore'
 import WidgetCard from './_parts/WidgetCard.vue'
 
 const props = defineProps({
@@ -86,6 +88,9 @@ const accent = '#F59E0B'
 const loading = ref(false)
 const error = ref('')
 const items = ref([])
+const authStore = useAuthStore()
+const userId = computed(() => authStore.user?.value?.id ?? authStore.user?.id ?? 'guest')
+const categoryLabels = ref(readStoredItemCategories(userId.value))
 let req = 0
 
 const metricConfig = {
@@ -110,13 +115,6 @@ const metricConfig = {
     format: (v) => formatNumber(v, { compact: true }),
     tooltip: (v) => formatNumber(v),
   },
-}
-
-const TYPE_LABELS = {
-  SNEAKER: 'Sneakers',
-  POKEMON_CARD: 'Cartes',
-  TICKET: 'Tickets',
-  OTHER: 'Autres',
 }
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
@@ -144,7 +142,24 @@ async function load() {
   }
 }
 
-onMounted(load)
+function onItemCategoriesChange(event) {
+  const detail = event?.detail || {}
+  if (String(detail.userId || 'guest') !== String(userId.value || 'guest')) return
+  categoryLabels.value = readStoredItemCategories(userId.value)
+}
+
+onMounted(() => {
+  window.addEventListener('snk:item-categories-change', onItemCategoriesChange)
+  load()
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('snk:item-categories-change', onItemCategoriesChange)
+})
+
+watch(userId, (value) => {
+  categoryLabels.value = readStoredItemCategories(value)
+})
 watch(() => [props.from, props.to, props.categories, props.types, props.metric, props.view], load)
 
 const layoutWidth = computed(() => {
@@ -174,7 +189,7 @@ const rows = computed(() =>
     const cfg = metricConfig[props.metric] ?? metricConfig.profit
     return {
       label: item.label,
-      prettyLabel: TYPE_LABELS[item.label] ?? item.label,
+      prettyLabel: itemTypeLabel(item.label, categoryLabels.value),
       value,
       pct,
       color: pickColor(index),
@@ -206,17 +221,6 @@ function formatTileLabel(label) {
   return `${text.slice(0, Math.max(1, limit - 1))}...`
 }
 
-const chartHeight = computed(() => {
-  const reserved = props.view === 'pie' ? 96 : 156
-  const available = Math.max(layoutHeight.value - reserved, 120)
-  if (props.view === 'pie') {
-    return clamp(Math.min(available, layoutWidth.value * 0.5), 150, 320)
-  }
-  if (props.view === 'treemap') {
-    return clamp(available, 140, 280)
-  }
-  return clamp(available, 120, 270)
-})
 const chartStyle = computed(() => ({ height: '100%', minHeight: '0px' }))
 
 const option = computed(() => {

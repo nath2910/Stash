@@ -2,12 +2,14 @@ package backend.service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
@@ -17,7 +19,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import backend.dto.*;
 import backend.dto.TopVenteProjection;
-import backend.entity.ItemType;
 import backend.entity.SnkVente;
 import backend.repository.SnkVenteRepository;
 
@@ -740,7 +741,7 @@ public class StatsService {
     if (types == null) return null;
     var cleaned = types.stream()
         .filter(t -> t != null && !t.trim().isEmpty())
-        .map(String::trim)
+        .map(snkVenteService::normalizeItemType)
         .distinct()
         .toList();
     return cleaned.isEmpty() ? null : cleaned;
@@ -786,11 +787,21 @@ public class StatsService {
     if (category != null && !category.trim().isEmpty()) {
       return category.trim();
     }
-    ItemType type = item.getType();
-    if (type == ItemType.POKEMON_CARD) return "Pokemon";
-    if (type == ItemType.TICKET) return "Tickets";
-    if (type == ItemType.OTHER) return "Autres";
-    return "Sneakers";
+    return itemTypeDisplayName(item.getType());
+  }
+
+  private String itemTypeDisplayName(String type) {
+    String normalized = snkVenteService.normalizeItemType(type);
+    if ("POKEMON_CARD".equals(normalized)) return "Pokemon";
+    if ("TICKET".equals(normalized)) return "Tickets";
+    if ("OTHER".equals(normalized)) return "Autres";
+    if ("SNEAKER".equals(normalized)) return "Sneakers";
+    String human = normalized.replace('_', ' ').toLowerCase(Locale.ROOT);
+    if (human.isBlank()) return "Sneakers";
+    return Normalizer.normalize(human, Normalizer.Form.NFC)
+        .substring(0, 1)
+        .toUpperCase(Locale.ROOT)
+        + human.substring(1);
   }
 
   private String itemName(SnkVente item) {

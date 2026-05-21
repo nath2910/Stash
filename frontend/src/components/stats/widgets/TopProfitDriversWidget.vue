@@ -145,25 +145,6 @@ const axisFont = computed(() =>
 const valueLabelVisible = computed(() => layoutWidth.value >= 480 && layoutHeight.value >= 220)
 
 const items = computed(() => rankItems.value)
-const chartHeight = computed(() => {
-  const reserved = props.view === 'pie' ? 92 : 150
-  const available = Math.max(layoutHeight.value - reserved, 120)
-
-  if (props.view === 'pie') {
-    return clamp(Math.min(available, layoutWidth.value * 0.52), 150, 320)
-  }
-
-  if (props.view === 'treemap' || props.view === 'heatmap') {
-    return clamp(available, 140, 280)
-  }
-
-  // Bars: keep extra vertical breathing so rows never look compressed.
-  const count = Math.max(1, items.value.length)
-  const base = denseMode.value ? 96 : 112
-  const per = denseMode.value ? 24 : 30
-  const target = base + count * per
-  return clamp(Math.min(available, target), 168, 360)
-})
 const chartStyle = computed(() => ({ height: '100%', minHeight: '0px' }))
 
 const total = computed(() => items.value.reduce((acc, i) => acc + Number(i.value ?? 0), 0))

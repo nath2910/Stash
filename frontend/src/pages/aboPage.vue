@@ -7,7 +7,7 @@
           class="app-touch-btn inline-flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-xs font-medium text-slate-200 transition hover:border-emerald-300/40 hover:text-white"
           @click="goToLogin"
         >
-          <span class="text-sm"><-</span>
+          <span class="text-sm">&lt;-</span>
           <span>Retour a la connexion</span>
         </button>
 
@@ -306,7 +306,7 @@ const statusMeta = computed(() => {
 const fetchStatus = async (includePortal = false) => {
   try {
     const res = await BillingService.status(includePortal)
-    status.value = (res?.data?.status as typeof status.value.value) || 'inactive'
+    status.value = (res?.data?.status as typeof status.value) || 'inactive'
     portalUrl.value = res?.data?.portalUrl || ''
 
     if (previousStatus !== 'active' && status.value === 'active') {
@@ -345,8 +345,11 @@ const startCheckout = async () => {
     }
 
     throw new Error('URL de paiement manquante')
-  } catch (e: any) {
-    error.value = e?.message || 'Impossible de lancer le paiement pour le moment'
+  } catch (e: unknown) {
+    error.value =
+      e && typeof e === 'object' && 'message' in e
+        ? String((e as { message?: unknown }).message || 'Impossible de lancer le paiement pour le moment')
+        : 'Impossible de lancer le paiement pour le moment'
   } finally {
     loading.value = false
   }

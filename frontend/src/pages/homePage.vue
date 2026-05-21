@@ -124,10 +124,14 @@ import HomeOverview from '@/components/AcceuilWidgetLateral.vue'
 import SnkVenteServices from '@/services/SnkVenteServices.js'
 import { useAuthStore } from '@/store/authStore'
 import { isVendue, prixRetailOf, prixResellOf } from '@/utils/snkVente'
-import { formatEUR, formatNumber } from '@/utils/formatters'
 
 const router = useRouter()
 const route = useRoute()
+
+type SnkVenteRow = Record<string, unknown> & {
+  dateVente?: string | number | Date
+  date_vente?: string | number | Date
+}
 
 const ONBOARD_PENDING = 'snk_onboarding_pending'
 const ONBOARD_SEEN = 'snk_onboarding_seen'
@@ -136,7 +140,7 @@ const showOnboarding = ref(false)
 const { user } = useAuthStore()
 const currentUser = user
 
-const snkVentes = ref<unknown[]>([])
+const snkVentes = ref<SnkVenteRow[]>([])
 const loading = ref(false)
 
 const chargerVentes = async () => {
@@ -150,7 +154,7 @@ const chargerVentes = async () => {
   loading.value = true
   try {
     const { data } = await SnkVenteServices.getSnkVente()
-    snkVentes.value = Array.isArray(data) ? data : []
+    snkVentes.value = Array.isArray(data) ? (data as SnkVenteRow[]) : []
   } catch (e) {
     console.error('Erreur chargement ventes (Accueil)', e)
     snkVentes.value = []
@@ -179,7 +183,7 @@ onMounted(() => {
 /**
  * Stats globales stock
  */
-const nbEnStock = computed(() => snkVentes.value.filter((v) => !isVendue(v)).length)
+const nbEnStock = computed<number>(() => snkVentes.value.filter((v) => !isVendue(v)).length)
 
 /**
  * Stats du mois en cours
@@ -188,7 +192,7 @@ const now = new Date()
 const currentMonth = now.getMonth()
 const currentYear = now.getFullYear()
 
-const ventesDuMois = computed(() =>
+const ventesDuMois = computed<SnkVenteRow[]>(() =>
   snkVentes.value.filter((v) => {
     const raw = v.dateVente ?? v.date_vente
     if (!raw) return false
@@ -198,9 +202,9 @@ const ventesDuMois = computed(() =>
   }),
 )
 
-const monthlyNbVendues = computed(() => ventesDuMois.value.length)
+const monthlyNbVendues = computed<number>(() => ventesDuMois.value.length)
 
-const monthlyTotalCA = computed(() =>
+const monthlyTotalCA = computed<number>(() =>
   ventesDuMois.value.reduce((sum, v) => {
     const resell = prixResellOf(v)
     if (Number.isNaN(resell)) return sum
@@ -208,7 +212,7 @@ const monthlyTotalCA = computed(() =>
   }, 0),
 )
 
-const monthlyTotalBenefice = computed(() =>
+const monthlyTotalBenefice = computed<number>(() =>
   ventesDuMois.value.reduce((sum, v) => {
     const retail = prixRetailOf(v)
     const resell = prixResellOf(v)
@@ -216,20 +220,6 @@ const monthlyTotalBenefice = computed(() =>
     return sum + (resell - retail)
   }, 0),
 )
-
-const monthlyAvgResell = computed(() => {
-  if (!monthlyNbVendues.value) return 0
-  return monthlyTotalCA.value / monthlyNbVendues.value
-})
-
-const formattedMonthlyCA = computed(() => formatEUR(monthlyTotalCA.value))
-const formattedMonthlyBenefice = computed(() => formatEUR(monthlyTotalBenefice.value))
-const formattedMonthlyAvgResell = computed(() => formatEUR(monthlyAvgResell.value))
-const formattedMonthlyNbVendues = computed(() =>
-  formatNumber(monthlyNbVendues.value, { compact: true }),
-)
-const formattedNbEnStock = computed(() => formatNumber(nbEnStock.value, { compact: true }))
-const beneficePositive = computed(() => monthlyTotalBenefice.value >= 0)
 
 const closeOnboarding = () => {
   showOnboarding.value = false

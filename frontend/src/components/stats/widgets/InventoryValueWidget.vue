@@ -24,8 +24,8 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import StatsServices from '@/services/StatsServices'
-import { normalizeSummary, parseYmdLocal, prevPeriod } from '@/services/statsAdapters'
-import { formatEUR, signFmt } from '@/utils/formatters'
+import { normalizeSummary, parseYmdLocal } from '@/services/statsAdapters'
+import { formatEUR } from '@/utils/formatters'
 import KpiCard from './_parts/KpiCard.vue'
 
 const props = defineProps({

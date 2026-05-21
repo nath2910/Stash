@@ -1,6 +1,5 @@
 package backend.dto;
 
-import backend.entity.ItemType;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -38,7 +37,8 @@ public class SnkVenteImportDto {
   @Size(max = 60)
   private String categorie;
 
-  private ItemType type;
+  @Size(max = 80)
+  private String type;
   private Map<String, Object> metadata;
 
 }

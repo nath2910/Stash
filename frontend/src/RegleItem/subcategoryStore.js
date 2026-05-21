@@ -1,4 +1,9 @@
-import { ITEM_TYPE_KEYS, isItemCategoryAlias } from './itemCategoryStore'
+import {
+  ITEM_TYPE_KEYS,
+  isItemCategoryAlias,
+  normalizeItemType as normalizeCategoryItemType,
+  resolveItemTypeOptions,
+} from './itemCategoryStore'
 
 const STORAGE_PREFIX = 'snk_item_subcategories_v1'
 const MAX_SUBCATEGORY_LENGTH = 60
@@ -11,8 +16,7 @@ export const DEFAULT_SUBCATEGORIES = {
 }
 
 export function normalizeItemType(type) {
-  const value = String(type || '').trim()
-  return ITEM_TYPE_KEYS.includes(value) ? value : 'OTHER'
+  return normalizeCategoryItemType(type)
 }
 
 export function normalizeSubcategoryName(value) {
@@ -35,21 +39,37 @@ export function dedupeSubcategories(values = []) {
   )
 }
 
+function isPlainObject(value) {
+  return value && typeof value === 'object' && !Array.isArray(value)
+}
+
 function removeMainCategoryAliases(values = [], aliases) {
   return values.filter((value) => {
     if (!value) return false
-    if (aliases && aliases.has(normalizeSubcategoryName(value).toLocaleLowerCase('fr'))) {
-      return false
-    }
+    const cleaned = normalizeSubcategoryName(value).toLocaleLowerCase('fr')
+    if (aliases && aliases.has(cleaned)) return false
     return !isItemCategoryAlias(value)
   })
 }
 
-export function sanitizeSubcategoryMap(value, fallback = DEFAULT_SUBCATEGORIES) {
-  const input = value && typeof value === 'object' && !Array.isArray(value) ? value : {}
+function collectTypes(input, fallback, categoryLabels) {
+  const types = new Set(ITEM_TYPE_KEYS)
+  if (isPlainObject(fallback)) {
+    Object.keys(fallback).forEach((type) => types.add(normalizeItemType(type)))
+  }
+  if (isPlainObject(input)) {
+    Object.keys(input).forEach((type) => types.add(normalizeItemType(type)))
+  }
+  resolveItemTypeOptions(categoryLabels || {}).forEach((option) => types.add(normalizeItemType(option.value)))
+  return Array.from(types).filter(Boolean)
+}
+
+export function sanitizeSubcategoryMap(value, fallback = DEFAULT_SUBCATEGORIES, categoryLabels) {
+  const input = isPlainObject(value) ? value : {}
+  const fallbackInput = isPlainObject(fallback) ? fallback : {}
   const out = {}
-  for (const type of ITEM_TYPE_KEYS) {
-    const raw = Array.isArray(input[type]) ? input[type] : fallback[type]
+  for (const type of collectTypes(input, fallbackInput, categoryLabels)) {
+    const raw = Array.isArray(input[type]) ? input[type] : fallbackInput[type]
     out[type] = dedupeSubcategories(raw || [])
   }
   return out
@@ -66,45 +86,47 @@ function getStorage(storage) {
   return window.localStorage ?? null
 }
 
-export function readStoredSubcategories(userId, storage) {
+export function readStoredSubcategories(userId, storage, categoryLabels) {
   const target = getStorage(storage)
-  if (!target) return sanitizeSubcategoryMap(DEFAULT_SUBCATEGORIES)
+  if (!target) return sanitizeSubcategoryMap(DEFAULT_SUBCATEGORIES, DEFAULT_SUBCATEGORIES, categoryLabels)
 
   try {
     const raw = target.getItem(subcategoryStorageKey(userId))
     if (!raw) {
-      const defaults = sanitizeSubcategoryMap(DEFAULT_SUBCATEGORIES)
+      const defaults = sanitizeSubcategoryMap(DEFAULT_SUBCATEGORIES, DEFAULT_SUBCATEGORIES, categoryLabels)
       target.setItem(subcategoryStorageKey(userId), JSON.stringify(defaults))
       return defaults
     }
-    return sanitizeSubcategoryMap(JSON.parse(raw))
+    return sanitizeSubcategoryMap(JSON.parse(raw), DEFAULT_SUBCATEGORIES, categoryLabels)
   } catch {
-    return sanitizeSubcategoryMap(DEFAULT_SUBCATEGORIES)
+    return sanitizeSubcategoryMap(DEFAULT_SUBCATEGORIES, DEFAULT_SUBCATEGORIES, categoryLabels)
   }
 }
 
-export function writeStoredSubcategories(userId, value, storage) {
+export function writeStoredSubcategories(userId, value, storage, categoryLabels) {
   const target = getStorage(storage)
-  const sanitized = sanitizeSubcategoryMap(value)
+  const sanitized = sanitizeSubcategoryMap(value, DEFAULT_SUBCATEGORIES, categoryLabels)
   if (!target) return sanitized
   target.setItem(subcategoryStorageKey(userId), JSON.stringify(sanitized))
   return sanitized
 }
 
-export function extractSubcategoriesByType(items = []) {
-  const out = Object.fromEntries(ITEM_TYPE_KEYS.map((type) => [type, []]))
+export function extractSubcategoriesByType(items = [], categoryLabels) {
+  const out = {}
   for (const item of Array.isArray(items) ? items : []) {
     const type = normalizeItemType(item?.type)
     const category = normalizeSubcategoryName(item?.categorie)
-    if (category) out[type].push(category)
+    if (!category) continue
+    if (!out[type]) out[type] = []
+    out[type].push(category)
   }
-  return sanitizeSubcategoryMap(out, {})
+  return sanitizeSubcategoryMap(out, {}, categoryLabels)
 }
 
 export function resolveSubcategoryOptions(type, options = {}) {
   const itemType = normalizeItemType(type)
-  const stored = sanitizeSubcategoryMap(options.stored)
-  const discovered = sanitizeSubcategoryMap(options.discovered, {})
+  const stored = sanitizeSubcategoryMap(options.stored, DEFAULT_SUBCATEGORIES, options.categoryLabels)
+  const discovered = sanitizeSubcategoryMap(options.discovered, {}, options.categoryLabels)
   const current = normalizeSubcategoryName(options.currentValue)
   const aliases = options.mainCategoryAliases instanceof Set ? options.mainCategoryAliases : null
   return removeMainCategoryAliases(
@@ -113,30 +135,30 @@ export function resolveSubcategoryOptions(type, options = {}) {
   )
 }
 
-export function addSubcategory(map, type, name) {
+export function addSubcategory(map, type, name, categoryLabels) {
   const itemType = normalizeItemType(type)
   const cleaned = normalizeSubcategoryName(name)
-  const next = sanitizeSubcategoryMap(map)
+  const next = sanitizeSubcategoryMap(map, DEFAULT_SUBCATEGORIES, categoryLabels)
   if (!cleaned) return next
   next[itemType] = dedupeSubcategories([...(next[itemType] || []), cleaned])
   return next
 }
 
-export function removeSubcategory(map, type, name) {
+export function removeSubcategory(map, type, name, categoryLabels) {
   const itemType = normalizeItemType(type)
   const cleanedKey = normalizeSubcategoryName(name).toLocaleLowerCase('fr')
-  const next = sanitizeSubcategoryMap(map)
+  const next = sanitizeSubcategoryMap(map, DEFAULT_SUBCATEGORIES, categoryLabels)
   next[itemType] = (next[itemType] || []).filter(
     (item) => item.toLocaleLowerCase('fr') !== cleanedKey,
   )
   return next
 }
 
-export function renameSubcategory(map, type, from, to) {
+export function renameSubcategory(map, type, from, to, categoryLabels) {
   const itemType = normalizeItemType(type)
   const fromKey = normalizeSubcategoryName(from).toLocaleLowerCase('fr')
   const cleanedTo = normalizeSubcategoryName(to)
-  const next = sanitizeSubcategoryMap(map)
+  const next = sanitizeSubcategoryMap(map, DEFAULT_SUBCATEGORIES, categoryLabels)
   if (!fromKey || !cleanedTo) return next
   next[itemType] = dedupeSubcategories(
     (next[itemType] || []).map((item) =>

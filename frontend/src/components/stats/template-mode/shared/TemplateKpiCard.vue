@@ -22,7 +22,7 @@ const props = withDefaults(
     value: string
     detail?: string
     tone?: TemplateKpiTone
-    icon?: unknown
+    icon?: unknown | null
   }>(),
   {
     detail: '',

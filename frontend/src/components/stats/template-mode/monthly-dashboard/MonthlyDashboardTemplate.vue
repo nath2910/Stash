@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <section class="monthly-dashboard" aria-label="Dashboard mensuel" @wheel="onWheel">
     <div class="monthly-dashboard__inner">
       <header class="monthly-header">
@@ -295,7 +295,6 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
   BadgeEuro,
   Boxes,
-  ChartNoAxesCombined,
   ChevronLeft,
   ChevronRight,
   CirclePercent,
@@ -914,7 +913,7 @@ function listDays(from: string, to: string) {
   return days
 }
 
-function normalizeSummary(raw: any): StatsSummary {
+function normalizeSummary(raw: unknown): StatsSummary {
   return {
     ca: toNumber(raw?.ca),
     profit: toNumber(raw?.profit),
@@ -925,7 +924,7 @@ function normalizeSummary(raw: any): StatsSummary {
   }
 }
 
-function normalizeTimeseries(raw: any): TimePoint[] {
+function normalizeTimeseries(raw: unknown): TimePoint[] {
   return Array.isArray(raw)
     ? raw
         .map((item) => ({
@@ -937,7 +936,7 @@ function normalizeTimeseries(raw: any): TimePoint[] {
     : []
 }
 
-function normalizeBrands(raw: any): BrandRow[] {
+function normalizeBrands(raw: unknown): BrandRow[] {
   return Array.isArray(raw)
     ? raw
         .map((item) => ({
@@ -948,7 +947,7 @@ function normalizeBrands(raw: any): BrandRow[] {
     : []
 }
 
-function normalizeTopSales(raw: any): TopSaleRow[] {
+function normalizeTopSales(raw: unknown): TopSaleRow[] {
   return Array.isArray(raw)
     ? raw
         .map((item) => ({
@@ -959,7 +958,7 @@ function normalizeTopSales(raw: any): TopSaleRow[] {
     : []
 }
 
-function normalizeRank(raw: any): RankRow[] {
+function normalizeRank(raw: unknown): RankRow[] {
   return Array.isArray(raw)
     ? raw
         .map((item) => ({
@@ -970,7 +969,7 @@ function normalizeRank(raw: any): RankRow[] {
     : []
 }
 
-function normalizeAnnualMonths(raw: any): DashboardMonth[] {
+function normalizeAnnualMonths(raw: unknown): DashboardMonth[] {
   const rows = Array.from({ length: 12 }, (_, index) => ({
     month: index + 1,
     revenue: 0,
@@ -1194,7 +1193,7 @@ async function loadDashboard() {
     categoryProfit.value = normalizeRank(categoryRes.data)
     annualMonths.value = normalizeAnnualMonths(annualRes.data?.monthly)
     hasLoadedOnce.value = true
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (id !== requestId) return
     error.value = err?.response?.data?.message ?? err?.message ?? 'Erreur inconnue'
   } finally {

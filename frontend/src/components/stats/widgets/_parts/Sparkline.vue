@@ -5,6 +5,8 @@
 <script setup>
 import { computed } from 'vue'
 
+defineOptions({ name: 'StatsSparkline' })
+
 const props = defineProps({
   data: { type: Array, default: () => [] }, // numbers
   color: { type: String, default: '#22C55E' },

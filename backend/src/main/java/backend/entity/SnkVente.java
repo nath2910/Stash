@@ -62,10 +62,9 @@ public class SnkVente {
   @Column(name = "categorie", length = 60)
   private String categorie;
 
-  @Enumerated(EnumType.STRING)
-  @Column(name = "type", length = 30, nullable = false)
+  @Column(name = "type", length = 80, nullable = false)
   @Builder.Default
-  private ItemType type = ItemType.SNEAKER;
+  private String type = "SNEAKER";
 
   @JdbcTypeCode(SqlTypes.JSON)
   @Column(name = "metadata", columnDefinition = "jsonb")

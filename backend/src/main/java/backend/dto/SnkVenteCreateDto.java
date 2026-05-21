@@ -1,7 +1,6 @@
 package backend.dto;
 
 
-import backend.entity.ItemType;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Map;
@@ -17,6 +16,6 @@ public record SnkVenteCreateDto(
   LocalDate dateVente,
   @Size(max = 500) String description,
   @Size(max = 60) String categorie,
-  ItemType type,
+  @Size(max = 80) String type,
   Map<String, Object> metadata
 ) {}

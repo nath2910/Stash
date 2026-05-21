@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <section class="annual-dashboard" aria-label="Dashboard annuel" @wheel="onWheel">
     <div class="annual-dashboard__inner">
       <header class="annual-header">
@@ -679,7 +679,7 @@ const categoryOption = computed(() => {
   }
 })
 
-function normalizeDashboard(raw: any): AnnualDashboard {
+function normalizeDashboard(raw: unknown): AnnualDashboard {
   return {
     year: Number(raw?.year ?? selectedYear.value),
     asOf: String(raw?.asOf ?? ''),
@@ -700,7 +700,7 @@ function normalizeDashboard(raw: any): AnnualDashboard {
   }
 }
 
-function normalizeSummary(raw: any): DashboardSummary {
+function normalizeSummary(raw: unknown): DashboardSummary {
   return {
     revenue: toNumber(raw?.revenue),
     profit: toNumber(raw?.profit),
@@ -718,7 +718,7 @@ function normalizeSummary(raw: any): DashboardSummary {
   }
 }
 
-function normalizeMonthly(raw: any): DashboardMonth[] {
+function normalizeMonthly(raw: unknown): DashboardMonth[] {
   const rows = Array.from({ length: 12 }, (_, index) => ({
     month: index + 1,
     revenue: 0,
@@ -743,7 +743,7 @@ function normalizeMonthly(raw: any): DashboardMonth[] {
   return rows
 }
 
-function normalizeCategory(raw: any): DashboardCategory {
+function normalizeCategory(raw: unknown): DashboardCategory {
   return {
     name: String(raw?.name ?? ''),
     revenue: toNumber(raw?.revenue),
@@ -752,7 +752,7 @@ function normalizeCategory(raw: any): DashboardCategory {
   }
 }
 
-function normalizeProduct(raw: any): DashboardProduct {
+function normalizeProduct(raw: unknown): DashboardProduct {
   return {
     id: toNumber(raw?.id),
     name: String(raw?.name ?? ''),
@@ -765,7 +765,7 @@ function normalizeProduct(raw: any): DashboardProduct {
   }
 }
 
-function normalizeInventoryItem(raw: any): DashboardInventoryItem {
+function normalizeInventoryItem(raw: unknown): DashboardInventoryItem {
   return {
     id: toNumber(raw?.id),
     name: String(raw?.name ?? ''),
@@ -945,7 +945,7 @@ async function loadDashboard() {
     const { data } = await StatsServices.annualDashboard(selectedYear.value)
     if (id !== requestId) return
     dashboard.value = normalizeDashboard(data)
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (id !== requestId) return
     error.value = err?.response?.data?.message ?? err?.message ?? 'Erreur inconnue'
     dashboard.value = null

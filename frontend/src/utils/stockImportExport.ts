@@ -1,6 +1,9 @@
-import { METADATA_FIELDS, typeLabel } from '@/RegleItem/CategorieItem'
+import { METADATA_FIELDS, normalizeItemTypeValue, typeLabel } from '@/RegleItem/CategorieItem'
 
-export type CsvRow = Record<string, any>
+type UnknownRecord = Record<string, unknown>
+type MetadataFieldDef = { key: string; label: string }
+
+export type CsvRow = UnknownRecord
 export type ImportMapping = Record<string, string>
 
 export type ImportPayloadItem = {
@@ -72,40 +75,48 @@ export const EXPORT_HEADERS = [
   ...EXPORT_METADATA_COLUMNS.map((column) => column.header),
 ]
 
-function quoteCsvCell(value: any) {
-  const s = String(value ?? '')
-  return `"${s.replaceAll('"', '""')}"`
+function asRecord(value: unknown): UnknownRecord {
+  return value && typeof value === 'object' && !Array.isArray(value) ? (value as UnknownRecord) : {}
 }
 
-function toIsoDate(value: any) {
+function quoteCsvCell(value: unknown) {
+  const s = String(value ?? '')
+  return `"${s.replace(/"/g, '""')}"`
+}
+
+function toIsoDate(value: unknown) {
   if (!value) return ''
-  const date = new Date(value)
+  const date =
+    value instanceof Date || typeof value === 'number' || typeof value === 'string'
+      ? new Date(value)
+      : new Date(String(value))
   if (Number.isNaN(date.getTime())) return ''
   return date.toISOString().slice(0, 10)
 }
 
-function toCsvNumber(value: any) {
+function toCsvNumber(value: unknown) {
   if (value === null || value === undefined || value === '') return ''
   const num = Number(value)
   if (!Number.isFinite(num)) return ''
   return String(num).replace('.', ',')
 }
 
-export function buildStockExportCsv(rows: any[]) {
+export function buildStockExportCsv(rows: unknown[]) {
   const safeRows = Array.isArray(rows) ? rows : []
   const lines = [
     EXPORT_HEADERS.join(';'),
-    ...safeRows.map((vente: any) => {
-      const metadata = vente.metadata && typeof vente.metadata === 'object' ? vente.metadata : {}
+    ...safeRows.map((source) => {
+      const vente = asRecord(source)
+      const metadata = asRecord(vente.metadata)
       const prixRetail = vente.prixRetail ?? vente.prix_retail
       const prixResell = vente.prixResell ?? vente.prix_resell
-      const type = vente.type ?? 'SNEAKER'
+      const type = String(vente.type ?? 'SNEAKER')
       const profit =
         Number.isFinite(Number(prixRetail)) && Number.isFinite(Number(prixResell))
           ? Number(prixResell) - Number(prixRetail)
           : ''
 
-      const row = {
+      const row: Record<string, unknown> = {
         'nom item': vente.nomItem ?? vente.nom_item ?? '',
         type,
         'type label': typeLabel(type),
@@ -121,7 +132,7 @@ export function buildStockExportCsv(rows: any[]) {
         ),
       }
 
-      return EXPORT_HEADERS.map((header) => quoteCsvCell((row as any)[header])).join(';')
+      return EXPORT_HEADERS.map((header) => quoteCsvCell(row[header])).join(';')
     }),
   ]
 
@@ -294,19 +305,17 @@ function buildMetadataFromColumns(row: CsvRow, headers: string[], typeValue: str
     .toUpperCase()
   const metadataFields = [
     ...EXPORT_METADATA_COLUMNS,
-    ...Object.values(METADATA_FIELDS)
-      .flat()
-      .map((field: any) => ({
-        key: field.key,
-        header: field.label,
-      })),
+    ...(Object.values(METADATA_FIELDS).flat() as MetadataFieldDef[]).map((field) => ({
+      key: field.key,
+      header: field.label,
+    })),
   ]
 
   const allowedKeys =
     normalizedType && METADATA_FIELDS[normalizedType as keyof typeof METADATA_FIELDS]
       ? new Set(
-          METADATA_FIELDS[normalizedType as keyof typeof METADATA_FIELDS].map(
-            (field: any) => field.key,
+          ((METADATA_FIELDS[normalizedType as keyof typeof METADATA_FIELDS] ?? []) as MetadataFieldDef[]).map(
+            (field) => field.key,
           ),
         )
       : null
@@ -335,7 +344,7 @@ export function isJsonFile(file: File) {
   return file.type === 'application/json' || /\.json$/i.test(file.name || '')
 }
 
-export function extractTableFrom2D(rows2D: any[][]): ParsedTable {
+export function extractTableFrom2D(rows2D: unknown[][]): ParsedTable {
   const headerIndex = rows2D.findIndex(
     (row) => (row || []).filter((cell) => String(cell).trim()).length >= 2,
   )
@@ -358,10 +367,10 @@ export function extractTableFrom2D(rows2D: any[][]): ParsedTable {
   return { headers, rows }
 }
 
-export function tableFromObjectRows(items: any[]): ParsedTable {
+export function tableFromObjectRows(items: unknown[]): ParsedTable {
   const objectRows = items.filter(
     (item) => item && typeof item === 'object' && !Array.isArray(item),
-  )
+  ) as UnknownRecord[]
   if (!objectRows.length) return { headers: [], rows: [] }
 
   const headers = Array.from(
@@ -382,11 +391,12 @@ export function tableFromObjectRows(items: any[]): ParsedTable {
   return { headers, rows }
 }
 
-export function findJsonArray(value: any): any[] | null {
+export function findJsonArray(value: unknown): unknown[] | null {
   if (Array.isArray(value)) return value
   if (!value || typeof value !== 'object') return null
+  const record = value as UnknownRecord
   for (const key of ['items', 'rows', 'data', 'stock', 'inventory', 'products']) {
-    if (Array.isArray(value[key])) return value[key]
+    if (Array.isArray(record[key])) return record[key] as unknown[]
   }
   return null
 }
@@ -395,7 +405,7 @@ export function parseJsonContent(text: string): ParsedTable {
   const parsed = JSON.parse(text)
   const array = findJsonArray(parsed)
   if (!array) return { headers: [], rows: [] }
-  if (array.every((row) => Array.isArray(row))) return extractTableFrom2D(array as any[][])
+  if (array.every((row) => Array.isArray(row))) return extractTableFrom2D(array as unknown[][])
   return tableFromObjectRows(array)
 }
 
@@ -610,12 +620,10 @@ export function recognizedImportHeaders(headers: string[], mapping: ImportMappin
   const recognized = new Set(Object.values(mapping).filter(Boolean))
   const metadataFields = [
     ...EXPORT_METADATA_COLUMNS,
-    ...Object.values(METADATA_FIELDS)
-      .flat()
-      .map((field: any) => ({
-        key: field.key,
-        header: field.label,
-      })),
+    ...(Object.values(METADATA_FIELDS).flat() as MetadataFieldDef[]).map((field) => ({
+      key: field.key,
+      header: field.label,
+    })),
   ]
 
   metadataFields.forEach((field) => {
@@ -631,15 +639,8 @@ function isEmptyImportRow(row: CsvRow, headers: string[]) {
 }
 
 function normalizeItemType(value: unknown) {
-  const raw = String(value ?? '')
-    .trim()
-    .toUpperCase()
-  if (!raw) return null
-  const cleaned = raw
-    .replace(/[\s-]+/g, '_')
-    .replace('POKEMON', 'POKEMON_CARD')
-    .replace('CARTE_POKEMON', 'POKEMON_CARD')
-  return ['SNEAKER', 'POKEMON_CARD', 'TICKET', 'OTHER'].includes(cleaned) ? cleaned : null
+  const normalized = normalizeItemTypeValue(value, '')
+  return normalized || null
 }
 
 function readCell(row: CsvRow, column?: string) {
@@ -686,21 +687,24 @@ function createDuplicateKey(item: ImportPayloadItem) {
   return `${name}|date:${item.dateAchat ?? ''}|retail:${item.prixRetail ?? ''}`
 }
 
-function existingDuplicateKeys(rows: any[] = []) {
+function existingDuplicateKeys(rows: unknown[] = []) {
   const keys = new Set<string>()
   const sourceRows = Array.isArray(rows) ? rows : []
   sourceRows.forEach((row) => {
-    const metadata = row?.metadata && typeof row.metadata === 'object' ? row.metadata : {}
+    const rowData = asRecord(row)
+    const metadata = asRecord(rowData.metadata)
     const item: ImportPayloadItem = {
-      nomItem: String(row?.nomItem ?? row?.nom_item ?? '').trim(),
-      prixRetail: toNumberSmart(row?.prixRetail ?? row?.prix_retail),
-      prixResell: toNumberSmart(row?.prixResell ?? row?.prix_resell),
-      dateAchat: parseDateSmart(row?.dateAchat ?? row?.date_achat),
-      dateVente: parseDateSmart(row?.dateVente ?? row?.date_vente),
-      categorie: row?.categorie ?? null,
-      description: row?.description ?? null,
-      type: row?.type ?? null,
-      metadata,
+      nomItem: String(rowData.nomItem ?? rowData.nom_item ?? '').trim(),
+      prixRetail: toNumberSmart(rowData.prixRetail ?? rowData.prix_retail),
+      prixResell: toNumberSmart(rowData.prixResell ?? rowData.prix_resell),
+      dateAchat: parseDateSmart(rowData.dateAchat ?? rowData.date_achat),
+      dateVente: parseDateSmart(rowData.dateVente ?? rowData.date_vente),
+      categorie: rowData.categorie == null ? null : String(rowData.categorie),
+      description: rowData.description == null ? null : String(rowData.description),
+      type: rowData.type == null ? null : String(rowData.type),
+      metadata: Object.fromEntries(
+        EXPORT_METADATA_COLUMNS.map((column) => [column.key, String(metadata[column.key] ?? '')]),
+      ),
     }
     if (item.nomItem) keys.add(createDuplicateKey(item))
   })
@@ -777,7 +781,7 @@ export function analyzeImportRows(
   rows: CsvRow[],
   headers: string[],
   mappingOverride?: ImportMapping,
-  existingRows: any[] = [],
+  existingRows: unknown[] = [],
 ): ImportPreview {
   const mapping = normalizeMapping(headers, mappingOverride ?? resolveImportMapping(headers))
   const recognizedHeaders = recognizedImportHeaders(headers, mapping)

@@ -13,6 +13,49 @@ export const DEFAULT_ITEM_TYPE_LABELS = Object.fromEntries(
   DEFAULT_ITEM_TYPES.map((item) => [item.value, item.label]),
 )
 
+const ITEM_TYPE_ALIASES = {
+  SNEAKERS: 'SNEAKER',
+  SHOE: 'SNEAKER',
+  SHOES: 'SNEAKER',
+  CHAUSSURE: 'SNEAKER',
+  CHAUSSURES: 'SNEAKER',
+  POKEMON: 'POKEMON_CARD',
+  POKEMON_CARDS: 'POKEMON_CARD',
+  CARTE_POKEMON: 'POKEMON_CARD',
+  CARTES_POKEMON: 'POKEMON_CARD',
+  TICKETS: 'TICKET',
+  AUTRE: 'OTHER',
+  AUTRES: 'OTHER',
+}
+
+export function normalizeItemTypeValue(value, fallback = 'OTHER') {
+  const raw = String(value ?? '').trim()
+  if (!raw) return fallback
+  const normalized = raw
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 80)
+    .replace(/_+$/g, '')
+  if (!normalized) return fallback
+  return ITEM_TYPE_ALIASES[normalized] || normalized
+}
+
+export function formatItemTypeLabel(type) {
+  const normalized = normalizeItemTypeValue(type, '')
+  if (!normalized) return 'Autre'
+  const known = DEFAULT_ITEM_TYPE_LABELS[normalized]
+  if (known) return known
+  return normalized
+    .toLowerCase()
+    .split('_')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
+}
+
 export const METADATA_FIELDS = {
   SNEAKER: [
     { key: 'size', label: 'Pointure', placeholder: '42 EU' },
@@ -24,7 +67,7 @@ export const METADATA_FIELDS = {
   POKEMON_CARD: [
     { key: 'set', label: 'Set', placeholder: '151 / Base Set' },
     { key: 'language', label: 'Langue', placeholder: 'FR / EN / JP' },
-    { key: 'rarity', label: 'Rareté', placeholder: 'Secret Rare' },
+    { key: 'rarity', label: 'Rarete', placeholder: 'Secret Rare' },
     { key: 'condition', label: 'Condition', placeholder: 'NEUF / TRES BON ETAT / BON ETAT' },
   ],
   TICKET: [
@@ -38,5 +81,4 @@ export const METADATA_FIELDS = {
   OTHER: [],
 }
 
-export const typeLabel = (type) =>
-  (DEFAULT_ITEM_TYPES.find((t) => t.value === type)?.label || 'Autre').toUpperCase()
+export const typeLabel = (type) => formatItemTypeLabel(type).toUpperCase()

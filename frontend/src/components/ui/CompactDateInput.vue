@@ -35,7 +35,7 @@
 import { computed } from 'vue'
 import { VueDatePicker } from '@vuepic/vue-datepicker'
 import '@vuepic/vue-datepicker/dist/main.css'
-import fr from 'date-fns/locale/fr'
+import { fr } from 'date-fns/locale/fr'
 
 const props = defineProps({
   modelValue: { type: String, default: '' },

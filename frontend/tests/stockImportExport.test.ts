@@ -37,6 +37,16 @@ describe('stockImportExport', () => {
     expect(preview.rows[0].errors).toContain('Doublon detecte')
   })
 
+  it('keeps custom item types when importing rows', () => {
+    const headers = ['Nom item', 'Type', 'Prix achat']
+    const rows = [{ 'Nom item': 'Rolex sample', Type: 'Montres luxe', 'Prix achat': '1000' }]
+
+    const preview = analyzeImportRows(rows, headers, resolveImportMapping(headers), [])
+
+    expect(preview.validItems).toBe(1)
+    expect(preview.payload[0].type).toBe('MONTRES_LUXE')
+  })
+
   it('exports stock rows with Excel-friendly separator and escaped cells', () => {
     const csv = buildStockExportCsv([
       {

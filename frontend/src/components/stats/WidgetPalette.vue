@@ -299,8 +299,8 @@ const formOpen = ref(false)
 const pendingWidget = ref<WidgetPaletteItem | null>(null)
 const activeDisplayKey = ref('')
 
-let searchTimer: ReturnType<typeof window.setTimeout> | null = null
-let optimisticTimer: ReturnType<typeof window.setTimeout> | null = null
+let searchTimer: number | null = null
+let optimisticTimer: number | null = null
 
 const normalizedGroups = computed<WidgetPaletteGroup[]>(() =>
   (props.groups ?? []).map((group) => ({
@@ -309,7 +309,7 @@ const normalizedGroups = computed<WidgetPaletteGroup[]>(() =>
   })),
 )
 
-const categoryChips = computed(() => [
+const categoryChips = computed<Array<{ label: string; value: string; color?: string; count: number }>>(() => [
   {
     label: 'Toutes',
     value: 'all',

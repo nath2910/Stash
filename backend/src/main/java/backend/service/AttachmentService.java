@@ -1,7 +1,6 @@
 package backend.service;
 
 import backend.entity.Attachment;
-import backend.entity.ItemType;
 import backend.entity.SnkVente;
 import backend.entity.User;
 import backend.repository.AttachmentRepository;
@@ -71,7 +70,7 @@ public class AttachmentService {
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Item introuvable ou non autorisé"));
   }
 
-  private void validateFileAgainstType(ItemType type, MultipartFile file) {
+  private void validateFileAgainstType(String type, MultipartFile file) {
     if (file == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Fichier manquant");
     if (file.getSize() > MAX_FILE_BYTES) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Fichier trop volumineux (max 10MB)");
@@ -81,7 +80,7 @@ public class AttachmentService {
         || file.getOriginalFilename() != null && file.getOriginalFilename().toLowerCase().endsWith(".pdf");
     boolean isImage = contentType.startsWith("image/");
 
-    if (type == ItemType.TICKET) {
+    if ("TICKET".equalsIgnoreCase(String.valueOf(type))) {
       if (!isPdf && !isImage) {
         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Pour les tickets, seuls les PDF ou images sont autorisés");
       }

@@ -1,15 +1,14 @@
 <template>
   <div ref="rootEl" class="relative">
-    <div class="mb-2 flex items-start justify-between gap-3">
+    <div class="mb-2 flex items-center justify-between gap-3">
       <div>
-        <label :for="buttonId" class="block text-sm font-bold text-gray-200">
+        <label :for="buttonId" class="block text-sm font-medium text-gray-200">
           Sous-categorie
         </label>
-        <p class="mt-0.5 text-xs text-gray-400">Detail propre a {{ currentTypeLabel }}</p>
       </div>
       <button
         type="button"
-        class="inline-flex items-center gap-1.5 rounded-full border border-purple-400/25 bg-purple-500/10 px-2.5 py-1 text-xs font-bold text-purple-200 transition hover:border-purple-300/50 hover:bg-purple-500/15 hover:text-purple-100"
+        class="inline-flex items-center gap-1.5 rounded-full border border-purple-400/25 bg-purple-500/10 px-2.5 py-0.5 text-xs font-bold text-purple-200 transition hover:border-purple-300/50 hover:bg-purple-500/15 hover:text-purple-100"
         @click="openManager"
       >
         <Settings2 class="h-3.5 w-3.5" />
@@ -31,10 +30,7 @@
       <ChevronDown class="h-4 w-4 shrink-0 text-gray-400" :class="{ 'rotate-180': menuOpen }" />
     </button>
 
-    <div
-      v-if="menuOpen"
-      class="subcategory-menu"
-    >
+    <div v-if="menuOpen" class="subcategory-menu">
       <div class="max-h-56 overflow-y-auto p-1.5">
         <button type="button" class="subcategory-option is-empty" @click="selectValue('')">
           <span>Aucune sous-categorie</span>
@@ -53,11 +49,7 @@
         </button>
       </div>
       <div class="border-t border-gray-800/90 p-2">
-        <button
-          type="button"
-          class="manage-menu-button"
-          @click="openManager"
-        >
+        <button type="button" class="manage-menu-button" @click="openManager">
           <Settings2 class="h-3.5 w-3.5" />
           <span>Gerer les sous-categories</span>
         </button>
@@ -103,22 +95,14 @@
                 placeholder="Nouvelle sous-categorie"
                 class="subcategory-add-input"
               />
-              <button
-                type="submit"
-                class="subcategory-add-button"
-                :disabled="!draftName"
-              >
+              <button type="submit" class="subcategory-add-button" :disabled="!draftName">
                 <Plus class="h-4 w-4" />
                 <span>Ajouter</span>
               </button>
             </form>
 
             <div v-if="managerItems.length" class="max-h-72 space-y-2 overflow-y-auto pr-1">
-              <div
-                v-for="item in managerItems"
-                :key="item"
-                class="subcategory-row"
-              >
+              <div v-for="item in managerItems" :key="item" class="subcategory-row">
                 <template v-if="renameFrom === item">
                   <input
                     v-model.trim="renameDraft"
@@ -217,23 +201,31 @@ const managerOpen = ref(false)
 const draftName = ref('')
 const renameFrom = ref('')
 const renameDraft = ref('')
-const storedMap = ref(readStoredSubcategories(props.userId))
+const storedMap = ref(
+  readStoredSubcategories(props.userId, undefined, props.categoryLabels || undefined),
+)
 
 const buttonId = `subcategory-${Math.random().toString(16).slice(2)}`
-const currentType = computed(() => normalizeItemType(props.type))
-const currentTypeLabel = computed(() => itemTypeLabel(currentType.value, props.categoryLabels || undefined))
-const mainCategoryAliases = computed(() => buildItemCategoryAliases(props.categoryLabels || undefined))
+const currentType = computed(() => normalizeItemType(props.type, props.categoryLabels || undefined))
+const currentTypeLabel = computed(() =>
+  itemTypeLabel(currentType.value, props.categoryLabels || undefined),
+)
+const mainCategoryAliases = computed(() =>
+  buildItemCategoryAliases(props.categoryLabels || undefined),
+)
 const optionsForType = computed(() =>
   resolveSubcategoryOptions(currentType.value, {
     stored: storedMap.value,
     discovered: props.discovered,
     currentValue: props.modelValue,
     mainCategoryAliases: mainCategoryAliases.value,
+    categoryLabels: props.categoryLabels || undefined,
   }),
 )
 const managerItems = computed(() =>
   (storedMap.value[currentType.value] || []).filter(
-    (item) => !mainCategoryAliases.value.has(normalizeSubcategoryName(item).toLocaleLowerCase('fr')),
+    (item) =>
+      !mainCategoryAliases.value.has(normalizeSubcategoryName(item).toLocaleLowerCase('fr')),
   ),
 )
 const selectedLabel = computed(() =>
@@ -245,7 +237,14 @@ const selectedLabel = computed(() =>
 watch(
   () => props.userId,
   (userId) => {
-    storedMap.value = readStoredSubcategories(userId)
+    storedMap.value = readStoredSubcategories(userId, undefined, props.categoryLabels || undefined)
+  },
+)
+
+watch(
+  () => props.categoryLabels,
+  (labels) => {
+    storedMap.value = readStoredSubcategories(props.userId, undefined, labels || undefined)
   },
 )
 
@@ -254,7 +253,9 @@ watch(
   () => {
     if (
       props.modelValue &&
-      mainCategoryAliases.value.has(normalizeSubcategoryName(props.modelValue).toLocaleLowerCase('fr'))
+      mainCategoryAliases.value.has(
+        normalizeSubcategoryName(props.modelValue).toLocaleLowerCase('fr'),
+      )
     ) {
       emit('update:modelValue', '')
     }
@@ -263,7 +264,12 @@ watch(
 )
 
 function persist(nextMap) {
-  storedMap.value = writeStoredSubcategories(props.userId, nextMap)
+  storedMap.value = writeStoredSubcategories(
+    props.userId,
+    nextMap,
+    undefined,
+    props.categoryLabels || undefined,
+  )
 }
 
 function selectValue(value) {
@@ -286,14 +292,21 @@ function addDraft() {
   const cleaned = normalizeSubcategoryName(draftName.value)
   if (!cleaned) return
   if (mainCategoryAliases.value.has(cleaned.toLocaleLowerCase('fr'))) return
-  persist(addSubcategory(storedMap.value, currentType.value, cleaned))
+  persist(
+    addSubcategory(storedMap.value, currentType.value, cleaned, props.categoryLabels || undefined),
+  )
   emit('update:modelValue', cleaned)
   draftName.value = ''
 }
 
 function removeItem(item) {
-  persist(removeSubcategory(storedMap.value, currentType.value, item))
-  if (normalizeSubcategoryName(props.modelValue).toLocaleLowerCase('fr') === item.toLocaleLowerCase('fr')) {
+  persist(
+    removeSubcategory(storedMap.value, currentType.value, item, props.categoryLabels || undefined),
+  )
+  if (
+    normalizeSubcategoryName(props.modelValue).toLocaleLowerCase('fr') ===
+    item.toLocaleLowerCase('fr')
+  ) {
     emit('update:modelValue', '')
   }
 }
@@ -315,8 +328,19 @@ function commitRename() {
     cancelRename()
     return
   }
-  persist(renameSubcategory(storedMap.value, currentType.value, from, to))
-  if (normalizeSubcategoryName(props.modelValue).toLocaleLowerCase('fr') === from.toLocaleLowerCase('fr')) {
+  persist(
+    renameSubcategory(
+      storedMap.value,
+      currentType.value,
+      from,
+      to,
+      props.categoryLabels || undefined,
+    ),
+  )
+  if (
+    normalizeSubcategoryName(props.modelValue).toLocaleLowerCase('fr') ===
+    from.toLocaleLowerCase('fr')
+  ) {
     emit('update:modelValue', to)
   }
   cancelRename()
@@ -340,17 +364,19 @@ onBeforeUnmount(() => {
 <style scoped>
 .subcategory-trigger {
   display: flex;
+  min-height: 2.625rem;
   width: 100%;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  border: 1px solid rgba(75, 85, 99, 0.95);
-  border-radius: 0.875rem;
-  background: rgba(17, 24, 39, 0.72);
-  padding: 0.78rem 0.9rem;
+  border: 1px solid rgb(75 85 99);
+  border-radius: var(--radius-lg, 0.5rem);
+  background: rgb(17 24 39);
+  padding: 0.625rem 0.75rem;
   text-align: left;
   color: rgb(243 244 246);
-  font-size: 0.92rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
   transition:
     background 140ms ease,
     border-color 140ms ease,
