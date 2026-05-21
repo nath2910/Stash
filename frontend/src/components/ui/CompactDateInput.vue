@@ -204,6 +204,20 @@ const maxDateValue = computed(() => parseYmdLocal(props.maxDate))
 }
 
 :global(.dp__menu) {
+  --dp-background-color: rgba(8, 10, 16, 0.96);
+  --dp-text-color: rgba(226, 232, 240, 0.94);
+  --dp-hover-color: rgba(30, 41, 59, 0.92);
+  --dp-hover-text-color: #ffffff;
+  --dp-primary-color: #0ea5e9;
+  --dp-primary-text-color: #ffffff;
+  --dp-secondary-color: rgba(148, 163, 184, 0.82);
+  --dp-border-color: rgba(255, 255, 255, 0.14);
+  --dp-menu-border-color: rgba(255, 255, 255, 0.14);
+  --dp-icon-color: rgba(226, 232, 240, 0.82);
+  --dp-disabled-color: rgba(15, 23, 42, 0.62);
+  --dp-disabled-color-text: rgba(100, 116, 139, 0.8);
+  --dp-scroll-bar-background: rgba(15, 23, 42, 0.8);
+  --dp-scroll-bar-color: rgba(100, 116, 139, 0.72);
   border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(8, 10, 16, 0.92);
@@ -240,6 +254,46 @@ const maxDateValue = computed(() => parseYmdLocal(props.maxDate))
 }
 :global(.dp__menu_inner) {
   padding: 4px 6px 6px;
+}
+:global(.dp__menu),
+:global(.dp__calendar),
+:global(.dp__month_year_row),
+:global(.dp__calendar_header),
+:global(.dp__overlay),
+:global(.dp__overlay_container) {
+  color: rgba(226, 232, 240, 0.94);
+}
+:global(.dp__month_year_select),
+:global(.dp__calendar_header_item),
+:global(.dp__cell_inner),
+:global(.dp__overlay_cell),
+:global(.dp__button),
+:global(.dp__inner_nav) {
+  color: rgba(226, 232, 240, 0.92) !important;
+}
+:global(.dp__cell_offset),
+:global(.dp__cell_disabled) {
+  color: rgba(100, 116, 139, 0.72) !important;
+}
+:global(.dp__cell_inner:hover),
+:global(.dp__month_year_select:hover),
+:global(.dp__inner_nav:hover),
+:global(.dp__overlay_cell:hover) {
+  background: rgba(30, 41, 59, 0.92) !important;
+  color: #ffffff !important;
+}
+:global(.dp__active_date),
+:global(.dp__range_start),
+:global(.dp__range_end) {
+  background: rgba(14, 165, 233, 0.92) !important;
+  border-color: rgba(14, 165, 233, 0.95) !important;
+  color: #ffffff !important;
+}
+:global(.dp__today) {
+  border-color: rgba(148, 163, 184, 0.68) !important;
+}
+:global(.dp__calendar_header_separator) {
+  background: rgba(148, 163, 184, 0.22);
 }
 .cd-picker :deep(.dp__calendar_header),
 .cd-picker :deep(.dp__month_year_row),

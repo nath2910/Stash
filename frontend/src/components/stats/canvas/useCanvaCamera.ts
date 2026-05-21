@@ -1,5 +1,11 @@
 import Panzoom from '@panzoom/panzoom'
-import type { PanOptions, PanzoomGlobalOptions, PanzoomObject, PanzoomOptions, ZoomOptions } from '@panzoom/panzoom'
+import type {
+  PanOptions,
+  PanzoomGlobalOptions,
+  PanzoomObject,
+  PanzoomOptions,
+  ZoomOptions,
+} from '@panzoom/panzoom'
 import type { Ref } from 'vue'
 import { ref } from 'vue'
 
@@ -41,11 +47,11 @@ const ALWAYS_IGNORE_PAN_SELECTOR = [
   '.template-picker-modal',
   '.profile-modal',
   '.shortcut-modal',
-  '.echarts',
-  '.vue-echarts',
 ].join(', ')
 
-const DEFAULT_PAN_CONTENT_SELECTOR = ['.widget', '.widget-card'].join(', ')
+const DEFAULT_PAN_CONTENT_SELECTOR = ['.widget', '.widget-card', '.echarts', '.vue-echarts'].join(
+  ', ',
+)
 const WHEEL_PAN_SPEED = 1.55
 
 export function useCanvasCamera(
@@ -226,13 +232,16 @@ export function useCanvasCamera(
     const el = eventElement(target)
     if (!el) return false
     if (closestFrom(el, ALWAYS_IGNORE_PAN_SELECTOR)) return true
+    const allowsContentPan = Boolean(closestFrom(el, '.canvas-root[data-pan-content="true"]'))
 
     const configuredExclude = panzoom?.getOptions?.().excludeClass
     const activeExclude = configuredExclude === undefined ? EXCLUDE_CLASS : configuredExclude
-    if (activeExclude && closestFrom(el, `.${activeExclude}`)) return true
+    if (activeExclude && closestFrom(el, `.${activeExclude}`)) {
+      if (!(allowsContentPan && closestFrom(el, '.widget'))) return true
+    }
 
     const isExplicitSpacePan = Boolean(closestFrom(el, '.canvas-root.is-space-pan'))
-    if (!isExplicitSpacePan && closestFrom(el, PAN_CONTENT_SELECTOR)) return true
+    if (!isExplicitSpacePan && !allowsContentPan && closestFrom(el, PAN_CONTENT_SELECTOR)) return true
 
     return false
   }
@@ -394,7 +403,12 @@ export function useCanvasCamera(
   function beginPointerPan(event: PointerEvent) {
     if (!panzoom || !customPanEnabled) return false
     if (event.pointerType === 'touch') return false
-    if (event.button !== 0 && event.button !== 1) return false
+    const targetEl = eventElement(event.target)
+    const isCanvasEditMode = Boolean(closestFrom(targetEl, '.canvas-root[data-edit="true"]'))
+    const isAllowedButton = isCanvasEditMode
+      ? event.button === 2 || event.button === 1
+      : event.button === 0 || event.button === 1 || event.button === 2
+    if (!isAllowedButton) return false
     if (event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) return false
 
     const vp = viewportEl.value

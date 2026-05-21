@@ -11,7 +11,7 @@
     :widget-base-width="props.widgetBaseWidth"
     :widget-base-height="props.widgetBaseHeight"
   >
-    <div class="risk-wrap">
+    <div v-if="hasRiskData" class="risk-wrap">
       <VChart class="risk-chart" :option="option" autoresize />
       <div v-if="showLegend" class="risk-legend">
         <span><i class="dot low"></i>Faible</span>
@@ -19,13 +19,17 @@
         <span><i class="dot high"></i>Eleve</span>
       </div>
     </div>
+    <div v-else class="risk-empty">
+      <strong>Aucun risque lisible</strong>
+      <span>Ajoute du stock ou des ventes categorisees pour alimenter la carte.</span>
+    </div>
   </WidgetCard>
 </template>
 
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import StatsServices from '@/services/StatsServices'
-import { normalizeBreakdown, normalizeRank } from '@/services/statsAdapters'
+import { normalizeBreakdown, normalizeRank, normalizeSummary } from '@/services/statsAdapters'
 import WidgetCard from './_parts/WidgetCard.vue'
 
 const props = defineProps({
@@ -44,6 +48,7 @@ const loading = ref(false)
 const error = ref('')
 const stockAging = ref([])
 const topProfit = ref([])
+const summary = ref(normalizeSummary({}))
 let requestSeq = 0
 
 async function load() {
@@ -51,13 +56,15 @@ async function load() {
   loading.value = true
   error.value = ''
   try {
-    const [agingRes, profitRes] = await Promise.all([
-      StatsServices.breakdown('stockAging', props.from, props.to, props.categories, props.types),
+    const [agingRes, profitRes, summaryRes] = await Promise.all([
+      StatsServices.breakdown('deathPileAge', props.from, props.to, props.categories, props.types),
       StatsServices.rank('topCategoriesProfit', props.from, props.to, 5, props.categories, props.types),
+      StatsServices.summary(props.from, props.to, props.categories, props.types),
     ])
     if (seq !== requestSeq) return
     stockAging.value = normalizeBreakdown(agingRes.data)
     topProfit.value = normalizeRank(profitRes.data)
+    summary.value = normalizeSummary(summaryRes.data)
   } catch (err) {
     if (seq !== requestSeq) return
     error.value = err?.response?.data?.message ?? err?.message ?? 'Impossible de charger'
@@ -69,26 +76,79 @@ async function load() {
 onMounted(load)
 watch(() => [props.from, props.to, props.categories, props.types], load)
 
-const xLabels = computed(() => {
-  const labels = topProfit.value.map((entry) => entry.label).slice(0, 5)
-  if (!labels.length) return ['Segment A', 'Segment B', 'Segment C']
-  return labels
+const xEntries = computed(() => {
+  const entries = topProfit.value
+    .map((entry) => ({
+      label: String(entry.label ?? '').trim(),
+      value: Number(entry.value ?? 0),
+    }))
+    .filter((entry) => entry.label)
+    .slice(0, 5)
+
+  if (entries.length) return entries
+
+  const hasGlobalSignal =
+    totalStockCount.value > 0 ||
+    Math.abs(Number(summary.value.profit ?? 0)) > 0 ||
+    Number(summary.value.valeurStock ?? 0) > 0
+  return hasGlobalSignal ? [{ label: 'Global', value: Number(summary.value.profit ?? 0) }] : []
 })
 
-const yLabels = ['Anciennete stock', 'Marge fragile', 'Cash immobilise']
+const xLabels = computed(() => xEntries.value.map((entry) => entry.label))
+const hasRiskData = computed(() => xEntries.value.length > 0)
+
+const yLabels = ['Stock dormant', 'Marge fragile', 'Cash immobilise']
+
+const totalStockCount = computed(() =>
+  stockAging.value.reduce((sum, entry) => sum + Math.max(0, Number(entry.value || 0)), 0),
+)
+
+function ageBucketWeight(label, index, totalCount) {
+  const text = String(label ?? '').toLowerCase()
+  if (text.includes('180')) return 100
+  if (text.includes('91') || text.includes('90')) return 82
+  if (text.includes('31')) return 58
+  if (text.includes('0-30') || text.includes('30')) return 22
+  const count = Math.max(1, Number(totalCount || 1))
+  return Math.round(24 + (76 * index) / count)
+}
+
+const agingRiskScore = computed(() => {
+  const total = totalStockCount.value
+  if (total <= 0) return Number(summary.value.valeurStock ?? 0) > 0 ? 45 : 0
+  const weighted = stockAging.value.reduce((sum, entry, index) => {
+    const value = Math.max(0, Number(entry.value || 0))
+    return sum + value * ageBucketWeight(entry.label, index, stockAging.value.length)
+  }, 0)
+  return clamp(Math.round(weighted / total), 0, 100)
+})
+
+const maxPositiveProfit = computed(() =>
+  Math.max(0, ...xEntries.value.map((entry) => Math.max(0, Number(entry.value || 0)))),
+)
+
+function profitRiskScore(entry) {
+  const value = Number(entry?.value ?? 0)
+  if (value <= 0) return 100
+  const max = Math.max(maxPositiveProfit.value, value, 1)
+  return clamp(Math.round(100 - (value / max) * 72), 18, 92)
+}
+
+function cashRiskScore(entry, index) {
+  const stockValue = Math.max(0, Number(summary.value.valeurStock ?? 0))
+  if (stockValue <= 0) return Number(entry?.value ?? 0) <= 0 ? 52 : 24
+  const stockPressure = clamp(44 + Math.log10(stockValue + 1) * 9, 48, 86)
+  const weakProfitPenalty = Number(entry?.value ?? 0) <= 0 ? 12 : 0
+  const spreadPenalty = xEntries.value.length > 1 ? index * 3 : 0
+  return clamp(Math.round(stockPressure + weakProfitPenalty + spreadPenalty), 18, 100)
+}
 
 const heatValues = computed(() => {
-  const riskFromAging = stockAging.value.reduce((sum, entry) => sum + Number(entry.value || 0), 0)
-  const baseline = Math.max(riskFromAging, 1)
-  return xLabels.value.flatMap((label, xIndex) => {
-    const profit = topProfit.value.find((entry) => entry.label === label)?.value ?? 0
-    const agingScore = Math.min(100, Math.round((baseline / (profit + baseline)) * 100))
-    const marginScore = Math.min(100, Math.max(8, 100 - Math.round(profit / 220)))
-    const cashScore = Math.min(100, 48 + xIndex * 10)
+  return xEntries.value.flatMap((entry, xIndex) => {
     return [
-      [xIndex, 0, agingScore],
-      [xIndex, 1, marginScore],
-      [xIndex, 2, cashScore],
+      [xIndex, 0, agingRiskScore.value],
+      [xIndex, 1, profitRiskScore(entry)],
+      [xIndex, 2, cashRiskScore(entry, xIndex)],
     ]
   })
 })
@@ -176,7 +236,7 @@ const option = computed(() => {
         const value = params?.value?.[2] ?? 0
         const metric = yLabels[params?.value?.[1] ?? 0]
         const segment = xLabels.value[params?.value?.[0] ?? 0]
-        return `${metric} - ${segment}<br/>Niveau de risque: ${value}/100`
+        return `${metric} - ${segment}<br/>Score estime: ${value}/100`
       },
     },
     series: [
@@ -232,6 +292,29 @@ const option = computed(() => {
   font-size: 11px;
   font-weight: 720;
   line-height: 1;
+}
+
+.risk-empty {
+  height: 100%;
+  min-height: 120px;
+  display: grid;
+  place-content: center;
+  gap: 6px;
+  text-align: center;
+  color: #64748b;
+  padding: 12px;
+}
+
+.risk-empty strong {
+  color: #111827;
+  font-size: 13px;
+  font-weight: 780;
+}
+
+.risk-empty span {
+  max-width: 34ch;
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 .risk-legend span {

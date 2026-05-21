@@ -7,6 +7,7 @@
       'theme-light': themeMode === 'light',
     }"
     :data-edit="editMode ? 'true' : 'false'"
+    :data-pan-content="editMode ? 'true' : 'false'"
     @pointerdown="onCanvasPointerDown"
     @wheel="onRootWheel"
     @contextmenu="onCanvasContextMenu"
@@ -98,6 +99,15 @@
           aria-hidden="true"
         >
           <div
+            v-for="box in dragAssistBoxes"
+            :key="box.id"
+            class="drag-assist-box"
+            :class="`drag-assist-box--${box.role}`"
+            :style="dragAssistBoxStyle(box)"
+          >
+            <span v-if="box.label" class="drag-assist-box__label">{{ box.label }}</span>
+          </div>
+          <div
             v-for="line in dragAssistLines"
             :key="line.id"
             class="drag-assist-line"
@@ -112,7 +122,10 @@
             v-for="gap in dragAssistGaps"
             :key="gap.id"
             class="drag-assist-gap"
-            :class="`drag-assist-gap--${gap.orientation}`"
+            :class="[
+              `drag-assist-gap--${gap.orientation}`,
+              gap.role ? `drag-assist-gap--${gap.role}` : '',
+            ]"
             :style="dragAssistGapStyle(gap)"
           >
             <span class="drag-assist-gap__label">{{ gap.label }}</span>
@@ -420,6 +433,20 @@
           <CalendarRange class="h-4 w-4" />
         </button>
         <button
+          v-if="!templateActive"
+          type="button"
+          class="template-rail__meta-btn"
+          :class="{ 'is-active': editMode }"
+          :data-tooltip="editMode ? 'Mode edition' : 'Mode fige'"
+          :title="editMode ? 'Mode edition actif' : 'Mode fige actif'"
+          :aria-pressed="editMode ? 'true' : 'false'"
+          :aria-label="editMode ? 'Mode edition actif' : 'Mode fige actif'"
+          @click.stop="toggleEditMode"
+        >
+          <MousePointer2 v-if="editMode" class="h-4 w-4" />
+          <Lock v-else class="h-4 w-4" />
+        </button>
+        <button
           type="button"
           class="template-rail__meta-btn"
           :class="{ 'is-active': templatePickerOpen }"
@@ -564,6 +591,9 @@
           </div>
 
           <ul class="shortcut-list">
+            <li><span>Clic gauche widget + glisser</span><kbd>Selectionner/deplacer</kbd></li>
+            <li><span>Clic gauche fond + glisser</span><kbd>Selection rectangle</kbd></li>
+            <li><span>Clic droit + glisser</span><kbd>Deplacer le canvas</kbd></li>
             <li><span>Espace (maintenir)</span><kbd>Pan temporaire</kbd></li>
             <li><span>+</span><kbd>Zoom avant</kbd></li>
             <li><span>-</span><kbd>Zoom arriere</kbd></li>
@@ -711,8 +741,10 @@ import {
   Check,
   Copy,
   LayoutTemplate,
+  Lock,
   Paintbrush,
   LayoutGrid,
+  MousePointer2,
   Target,
   PlusSquare,
   Trash2,
@@ -2490,6 +2522,15 @@ function dragAssistLineStyle(line: DragAssistLine) {
   }
 }
 
+function dragAssistBoxStyle(box: DragAssistBox) {
+  return {
+    left: `${box.x}px`,
+    top: `${box.y}px`,
+    width: `${Math.max(1, box.w)}px`,
+    height: `${Math.max(1, box.h)}px`,
+  }
+}
+
 function dragAssistGapStyle(gap: DragAssistGap) {
   if (gap.orientation === 'horizontal') {
     const left = Math.min(gap.start, gap.end)
@@ -2996,51 +3037,21 @@ function onCanvasPointerDown(e: PointerEvent) {
   )
   if (interactiveTarget) return
   const additive = e.shiftKey || e.ctrlKey || e.metaKey
+  const widgetEl = target?.closest('.widget') as HTMLElement | null
 
   if (isSecondary) {
-    e.preventDefault()
-    e.stopPropagation()
-    dragArmedId.value = null
-    activeTextWidgetId.value = null
-    if (!additive) {
-      clearSelection()
-    }
-    startMarqueeSelection(e, additive)
+    // Secondary drag is reserved for panning the canvas.
     return
   }
 
-  const widgetEl = target?.closest('.widget') as HTMLElement | null
   if (widgetEl) {
     const clickedId = String(widgetEl.dataset.id ?? '')
     if (!clickedId) return
-    const dragAlreadyStarted =
-      activeDragId === clickedId || activeDragIds.includes(clickedId) || dragStates.has(clickedId)
     if (additive) {
       toggleWidgetSelection(clickedId)
       if (!isWidgetSelected(clickedId) && activeTextWidgetId.value === clickedId) {
         activeTextWidgetId.value = null
       }
-      return
-    }
-    if (dragAlreadyStarted) return
-
-    if (!isWidgetSelected(clickedId)) {
-      selectSingleWidget(clickedId)
-    }
-
-    if (selectedWidgetIds.value.length !== 1) {
-      activeTextWidgetId.value = null
-      return
-    }
-
-    const onlyId = selectedWidgetIds.value[0]
-    const onlyWidget = getWidgetById(onlyId)
-    if (!onlyWidget || !isTextWidget(onlyWidget)) {
-      activeTextWidgetId.value = null
-      return
-    }
-    if (activeTextWidgetId.value && activeTextWidgetId.value !== onlyId) {
-      activeTextWidgetId.value = null
     }
     return
   }
@@ -3074,8 +3085,7 @@ function onCanvasPointerDown(e: PointerEvent) {
     return
   }
   clearSelection()
-  // Fond du board: on laisse panzoom gerer le drag pour deplacer la page.
-  // La selection rectangle reste disponible en mode additif (Shift/Ctrl/Cmd + drag).
+  startMarqueeSelection(e, false)
 }
 
 function onCanvasContextMenu(event: MouseEvent) {
@@ -3257,11 +3267,18 @@ const railDateButtonRef = ref<HTMLElement | null>(null)
 const railDatePanelRef = ref<HTMLElement | null>(null)
 const visibleRect = ref<{ left: number; top: number; right: number; bottom: number } | null>(null)
 let visibleRectRaf: number | null = null
+let visibleRectThrottleTimer: number | null = null
+let visibleRectLastUpdate = 0
+const VISIBLE_RECT_MIN_INTERVAL_MS = 48
 
 function clearVisibleRectRaf() {
   if (visibleRectRaf != null) {
     cancelAnimationFrame(visibleRectRaf)
     visibleRectRaf = null
+  }
+  if (visibleRectThrottleTimer != null) {
+    window.clearTimeout(visibleRectThrottleTimer)
+    visibleRectThrottleTimer = null
   }
 }
 
@@ -3291,8 +3308,19 @@ function updateVisibleRectNow() {
 
 function scheduleVisibleRectUpdate() {
   if (visibleRectRaf != null) return
+  const now = performance.now()
+  const elapsed = now - visibleRectLastUpdate
+  if (elapsed < VISIBLE_RECT_MIN_INTERVAL_MS) {
+    if (visibleRectThrottleTimer != null) return
+    visibleRectThrottleTimer = window.setTimeout(() => {
+      visibleRectThrottleTimer = null
+      scheduleVisibleRectUpdate()
+    }, VISIBLE_RECT_MIN_INTERVAL_MS - elapsed)
+    return
+  }
   visibleRectRaf = requestAnimationFrame(() => {
     visibleRectRaf = null
+    visibleRectLastUpdate = performance.now()
     updateVisibleRectNow()
   })
 }
@@ -3414,6 +3442,15 @@ type DragAssistLine = {
   start: number
   end: number
 }
+type DragAssistBox = {
+  id: string
+  role: 'active' | 'target' | 'spacing'
+  x: number
+  y: number
+  w: number
+  h: number
+  label?: string
+}
 type DragAssistGap = {
   id: string
   orientation: 'horizontal' | 'vertical'
@@ -3421,6 +3458,27 @@ type DragAssistGap = {
   end: number
   cross: number
   label: string
+  role?: 'nearby' | 'active-spacing' | 'reference-spacing'
+}
+type SpacingTarget = {
+  axis: SnapAxis
+  distance: number
+  firstWidgetId: string
+  secondWidgetId: string
+  start: number
+  end: number
+  cross: number
+  overlap: number
+}
+type SpacingSnapMatch = {
+  axis: SnapAxis
+  value: number
+  distance: number
+  neighborId: string
+  target: SpacingTarget
+  activeGapStart: number
+  activeGapEnd: number
+  activeGapCross: number
 }
 
 type DragState = {
@@ -3434,6 +3492,8 @@ type DragState = {
   el: HTMLElement | null
   xTargets: SnapTarget[]
   yTargets: SnapTarget[]
+  xSpacingTargets: SpacingTarget[]
+  ySpacingTargets: SpacingTarget[]
   isText: boolean
   projection: ViewProjection | null
 }
@@ -3446,6 +3506,7 @@ let zTop = 10
 const snapGuides = ref<{ x: number | null; y: number | null }>({ x: null, y: null })
 const dragAssistLines = ref<DragAssistLine[]>([])
 const dragAssistGaps = ref<DragAssistGap[]>([])
+const dragAssistBoxes = ref<DragAssistBox[]>([])
 const interactionTick = ref(0)
 
 function maxForegroundZ() {
@@ -3820,6 +3881,27 @@ function sameDragAssistGaps(a: DragAssistGap[], b: DragAssistGap[]) {
       left.start !== right.start ||
       left.end !== right.end ||
       left.cross !== right.cross ||
+      left.label !== right.label ||
+      left.role !== right.role
+    ) {
+      return false
+    }
+  }
+  return true
+}
+
+function sameDragAssistBoxes(a: DragAssistBox[], b: DragAssistBox[]) {
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i += 1) {
+    const left = a[i]
+    const right = b[i]
+    if (
+      left.id !== right.id ||
+      left.role !== right.role ||
+      left.x !== right.x ||
+      left.y !== right.y ||
+      left.w !== right.w ||
+      left.h !== right.h ||
       left.label !== right.label
     ) {
       return false
@@ -3828,21 +3910,24 @@ function sameDragAssistGaps(a: DragAssistGap[], b: DragAssistGap[]) {
   return true
 }
 
-function setDragAssist(lines: DragAssistLine[], gaps: DragAssistGap[]) {
+function setDragAssist(lines: DragAssistLine[], gaps: DragAssistGap[], boxes: DragAssistBox[]) {
   if (
     sameDragAssistLines(lines, dragAssistLines.value) &&
-    sameDragAssistGaps(gaps, dragAssistGaps.value)
+    sameDragAssistGaps(gaps, dragAssistGaps.value) &&
+    sameDragAssistBoxes(boxes, dragAssistBoxes.value)
   ) {
     return
   }
   dragAssistLines.value = lines
   dragAssistGaps.value = gaps
+  dragAssistBoxes.value = boxes
 }
 
 function clearDragAssist() {
-  if (!dragAssistLines.value.length && !dragAssistGaps.value.length) return
+  if (!dragAssistLines.value.length && !dragAssistGaps.value.length && !dragAssistBoxes.value.length) return
   dragAssistLines.value = []
   dragAssistGaps.value = []
+  dragAssistBoxes.value = []
 }
 
 function getViewportProjection(): ViewProjection | null {
@@ -3880,6 +3965,46 @@ function snapAnchorOffset(size: number, anchor: SnapAnchor) {
   if (anchor === 'center') return size / 2
   if (anchor === 'end') return size
   return 0
+}
+
+function widgetAssistBox(
+  widget: Widget,
+  projection: ViewProjection,
+  role: DragAssistBox['role'],
+  label?: string,
+): DragAssistBox {
+  return {
+    id: `box-${role}-${widget.id}`,
+    role,
+    x: boardToViewportX(widget.x, projection),
+    y: boardToViewportY(widget.y, projection),
+    w: roundAssistCoord(widget.w * projection.scaleX),
+    h: roundAssistCoord(widget.h * projection.scaleY),
+    label,
+  }
+}
+
+function rectAssistBox(
+  id: string,
+  rect: { x: number; y: number; w: number; h: number },
+  projection: ViewProjection,
+  role: DragAssistBox['role'],
+  label?: string,
+): DragAssistBox {
+  return {
+    id: `box-${role}-${id}`,
+    role,
+    x: boardToViewportX(rect.x, projection),
+    y: boardToViewportY(rect.y, projection),
+    w: roundAssistCoord(rect.w * projection.scaleX),
+    h: roundAssistCoord(rect.h * projection.scaleY),
+    label,
+  }
+}
+
+function pushUniqueAssistBox(boxes: DragAssistBox[], box: DragAssistBox) {
+  if (boxes.some((entry) => entry.id === box.id)) return
+  boxes.push(box)
 }
 
 function overlapLength(aStart: number, aEnd: number, bStart: number, bEnd: number) {
@@ -3961,15 +4086,16 @@ function pickGapCandidate(current: GapAssistCandidate | null, candidate: GapAssi
 }
 
 function collectNearestGapAssist(
-  activeId: string,
+  activeId: string | null,
   rect: { x: number; y: number; w: number; h: number },
   projection: ViewProjection,
+  excludedIds = new Set<string>(),
 ) {
   let bestHorizontal: GapAssistCandidate | null = null
   let bestVertical: GapAssistCandidate | null = null
 
   for (const other of widgets.value) {
-    if (other.id === activeId) continue
+    if (other.id === activeId || excludedIds.has(other.id)) continue
 
     const overlapY = overlapLength(rect.y, rect.y + rect.h, other.y, other.y + other.h)
     if (overlapY >= DRAG_ASSIST_MIN_OVERLAP) {
@@ -3998,6 +4124,7 @@ function collectNearestGapAssist(
             end: boardToViewportX(endBoard, projection),
             cross: boardToViewportY(crossBoard, projection),
             label: `${Math.round(distance)} px`,
+            role: 'nearby',
           },
         })
       }
@@ -4030,6 +4157,7 @@ function collectNearestGapAssist(
             end: boardToViewportY(endBoard, projection),
             cross: boardToViewportX(crossBoard, projection),
             label: `${Math.round(distance)} px`,
+            role: 'nearby',
           },
         })
       }
@@ -4042,7 +4170,94 @@ function collectNearestGapAssist(
   return out
 }
 
-function updateDragAssist(state: DragState, snapX: SnapOriginResult, snapY: SnapOriginResult) {
+function spacingMatchToGaps(match: SpacingSnapMatch, projection: ViewProjection) {
+  const orientation = match.axis === 'x' ? 'horizontal' : 'vertical'
+  const activeGap: DragAssistGap = {
+    id: `spacing-active-${match.axis}-${match.neighborId}`,
+    orientation,
+    start:
+      match.axis === 'x'
+        ? boardToViewportX(match.activeGapStart, projection)
+        : boardToViewportY(match.activeGapStart, projection),
+    end:
+      match.axis === 'x'
+        ? boardToViewportX(match.activeGapEnd, projection)
+        : boardToViewportY(match.activeGapEnd, projection),
+    cross:
+      match.axis === 'x'
+        ? boardToViewportY(match.activeGapCross, projection)
+        : boardToViewportX(match.activeGapCross, projection),
+    label: `${Math.round(match.distance)} px`,
+    role: 'active-spacing',
+  }
+  const referenceGap: DragAssistGap = {
+    id: `spacing-reference-${match.axis}-${match.target.firstWidgetId}-${match.target.secondWidgetId}`,
+    orientation,
+    start:
+      match.axis === 'x'
+        ? boardToViewportX(match.target.start, projection)
+        : boardToViewportY(match.target.start, projection),
+    end:
+      match.axis === 'x'
+        ? boardToViewportX(match.target.end, projection)
+        : boardToViewportY(match.target.end, projection),
+    cross:
+      match.axis === 'x'
+        ? boardToViewportY(match.target.cross, projection)
+        : boardToViewportX(match.target.cross, projection),
+    label: `${Math.round(match.distance)} px`,
+    role: 'reference-spacing',
+  }
+  return [referenceGap, activeGap]
+}
+
+function pushSpacingAssistBoxes(
+  boxes: DragAssistBox[],
+  match: SpacingSnapMatch | null,
+  projection: ViewProjection,
+) {
+  if (!match) return
+  const ids = [match.neighborId, match.target.firstWidgetId, match.target.secondWidgetId]
+  for (const id of ids) {
+    const widget = getWidgetById(id)
+    if (widget) pushUniqueAssistBox(boxes, widgetAssistBox(widget, projection, 'spacing'))
+  }
+}
+
+function pushSnapTargetAssistBox(
+  boxes: DragAssistBox[],
+  match: SnapOriginResult,
+  projection: ViewProjection,
+) {
+  const id = match.target?.widgetId
+  if (!id) return
+  const widget = getWidgetById(id)
+  if (!widget) return
+  const label = match.anchor === 'center' || match.target?.anchor === 'center' ? 'Centre' : 'Bord'
+  pushUniqueAssistBox(boxes, widgetAssistBox(widget, projection, 'target', label))
+}
+
+function buildAlignmentAssistLines(
+  rect: { x: number; y: number; w: number; h: number },
+  projection: ViewProjection,
+  snapX: SnapOriginResult,
+  snapY: SnapOriginResult,
+) {
+  const lines: DragAssistLine[] = []
+  const verticalLine = buildAlignmentAssistLine('x', rect, snapX, projection)
+  if (verticalLine) lines.push(verticalLine)
+  const horizontalLine = buildAlignmentAssistLine('y', rect, snapY, projection)
+  if (horizontalLine) lines.push(horizontalLine)
+  return lines
+}
+
+function updateDragAssist(
+  state: DragState,
+  snapX: SnapOriginResult,
+  snapY: SnapOriginResult,
+  spacingX: SpacingSnapMatch | null = null,
+  spacingY: SpacingSnapMatch | null = null,
+) {
   const projection = state.projection ?? getViewportProjection()
   if (!projection) {
     clearDragAssist()
@@ -4057,14 +4272,69 @@ function updateDragAssist(state: DragState, snapX: SnapOriginResult, snapY: Snap
     h: state.widget.h,
   }
 
-  const lines: DragAssistLine[] = []
-  const verticalLine = buildAlignmentAssistLine('x', rect, snapX, projection)
-  if (verticalLine) lines.push(verticalLine)
-  const horizontalLine = buildAlignmentAssistLine('y', rect, snapY, projection)
-  if (horizontalLine) lines.push(horizontalLine)
+  const lines = buildAlignmentAssistLines(rect, projection, snapX, snapY)
 
-  const gaps = collectNearestGapAssist(state.widget.id, rect, projection)
-  setDragAssist(lines, gaps)
+  const boxes: DragAssistBox[] = []
+  const gaps =
+    spacingX || spacingY
+      ? [
+          ...(spacingX ? spacingMatchToGaps(spacingX, projection) : []),
+          ...(spacingY ? spacingMatchToGaps(spacingY, projection) : []),
+        ]
+      : collectNearestGapAssist(state.widget.id, rect, projection)
+
+  if (lines.length || gaps.length) {
+    pushUniqueAssistBox(
+      boxes,
+      rectAssistBox(state.widget.id, rect, projection, 'active', `${Math.round(rect.w)} x ${Math.round(rect.h)}`),
+    )
+  }
+  pushSnapTargetAssistBox(boxes, snapX, projection)
+  pushSnapTargetAssistBox(boxes, snapY, projection)
+  pushSpacingAssistBoxes(boxes, spacingX, projection)
+  pushSpacingAssistBoxes(boxes, spacingY, projection)
+
+  setDragAssist(lines, gaps, boxes)
+}
+
+function updateGroupDragAssist(
+  activeIds: string[],
+  rect: { x: number; y: number; w: number; h: number },
+  projection: ViewProjection,
+  snapX: SnapOriginResult,
+  snapY: SnapOriginResult,
+  spacingX: SpacingSnapMatch | null = null,
+  spacingY: SpacingSnapMatch | null = null,
+) {
+  const excludedIds = new Set(activeIds)
+  const lines = buildAlignmentAssistLines(rect, projection, snapX, snapY)
+  const boxes: DragAssistBox[] = []
+  const gaps =
+    spacingX || spacingY
+      ? [
+          ...(spacingX ? spacingMatchToGaps(spacingX, projection) : []),
+          ...(spacingY ? spacingMatchToGaps(spacingY, projection) : []),
+        ]
+      : collectNearestGapAssist(null, rect, projection, excludedIds)
+
+  if (lines.length || gaps.length) {
+    pushUniqueAssistBox(
+      boxes,
+      rectAssistBox(
+        `group-${activeIds.join('-')}`,
+        rect,
+        projection,
+        'active',
+        `${activeIds.length} widgets`,
+      ),
+    )
+  }
+  pushSnapTargetAssistBox(boxes, snapX, projection)
+  pushSnapTargetAssistBox(boxes, snapY, projection)
+  pushSpacingAssistBoxes(boxes, spacingX, projection)
+  pushSpacingAssistBoxes(boxes, spacingY, projection)
+
+  setDragAssist(lines, gaps, boxes)
 }
 
 function axisSign(dir: ResizeDir, positive: 'e' | 's', negative: 'w' | 'n') {
@@ -4073,7 +4343,7 @@ function axisSign(dir: ResizeDir, positive: 'e' | 's', negative: 'w' | 'n') {
   return 0
 }
 
-function collectAxisTargets(activeId: string, axis: 'x' | 'y'): SnapTarget[] {
+function collectAxisTargetsForExcluded(excludedIds: Set<string>, axis: 'x' | 'y'): SnapTarget[] {
   const limit = axis === 'x' ? BOARD_W : BOARD_H
   const crossLimit = axis === 'x' ? BOARD_H : BOARD_W
   const targets: SnapTarget[] = [
@@ -4107,7 +4377,7 @@ function collectAxisTargets(activeId: string, axis: 'x' | 'y'): SnapTarget[] {
   ]
 
   for (const other of widgets.value) {
-    if (other.id === activeId) continue
+    if (excludedIds.has(other.id)) continue
     const start = axis === 'x' ? other.x : other.y
     const size = axis === 'x' ? other.w : other.h
     const spanStart = axis === 'x' ? other.y : other.x
@@ -4150,6 +4420,10 @@ function collectAxisTargets(activeId: string, axis: 'x' | 'y'): SnapTarget[] {
   return targets
 }
 
+function collectAxisTargets(activeId: string, axis: 'x' | 'y'): SnapTarget[] {
+  return collectAxisTargetsForExcluded(new Set([activeId]), axis)
+}
+
 function collectSizeTargets(activeId: string, axis: 'w' | 'h') {
   const out: number[] = []
   for (const other of widgets.value) {
@@ -4159,6 +4433,63 @@ function collectSizeTargets(activeId: string, axis: 'w' | 'h') {
     out.push(Math.round(size))
   }
   return Array.from(new Set(out)).sort((a, b) => a - b)
+}
+
+function collectSpacingTargetsForExcluded(excludedIds: Set<string>, axis: SnapAxis) {
+  const out: SpacingTarget[] = []
+  const items = widgets.value.filter((widget) => !excludedIds.has(widget.id))
+  for (let i = 0; i < items.length; i += 1) {
+    for (let j = i + 1; j < items.length; j += 1) {
+      const first = items[i]
+      const second = items[j]
+      const firstStart = axis === 'x' ? first.x : first.y
+      const firstSize = axis === 'x' ? first.w : first.h
+      const secondStart = axis === 'x' ? second.x : second.y
+      const secondSize = axis === 'x' ? second.w : second.h
+      const firstEnd = firstStart + firstSize
+      const secondEnd = secondStart + secondSize
+      const crossFirstStart = axis === 'x' ? first.y : first.x
+      const crossFirstEnd = crossFirstStart + (axis === 'x' ? first.h : first.w)
+      const crossSecondStart = axis === 'x' ? second.y : second.x
+      const crossSecondEnd = crossSecondStart + (axis === 'x' ? second.h : second.w)
+      const overlap = overlapLength(crossFirstStart, crossFirstEnd, crossSecondStart, crossSecondEnd)
+      if (overlap < DRAG_ASSIST_MIN_OVERLAP) continue
+
+      let leftOrTop = first
+      let rightOrBottom = second
+      let start = firstEnd
+      let end = secondStart
+      if (secondEnd <= firstStart) {
+        leftOrTop = second
+        rightOrBottom = first
+        start = secondEnd
+        end = firstStart
+      } else if (firstEnd > secondStart) {
+        continue
+      }
+
+      const distance = Math.abs(end - start)
+      if (distance < DRAG_ASSIST_GAP_MIN || distance > DRAG_ASSIST_GAP_MAX) continue
+
+      const crossStart = Math.max(crossFirstStart, crossSecondStart)
+      const crossEnd = Math.min(crossFirstEnd, crossSecondEnd)
+      out.push({
+        axis,
+        distance,
+        firstWidgetId: leftOrTop.id,
+        secondWidgetId: rightOrBottom.id,
+        start,
+        end,
+        cross: (crossStart + crossEnd) / 2,
+        overlap,
+      })
+    }
+  }
+  return out.sort((a, b) => b.overlap - a.overlap || a.distance - b.distance).slice(0, 80)
+}
+
+function collectSpacingTargets(activeId: string, axis: SnapAxis) {
+  return collectSpacingTargetsForExcluded(new Set([activeId]), axis)
 }
 
 function snapOriginToTargets(
@@ -4225,6 +4556,88 @@ function snapOriginToTargets(
   return { value: origin, guide: null, target: null, anchor: null }
 }
 
+function snapSpacingToTargets(
+  axis: SnapAxis,
+  origin: number,
+  size: number,
+  crossStart: number,
+  crossEnd: number,
+  activeId: string | null,
+  targets: SpacingTarget[],
+  enabled: boolean,
+  excludedIds = new Set<string>(),
+): { value: number; match: SpacingSnapMatch | null } {
+  if (!enabled || !targets.length) return { value: origin, match: null }
+
+  const activeStart = origin
+  const activeEnd = origin + size
+  const activeCrossCenter = (crossStart + crossEnd) / 2
+  let bestMatch: SpacingSnapMatch | null = null
+  let bestDiff = SNAP_DIST + 1
+  let bestOverlap = -Infinity
+  let bestCrossDistance = Number.POSITIVE_INFINITY
+
+  for (const other of widgets.value) {
+    if (other.id === activeId || excludedIds.has(other.id)) continue
+    const otherStart = axis === 'x' ? other.x : other.y
+    const otherSize = axis === 'x' ? other.w : other.h
+    const otherEnd = otherStart + otherSize
+    const otherCrossStart = axis === 'x' ? other.y : other.x
+    const otherCrossEnd = otherCrossStart + (axis === 'x' ? other.h : other.w)
+    const overlap = overlapLength(crossStart, crossEnd, otherCrossStart, otherCrossEnd)
+    if (overlap < DRAG_ASSIST_MIN_OVERLAP) continue
+
+    for (const target of targets) {
+      let currentGap: number | null = null
+      let nextOrigin = origin
+      let activeGapStart = 0
+      let activeGapEnd = 0
+
+      if (otherEnd <= activeStart) {
+        currentGap = activeStart - otherEnd
+        nextOrigin = otherEnd + target.distance
+        activeGapStart = otherEnd
+        activeGapEnd = nextOrigin
+      } else if (activeEnd <= otherStart) {
+        currentGap = otherStart - activeEnd
+        nextOrigin = otherStart - target.distance - size
+        activeGapStart = nextOrigin + size
+        activeGapEnd = otherStart
+      }
+
+      if (currentGap === null) continue
+      const limit = axis === 'x' ? BOARD_W : BOARD_H
+      if (nextOrigin < 0 || nextOrigin + size > limit) continue
+
+      const diff = Math.abs(currentGap - target.distance)
+      const crossDistance = Math.abs(target.cross - activeCrossCenter)
+      const isBetter =
+        diff < bestDiff ||
+        (Math.abs(diff - bestDiff) < 0.001 && overlap > bestOverlap) ||
+        (Math.abs(diff - bestDiff) < 0.001 &&
+          overlap === bestOverlap &&
+          crossDistance < bestCrossDistance)
+      if (diff <= SNAP_DIST && isBetter) {
+        bestDiff = diff
+        bestOverlap = overlap
+        bestCrossDistance = crossDistance
+        bestMatch = {
+          axis,
+          value: nextOrigin,
+          distance: target.distance,
+          neighborId: other.id,
+          target,
+          activeGapStart,
+          activeGapEnd,
+          activeGapCross: (Math.max(crossStart, otherCrossStart) + Math.min(crossEnd, otherCrossEnd)) / 2,
+        }
+      }
+    }
+  }
+
+  return bestMatch ? { value: bestMatch.value, match: bestMatch } : { value: origin, match: null }
+}
+
 function snapEdgeToTargets(edge: number, targets: SnapTarget[], enabled: boolean) {
   if (!enabled) return { value: edge, guide: null as number | null }
 
@@ -4275,6 +4688,49 @@ function snapSizeToTargets(value: number, targets: number[], enabled: boolean) {
   }
 
   return { value, snapped: false }
+}
+
+function dragGroupRect(states: DragState[]) {
+  let minX = Infinity
+  let minY = Infinity
+  let maxX = -Infinity
+  let maxY = -Infinity
+  for (const state of states) {
+    minX = Math.min(minX, state.x)
+    minY = Math.min(minY, state.y)
+    maxX = Math.max(maxX, state.x + state.widget.w)
+    maxY = Math.max(maxY, state.y + state.widget.h)
+  }
+  const w = Math.max(1, maxX - minX)
+  const h = Math.max(1, maxY - minY)
+  return { x: minX, y: minY, w, h }
+}
+
+function clampDragGroupDelta(states: DragState[], dx: number, dy: number) {
+  let minDx = -Infinity
+  let maxDx = Infinity
+  let minDy = -Infinity
+  let maxDy = Infinity
+
+  for (const state of states) {
+    minDx = Math.max(minDx, -state.x)
+    maxDx = Math.min(maxDx, BOARD_W - state.widget.w - state.x)
+    minDy = Math.max(minDy, -state.y)
+    maxDy = Math.min(maxDy, BOARD_H - state.widget.h - state.y)
+  }
+
+  return {
+    dx: clamp(dx, minDx, maxDx),
+    dy: clamp(dy, minDy, maxDy),
+  }
+}
+
+function moveDragStates(states: DragState[], dx: number, dy: number) {
+  if (Math.abs(dx) < 0.001 && Math.abs(dy) < 0.001) return
+  for (const state of states) {
+    state.x += dx
+    state.y += dy
+  }
 }
 
 function rectsOverlap(
@@ -4487,6 +4943,8 @@ function startDrag(id: string, event: PointerEvent) {
       el: dragEl ?? null,
       xTargets: collectAxisTargets(dragId, 'x'),
       yTargets: collectAxisTargets(dragId, 'y'),
+      xSpacingTargets: collectSpacingTargets(dragId, 'x'),
+      ySpacingTargets: collectSpacingTargets(dragId, 'y'),
       isText,
       projection,
     })
@@ -4522,27 +4980,90 @@ function applyGlobalPointerMove(event: PointerEvent) {
 
     const moveX = dx / state.scale
     const moveY = dy / state.scale
-    let minDx = -Infinity
-    let maxDx = Infinity
-    let minDy = -Infinity
-    let maxDy = Infinity
+    const baseDelta = clampDragGroupDelta(states, moveX, moveY)
+    moveDragStates(states, baseDelta.dx, baseDelta.dy)
 
-    for (const dragState of states) {
-      minDx = Math.max(minDx, -dragState.x)
-      maxDx = Math.min(maxDx, BOARD_W - dragState.widget.w - dragState.x)
-      minDy = Math.max(minDy, -dragState.y)
-      maxDy = Math.min(maxDy, BOARD_H - dragState.widget.h - dragState.y)
+    const smartSnap = shouldUseSmartSnap(event)
+    const projection = state.projection ?? getViewportProjection()
+    let nextX: SnapOriginResult = { value: 0, guide: null, target: null, anchor: null }
+    let nextY: SnapOriginResult = { value: 0, guide: null, target: null, anchor: null }
+    let spacingX: { value: number; match: SpacingSnapMatch | null } = { value: 0, match: null }
+    let spacingY: { value: number; match: SpacingSnapMatch | null } = { value: 0, match: null }
+
+    if (smartSnap) {
+      const excludedIds = new Set(activeDragIds)
+      let rect = dragGroupRect(states)
+      nextX = snapOriginToTargets(
+        rect.x,
+        rect.w,
+        collectAxisTargetsForExcluded(excludedIds, 'x'),
+        true,
+        rect.y + rect.h / 2,
+      )
+      nextY = snapOriginToTargets(
+        rect.y,
+        rect.h,
+        collectAxisTargetsForExcluded(excludedIds, 'y'),
+        true,
+        rect.x + rect.w / 2,
+      )
+
+      const snapDelta = clampDragGroupDelta(states, nextX.value - rect.x, nextY.value - rect.y)
+      moveDragStates(states, snapDelta.dx, snapDelta.dy)
+
+      rect = dragGroupRect(states)
+      spacingX = !nextX.target
+        ? snapSpacingToTargets(
+            'x',
+            rect.x,
+            rect.w,
+            rect.y,
+            rect.y + rect.h,
+            null,
+            collectSpacingTargetsForExcluded(excludedIds, 'x'),
+            true,
+            excludedIds,
+          )
+        : { value: rect.x, match: null }
+      const spacingDeltaX = clampDragGroupDelta(states, spacingX.value - rect.x, 0)
+      moveDragStates(states, spacingDeltaX.dx, 0)
+
+      rect = dragGroupRect(states)
+      spacingY = !nextY.target
+        ? snapSpacingToTargets(
+            'y',
+            rect.y,
+            rect.h,
+            rect.x,
+            rect.x + rect.w,
+            null,
+            collectSpacingTargetsForExcluded(excludedIds, 'y'),
+            true,
+            excludedIds,
+          )
+        : { value: rect.y, match: null }
+      const spacingDeltaY = clampDragGroupDelta(states, 0, spacingY.value - rect.y)
+      moveDragStates(states, 0, spacingDeltaY.dy)
     }
 
-    const clampedDx = clamp(moveX, minDx, maxDx)
-    const clampedDy = clamp(moveY, minDy, maxDy)
     for (const dragState of states) {
-      dragState.x += clampedDx
-      dragState.y += clampedDy
       scheduleDragApply(dragState)
     }
     setSnapGuides(null, null)
-    clearDragAssist()
+    if (smartSnap && projection) {
+      state.projection = projection
+      updateGroupDragAssist(
+        activeDragIds,
+        dragGroupRect(states),
+        projection,
+        nextX,
+        nextY,
+        spacingX.match,
+        spacingY.match,
+      )
+    } else {
+      clearDragAssist()
+    }
     return
   }
 
@@ -4555,13 +5076,43 @@ function applyGlobalPointerMove(event: PointerEvent) {
   state.x = nextX.value
   state.y = nextY.value
 
+  const spacingX =
+    !nextX.target && smartSnap
+      ? snapSpacingToTargets(
+          'x',
+          state.x,
+          w.w,
+          state.y,
+          state.y + w.h,
+          w.id,
+          state.xSpacingTargets,
+          true,
+        )
+      : { value: state.x, match: null }
+  state.x = spacingX.value
+
+  const spacingY =
+    !nextY.target && smartSnap
+      ? snapSpacingToTargets(
+          'y',
+          state.y,
+          w.h,
+          state.x,
+          state.x + w.w,
+          w.id,
+          state.ySpacingTargets,
+          true,
+        )
+      : { value: state.y, match: null }
+  state.y = spacingY.value
+
   const clamped = clampWidgetPosition(state.x, state.y, w)
   state.x = clamped.x
   state.y = clamped.y
 
   setSnapGuides(null, null)
   if (smartSnap) {
-    updateDragAssist(state, nextX, nextY)
+    updateDragAssist(state, nextX, nextY, spacingX.match, spacingY.match)
   } else {
     clearDragAssist()
   }

@@ -1,7 +1,7 @@
 ﻿<template>
   <div class="w-full">
     <div
-      class="group flex h-[42px] items-center gap-2.5 rounded-[14px] border border-slate-700/90 bg-slate-950/55 px-4 shadow-sm transition focus-within:border-violet-400/60 focus-within:ring-2 focus-within:ring-violet-500/25"
+      class="group flex h-10 items-center gap-2.5 rounded-[14px] border border-slate-700/80 bg-slate-950/45 px-3.5 shadow-sm transition focus-within:border-violet-400/60 focus-within:bg-slate-950/65 focus-within:ring-2 focus-within:ring-violet-500/20"
     >
       <svg
         class="h-4 w-4 shrink-0 text-slate-400 transition group-focus-within:text-violet-300"

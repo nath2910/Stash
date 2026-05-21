@@ -142,10 +142,14 @@
                       type="button"
                       class="filter-reset-button"
                       :disabled="!hasActiveFilters"
+                      :title="hasActiveFilters ? 'Reinitialiser les filtres' : 'Aucun filtre actif'"
+                      :aria-label="
+                        hasActiveFilters ? 'Reinitialiser les filtres' : 'Aucun filtre actif'
+                      "
                       @click="resetFilters"
                     >
                       <RotateCcw class="h-3.5 w-3.5" />
-                      <span>Reset</span>
+                      <span class="filter-reset-text">Reset</span>
                       <span v-if="activeFilterCount" class="filter-count-badge">
                         {{ activeFilterCount }}
                       </span>
@@ -745,16 +749,8 @@ watch(
 
 <style scoped>
 .gestion-command-panel {
-  overflow: hidden;
-  border: 1px solid rgba(71, 85, 105, 0.72);
-  border-radius: 18px;
-  background:
-    linear-gradient(180deg, rgba(15, 23, 42, 0.94), rgba(15, 23, 42, 0.78)),
-    rgba(15, 23, 42, 0.82);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.05),
-    0 18px 44px rgba(2, 6, 23, 0.24);
-  padding: 0.75rem;
+  container-type: inline-size;
+  overflow: visible;
 }
 
 .command-panel-grid {
@@ -768,103 +764,136 @@ watch(
   display: grid;
   min-width: 0;
   align-content: center;
-  gap: 0.65rem;
+  gap: 0.55rem;
+  border: 1px solid rgba(51, 65, 85, 0.86);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.78), rgba(15, 23, 42, 0.56)),
+    rgba(2, 6, 23, 0.24);
+  padding: 0.62rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 14px 34px rgba(2, 6, 23, 0.18);
 }
 
 .command-primary-row {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 0.65rem;
+  gap: 0.55rem;
   align-items: center;
+  min-width: 0;
 }
 
 .filter-compact-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.6rem;
-  align-items: end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+  min-width: 0;
 }
 
 .filter-field {
   display: grid;
-  min-width: 0;
-  gap: 0.3rem;
-}
-
-.filter-field > span {
-  color: rgb(148 163 184);
-  font-size: 10.5px;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  line-height: 1;
-  text-transform: uppercase;
-}
-
-.filter-control {
-  appearance: none;
-  height: 40px;
-  width: 100%;
-  border: 1px solid rgba(71, 85, 105, 0.9);
-  border-radius: 14px;
-  background:
-    linear-gradient(45deg, transparent 50%, rgb(148, 163, 184) 50%) calc(100% - 16px) 18px /
-      5px 5px no-repeat,
-    linear-gradient(135deg, rgb(148, 163, 184) 50%, transparent 50%) calc(100% - 11px) 18px /
-      5px 5px no-repeat,
-    rgba(15, 23, 42, 0.76);
-  color: rgb(241 245 249);
-  font-size: 13px;
-  font-weight: 750;
-  line-height: 1;
-  outline: none;
-  padding: 0 2.15rem 0 0.9rem;
-  text-overflow: ellipsis;
+  flex: 1 1 176px;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  min-width: 158px;
+  max-width: 258px;
+  height: 36px;
+  overflow: hidden;
+  border: 1px solid rgba(71, 85, 105, 0.82);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.54);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
   transition:
     border-color 140ms ease,
     background 140ms ease,
     box-shadow 140ms ease;
 }
 
+.filter-field:focus-within {
+  border-color: rgba(167, 139, 250, 0.76);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+}
+
+.filter-field:hover {
+  border-color: rgba(100, 116, 139, 0.95);
+  background: rgba(15, 23, 42, 0.72);
+}
+
+.filter-field > span {
+  color: rgb(148 163 184);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  line-height: 1;
+  padding-left: 0.82rem;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.filter-control {
+  appearance: none;
+  height: 34px;
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  background:
+    linear-gradient(45deg, transparent 50%, rgb(148, 163, 184) 50%) calc(100% - 14px) 15px /
+      5px 5px no-repeat,
+    linear-gradient(135deg, rgb(148, 163, 184) 50%, transparent 50%) calc(100% - 9px) 15px /
+      5px 5px no-repeat;
+  color: rgb(241 245 249);
+  font-size: 12.5px;
+  font-weight: 800;
+  line-height: 1;
+  outline: none;
+  padding: 0 1.75rem 0 0.45rem;
+  text-overflow: ellipsis;
+}
+
 .filter-control:disabled {
   cursor: not-allowed;
   color: rgb(100 116 139);
   background:
-    linear-gradient(45deg, transparent 50%, rgb(100, 116, 139) 50%) calc(100% - 16px) 18px /
+    linear-gradient(45deg, transparent 50%, rgb(100, 116, 139) 50%) calc(100% - 14px) 15px /
       5px 5px no-repeat,
-    linear-gradient(135deg, rgb(100, 116, 139) 50%, transparent 50%) calc(100% - 11px) 18px /
-      5px 5px no-repeat,
-    rgba(15, 23, 42, 0.42);
+    linear-gradient(135deg, rgb(100, 116, 139) 50%, transparent 50%) calc(100% - 9px) 15px /
+      5px 5px no-repeat;
 }
 
 .filter-control:hover {
-  border-color: rgb(100 116 139);
-  background-color: rgba(15, 23, 42, 0.95);
+  background-color: transparent;
 }
 
 .filter-control:focus {
-  border-color: rgb(167 139 250);
-  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.18);
+  box-shadow: none;
 }
 
 .filter-status-group {
   display: inline-grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   width: 100%;
+  max-width: 310px;
   min-width: 0;
   height: 40px;
-  border: 1px solid rgba(71, 85, 105, 0.86);
-  border-radius: 15px;
-  background: rgba(2, 6, 23, 0.26);
+  border: 1px solid rgba(71, 85, 105, 0.78);
+  border-radius: 999px;
+  background: rgba(2, 6, 23, 0.28);
   padding: 3px;
 }
 
 .filter-status-button {
   min-width: 0;
-  border-radius: 12px;
+  border-radius: 999px;
   color: rgb(203 213 225);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 850;
   line-height: 1;
+  overflow: hidden;
+  padding: 0 0.45rem;
+  text-overflow: ellipsis;
   white-space: nowrap;
   transition:
     background 140ms ease,
@@ -880,31 +909,42 @@ watch(
 .filter-status-button.is-active {
   background: rgb(241 245 249);
   color: rgb(15 23 42);
-  box-shadow: 0 10px 22px rgba(2, 6, 23, 0.28);
+  box-shadow: 0 8px 18px rgba(2, 6, 23, 0.24);
 }
 
 .date-range-compact {
   display: grid;
-  grid-template-columns: 1fr;
+  flex: 1 1 306px;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  gap: 0.45rem;
-  min-width: 0;
-  min-height: 40px;
-  border: 1px solid rgba(71, 85, 105, 0.86);
-  border-radius: 14px;
-  background: rgba(15, 23, 42, 0.56);
-  padding: 0.55rem;
+  gap: 0.48rem;
+  min-width: 278px;
+  max-width: 380px;
+  min-height: 36px;
+  border: 1px solid rgba(71, 85, 105, 0.82);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.54);
+  padding: 4px 6px 4px 0.78rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  transition:
+    border-color 140ms ease,
+    background 140ms ease;
+}
+
+.date-range-compact:hover {
+  border-color: rgba(100, 116, 139, 0.95);
+  background: rgba(15, 23, 42, 0.72);
 }
 
 .date-range-title {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.32rem;
   min-width: max-content;
   color: rgb(196 181 253);
-  font-size: 11px;
+  font-size: 9.5px;
   font-weight: 800;
-  letter-spacing: 0.11em;
+  letter-spacing: 0.1em;
   line-height: 1;
   text-transform: uppercase;
 }
@@ -928,13 +968,13 @@ watch(
 }
 
 .date-range-inputs :deep(.cd-input) {
-  height: 30px;
+  height: 28px;
   width: 100%;
   border: 0;
-  border-radius: 10px;
-  background: rgba(30, 41, 59, 0.74);
+  border-radius: 999px;
+  background: rgba(30, 41, 59, 0.66);
   color: rgb(226 232 240);
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 760;
   line-height: 1;
   outline: none;
@@ -946,11 +986,11 @@ watch(
 }
 
 .date-range-inputs :deep(.cd-input:hover) {
-  background: rgba(30, 41, 59, 0.95);
+  background: rgba(30, 41, 59, 0.9);
 }
 
 .date-range-inputs :deep(.cd-input:focus-visible) {
-  background: rgba(30, 41, 59, 0.95);
+  background: rgba(30, 41, 59, 0.9);
   box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.22);
 }
 
@@ -965,17 +1005,20 @@ watch(
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  height: 40px;
-  min-width: 0;
+  flex: 0 0 auto;
+  height: 36px;
+  width: 36px;
+  min-width: 36px;
   white-space: nowrap;
-  border: 1px solid rgba(71, 85, 105, 0.86);
-  border-radius: 14px;
-  background: rgba(15, 23, 42, 0.42);
+  border: 1px solid rgba(71, 85, 105, 0.72);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.46);
   color: rgb(203 213 225);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 800;
   line-height: 1;
-  padding: 0 0.8rem;
+  padding: 0;
+  position: relative;
   transition:
     border-color 140ms ease,
     background 140ms ease,
@@ -993,10 +1036,22 @@ watch(
   opacity: 0.42;
 }
 
+.filter-reset-text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
 .filter-count-badge {
   display: inline-grid;
-  min-width: 18px;
-  height: 18px;
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 17px;
+  height: 17px;
   place-items: center;
   border-radius: 999px;
   background: rgb(196 181 253);
@@ -1006,100 +1061,57 @@ watch(
   line-height: 1;
 }
 
-@media (min-width: 560px) {
-  .gestion-command-panel {
-    padding: 0.85rem;
-  }
-
-  .filter-compact-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .filter-reset-button {
-    justify-self: stretch;
-  }
-
-  .date-range-compact {
-    grid-template-columns: auto minmax(0, 1fr);
-    padding: 5px 6px 5px 0.72rem;
-  }
-}
-
 @media (min-width: 760px) {
   .command-primary-row {
-    grid-template-columns: minmax(260px, 1fr) minmax(252px, auto);
+    grid-template-columns: minmax(320px, 1fr) minmax(248px, 310px);
   }
 
   .filter-status-group {
-    width: auto;
-    min-width: 252px;
-  }
-
-  .filter-compact-grid {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(120px, 0.7fr);
-  }
-
-  .date-range-compact {
-    grid-column: span 3;
+    justify-self: end;
   }
 }
 
 @media (min-width: 1180px) {
-  .command-panel-grid {
-    gap: 0.9rem;
-  }
-
-  .filter-compact-grid {
-    grid-template-columns:
-      minmax(148px, 0.85fr)
-      minmax(170px, 1fr)
-      minmax(112px, 0.55fr)
-      auto;
-  }
-
-  .date-range-compact {
-    grid-column: span 2;
+  .command-controls {
+    padding: 0.68rem;
   }
 }
 
 @media (min-width: 1440px) {
-  .gestion-command-panel {
-    padding: 0.9rem;
-  }
-
-  .command-panel-grid {
-    grid-template-columns: minmax(320px, 360px) minmax(0, 1fr);
-    align-items: stretch;
-  }
-
   .filter-compact-grid {
-    grid-template-columns:
-      minmax(128px, 0.72fr)
-      minmax(170px, 0.95fr)
-      minmax(108px, 0.52fr)
-      auto
-      minmax(268px, 1fr)
-      minmax(268px, 1fr);
+    flex-wrap: nowrap;
   }
 
   .date-range-compact {
-    grid-column: auto;
+    flex-basis: 298px;
   }
 }
 
-@media (min-width: 1680px) {
-  .command-panel-grid {
-    grid-template-columns: minmax(330px, 380px) minmax(0, 1fr);
+@media (max-width: 640px) {
+  .filter-status-group {
+    max-width: none;
   }
 
-  .filter-compact-grid {
-    grid-template-columns:
-      minmax(140px, 0.68fr)
-      minmax(190px, 0.92fr)
-      minmax(110px, 0.48fr)
-      auto
-      minmax(290px, 1fr)
-      minmax(290px, 1fr);
+  .filter-field,
+  .date-range-compact,
+  .filter-reset-button {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+
+  .filter-reset-button {
+    width: 100%;
+  }
+
+  .filter-reset-text {
+    position: static;
+    width: auto;
+    height: auto;
+    clip: auto;
+  }
+
+  .date-range-compact {
+    grid-template-columns: 1fr;
   }
 }
 
