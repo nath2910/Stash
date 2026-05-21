@@ -112,6 +112,7 @@ body.canvas-pan-cursor * {
   overscroll-behavior: contain;
   touch-action: none;
   cursor: grab;
+  contain: layout paint;
 }
 .viewport,
 .board {
@@ -167,6 +168,8 @@ body.canvas-pan-cursor * {
   z-index: 1;
   transform-origin: 0 0;
   will-change: transform;
+  contain: layout paint style;
+  backface-visibility: hidden;
   background:
     linear-gradient(var(--canvas-board-grid) 1px, transparent 1px) 0 0 / 32px 32px,
     linear-gradient(90deg, var(--canvas-board-grid) 1px, transparent 1px) 0 0 / 32px 32px,
@@ -1232,16 +1235,25 @@ body.canvas-pan-cursor * {
   color: #51749d;
 }
 
-.template-rail-date-field input {
+.template-rail-date-field .cd-root,
+.template-rail-date-field .cd-picker {
   width: 100%;
-  height: 32px;
-  border-radius: 8px;
-  border: 1px solid rgba(126, 155, 190, 0.55);
-  background: rgba(255, 255, 255, 0.96);
-  color: #1a3d66;
-  padding: 0 8px;
-  font-size: 0.76rem;
-  font-weight: 640;
+}
+
+.template-rail-date-field .cd-root {
+  gap: 0;
+}
+
+.template-rail-date-field .cd-input {
+  width: 100%;
+  height: 32px !important;
+  border-radius: 8px !important;
+  border: 1px solid rgba(126, 155, 190, 0.55) !important;
+  background: rgba(255, 255, 255, 0.96) !important;
+  color: #1a3d66 !important;
+  padding: 0 8px !important;
+  font-size: 0.76rem !important;
+  font-weight: 640 !important;
 }
 
 .template-rail-date-field select {
@@ -1837,6 +1849,7 @@ body.canvas-pan-cursor * {
     0 12px 28px rgba(15, 23, 42, 0.16),
     inset 0 1px 0 rgba(255, 255, 255, 0.78);
   color: #334155;
+  overflow: visible;
 }
 
 .group-selection-toolbar__btn {
@@ -1866,37 +1879,129 @@ body.canvas-pan-cursor * {
   color: #1d4ed8;
 }
 
+.group-selection-toolbar__btn--wide {
+  width: auto;
+  min-width: 78px;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  gap: 6px;
+  padding: 0 9px;
+  font-size: 12px;
+  font-weight: 720;
+}
+
+.group-selection-toolbar__btn.is-active {
+  border-color: rgba(37, 99, 235, 0.42);
+  background: rgba(37, 99, 235, 0.14);
+  color: #1d4ed8;
+}
+
 .group-selection-toolbar__btn:disabled {
   cursor: not-allowed;
   opacity: 0.42;
 }
 
-.group-selection-date {
-  height: 30px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 8px;
-  border-radius: 7px;
-  border: 1px solid rgba(100, 116, 139, 0.2);
-  background: rgba(248, 250, 252, 0.92);
-  color: #475569;
+.group-selection-toolbar__btn:focus-visible,
+.group-selection-date-popover__apply:focus-visible {
+  outline: 2px solid rgba(59, 130, 246, 0.82);
+  outline-offset: 2px;
 }
 
-.group-selection-date input {
-  width: 132px;
-  border: none;
-  outline: none;
-  background: transparent;
+.group-selection-date-popover {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 8px);
+  width: 248px;
+  display: grid;
+  gap: 9px;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(100, 116, 139, 0.22);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow:
+    0 18px 38px rgba(15, 23, 42, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
   color: #0f172a;
+}
+
+.group-selection-date-popover__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.group-selection-date-popover__head strong {
   font-size: 12px;
+  font-weight: 820;
+}
+
+.group-selection-date-popover__head span {
+  color: #64748b;
+  font-size: 11px;
   font-weight: 650;
 }
 
-.group-selection-toolbar__btn:focus-visible,
-.group-selection-date:focus-within {
-  outline: 2px solid rgba(59, 130, 246, 0.82);
-  outline-offset: 2px;
+.group-selection-date-popover__fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.group-selection-date-field {
+  display: grid;
+  gap: 4px;
+}
+
+.group-selection-date-field > span {
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 760;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.group-selection-date-field .cd-root,
+.group-selection-date-field .cd-picker {
+  width: 100%;
+}
+
+.group-selection-date-field .cd-root {
+  gap: 0;
+}
+
+.group-selection-date-field .cd-input {
+  height: 32px !important;
+  border-radius: 8px !important;
+  border-color: rgba(100, 116, 139, 0.28) !important;
+  background: rgba(248, 250, 252, 0.96) !important;
+  color: #0f172a !important;
+  font-size: 12px !important;
+  font-weight: 720 !important;
+}
+
+.group-selection-date-popover__apply {
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(37, 99, 235, 0.34);
+  background: rgba(37, 99, 235, 0.12);
+  color: #1d4ed8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.group-selection-date-popover__apply:hover:not(:disabled) {
+  border-color: rgba(37, 99, 235, 0.52);
+  background: rgba(37, 99, 235, 0.18);
+}
+
+.group-selection-date-popover__apply:disabled {
+  cursor: not-allowed;
+  opacity: 0.46;
 }
 
 .group-selection-handle {

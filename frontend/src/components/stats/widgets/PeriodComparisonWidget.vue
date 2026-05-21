@@ -12,14 +12,20 @@
     :widget-base-height="props.widgetBaseHeight"
   >
     <div class="comparison-grid">
+      <div class="comparison-periods" aria-label="Periodes comparees">
+        <span>{{ metricLabel }}</span>
+        <strong>{{ currentPeriodText }}</strong>
+        <span class="comparison-periods__sep">vs</span>
+        <strong>{{ previousPeriodText }}</strong>
+      </div>
       <VChart class="comparison-chart" :option="option" autoresize />
       <div class="comparison-side">
         <div class="comparison-kpi">
-          <span>Periode actuelle</span>
+          <span>Periode actuelle - {{ currentPeriodText }}</span>
           <strong>{{ currentText }}</strong>
         </div>
         <div class="comparison-kpi">
-          <span>Periode precedente</span>
+          <span>Periode precedente - {{ previousPeriodText }}</span>
           <strong>{{ previousText }}</strong>
         </div>
         <div class="comparison-kpi">
@@ -35,7 +41,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import StatsServices from '@/services/StatsServices'
 import { normalizeKpi, prevPeriod } from '@/services/statsAdapters'
-import { formatEUR, formatPct, signFmt } from '@/utils/formatters'
+import { formatDateFR, formatEUR, formatPct, signFmt } from '@/utils/formatters'
 import WidgetCard from './_parts/WidgetCard.vue'
 
 const props = defineProps({
@@ -84,6 +90,17 @@ onMounted(load)
 watch(() => [props.from, props.to, props.metric, props.bucket, props.categories, props.types], load)
 
 const usesPercent = computed(() => ['roi', 'avgMargin', 'sellThrough'].includes(String(props.metric)))
+const previousRange = computed(() => prevPeriod(props.from, props.to))
+const metricLabel = computed(
+  () =>
+    ({
+      grossRevenue: 'CA',
+      netProfit: 'Profit',
+      avgMargin: 'Marge',
+      roi: 'ROI',
+      sellThrough: 'Ecoulement',
+    })[String(props.metric)] || 'Mesure',
+)
 
 function formatMetric(value) {
   if (usesPercent.value) return formatPct(value, { digits: 1 })
@@ -100,6 +117,14 @@ const currentText = computed(() => formatMetric(currentValue.value))
 const previousText = computed(() => formatMetric(previousValue.value))
 const deltaText = computed(() => signFmt(deltaPct.value))
 const deltaClass = computed(() => (deltaPct.value >= 0 ? 'is-good' : 'is-low'))
+const currentPeriodText = computed(() => formatPeriod(props.from, props.to))
+const previousPeriodText = computed(() =>
+  formatPeriod(previousRange.value.from, previousRange.value.to),
+)
+const currentPeriodShort = computed(() => formatPeriod(props.from, props.to, true))
+const previousPeriodShort = computed(() =>
+  formatPeriod(previousRange.value.from, previousRange.value.to, true),
+)
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
 const layoutWidth = computed(() => Math.max(Number(props.widgetWidth ?? 0), 1))
 const layoutHeight = computed(() => Math.max(Number(props.widgetHeight ?? 0), 1))
@@ -129,12 +154,23 @@ const option = computed(() => {
       borderColor: 'rgba(148,163,184,0.32)',
       textStyle: { color: '#0f172a', fontSize: 12, fontWeight: 600 },
       extraCssText: 'border-radius:10px;box-shadow:0 12px 28px rgba(15,23,42,0.14);',
+      axisPointer: {
+        type: 'shadow',
+        shadowStyle: { color: 'rgba(56,189,248,0.12)' },
+      },
+      formatter: formatComparisonTooltip,
     },
     xAxis: {
       type: 'category',
-      data: ['Precedent', 'Actuel'],
+      data: [previousPeriodShort.value, currentPeriodShort.value],
       axisLine: { lineStyle: { color: 'rgba(148, 163, 184, 0.32)' } },
-      axisLabel: { color: '#64748b', fontSize: axisFont, fontWeight: 650 },
+      axisLabel: {
+        color: '#64748b',
+        fontSize: axisFont,
+        fontWeight: 650,
+        interval: 0,
+        hideOverlap: true,
+      },
       axisTick: { show: false },
     },
     yAxis: {
@@ -183,14 +219,72 @@ const option = computed(() => {
     ],
   }
 })
+
+function formatPeriod(from, to, short = false) {
+  const dateOptions = short
+    ? { day: '2-digit', month: 'short', year: '2-digit' }
+    : { day: '2-digit', month: 'short', year: 'numeric' }
+  return `${formatDateFR(from, dateOptions)} - ${formatDateFR(to, dateOptions)}`
+}
+
+function formatComparisonTooltip(params) {
+  const entry = Array.isArray(params) ? params[0] : params
+  const index = Number(entry?.dataIndex ?? 0)
+  const isCurrent = index === 1
+  const label = isCurrent ? 'Periode actuelle' : 'Periode precedente'
+  const period = isCurrent ? currentPeriodText.value : previousPeriodText.value
+  const value = isCurrent ? currentText.value : previousText.value
+  const delta =
+    isCurrent && Number.isFinite(deltaPct.value)
+      ? `<div style="margin-top:4px;color:#64748b;font-size:11px;">Ecart vs precedent: <strong style="color:${
+          deltaPct.value >= 0 ? '#047857' : '#be123c'
+        };">${escapeHtml(deltaText.value)}</strong></div>`
+      : ''
+  return `<div style="font-size:11px;color:#64748b;font-weight:800;text-transform:uppercase;letter-spacing:.06em;">${escapeHtml(label)}</div><div style="margin-top:3px;color:#334155;font-size:11px;">${escapeHtml(period)}</div><div style="margin-top:5px;color:#111827;font-size:15px;font-weight:850;">${escapeHtml(value)}</div>${delta}`
+}
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (char) => {
+    const entities = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    }
+    return entities[char] || char
+  })
+}
 </script>
 
 <style scoped>
 .comparison-grid {
   height: 100%;
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   grid-template-columns: minmax(0, 1fr);
-  gap: 0;
+  gap: 8px;
+}
+
+.comparison-periods {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 720;
+  line-height: 1.2;
+}
+
+.comparison-periods strong {
+  color: #111827;
+  font-weight: 820;
+}
+
+.comparison-periods__sep {
+  color: #94a3b8;
 }
 
 .comparison-chart {

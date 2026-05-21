@@ -92,9 +92,29 @@
 
                   <div class="filter-compact-grid">
                     <label class="filter-field">
+                      <span>Type item</span>
+                      <select v-model="filters.itemType" class="filter-control">
+                        <option value="all">Tous</option>
+                        <option
+                          v-for="option in itemTypeOptions"
+                          :key="option.value"
+                          :value="option.value"
+                        >
+                          {{ option.label }}
+                        </option>
+                      </select>
+                    </label>
+
+                    <label class="filter-field">
                       <span>Sous-categorie</span>
-                      <select v-model="filters.category" class="filter-control">
-                        <option value="all">Toutes</option>
+                      <select
+                        v-model="filters.category"
+                        class="filter-control"
+                        :disabled="!selectedItemType"
+                      >
+                        <option value="all">
+                          {{ selectedItemType ? 'Toutes' : "Choisir un type d'abord" }}
+                        </option>
                         <option
                           v-for="option in categoryOptions"
                           :key="option.value"
@@ -266,7 +286,19 @@ import CsvImportExportWidget from '@/components/gestion/CsvImportExportWidget.vu
 import DeliveryTrackingPanel from '@/components/gestion/DeliveryTrackingPanel.vue'
 import CompactDateInput from '@/components/ui/CompactDateInput.vue'
 import { isVendue, prixRetailOf } from '@/utils/snkVente'
-import { isItemCategoryAlias, itemTypeLabel, readStoredItemCategories } from '@/RegleItem/itemCategoryStore'
+import {
+  buildItemCategoryAliases,
+  isItemCategoryAlias,
+  itemTypeLabel,
+  normalizeItemType,
+  readStoredItemCategories,
+  resolveItemTypeOptions,
+} from '@/RegleItem/itemCategoryStore'
+import {
+  extractSubcategoriesByType,
+  readStoredSubcategories,
+  resolveSubcategoryOptions,
+} from '@/RegleItem/subcategoryStore'
 
 const snkVentes = ref([])
 const searchTerm = ref('')
@@ -283,6 +315,9 @@ const { user } = useAuthStore()
 const currentUser = user
 const currentUserId = computed(() => currentUser.value?.id ?? 'guest')
 const categoryLabels = ref(readStoredItemCategories(currentUserId.value))
+const storedSubcategories = ref(
+  readStoredSubcategories(currentUserId.value, undefined, categoryLabels.value),
+)
 const route = useRoute()
 const router = useRouter()
 const tabFromRoute = () => (route.query?.tab === 'delivery' ? 'delivery' : 'inventory')
@@ -316,6 +351,7 @@ const setGestionTab = (tab) => {
 }
 
 const emptyFilters = () => ({
+  itemType: 'all',
   category: 'all',
   status: 'all',
   sort: 'none',
@@ -376,20 +412,44 @@ const dateInRange = (value, from, to) => {
 const categoryValueOf = (vente) => {
   const raw = String(vente?.categorie ?? '').trim()
   if (isItemCategoryAlias(raw, categoryLabels.value)) return EMPTY_CATEGORY_VALUE
-  return raw ? normalizeText(raw) : EMPTY_CATEGORY_VALUE
+  return raw || EMPTY_CATEGORY_VALUE
 }
 
-const categoryOptions = computed(() => {
-  const options = new Map()
+const itemTypeOptions = computed(() => resolveItemTypeOptions(categoryLabels.value))
+const selectedItemType = computed(() => {
+  const raw = filters.value.itemType
+  if (!raw || raw === 'all') return ''
+  const normalized = normalizeItemType(raw)
+  return itemTypeOptions.value.some((option) => option.value === normalized) ? normalized : ''
+})
+const mainCategoryAliases = computed(() => buildItemCategoryAliases(categoryLabels.value))
+const discoveredSubcategories = computed(() =>
+  extractSubcategoriesByType(snkVentes.value, categoryLabels.value),
+)
 
-  for (const vente of snkVentes.value) {
-    const value = categoryValueOf(vente)
-    if (options.has(value)) continue
-    const rawLabel = String(vente?.categorie ?? '').trim()
-    options.set(value, {
-      value,
-      label: value === EMPTY_CATEGORY_VALUE ? 'Sans sous-categorie' : rawLabel,
-    })
+const categoryOptions = computed(() => {
+  if (!selectedItemType.value) return []
+
+  const options = new Map([
+    [
+      EMPTY_CATEGORY_VALUE,
+      {
+        value: EMPTY_CATEGORY_VALUE,
+        label: 'Sans sous-categorie',
+      },
+    ],
+  ])
+
+  for (const label of resolveSubcategoryOptions(selectedItemType.value, {
+    stored: storedSubcategories.value,
+    discovered: discoveredSubcategories.value,
+    currentValue: filters.value.category === 'all' ? '' : filters.value.category,
+    mainCategoryAliases: mainCategoryAliases.value,
+    categoryLabels: categoryLabels.value,
+  })) {
+    const value = String(label || '').trim()
+    if (!value || options.has(value)) continue
+    options.set(value, { value, label: value })
   }
 
   return Array.from(options.values()).sort((a, b) =>
@@ -398,13 +458,21 @@ const categoryOptions = computed(() => {
 })
 
 const sanitizeFilters = (rawFilters) => {
+  const itemType =
+    rawFilters?.itemType === 'all'
+      ? 'all'
+      : itemTypeOptions.value.some((option) => option.value === normalizeItemType(rawFilters?.itemType))
+        ? normalizeItemType(rawFilters?.itemType)
+        : 'all'
   const category = rawFilters?.category || 'all'
   const purchaseRange = normalizeDateRange(rawFilters?.purchaseFrom, rawFilters?.purchaseTo)
   const saleRange = normalizeDateRange(rawFilters?.saleFrom, rawFilters?.saleTo)
 
   return {
+    itemType,
     category:
-      category === 'all' || categoryOptions.value.some((option) => option.value === category)
+      itemType !== 'all' &&
+      (category === 'all' || categoryOptions.value.some((option) => option.value === category))
         ? category
         : 'all',
     status: statusOptions.some((option) => option.value === rawFilters?.status)
@@ -438,7 +506,12 @@ const venteMatchesSearch = (vente, term) => {
 }
 
 const venteMatchesFilters = (vente, activeFilters) => {
-  if (activeFilters.category !== 'all' && categoryValueOf(vente) !== activeFilters.category)
+  const venteType = normalizeItemType(vente?.type || 'SNEAKER')
+  if (activeFilters.itemType !== 'all' && venteType !== activeFilters.itemType) return false
+  if (
+    activeFilters.category !== 'all' &&
+    normalizeText(categoryValueOf(vente)) !== normalizeText(activeFilters.category)
+  )
     return false
   if (activeFilters.status === 'stock' && isVendue(vente)) return false
   if (activeFilters.status === 'sold' && !isVendue(vente)) return false
@@ -484,6 +557,7 @@ const hasActiveFilters = computed(() => {
   const activeFilters = sanitizeFilters(filters.value)
   return (
     Boolean(normalizeText(searchTerm.value)) ||
+    activeFilters.itemType !== 'all' ||
     activeFilters.category !== 'all' ||
     activeFilters.status !== 'all' ||
     activeFilters.sort !== 'none' ||
@@ -496,6 +570,7 @@ const activeFilterCount = computed(() => {
   const activeFilters = sanitizeFilters(filters.value)
   return [
     Boolean(normalizeText(searchTerm.value)),
+    activeFilters.itemType !== 'all',
     activeFilters.category !== 'all',
     activeFilters.status !== 'all',
     activeFilters.sort !== 'none',
@@ -527,6 +602,7 @@ watch(
   () => currentUserId.value,
   (userId) => {
     categoryLabels.value = readStoredItemCategories(userId)
+    storedSubcategories.value = readStoredSubcategories(userId, undefined, categoryLabels.value)
   },
 )
 
@@ -534,7 +610,19 @@ const onCategoryLabelsChange = (event) => {
   const detail = event?.detail || {}
   if (String(detail.userId || 'guest') !== String(currentUserId.value || 'guest')) return
   categoryLabels.value = readStoredItemCategories(currentUserId.value)
+  storedSubcategories.value = readStoredSubcategories(
+    currentUserId.value,
+    undefined,
+    categoryLabels.value,
+  )
 }
+
+watch(
+  () => filters.value.itemType,
+  () => {
+    filters.value.category = 'all'
+  },
+)
 
 onMounted(() => {
   window.addEventListener('snk:item-categories-change', onCategoryLabelsChange)
@@ -659,21 +747,21 @@ watch(
 .gestion-command-panel {
   overflow: hidden;
   border: 1px solid rgba(71, 85, 105, 0.72);
-  border-radius: 1.35rem;
+  border-radius: 18px;
   background:
     linear-gradient(180deg, rgba(15, 23, 42, 0.94), rgba(15, 23, 42, 0.78)),
     rgba(15, 23, 42, 0.82);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.05),
     0 18px 44px rgba(2, 6, 23, 0.24);
-  padding: 1rem;
+  padding: 0.75rem;
 }
 
 .command-panel-grid {
   display: grid;
-  grid-template-columns: minmax(430px, 0.45fr) minmax(0, 1fr);
-  gap: 1rem;
-  align-items: stretch;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+  align-items: start;
 }
 
 .command-controls {
@@ -685,19 +773,14 @@ watch(
 
 .command-primary-row {
   display: grid;
-  grid-template-columns: minmax(280px, 1fr) minmax(252px, auto);
+  grid-template-columns: 1fr;
   gap: 0.65rem;
   align-items: center;
 }
 
 .filter-compact-grid {
   display: grid;
-  grid-template-columns:
-    minmax(180px, 0.8fr)
-    minmax(120px, 0.48fr)
-    auto
-    minmax(292px, 1fr)
-    minmax(292px, 1fr);
+  grid-template-columns: 1fr;
   gap: 0.6rem;
   align-items: end;
 }
@@ -719,7 +802,7 @@ watch(
 
 .filter-control {
   appearance: none;
-  height: 42px;
+  height: 40px;
   width: 100%;
   border: 1px solid rgba(71, 85, 105, 0.9);
   border-radius: 14px;
@@ -742,6 +825,17 @@ watch(
     box-shadow 140ms ease;
 }
 
+.filter-control:disabled {
+  cursor: not-allowed;
+  color: rgb(100 116 139);
+  background:
+    linear-gradient(45deg, transparent 50%, rgb(100, 116, 139) 50%) calc(100% - 16px) 18px /
+      5px 5px no-repeat,
+    linear-gradient(135deg, rgb(100, 116, 139) 50%, transparent 50%) calc(100% - 11px) 18px /
+      5px 5px no-repeat,
+    rgba(15, 23, 42, 0.42);
+}
+
 .filter-control:hover {
   border-color: rgb(100 116 139);
   background-color: rgba(15, 23, 42, 0.95);
@@ -755,8 +849,9 @@ watch(
 .filter-status-group {
   display: inline-grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  min-width: 252px;
-  height: 42px;
+  width: 100%;
+  min-width: 0;
+  height: 40px;
   border: 1px solid rgba(71, 85, 105, 0.86);
   border-radius: 15px;
   background: rgba(2, 6, 23, 0.26);
@@ -790,15 +885,15 @@ watch(
 
 .date-range-compact {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: 1fr;
   align-items: center;
-  gap: 0.55rem;
+  gap: 0.45rem;
   min-width: 0;
-  min-height: 42px;
+  min-height: 40px;
   border: 1px solid rgba(71, 85, 105, 0.86);
   border-radius: 14px;
   background: rgba(15, 23, 42, 0.56);
-  padding: 5px 6px 5px 0.72rem;
+  padding: 0.55rem;
 }
 
 .date-range-title {
@@ -870,8 +965,8 @@ watch(
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  height: 42px;
-  min-width: 92px;
+  height: 40px;
+  min-width: 0;
   white-space: nowrap;
   border: 1px solid rgba(71, 85, 105, 0.86);
   border-radius: 14px;
@@ -911,52 +1006,114 @@ watch(
   line-height: 1;
 }
 
-@media (max-width: 1500px) {
-  .command-panel-grid {
-    grid-template-columns: 1fr;
+@media (min-width: 560px) {
+  .gestion-command-panel {
+    padding: 0.85rem;
   }
-}
 
-@media (max-width: 1280px) {
   .filter-compact-grid {
-    grid-template-columns: minmax(150px, 0.86fr) minmax(120px, 0.7fr) auto;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .filter-reset-button {
     justify-self: stretch;
   }
-}
-
-@media (max-width: 760px) {
-  .gestion-command-panel {
-    padding: 0.75rem;
-  }
-
-  .command-primary-row {
-    grid-template-columns: 1fr;
-  }
-
-  .filter-status-group {
-    width: 100%;
-    min-width: 0;
-  }
-
-  .filter-compact-grid {
-    grid-template-columns: 1fr;
-  }
 
   .date-range-compact {
     grid-template-columns: auto minmax(0, 1fr);
+    padding: 5px 6px 5px 0.72rem;
   }
 }
 
-@media (max-width: 520px) {
+@media (min-width: 760px) {
+  .command-primary-row {
+    grid-template-columns: minmax(260px, 1fr) minmax(252px, auto);
+  }
+
+  .filter-status-group {
+    width: auto;
+    min-width: 252px;
+  }
+
+  .filter-compact-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(120px, 0.7fr);
+  }
+
   .date-range-compact {
+    grid-column: span 3;
+  }
+}
+
+@media (min-width: 1180px) {
+  .command-panel-grid {
+    gap: 0.9rem;
+  }
+
+  .filter-compact-grid {
+    grid-template-columns:
+      minmax(148px, 0.85fr)
+      minmax(170px, 1fr)
+      minmax(112px, 0.55fr)
+      auto;
+  }
+
+  .date-range-compact {
+    grid-column: span 2;
+  }
+}
+
+@media (min-width: 1440px) {
+  .gestion-command-panel {
+    padding: 0.9rem;
+  }
+
+  .command-panel-grid {
+    grid-template-columns: minmax(320px, 360px) minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .filter-compact-grid {
+    grid-template-columns:
+      minmax(128px, 0.72fr)
+      minmax(170px, 0.95fr)
+      minmax(108px, 0.52fr)
+      auto
+      minmax(268px, 1fr)
+      minmax(268px, 1fr);
+  }
+
+  .date-range-compact {
+    grid-column: auto;
+  }
+}
+
+@media (min-width: 1680px) {
+  .command-panel-grid {
+    grid-template-columns: minmax(330px, 380px) minmax(0, 1fr);
+  }
+
+  .filter-compact-grid {
+    grid-template-columns:
+      minmax(140px, 0.68fr)
+      minmax(190px, 0.92fr)
+      minmax(110px, 0.48fr)
+      auto
+      minmax(290px, 1fr)
+      minmax(290px, 1fr);
+  }
+}
+
+@media (max-width: 420px) {
+  .date-range-title {
+    min-width: 0;
+  }
+
+  .date-range-inputs {
     grid-template-columns: 1fr;
   }
 
-  .date-range-title {
-    min-width: 0;
+  .date-range-separator {
+    display: none;
   }
 }
 

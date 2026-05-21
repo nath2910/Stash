@@ -335,8 +335,21 @@ export const WIDGET_DEFS = [
     forms: ['number', 'line'],
     defaultSize: { w: 720, h: 320 },
     minSize: { w: 240, h: 150 },
-    defaultProps: { bucket: 'day', view: 'line', autoHeight: false, categories: [], types: [] },
-    settings: [],
+    defaultProps: { bucket: 'auto', view: 'line', autoHeight: false, categories: [], types: [] },
+    settings: [
+      {
+        key: 'bucket',
+        label: 'Granularite',
+        type: 'select',
+        options: [
+          { label: 'Auto', value: 'auto' },
+          { label: 'Jour', value: 'day' },
+          { label: 'Semaine', value: 'week' },
+          { label: 'Mois', value: 'month' },
+          { label: 'Annee', value: 'year' },
+        ],
+      },
+    ],
     categoryFilter: true,
   },
   {
@@ -510,7 +523,7 @@ export const WIDGET_DEFS = [
     settings: [
       {
         key: 'metric',
-        label: 'Metric',
+        label: 'Mesure',
         type: 'select',
         options: [
           { label: 'Profit', value: 'netProfit' },
@@ -556,7 +569,7 @@ export const WIDGET_DEFS = [
     settings: [
       {
         key: 'metric',
-        label: 'Metric',
+        label: 'Mesure',
         type: 'select',
         options: [
           { label: 'Profit', value: 'netProfit' },
@@ -582,7 +595,7 @@ export const WIDGET_DEFS = [
   },
   {
     type: 'periodComparison',
-    title: 'Period comparison',
+    title: 'Comparaison periode',
     category: 'Decision',
     help: 'Comparer deux periodes',
     icon: GitCompareArrows,
@@ -599,7 +612,7 @@ export const WIDGET_DEFS = [
     settings: [
       {
         key: 'metric',
-        label: 'Metric',
+        label: 'Mesure',
         type: 'select',
         options: [
           { label: 'Profit', value: 'netProfit' },
@@ -678,7 +691,7 @@ export const WIDGET_DEFS = [
     settings: [
       {
         key: 'metric',
-        label: 'Metric',
+        label: 'Mesure',
         type: 'select',
         options: [
           { label: 'Profit', value: 'netProfit' },
@@ -693,7 +706,7 @@ export const WIDGET_DEFS = [
   },
   {
     type: 'riskHeat',
-    title: 'Risk heat',
+    title: 'Carte des risques',
     category: 'Decision',
     help: 'Carte de concentration des risques',
     icon: BarChart3,

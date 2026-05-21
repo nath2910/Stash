@@ -45,30 +45,37 @@
                   Pas de reglages pour ce widget.
                 </div>
 
-                <template v-for="f in orderedFields" :key="f.key">
+                <template v-for="(f, index) in displayFields" :key="f.key">
+                  <div v-if="shouldShowSectionHeading(f, index)" class="settings-section-title">
+                    {{ sectionLabel(f) }}
+                  </div>
                   <div
-                    v-if="!(f.hideWhenGlobalRange && draft.useGlobalRange !== false)"
                     class="setting-card space-y-2"
-                    :class="settingCardClass(f)"
+                    :class="[settingCardClass(f), { 'is-locked': isFieldLocked(f) }]"
                   >
                     <div v-if="f.type !== 'toggle'" class="text-sm text-white/80 font-semibold">{{ f.label }}</div>
 
                     <div v-if="f.type === 'select' && useTileSelect(f)" class="tile-grid" :class="tileGridClass(f)">
                       <button
-                        v-for="o in f.options"
+                        v-for="o in fieldOptions(f)"
                         :key="o.value"
                         type="button"
                         class="tile-option"
                         :class="{ 'is-active': draft[f.key] === o.value, 'tile-option--font': f.key === 'fontFamily' }"
                         :style="optionStyle(f, o)"
+                        :disabled="isFieldLocked(f)"
                         @click="draft[f.key] = o.value"
                       >
                         {{ o.label }}
                       </button>
                     </div>
                     <div v-else-if="f.type === 'select'" class="select-wrap">
-                      <select v-model="draft[f.key]" class="glass-field select-field w-full h-10 rounded-xl px-3">
-                        <option v-for="o in f.options" :key="o.value" :value="o.value">
+                      <select
+                        v-model="draft[f.key]"
+                        class="glass-field select-field w-full h-10 rounded-xl px-3"
+                        :disabled="isFieldLocked(f)"
+                      >
+                        <option v-for="o in fieldOptions(f)" :key="o.value" :value="o.value">
                           {{ o.label }}
                         </option>
                       </select>
@@ -76,21 +83,24 @@
                     </div>
                     <div v-else-if="f.type === 'multiselect'" class="multi-select">
                       <div class="multi-preview">
-                        <template v-if="(draft[f.key] || []).length">
+                        <template v-if="!isFieldLocked(f) && (draft[f.key] || []).length">
                           <span
                             v-for="tag in draft[f.key]"
                             :key="tag"
                             class="multi-pill"
                           >
-                            {{ resolveMultiLabel(f.options, tag) }}
+                            {{ resolveMultiLabel(fieldOptions(f), tag) }}
                           </span>
                         </template>
-                        <span v-else class="multi-placeholder">{{ f.placeholder || 'Tout' }}</span>
+                        <span v-else class="multi-placeholder">
+                          {{ isFieldLocked(f) ? f.lockedHint || 'Selection requise' : f.placeholder || 'Tout' }}
+                        </span>
                       </div>
                       <div class="multi-actions">
                         <button
                           type="button"
                           class="multi-btn"
+                          :disabled="isFieldLocked(f)"
                           @click="clearMulti(f.key)"
                         >
                           Retirer filtre
@@ -98,14 +108,15 @@
                         <button
                           type="button"
                           class="multi-btn"
-                          @click="selectAllMulti(f.key, f.options)"
+                          :disabled="isFieldLocked(f) || !fieldOptions(f).length"
+                          @click="selectAllMulti(f.key, fieldOptions(f))"
                         >
                           Tout selectionner
                         </button>
                       </div>
-                      <div class="multi-list">
+                      <div v-if="!isFieldLocked(f) && fieldOptions(f).length" class="multi-list">
                         <label
-                          v-for="o in f.options"
+                          v-for="o in fieldOptions(f)"
                           :key="o.value"
                           class="multi-option"
                         >
@@ -116,6 +127,9 @@
                           />
                           <span>{{ o.label }}</span>
                         </label>
+                      </div>
+                      <div v-else class="multi-empty">
+                        {{ isFieldLocked(f) ? f.lockedHint || 'Selection requise' : 'Aucune option disponible' }}
                       </div>
                     </div>
 
@@ -272,9 +286,25 @@ const TEXT_FIELD_ORDER = {
   padding: 9,
 }
 
+const SECTION_ORDER = {
+  Donnees: 0,
+  Filtres: 1,
+  Apparence: 2,
+  Comportement: 3,
+  Texte: 4,
+  Autres: 99,
+}
+
 const orderedFields = computed(() => {
   const base = Array.isArray(props.fields) ? [...props.fields] : []
-  if (!isTextWidgetSettings.value) return base
+  if (!isTextWidgetSettings.value) {
+    return base.sort((a, b) => {
+      const sectionA = SECTION_ORDER[sectionLabel(a)] ?? SECTION_ORDER.Autres
+      const sectionB = SECTION_ORDER[sectionLabel(b)] ?? SECTION_ORDER.Autres
+      if (sectionA !== sectionB) return sectionA - sectionB
+      return String(a?.label ?? '').localeCompare(String(b?.label ?? ''), 'fr')
+    })
+  }
   return base.sort((a, b) => {
     const rankA = TEXT_FIELD_ORDER[a?.key] ?? 100
     const rankB = TEXT_FIELD_ORDER[b?.key] ?? 100
@@ -282,6 +312,62 @@ const orderedFields = computed(() => {
     return String(a?.label ?? '').localeCompare(String(b?.label ?? ''))
   })
 })
+
+const displayFields = computed(() => orderedFields.value.filter((field) => !isFieldHidden(field)))
+
+function sectionLabel(field) {
+  return String(field?.section || (isTextWidgetSettings.value ? 'Texte' : 'Autres'))
+}
+
+function shouldShowSectionHeading(field, index) {
+  const current = sectionLabel(field)
+  const previous = index > 0 ? sectionLabel(displayFields.value[index - 1]) : ''
+  return current && current !== previous
+}
+
+function isFieldHidden(field) {
+  return Boolean(field?.hideWhenGlobalRange && draft.useGlobalRange !== false)
+}
+
+function parentValues(field) {
+  const key = field?.dependsOn || field?.requiresAny
+  if (!key) return []
+  const raw = draft[key]
+  if (Array.isArray(raw)) return raw.map((value) => String(value ?? '').trim()).filter(Boolean)
+  const value = String(raw ?? '').trim()
+  return value ? [value] : []
+}
+
+function isFieldLocked(field) {
+  if (!field?.requiresAny) return false
+  return parentValues(field).length === 0
+}
+
+function uniqueOptions(options) {
+  const map = new Map()
+  for (const option of Array.isArray(options) ? options : []) {
+    const value = option?.value
+    if (value === undefined || value === null || value === '') continue
+    const key = String(value)
+    if (!map.has(key)) map.set(key, { label: option?.label ?? key, value })
+  }
+  return Array.from(map.values())
+}
+
+function fieldOptions(field) {
+  if (field?.optionsByParent && field?.dependsOn) {
+    const selectedParents = parentValues(field)
+    const grouped = []
+    for (const parent of selectedParents) {
+      grouped.push(...(field.optionsByParent[parent] || []))
+    }
+    const selectedValues = Array.isArray(draft[field.key])
+      ? draft[field.key].map((value) => ({ label: value, value }))
+      : []
+    return uniqueOptions([...grouped, ...selectedValues])
+  }
+  return uniqueOptions(field?.options || [])
+}
 
 function useTileSelect(field) {
   return isTextWidgetSettings.value && ['align', 'valign', 'fontFamily', 'weight', 'padding'].includes(field?.key)
@@ -330,6 +416,10 @@ function hasNumberMeta(field) {
 
 function normalizeDraft() {
   for (const field of props.fields || []) {
+    if (isFieldLocked(field)) {
+      if (field?.type === 'multiselect') draft[field.key] = []
+      continue
+    }
     if (field?.type !== 'number') continue
     const raw = Number(draft[field.key] ?? 0)
     const min = field.min ?? -Infinity
@@ -394,6 +484,20 @@ watch(
     }
   },
   { immediate: true },
+)
+
+watch(
+  () => JSON.stringify(draft.types || []),
+  () => {
+    const hasDependentCategories = (props.fields || []).some(
+      (field) => field?.key === 'categories' && field?.requiresAny === 'types',
+    )
+    if (!hasDependentCategories) return
+    if (Array.isArray(draft.types) && draft.types.length) return
+    if (Array.isArray(draft.categories) && draft.categories.length) {
+      draft.categories = []
+    }
+  },
 )
 </script>
 
@@ -505,9 +609,10 @@ watch(
 }
 .settings-body {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   overflow: auto;
   min-height: 0;
+  align-content: start;
 }
 .settings-body--text {
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -517,7 +622,23 @@ watch(
   padding: 12px;
   border-radius: 8px;
   border: 1px solid rgba(148, 163, 184, 0.2);
-  background: rgba(15, 23, 42, 0.52);
+  background: rgba(15, 23, 42, 0.42);
+}
+.settings-section-title {
+  margin-top: 4px;
+  color: rgba(191, 219, 254, 0.86);
+  font-size: 11px;
+  font-weight: 820;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+.settings-section-title:first-child {
+  margin-top: 0;
+}
+.setting-card.is-locked {
+  border-style: dashed;
+  opacity: 0.72;
 }
 .setting-card--wide {
   grid-column: 1 / -1;
@@ -580,6 +701,13 @@ watch(
   border-color: rgba(96, 165, 250, 0.62);
   background: rgba(30, 41, 59, 0.94);
 }
+.multi-btn:disabled,
+.tile-option:disabled,
+.select-field:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+  transform: none;
+}
 .multi-preview {
   min-height: 34px;
   display: flex;
@@ -618,6 +746,14 @@ watch(
 }
 .multi-list .multi-option span {
   line-height: 1.1;
+}
+.multi-empty {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px dashed rgba(148, 163, 184, 0.22);
+  background: rgba(15, 23, 42, 0.42);
+  color: rgba(226, 232, 240, 0.5);
+  font-size: 12px;
 }
 @media (min-width: 520px) {
   .multi-list {

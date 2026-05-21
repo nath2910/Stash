@@ -44,6 +44,8 @@ const props = defineProps({
   minDate: { type: String, default: '' },
   maxDate: { type: String, default: '' },
   light: { type: Boolean, default: false },
+  menuPlacement: { type: String, default: 'bottom-start' },
+  menuOffset: { type: Number, default: 14 },
 })
 const emit = defineEmits(['update:modelValue'])
 const light = computed(() => props.light)
@@ -89,7 +91,10 @@ const timeConfig = {
   timePickerInline: false,
 }
 const localeFr = fr
-const floating = { placement: 'bottom-start', offset: 14 }
+const floating = computed(() => ({
+  placement: props.menuPlacement || 'bottom-start',
+  offset: Number.isFinite(props.menuOffset) ? props.menuOffset : 14,
+}))
 
 function parseYmdLocal(ymd) {
   if (!ymd) return null

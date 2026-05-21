@@ -81,13 +81,24 @@ export function duplicateWidgetGroup<TWidget extends CanvasWidget>(
 }
 
 export function buildCommonDatePatch(def: WidgetDateDef | null | undefined, date: string) {
-  const normalized = String(date ?? '').trim()
-  if (!normalized || !def || def.hideGlobalRange === true) return null
+  return buildCommonDateRangePatch(def, date, date)
+}
+
+export function buildCommonDateRangePatch(
+  def: WidgetDateDef | null | undefined,
+  from: string,
+  to: string,
+) {
+  const start = String(from ?? '').trim()
+  const end = String(to ?? '').trim()
+  if (!start || !end || !def || def.hideGlobalRange === true) return null
+  const normalizedFrom = start <= end ? start : end
+  const normalizedTo = start <= end ? end : start
 
   if (def.dateMode === 'asOf') {
     return {
       useGlobalRange: false,
-      asOf: normalized,
+      asOf: normalizedTo,
     }
   }
 
@@ -96,7 +107,7 @@ export function buildCommonDatePatch(def: WidgetDateDef | null | undefined, date
 
   return {
     useGlobalRange: false,
-    from: normalized,
-    to: normalized,
+    from: normalizedFrom,
+    to: normalizedTo,
   }
 }

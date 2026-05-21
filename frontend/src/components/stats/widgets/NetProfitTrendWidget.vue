@@ -74,6 +74,14 @@ interface LayoutInfo {
   tiny: boolean
 }
 
+interface ImportantPointMeta {
+  label: string
+  detail: string
+  color: string
+}
+
+type IndexedPoint = SeriesPoint & { index: number }
+
 interface ChartApi {
   resize: () => void
   getEchartsInstance?: () => {
@@ -106,6 +114,8 @@ let chartResizeObserver: ResizeObserver | null = null
 const hoveredIndex = ref<number | null>(null)
 let axisPointerHandler: ((payload: unknown) => void) | null = null
 let globalOutHandler: ((payload: unknown) => void) | null = null
+let hoverFrame = 0
+let pendingHoverIndex: number | null = null
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value))
 
@@ -156,7 +166,21 @@ function requestChartResize() {
 }
 
 function clearChartFocus() {
+  pendingHoverIndex = null
+  if (hoverFrame) {
+    cancelAnimationFrame(hoverFrame)
+    hoverFrame = 0
+  }
   hoveredIndex.value = null
+}
+
+function scheduleHoverIndex(index: number | null) {
+  pendingHoverIndex = index
+  if (hoverFrame) return
+  hoverFrame = requestAnimationFrame(() => {
+    hoverFrame = 0
+    hoveredIndex.value = pendingHoverIndex
+  })
 }
 
 function resolveHoverIndex(payload: unknown): number | null {
@@ -212,10 +236,10 @@ function connectChartEvents() {
   if (!instance) return
 
   axisPointerHandler = (payload: unknown) => {
-    hoveredIndex.value = resolveHoverIndex(payload)
+    scheduleHoverIndex(resolveHoverIndex(payload))
   }
   globalOutHandler = () => {
-    clearChartFocus()
+    scheduleHoverIndex(null)
   }
 
   instance.on('updateAxisPointer', axisPointerHandler)
@@ -251,6 +275,7 @@ onBeforeUnmount(() => {
     chartResizeObserver = null
   }
   disconnectChartEvents()
+  clearChartFocus()
 })
 
 watch(chartShellEl, () => {
@@ -358,6 +383,80 @@ const hoverPoint = computed(() => {
   }
 })
 
+const importantPointMap = computed(() => {
+  const points = props.metrics.series
+    .map((point, index) => ({
+      index,
+      date: point.date,
+      value: Number(point.value ?? 0),
+    }))
+    .filter((point) => Number.isFinite(point.value))
+  const map = new Map<number, ImportantPointMeta>()
+  if (!points.length) return map
+
+  const peak = points.reduce((best, point) => (point.value > best.value ? point : best), points[0])
+  addImportantPoint(map, peak, 'Pic', 'Meilleur point de la periode', palette.value.line)
+
+  let strongestMove: (IndexedPoint & { delta: number }) | null = null
+  for (let index = 1; index < points.length; index += 1) {
+    const previous = points[index - 1]
+    const current = points[index]
+    if (!previous || !current) continue
+    const delta = current.value - previous.value
+    if (!strongestMove || Math.abs(delta) > Math.abs(strongestMove.delta)) {
+      strongestMove = { ...current, delta }
+    }
+  }
+  if (strongestMove && Math.abs(strongestMove.delta) > EPS) {
+    addImportantPoint(
+      map,
+      strongestMove,
+      strongestMove.delta >= 0 ? 'Forte hausse' : 'Forte baisse',
+      `Variation ${signedCurrency(strongestMove.delta)}`,
+      strongestMove.delta >= 0 ? '#047857' : '#be123c',
+    )
+  }
+
+  addImportantPoint(map, points[points.length - 1], 'Dernier', 'Dernier point affiche', palette.value.lineSoft)
+  return map
+})
+
+const importantMarks = computed(() => {
+  if (props.layout.width < 560 || props.layout.height < 300 || props.layout.tiny) return []
+  return Array.from(importantPointMap.value.entries())
+    .slice(0, 3)
+    .flatMap(([index, meta]) => {
+      const point = props.metrics.series[index]
+      if (!point) return []
+      return [
+        {
+          name: meta.label,
+          value: meta.label,
+          xAxis: point.date,
+          yAxis: Number(point.value ?? 0),
+          symbol: 'circle',
+          symbolSize: meta.label === 'Dernier' ? 8 : 10,
+          itemStyle: {
+            color: '#ffffff',
+            borderColor: meta.color,
+            borderWidth: 2,
+            shadowBlur: 10,
+            shadowColor: `${meta.color}38`,
+          },
+          label: {
+            show: true,
+            formatter: meta.label,
+            position: 'top',
+            distance: 8,
+            color: meta.color,
+            fontSize: 10,
+            fontWeight: 750,
+          },
+        },
+      ]
+    })
+})
+
 const chartShellStyle = computed(() => ({
   minHeight: '0px',
 }))
@@ -379,6 +478,7 @@ const option = computed(() => {
   const x = props.metrics.series.map((point) => point.date)
   const y = props.metrics.series.map((point) => Number(point.value ?? 0))
   const focus = hoverPoint.value
+  const marks = importantMarks.value
   const maxLabels = Math.max(2, Math.floor(props.layout.width / (props.layout.tiny ? 170 : 125)))
   const interval = x.length > maxLabels ? Math.ceil(x.length / maxLabels) - 1 : 0
   const symbolSize = props.layout.tiny ? 4 : 5
@@ -404,11 +504,25 @@ const option = computed(() => {
         fontSize: 12,
       },
       axisPointer: {
-        type: 'line',
+        type: 'cross',
         snap: true,
         lineStyle: {
           color: 'rgba(91, 92, 226, 0.28)',
           type: 'solid',
+        },
+        crossStyle: {
+          color: 'rgba(91, 92, 226, 0.2)',
+          type: 'solid',
+        },
+        label: {
+          show: !props.layout.tiny,
+          backgroundColor: 'rgba(15,23,42,0.92)',
+          color: '#ffffff',
+          fontSize: 10,
+          formatter: (params: { axisDimension?: string; value?: unknown }) =>
+            params?.axisDimension === 'y'
+              ? compactCurrency(Number(params.value ?? 0))
+              : formatAxisDate(String(params?.value ?? '')),
         },
       },
       formatter: (params: unknown) => {
@@ -417,6 +531,10 @@ const option = computed(() => {
         const label = formatAxisDate(String(row?.axisValue ?? ''))
         const value = formatEUR(Number(row?.data ?? 0))
         const idx = Number(row?.dataIndex ?? -1)
+        const meta = importantPointMap.value.get(idx)
+        const badge = meta
+          ? `<div style="display:grid;gap:1px;margin-top:7px;padding:5px 7px;border-radius:9px;background:${meta.color}12;color:${meta.color};"><span style="font-size:11px;font-weight:800;">${escapeHtml(meta.label)}</span><span style="font-size:10px;color:#64748b;font-weight:650;">${escapeHtml(meta.detail)}</span></div>`
+          : ''
         let detail = ''
         if (Number.isFinite(idx) && idx > 0 && idx < y.length) {
           const prev = Number(y[idx - 1] ?? 0)
@@ -427,7 +545,7 @@ const option = computed(() => {
             pct == null || !Number.isFinite(pct) ? '' : ` (${signedPercent(pct)})`
           }</div>`
         }
-        return `<div style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.06em;">${label}</div><div style="margin-top:4px;color:#111827;font-weight:800;">${value}</div>${detail}`
+        return `<div style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.06em;">${escapeHtml(label)}</div><div style="margin-top:4px;color:#111827;font-weight:800;">${escapeHtml(value)}</div>${detail}${badge}`
       },
       extraCssText: 'border-radius:10px;box-shadow:0 12px 28px rgba(15,23,42,0.14);',
     },
@@ -504,6 +622,14 @@ const option = computed(() => {
                 },
               }
             : undefined,
+        markPoint: marks.length
+          ? {
+              symbolKeepAspect: true,
+              data: marks,
+              animation: false,
+              silent: true,
+            }
+          : undefined,
       },
       {
         type: 'scatter',
@@ -529,6 +655,30 @@ const option = computed(() => {
     ],
   }
 })
+
+function addImportantPoint(
+  map: Map<number, ImportantPointMeta>,
+  point: IndexedPoint | null | undefined,
+  label: string,
+  detail: string,
+  color: string,
+) {
+  if (!point || map.has(point.index)) return
+  map.set(point.index, { label, detail, color })
+}
+
+function escapeHtml(value: unknown) {
+  return String(value ?? '').replace(/[&<>"']/g, (char) => {
+    const entities: Record<string, string> = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    }
+    return entities[char] || char
+  })
+}
 
 const layoutClass = computed(() => ({
   'is-compact': props.layout.mode === 'compact',

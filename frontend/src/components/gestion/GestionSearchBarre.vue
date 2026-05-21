@@ -21,7 +21,7 @@
         :value="modelValue"
         @input="$emit('update:modelValue', $event.target.value)"
         type="text"
-        placeholder="Rechercher par modele, categorie, description..."
+        placeholder="Rechercher modele, categorie, description..."
         class="min-w-0 flex-1 border-0 bg-transparent text-[14px] leading-none text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-0"
       />
     </div>

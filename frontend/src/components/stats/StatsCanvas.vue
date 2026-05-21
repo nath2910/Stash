@@ -173,27 +173,69 @@
             >
               <Copy class="h-4 w-4" />
             </button>
-            <label class="group-selection-date" title="Date commune">
-              <CalendarRange class="h-4 w-4" />
-              <input
-                :value="groupDateDraft"
-                type="date"
-                :min="minDate"
-                :max="maxDate"
-                aria-label="Date commune"
-                @input="onGroupDateInput"
-              />
-            </label>
             <button
               type="button"
-              class="group-selection-toolbar__btn group-selection-toolbar__btn--primary"
-              :disabled="!canApplyGroupDate"
-              title="Appliquer la date"
-              aria-label="Appliquer la date a la selection"
-              @click.stop="applyGroupDateToSelection"
+              class="group-selection-toolbar__btn group-selection-toolbar__btn--wide"
+              :class="{ 'is-active': groupDatePopoverOpen }"
+              :disabled="groupDateCompatibleCount === 0"
+              :aria-expanded="groupDatePopoverOpen"
+              title="Regler la periode des widgets selectionnes"
+              aria-label="Regler la periode des widgets selectionnes"
+              @click.stop="toggleGroupDatePopover"
             >
-              <Check class="h-4 w-4" />
+              <CalendarRange class="h-4 w-4" />
+              <span>Dates</span>
             </button>
+            <div
+              v-if="groupDatePopoverOpen"
+              class="group-selection-date-popover"
+              role="dialog"
+              aria-label="Periode de la selection"
+              @pointerdown.stop
+              @click.stop
+            >
+              <div class="group-selection-date-popover__head">
+                <strong>Periode</strong>
+                <span>{{ groupDateCompatibleCount }} compatible{{ groupDateCompatibleCount > 1 ? 's' : '' }}</span>
+              </div>
+              <div class="group-selection-date-popover__fields">
+                <label class="group-selection-date-field">
+                  <span>Du</span>
+                  <CompactDateInput
+                    v-model="groupRangeFromModel"
+                    size="md"
+                    light
+                    menu-placement="right-start"
+                    :menu-offset="12"
+                    :min-date="minDate"
+                    :max-date="maxDate"
+                    aria-label="Date de debut de selection"
+                  />
+                </label>
+                <label class="group-selection-date-field">
+                  <span>Au</span>
+                  <CompactDateInput
+                    v-model="groupRangeToModel"
+                    size="md"
+                    light
+                    menu-placement="right-start"
+                    :menu-offset="12"
+                    :min-date="minDate"
+                    :max-date="maxDate"
+                    aria-label="Date de fin de selection"
+                  />
+                </label>
+              </div>
+              <button
+                type="button"
+                class="group-selection-date-popover__apply"
+                :disabled="!canApplyGroupDate"
+                @click.stop="applyGroupDateRangeToSelection"
+              >
+                <Check class="h-4 w-4" />
+                <span>Appliquer aux widgets</span>
+              </button>
+            </div>
           </div>
           <div
             v-if="groupSelectionFrameStyle"
@@ -450,26 +492,34 @@
         <div class="template-rail-date-popover__title">Periode</div>
 
         <div class="template-rail-date-popover__inputs">
-          <label class="template-rail-date-field">
+          <div class="template-rail-date-field">
             <span>Du</span>
-            <input
-              :value="localFrom"
-              type="date"
-              :min="minDate"
-              :max="maxDate"
-              @input="onRailFromInput"
+            <CompactDateInput
+              v-model="railFromModel"
+              class="template-rail-date-picker"
+              size="md"
+              light
+              menu-placement="right-start"
+              :menu-offset="12"
+              :min-date="minDate"
+              :max-date="maxDate"
+              aria-label="Date de debut"
             />
-          </label>
-          <label class="template-rail-date-field">
+          </div>
+          <div class="template-rail-date-field">
             <span>Au</span>
-            <input
-              :value="localTo"
-              type="date"
-              :min="minDate"
-              :max="maxDate"
-              @input="onRailToInput"
+            <CompactDateInput
+              v-model="railToModel"
+              class="template-rail-date-picker"
+              size="md"
+              light
+              menu-placement="right-start"
+              :menu-offset="12"
+              :min-date="minDate"
+              :max-date="maxDate"
+              aria-label="Date de fin"
             />
-          </label>
+          </div>
         </div>
         <div class="template-rail-date-popover__quick">
           <button type="button" class="template-rail-date-chip" @click="applyQuickPreset('today')">
@@ -648,9 +698,10 @@ import {
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import WidgetFrame from './canvas/WidgetFrame.vue'
 import TemplateEmptyLayout from './template-mode/TemplateEmptyLayout.vue'
+import CompactDateInput from '@/components/ui/CompactDateInput.vue'
 import { useCanvasCamera } from './canvas/useCanvaCamera'
 import { useCanvasShortcuts } from './canvas/useCanvasShortcuts'
-import { buildCommonDatePatch, duplicateWidgetGroup } from './canvas/widgetBatchActions'
+import { buildCommonDateRangePatch, duplicateWidgetGroup } from './canvas/widgetBatchActions'
 import { buildWidgetTransform, resolveWidgetRotation } from './canvas/widgetTransform'
 import {
   Home,
@@ -680,11 +731,16 @@ import { useTheme } from '@/composables/useTheme'
 import { useAuthStore } from '@/store/authStore'
 import StatsServices from '@/services/StatsServices'
 import {
+  buildItemCategoryAliases,
   isItemCategoryAlias,
   normalizeItemType,
   readStoredItemCategories,
   resolveItemTypeOptions,
 } from '@/RegleItem/itemCategoryStore'
+import {
+  readStoredSubcategories,
+  resolveSubcategoryOptions,
+} from '@/RegleItem/subcategoryStore'
 import {
   DEFAULT_TEMPLATE_ID,
   TEMPLATE_DEFINITIONS,
@@ -751,6 +807,7 @@ const isRouteLeaving = ref(false)
 // Chaque utilisateur a une cle de layout isolee; guest reste en stockage local.
 const userId = computed(() => user.value?.id ?? 'guest')
 const categoryLabels = ref(readStoredItemCategories(userId.value))
+const storedSubcategories = ref(readStoredSubcategories(userId.value, undefined, categoryLabels.value))
 
 const PROFILE_COLORS = { p1: '#22C55E', p2: '#3B82F6', p3: '#F59E0B' }
 const DEFAULT_PROFILE_NAMES = { p1: 'Profil 1', p2: 'Profil 2', p3: 'Profil 3' }
@@ -803,6 +860,23 @@ const categoryOptions = computed(() =>
     .map((c) => ({ label: c, value: c })),
 )
 const typeOptions = computed(() => resolveItemTypeOptions(categoryLabels.value))
+const settingsMainCategoryAliases = computed(() => buildItemCategoryAliases(categoryLabels.value))
+const categoryOptionsByType = computed(() => {
+  const entries: Array<[string, Array<{ label: string; value: string }>]> = []
+  const flatFallback = categoryOptions.value
+  for (const option of typeOptions.value) {
+    const type = normalizeItemType(option.value)
+    const values = resolveSubcategoryOptions(type, {
+      stored: storedSubcategories.value,
+      currentValue: '',
+      mainCategoryAliases: settingsMainCategoryAliases.value,
+      categoryLabels: categoryLabels.value,
+    })
+    const scoped = values.map((value) => ({ label: value, value }))
+    entries.push([type, scoped.length ? scoped : flatFallback])
+  }
+  return Object.fromEntries(entries)
+})
 
 /* ===== Mode edition/fige ===== */
 // Le mode edition est stocke par utilisateur pour eviter les fuites d'etat UI.
@@ -978,6 +1052,16 @@ function setTo(v: string) {
     if (next !== from.value) emit('update:from', next)
   }
 }
+
+const railFromModel = computed({
+  get: () => localFrom.value,
+  set: (value: string) => setFrom(value),
+})
+
+const railToModel = computed({
+  get: () => localTo.value,
+  set: (value: string) => setTo(value),
+})
 
 function clampDate(v: string) {
   if (!v) return ''
@@ -2233,7 +2317,9 @@ const dragArmedId = ref<string | null>(null)
 const activeTextWidgetId = ref<string | null>(null)
 const selectedWidgetIds = ref<string[]>([])
 const selectedWidgetIdSet = computed(() => new Set(selectedWidgetIds.value))
-const groupDateDraft = ref(localTo.value || localFrom.value)
+const groupDatePopoverOpen = ref(false)
+const groupRangeFromDraft = ref(localFrom.value)
+const groupRangeToDraft = ref(localTo.value)
 const marqueeSelection = ref<{
   startX: number
   startY: number
@@ -2242,30 +2328,64 @@ const marqueeSelection = ref<{
   additive: boolean
 } | null>(null)
 const isGroupSelectionActive = computed(() => editMode.value && selectedWidgetIds.value.length > 1)
+const normalizedGroupDateRange = computed(() => {
+  const fromDate = clampDate(groupRangeFromDraft.value || localFrom.value)
+  const toDate = clampDate(groupRangeToDraft.value || localTo.value)
+  if (!fromDate || !toDate) return null
+  return fromDate <= toDate
+    ? { from: fromDate, to: toDate }
+    : { from: toDate, to: fromDate }
+})
 const groupDateCompatibleCount = computed(() => {
-  const date = groupDateDraft.value || localTo.value || localFrom.value
-  if (!date || !isGroupSelectionActive.value) return 0
+  const range = normalizedGroupDateRange.value
+  if (!range || !isGroupSelectionActive.value) return 0
   return selectedWidgetIds.value.reduce((count, id) => {
     const widget = getWidgetById(id)
     if (!widget) return count
-    return buildCommonDatePatch(getWidgetDef(widget.type), date) ? count + 1 : count
+    return buildCommonDateRangePatch(getWidgetDef(widget.type), range.from, range.to)
+      ? count + 1
+      : count
   }, 0)
 })
 const canApplyGroupDate = computed(
   () =>
     isGroupSelectionActive.value &&
-    Boolean(groupDateDraft.value) &&
+    Boolean(normalizedGroupDateRange.value) &&
     groupDateCompatibleCount.value > 0,
 )
+const groupRangeFromModel = computed({
+  get: () => groupRangeFromDraft.value,
+  set: (value: string) => {
+    groupRangeFromDraft.value = clampDate(value) || ''
+  },
+})
+const groupRangeToModel = computed({
+  get: () => groupRangeToDraft.value,
+  set: (value: string) => {
+    groupRangeToDraft.value = clampDate(value) || ''
+  },
+})
 
 watch(
   () => [localFrom.value, localTo.value],
   () => {
-    if (!groupDateDraft.value) {
-      groupDateDraft.value = localTo.value || localFrom.value
-    }
+    if (!groupRangeFromDraft.value) groupRangeFromDraft.value = localFrom.value
+    if (!groupRangeToDraft.value) groupRangeToDraft.value = localTo.value
   },
 )
+
+watch(isGroupSelectionActive, (active) => {
+  if (!active) {
+    groupDatePopoverOpen.value = false
+    return
+  }
+  if (!groupRangeFromDraft.value) groupRangeFromDraft.value = localFrom.value
+  if (!groupRangeToDraft.value) groupRangeToDraft.value = localTo.value
+})
+
+watch(groupDateCompatibleCount, (count) => {
+  if (count <= 0) groupDatePopoverOpen.value = false
+})
 
 const GROUP_RESIZE_HANDLES: Array<{ dir: ResizeDir; title: string }> = [
   { dir: 'ne', title: 'Redimensionner le groupe (coin haut droit)' },
@@ -2487,21 +2607,21 @@ const groupSelectionToolbarStyle = computed(() => {
   }
 })
 
-function onGroupDateInput(event: Event) {
-  const input = event.target as HTMLInputElement | null
-  groupDateDraft.value = input?.value ?? ''
+function toggleGroupDatePopover() {
+  if (groupDateCompatibleCount.value === 0) return
+  groupDatePopoverOpen.value = !groupDatePopoverOpen.value
 }
 
-function applyGroupDateToSelection() {
+function applyGroupDateRangeToSelection() {
   if (!editMode.value || !isGroupSelectionActive.value) return
-  const date = clampDate(groupDateDraft.value || localTo.value || localFrom.value)
-  if (!date) return
+  const range = normalizedGroupDateRange.value
+  if (!range) return
 
   let changed = false
   for (const id of selectedWidgetIds.value) {
     const widget = getWidgetById(id)
     if (!widget) continue
-    const patch = buildCommonDatePatch(getWidgetDef(widget.type), date)
+    const patch = buildCommonDateRangePatch(getWidgetDef(widget.type), range.from, range.to)
     if (!patch) continue
     widget.props = {
       ...(widget.props ?? {}),
@@ -2511,7 +2631,9 @@ function applyGroupDateToSelection() {
   }
 
   if (!changed) return
-  groupDateDraft.value = date
+  groupRangeFromDraft.value = range.from
+  groupRangeToDraft.value = range.to
+  groupDatePopoverOpen.value = false
   scheduleSave()
 }
 
@@ -2663,6 +2785,43 @@ function isWidgetEditable(widget: Widget | null | undefined) {
   return Boolean(widget && isWidgetInEditMode.value)
 }
 
+function inferSettingsSection(key: string) {
+  if (
+    [
+      'view',
+      'metric',
+      'bucket',
+      'target',
+      'unit',
+      'asOf',
+      'maxItems',
+      'limit',
+      'top',
+      'secondaryLimit',
+    ].includes(key)
+  ) {
+    return 'Donnees'
+  }
+  if (
+    [
+      'fillEnabled',
+      'fillColor',
+      'borderEnabled',
+      'borderColor',
+      'borderWidth',
+      'cornerRadius',
+      'color',
+      'fontSize',
+      'rotation',
+      'align',
+      'fontFamily',
+    ].includes(key)
+  ) {
+    return 'Apparence'
+  }
+  return 'Comportement'
+}
+
 function buildSettingsFieldsForWidget(
   widget: Widget | null | undefined,
   def: Record<string, unknown> | null | undefined,
@@ -2675,8 +2834,8 @@ function buildSettingsFieldsForWidget(
   const rangeFields =
     !hideRange && dateMode === 'range'
       ? [
-          { key: 'from', label: 'Du', type: 'date', hideWhenGlobalRange: true },
-          { key: 'to', label: 'Au', type: 'date', hideWhenGlobalRange: true },
+          { key: 'from', label: 'Du', type: 'date', hideWhenGlobalRange: true, section: 'Donnees' },
+          { key: 'to', label: 'Au', type: 'date', hideWhenGlobalRange: true, section: 'Donnees' },
         ]
       : []
 
@@ -2690,18 +2849,23 @@ function buildSettingsFieldsForWidget(
   const filterFields = def?.categoryFilter
     ? [
         {
-          key: 'categories',
-          label: 'Sous-categories',
-          type: 'multiselect',
-          options: categoryOptions.value,
-          placeholder: 'Toutes sous-categories',
-        },
-        {
           key: 'types',
-          label: 'Categories principales',
+          label: 'Categories majeures',
           type: 'multiselect',
           options: typeOptions.value,
           placeholder: 'Toutes categories',
+          section: 'Filtres',
+        },
+        {
+          key: 'categories',
+          label: 'Sous-categories',
+          type: 'multiselect',
+          optionsByParent: categoryOptionsByType.value,
+          dependsOn: 'types',
+          requiresAny: 'types',
+          placeholder: 'Toutes sous-categories',
+          lockedHint: "Choisis d'abord une categorie majeure.",
+          section: 'Filtres',
         },
       ]
     : []
@@ -2714,12 +2878,16 @@ function buildSettingsFieldsForWidget(
             label: 'Utiliser periode globale',
             type: 'toggle',
             hint: 'Active par defaut',
+            section: 'Donnees',
           },
         ]
       : []),
     ...rangeFields,
     ...filterFields,
-    ...mappedBase,
+    ...mappedBase.map((field) => ({
+      ...field,
+      section: field?.section ?? inferSettingsSection(String(field?.key ?? '')),
+    })),
   ]
 
   return simplifySettingsFields(widget, rawFields)
@@ -2768,6 +2936,7 @@ function openSettings(w: Widget) {
   settingsWidgetId.value = w.id
   settingsOpen.value = true
   if (widgetNeedsCategoryFilter(w)) {
+    storedSubcategories.value = readStoredSubcategories(userId.value, undefined, categoryLabels.value)
     const range = widgetCategoryRange(w)
     void loadCategories(range.from, range.to)
   }
@@ -2974,6 +3143,9 @@ function applySettings(newModel: Record<string, unknown>) {
     const v = rawType ? normalizeItemType(rawType, categoryLabels.value) : ''
     ;(next as unknown).types = v ? [v] : []
   }
+  if (!Array.isArray((next as unknown).types) || !(next as unknown).types.length) {
+    ;(next as unknown).categories = []
+  }
   delete (next as unknown).category
   delete (next as unknown).type
   const fromVal = typeof next.from === 'string' ? next.from : ''
@@ -3141,22 +3313,20 @@ function closeRailDatePicker() {
   railDatePickerOpen.value = false
 }
 
-function onRailFromInput(event: Event) {
-  const value = (event.target as HTMLInputElement | null)?.value ?? ''
-  setFrom(value)
-}
-
-function onRailToInput(event: Event) {
-  const value = (event.target as HTMLInputElement | null)?.value ?? ''
-  setTo(value)
-}
-
 function onRailDateGlobalPointerDown(event: PointerEvent) {
   if (!railDatePickerOpen.value) return
   const path = (event.composedPath?.() ?? []) as EventTarget[]
   if (railDatePanelRef.value && path.includes(railDatePanelRef.value)) return
   if (railDateButtonRef.value && path.includes(railDateButtonRef.value)) return
+  if (eventPathContainsDatePicker(path)) return
   closeRailDatePicker()
+}
+
+function eventPathContainsDatePicker(path: EventTarget[]) {
+  return path.some((target) => {
+    if (!(target instanceof HTMLElement)) return false
+    return Boolean(target.closest('.dp__menu, .dp__overlay, .dp__outer_menu_wrap'))
+  })
 }
 
 function onRailDateGlobalKeyDown(event: KeyboardEvent) {
@@ -3428,6 +3598,7 @@ const visibleWidgets = computed(() => {
   if (!rect) return widgets.value
 
   const pinned = new Set<string>()
+  for (const id of selectedWidgetIds.value) pinned.add(id)
   if (activeDragId) pinned.add(activeDragId)
   for (const id of activeDragIds) pinned.add(id)
   if (activeResizeId) pinned.add(activeResizeId)
@@ -5647,6 +5818,11 @@ watch(
   async () => {
     const expectedUserId = String(userId.value)
     categoryLabels.value = readStoredItemCategories(expectedUserId)
+    storedSubcategories.value = readStoredSubcategories(
+      expectedUserId,
+      undefined,
+      categoryLabels.value,
+    )
     clearPendingSaves()
     loadEditMode()
     detachAllInteract()
@@ -5678,6 +5854,7 @@ function onItemCategoriesChange(event: Event) {
   const detail = (event as CustomEvent)?.detail || {}
   if (String(detail.userId || 'guest') !== String(userId.value || 'guest')) return
   categoryLabels.value = readStoredItemCategories(userId.value)
+  storedSubcategories.value = readStoredSubcategories(userId.value, undefined, categoryLabels.value)
 }
 
 async function loadDateBounds() {

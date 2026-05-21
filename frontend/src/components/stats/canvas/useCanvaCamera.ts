@@ -179,13 +179,6 @@ export function useCanvasCamera(
     })
   }
 
-  function panByNow(dx: number, dy: number) {
-    if (!panzoom || !Number.isFinite(dx) || !Number.isFinite(dy)) return
-    if (Math.abs(dx) < 0.01 && Math.abs(dy) < 0.01) return
-    panzoom.pan(dx, dy, { relative: true, force: true } as PanOptions)
-    onPanzoomChange()
-  }
-
   function cancelWheelZoom() {
     if (wheelZoomRaf != null) {
       cancelAnimationFrame(wheelZoomRaf)
@@ -631,7 +624,7 @@ export function useCanvasCamera(
         touchPanState.lastX = event.clientX
         touchPanState.lastY = event.clientY
         if (dx || dy) {
-          panByNow(dx, dy)
+          queuePanBy(dx, dy)
         }
         return
       }
@@ -641,7 +634,7 @@ export function useCanvasCamera(
       const dy = event.clientY - pointerPanState.lastY
       pointerPanState.lastX = event.clientX
       pointerPanState.lastY = event.clientY
-      panByNow(dx, dy)
+      queuePanBy(dx, dy)
     }
 
     pointerUpHandler = (event: PointerEvent) => {

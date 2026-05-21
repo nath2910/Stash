@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildCommonDatePatch,
+  buildCommonDateRangePatch,
   duplicateWidgetGroup,
 } from '../src/components/stats/canvas/widgetBatchActions'
 
@@ -98,5 +99,20 @@ describe('buildCommonDatePatch', () => {
   it('ignores widgets without compatible date settings', () => {
     expect(buildCommonDatePatch({ hideGlobalRange: true }, '2026-05-20')).toBeNull()
     expect(buildCommonDatePatch({ dateMode: 'custom' }, '2026-05-20')).toBeNull()
+  })
+
+  it('builds a sorted local range patch for multi-selection updates', () => {
+    expect(buildCommonDateRangePatch({}, '2026-05-31', '2026-05-01')).toEqual({
+      useGlobalRange: false,
+      from: '2026-05-01',
+      to: '2026-05-31',
+    })
+  })
+
+  it('uses the range end date for as-of widgets', () => {
+    expect(buildCommonDateRangePatch({ dateMode: 'asOf' }, '2026-05-01', '2026-05-31')).toEqual({
+      useGlobalRange: false,
+      asOf: '2026-05-31',
+    })
   })
 })
