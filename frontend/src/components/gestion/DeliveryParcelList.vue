@@ -1,6 +1,6 @@
 <template>
   <section
-    class="rounded-[22px] border border-slate-700/70 bg-slate-900/70 shadow-xl shadow-slate-950/20 backdrop-blur"
+    class="min-w-0 rounded-[22px] border border-slate-700/70 bg-slate-900/70 shadow-xl shadow-slate-950/20 backdrop-blur"
   >
     <div
       class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-700/70 px-4 py-3 sm:px-5"
@@ -43,7 +43,7 @@
           "
           @click="$emit('select', parcel.id)"
         >
-          <div class="flex items-start justify-between gap-3">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div class="min-w-0">
               <p class="break-all text-sm font-semibold text-white">{{ parcel.trackingNumber }}</p>
               <div class="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-400">
@@ -69,7 +69,7 @@
               </p>
             </div>
 
-            <div class="flex shrink-0 flex-col items-end gap-2">
+            <div class="flex shrink-0 flex-row flex-wrap items-center gap-2 sm:flex-col sm:items-end">
               <span
                 class="rounded-full border px-2.5 py-1 text-[11px] font-semibold"
                 :class="statusMeta(parcel.status).class"

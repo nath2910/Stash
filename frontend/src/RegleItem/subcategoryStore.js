@@ -10,6 +10,12 @@ const MAX_SUBCATEGORY_LENGTH = 60
 
 export const DEFAULT_SUBCATEGORIES = {
   SNEAKER: ['Jordan', 'Dunk', 'Yeezy', 'Running', 'New Balance', 'Asics'],
+  CLOTHING: ['Hoodie', 'T-shirt', 'Veste', 'Pantalon', 'Casquette'],
+  ACCESSORY: ['Sac', 'Bijou', 'Lunettes', 'Ceinture'],
+  WATCH: ['Automatique', 'Quartz', 'Connectee', 'Vintage'],
+  ELECTRONICS: ['Console', 'Smartphone', 'Audio', 'Photo', 'Ordinateur'],
+  COLLECTIBLE: ['Figurine', 'Carte', 'Vinyle', 'Art toy', 'Edition limitee'],
+  HOME: ['Mobilier', 'Decoration', 'Luminaire', 'Cuisine'],
   POKEMON_CARD: ['Booster', 'Display', 'Carte gradee', 'Coffret', 'ETB'],
   TICKET: ['Concert', 'Evenement sportif', 'Festival', 'Theatre', 'Spectacle'],
   OTHER: ['Collection', 'Accessoire', 'Mode', 'Electronique'],
@@ -108,6 +114,13 @@ export function writeStoredSubcategories(userId, value, storage, categoryLabels)
   const sanitized = sanitizeSubcategoryMap(value, DEFAULT_SUBCATEGORIES, categoryLabels)
   if (!target) return sanitized
   target.setItem(subcategoryStorageKey(userId), JSON.stringify(sanitized))
+  if (typeof window !== 'undefined' && !storage) {
+    window.dispatchEvent(
+      new CustomEvent('snk:item-subcategories-change', {
+        detail: { userId: String(userId || 'guest'), subcategories: sanitized },
+      }),
+    )
+  }
   return sanitized
 }
 

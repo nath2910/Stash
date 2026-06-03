@@ -1,12 +1,12 @@
 <template>
   <section
-    class="rounded-3xl border border-white/10 bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-slate-950/80 p-5 sm:p-6 shadow-2xl space-y-4 relative overflow-hidden"
+    class="csv-widget rounded-2xl border p-3 shadow-sm space-y-2 relative overflow-hidden"
   >
     <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,#7c3aed22,transparent_35%),radial-gradient(circle_at_80%_0%,#22c55e22,transparent_35%)]"></div>
-    <div class="relative flex items-start justify-between gap-3">
-      <div>
+    <div class="relative flex items-center justify-between gap-3">
+      <div class="min-w-0">
         <p class="text-[11px] uppercase tracking-[0.2em] text-violet-200/70">Données</p>
-        <h3 class="text-xl font-semibold text-white">Import / Export</h3>
+        <h3 class="text-lg font-semibold leading-tight text-white">Import / export</h3>
       </div>
       <div class="hidden sm:flex items-center gap-2 text-xs text-slate-300/70">
         <span class="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_10px_#34d39999]"></span>
@@ -15,7 +15,7 @@
     </div>
 
     <!-- Actions -->
-    <div class="relative grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <div class="relative grid grid-cols-1 sm:grid-cols-[0.8fr_1.2fr] gap-3">
       <div
         v-if="importing || parsing"
         class="absolute inset-0 rounded-2xl border border-violet-400/20 bg-slate-950/70 backdrop-blur-sm flex flex-col gap-3 items-center justify-center z-10 text-white text-sm"
@@ -36,13 +36,13 @@
       <!-- EXPORT -->
       <button
         type="button"
-        class="w-full px-4 py-3 rounded-2xl bg-slate-800/70 hover:bg-slate-800 border border-white/10 text-white transition flex items-center justify-between gap-3 disabled:opacity-50 relative overflow-hidden"
+        class="w-full px-3 py-2.5 rounded-2xl bg-slate-800/70 hover:bg-slate-800 border border-white/10 text-white transition flex items-center justify-between gap-3 disabled:opacity-50 relative overflow-hidden"
         :disabled="!rowsToExport.length"
         @click="exportCsv"
       >
         <div class="flex items-center gap-3">
           <span
-            class="inline-flex items-center justify-center h-10 w-10 rounded-2xl bg-white/5 border border-white/10 text-xs font-semibold"
+            class="inline-flex items-center justify-center h-9 w-9 rounded-2xl bg-white/5 border border-white/10 text-xs font-semibold"
           >
             CSV
           </span>
@@ -58,7 +58,7 @@
 
       <!-- IMPORT -->
       <div
-        class="rounded-2xl border bg-slate-900/50 p-4 space-y-3 transition"
+        class="rounded-2xl border bg-slate-900/50 p-3 space-y-2 transition"
         :class="dragOver ? 'border-violet-300/70 bg-violet-500/10' : 'border-white/10'"
         @dragover.prevent="onDragOver"
         @dragleave.prevent="onDragLeave"
@@ -79,7 +79,7 @@
           <div class="flex items-center gap-2">
             <button
               type="button"
-              class="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white text-sm transition"
+              class="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white text-sm transition"
               @click="pickFile"
               :disabled="importing || parsing"
             >
@@ -88,7 +88,7 @@
 
             <button
               type="button"
-              class="px-3 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm disabled:opacity-50 transition inline-flex items-center gap-2"
+              class="px-3 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm disabled:opacity-50 transition inline-flex items-center gap-2"
               :disabled="importing || parsing || !canConfirmImport"
               @click="importNow"
             >
@@ -106,15 +106,9 @@
           @change="onFilePicked"
         />
 
-        <div class="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-xs text-slate-300">
-          <div class="font-semibold text-white">Formats acceptes</div>
-          <p class="mt-1 leading-relaxed">
-            CSV, XLSX, XLS, TSV, TXT structure, JSON simple, export Google Sheets en CSV,
-            export Apple Numbers en CSV, ou fichier texte structure.
-          </p>
-          <p class="mt-1 text-slate-400">
-            Depose un fichier ici ou selectionne-le depuis Sheets, Excel, Numbers ou un export texte.
-          </p>
+        <div class="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-slate-300">
+          <span class="font-semibold text-white">Formats</span>
+          <span class="ml-2 text-slate-400">CSV, XLSX, XLS, TSV, TXT, JSON</span>
         </div>
 
         <div
@@ -717,6 +711,86 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+.csv-widget {
+  border-color: rgba(148, 163, 184, 0.24);
+  background: #fbfaf7;
+  color: #0f172a;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+}
+
+.csv-widget::before {
+  display: none;
+}
+
+.csv-widget > .pointer-events-none {
+  display: none;
+}
+
+.csv-widget :is(.text-white, .text-slate-100, .text-slate-200) {
+  color: #0f172a;
+}
+
+.csv-widget :is(.text-violet-200\/70, .text-slate-300, .text-slate-300\/70, .text-slate-400, .text-white\/60, .text-white\/50) {
+  color: #64748b;
+}
+
+.csv-widget :is(.text-emerald-100, .text-emerald-200) {
+  color: #0f766e;
+}
+
+.csv-widget :is(.text-red-100, .text-red-200) {
+  color: #b91c1c;
+}
+
+.csv-widget :is(.text-amber-100, .text-amber-100\/80) {
+  color: #b45309;
+}
+
+.csv-widget [class*='bg-slate-'],
+.csv-widget [class*='bg-white/'],
+.csv-widget [class*='bg-white\\['] {
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.csv-widget [class*='border-white'],
+.csv-widget [class*='border-slate-'] {
+  border-color: rgba(148, 163, 184, 0.22);
+}
+
+.csv-widget button {
+  border-color: rgba(148, 163, 184, 0.24);
+  background: rgba(255, 255, 255, 0.78);
+  color: #0f172a;
+  font-weight: 800;
+}
+
+.csv-widget button:not(:disabled):hover {
+  border-color: rgba(20, 184, 166, 0.34);
+  background: #ffffff;
+  color: #0f766e;
+}
+
+.csv-widget button.bg-violet-600 {
+  background: linear-gradient(135deg, #0f766e, #0e7490);
+  color: #ffffff;
+}
+
+.csv-widget select {
+  border-color: rgba(148, 163, 184, 0.28);
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.csv-widget thead {
+  background: #f0fdfa;
+  color: #0f766e;
+}
+
+.csv-widget tbody {
+  background: rgba(255, 255, 255, 0.84);
+  color: #0f172a;
+}
+
 .loading-spinner {
   animation: spin 0.9s linear infinite;
 }

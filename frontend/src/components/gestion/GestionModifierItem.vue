@@ -2,19 +2,20 @@
   <teleport to="body">
     <div v-if="modelValue" class="fixed inset-0 z-[9999]">
       <!-- overlay -->
-      <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" @click.self="close"></div>
+      <div class="absolute inset-0 bg-slate-950/55 backdrop-blur-sm" @click.self="close"></div>
 
       <!-- modal -->
       <div
         class="relative z-10 flex min-h-full items-end justify-center p-0 sm:items-center sm:p-4"
       >
         <div
-          class="modal-card w-full max-w-3xl max-h-[100dvh] rounded-t-2xl rounded-b-none border border-gray-700 bg-gray-800 shadow-2xl sm:max-h-[85vh] sm:rounded-2xl"
+          class="modal-card w-full max-w-4xl max-h-[100dvh] rounded-t-2xl rounded-b-none border border-gray-700 bg-gray-800 shadow-2xl sm:max-h-[92vh] sm:rounded-2xl"
         >
           <!-- Header -->
-          <div class="flex items-start justify-between border-b border-gray-700 p-4 sm:p-5">
+          <div class="modal-card-header flex items-start justify-between border-b border-gray-700 p-4 sm:p-5">
             <div>
-              <h3 class="text-xl font-semibold text-gray-100">Modifier une vente</h3>
+              <h3 class="text-xl font-semibold text-gray-100">Modifier un item</h3>
+              <p class="mt-1 text-sm text-gray-400">Mets a jour les informations, le statut et les pieces jointes.</p>
             </div>
             <div class="[&_button:hover]:bg-gray-600">
               <button
@@ -52,7 +53,7 @@
           </div>
 
           <!-- Formulaire -->
-          <form class="space-y-6 overflow-hidden p-4 sm:p-6" @submit.prevent="save">
+          <form class="modal-form space-y-5 p-4 sm:p-6" @submit.prevent="save">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <!-- Categorie principale -->
               <div class="sm:col-span-2">
@@ -88,7 +89,7 @@
               <!-- Prix retail -->
               <div>
                 <label class="block text-sm font-medium text-gray-200 mb-2"
-                  >Prix Retail (EUR)</label
+                  >Prix d'achat (EUR)</label
                 >
                 <input
                   type="number"
@@ -103,7 +104,7 @@
               <!-- Prix revente -->
               <div>
                 <label class="block text-sm font-medium text-gray-200 mb-2"
-                  >Prix Revente (EUR)</label
+                  >Prix de vente (EUR)</label
                 >
                 <input
                   type="number"
@@ -164,14 +165,14 @@
 
             <!-- Attachments -->
             <div class="rounded-xl border border-gray-700 bg-gray-900/60 p-4 space-y-3">
-              <div class="flex items-start justify-between gap-2">
+              <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <p class="text-sm font-semibold text-gray-100">Pièces jointes</p>
                   <p class="text-xs text-gray-400">
                     PDF ou images (max 10MB). {{ form.type === 'TICKET' ? 'PDF recommandé.' : '' }}
                   </p>
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 sm:shrink-0">
                   <input
                     ref="fileInput"
                     type="file"
@@ -198,16 +199,16 @@
                 <li
                   v-for="att in attachments"
                   :key="att.id"
-                  class="flex items-center justify-between gap-3 rounded-lg border border-gray-700 bg-gray-800/70 px-3 py-2 text-sm"
+                  class="flex flex-col gap-3 rounded-lg border border-gray-700 bg-gray-800/70 px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between"
                 >
-                  <div>
-                    <p class="text-gray-100">{{ att.filename }}</p>
+                  <div class="min-w-0">
+                    <p class="break-words text-gray-100">{{ att.filename }}</p>
                     <p class="text-[11px] text-gray-400">
                       {{ formatSize(att.sizeBytes) }} •
                       {{ att.mimeType || 'application/octet-stream' }}
                     </p>
                   </div>
-                  <div class="flex items-center gap-2">
+                  <div class="flex flex-wrap items-center gap-2 sm:shrink-0">
                     <button
                       type="button"
                       class="px-2 py-1 text-xs rounded border border-blue-400/50 text-blue-200 hover:bg-blue-500/10"
@@ -477,19 +478,110 @@ const formatSize = (bytes) => {
 
 <style scoped>
 .modal-card {
+  border-color: rgba(125, 211, 252, 0.38);
+  background:
+    linear-gradient(135deg, rgba(14, 165, 233, 0.08), transparent 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96)),
+    #ffffff;
+  color: #0f172a;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: none;
+  box-shadow: 0 28px 90px rgba(15, 23, 42, 0.24);
+}
+.modal-card::before {
+  content: '';
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  display: block;
+  height: 4px;
+  background: linear-gradient(90deg, #0ea5e9, #14b8a6, #f59e0b);
 }
 .modal-card::-webkit-scrollbar {
   display: none;
+}
+.modal-card-header {
+  position: sticky;
+  top: 4px;
+  z-index: 3;
+  background:
+    linear-gradient(135deg, rgba(236, 253, 245, 0.94), rgba(224, 242, 254, 0.78)),
+    rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(10px);
+}
+.modal-card-header h3 {
+  color: #0f172a;
+  font-size: clamp(1.25rem, 2vw, 1.55rem);
+  font-weight: 950;
+  letter-spacing: 0;
+}
+.modal-form {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.35), rgba(248, 250, 252, 0.62));
 }
 .modal-footer-sticky {
   position: sticky;
   bottom: 0;
   z-index: 2;
-  background: linear-gradient(180deg, rgba(31, 41, 55, 0.88), rgba(31, 41, 55, 0.96));
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.86), rgba(255, 255, 255, 0.98));
   backdrop-filter: blur(6px);
+}
+
+.modal-card :is(.border-gray-700, .border-gray-600) {
+  border-color: rgba(125, 211, 252, 0.32);
+}
+
+.modal-card :is(.bg-gray-900\/60, .bg-gray-900, .bg-gray-800) {
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.modal-card [class*='bg-slate-'],
+.modal-card [class*='bg-white/'] {
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.modal-card :is(.text-gray-100, .text-gray-200, .text-gray-300) {
+  color: #0f172a;
+}
+
+.modal-card :is(.text-gray-400, .text-gray-500) {
+  color: #64748b;
+}
+
+.modal-card :is(input, textarea) {
+  border-color: rgba(148, 163, 184, 0.28);
+  background: #ffffff;
+  color: #0f172a;
+  min-height: 2.65rem;
+  border-radius: 0.9rem;
+}
+
+.modal-card :is(input, textarea)::placeholder {
+  color: #94a3b8;
+}
+
+.modal-card :is(input, textarea):focus {
+  border-color: rgba(20, 184, 166, 0.72);
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.14);
+}
+
+.modal-card button[type='submit'] {
+  border-color: rgba(15, 118, 110, 0.2);
+  background: linear-gradient(135deg, #0f766e, #0e7490);
+  color: #ffffff;
+  border-radius: 999px;
+  font-weight: 900;
+  min-height: 2.55rem;
+}
+.modal-card button:not([type='submit']) {
+  border-radius: 999px;
+  font-weight: 800;
+}
+.modal-card :is(.text-blue-200) {
+  color: #0369a1;
+}
+.modal-card :is(.text-red-200, .text-red-300) {
+  color: #b91c1c;
 }
 @media (max-width: 639px) {
   .modal-card {

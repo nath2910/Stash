@@ -1,170 +1,189 @@
 <template>
-  <div class="min-h-screen text-slate-100">
-    <section class="relative w-full app-page-stack">
-      <teleport to="body">
-        <div v-if="showOnboarding" class="fixed inset-0 z-50">
-          <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="closeOnboarding"></div>
-          <div
-            class="absolute inset-0 flex items-center justify-center px-4"
-            aria-modal="true"
-            role="dialog"
-          >
-            <div class="relative w-full max-w-lg rounded-3xl border border-slate-800 bg-slate-900/90 p-6 shadow-2xl">
+  <div class="home-page-light">
+    <teleport to="body">
+      <div v-if="showOnboarding" class="fixed inset-0 z-50">
+        <div class="absolute inset-0 bg-slate-950/55 backdrop-blur-sm" @click="closeOnboarding"></div>
+        <div class="absolute inset-0 flex items-center justify-center px-4" aria-modal="true" role="dialog">
+          <div class="relative max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-3xl border border-slate-200 bg-white p-5 text-slate-950 shadow-2xl sm:p-6">
+            <button
+              type="button"
+              class="absolute right-3 top-3 rounded-full p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+              aria-label="Fermer"
+              @click="closeOnboarding"
+            >
+              <X class="h-4 w-4" aria-hidden="true" />
+            </button>
+            <p class="mb-2 text-xs font-extrabold uppercase text-teal-700">Bienvenue</p>
+            <h2 class="mb-2 text-2xl font-extrabold text-slate-950">Abonnement actif</h2>
+            <p class="mb-4 text-sm text-slate-600">
+              Retrouve tes actions rapides, tes stats et ton inventaire depuis l'accueil.
+            </p>
+            <div class="flex flex-col gap-3 min-[420px]:flex-row min-[420px]:flex-wrap">
               <button
                 type="button"
-                class="absolute right-3 top-3 text-slate-400 hover:text-white"
-                aria-label="Fermer"
+                class="rounded-xl bg-teal-700 px-4 py-2 text-sm font-bold text-white shadow-md hover:bg-teal-600"
+                @click="goToStatsFromModal"
+              >
+                Ouvrir les stats
+              </button>
+              <button
+                type="button"
+                class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-bold text-slate-800 hover:border-teal-500"
+                @click="goToGestionFromModal"
+              >
+                Voir Gestion
+              </button>
+              <button
+                type="button"
+                class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-bold text-slate-600 hover:border-slate-500"
                 @click="closeOnboarding"
               >
-                ✕
+                Plus tard
               </button>
-              <p class="text-xs uppercase tracking-[0.3em] text-emerald-200/80 mb-2">Bienvenue</p>
-              <h2 class="text-2xl font-semibold text-white mb-2">Abonnement actif</h2>
-              <p class="text-sm text-slate-300 mb-4">
-                Explore les tableaux Stats, suit ton stock dans Gestion et retrouve tout ton compte ici.
-              </p>
-              <div class="flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  class="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-900 shadow-md hover:bg-emerald-400"
-                  @click="goToStatsFromModal"
-                >
-                  Ouvrir les stats
-                </button>
-                <button
-                  type="button"
-                  class="rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-100 hover:border-emerald-300/60"
-                  @click="goToGestionFromModal"
-                >
-                  Voir Gestion
-                </button>
-                <button
-                  type="button"
-                  class="rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-200 hover:border-slate-500"
-                  @click="closeOnboarding"
-                >
-                  Plus tard
-                </button>
-              </div>
             </div>
           </div>
         </div>
-      </teleport>
-
-      <!-- Hero -->
-      <header
-        class="relative overflow-hidden rounded-[28px] border border-slate-800/70 bg-[radial-gradient(circle_at_top_left,_rgba(15,23,42,0.85),_rgba(2,6,23,0.95))] px-6 py-7 shadow-[0_30px_90px_rgba(0,0,0,0.45)] backdrop-blur sm:px-8"
-      >
-        <div class="absolute right-0 top-0 h-40 w-40 -translate-y-10 translate-x-16 rounded-full bg-emerald-400/8 blur-3xl"></div>
-        <div class="flex flex-wrap items-start justify-between gap-6">
-          <div class="max-w-2xl space-y-4">
-            <p class="text-xs uppercase tracking-[0.35em] text-amber-200/80">
-              Tableau de bord
-            </p>
-            <h1 class="text-3xl font-semibold text-white sm:text-4xl">
-              Accueil
-            </h1>
-            <p class="text-base text-slate-400">
-              Vue synthetique du stock, des ventes et du mois en cours.
-            </p>
-            <div class="mt-2 flex flex-wrap gap-2 text-xs">
-              <span
-                class="inline-flex items-center rounded-full border border-emerald-300/30 bg-emerald-300/10 px-3 py-1 text-emerald-100"
-              >
-                Temps reel
-              </span>
-              <span
-                class="inline-flex items-center rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1 text-slate-300"
-              >
-                Stock 
-              </span>
-              <span
-                class="inline-flex items-center rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1 text-slate-300"
-              >
-                Focus mois en cours
-              </span>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <!-- Contenu principal -->
-      <div class="grid grid-cols-1 gap-6 sm:gap-8 lg:grid-cols-12 lg:items-start">
-        <!-- Colonne droite (Overview) : en haut sur mobile, à droite sur desktop -->
-        <aside class="order-1 lg:order-2 lg:col-span-4 w-full">
-          <div
-            class="lg:sticky lg:top-6 rounded-3xl border border-slate-800/80 bg-gradient-to-b from-slate-900/95 via-slate-900/80 to-slate-950/70 p-4 shadow-2xl backdrop-blur sm:p-5"
-          >
-            <HomeOverview
-              :total-benefice="monthlyTotalBenefice"
-              :total-c-a="monthlyTotalCA"
-              :nb-vendues="monthlyNbVendues"
-              :nb-en-stock="nbEnStock"
-              :loading="loading"
-              @go-gestion="goToGestion"
-              @go-stats="goToStats"
-            />
-          </div>
-        </aside>
-
-        <!-- Colonne gauche : liste/dernier items -->
-        <main class="order-2 lg:order-1 lg:col-span-8 min-w-0 space-y-6">
-          <Affichage10 />
-        </main>
       </div>
+    </teleport>
+
+    <section class="home-action-shell" aria-label="Actions rapides">
+      <QuickSearchBar :items="stockItems" :loading="stockLoading" @select="openItemModal" />
+
+      <QuickAddItemForm
+        :items="stockItems"
+        :saving="quickAddSaving"
+        :api-error="quickAddError"
+        :success-key="quickAddSuccessKey"
+        :success-message="quickAddSuccessMessage"
+        @submit="handleQuickAdd"
+      />
+
+      <HomeMonthlyKpis :summary="kpiSummary" :loading="kpiLoading" :error="kpiError" />
     </section>
+
+    <QuickItemModal
+      :open="Boolean(selectedItem)"
+      :item="selectedItem"
+      :items="stockItems"
+      :saving="modalSaving"
+      :error="modalError"
+      :success-key="modalSuccessKey"
+      @close="closeItemModal"
+      @save="handleQuickUpdate"
+    />
   </div>
 </template>
 
-<script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import Affichage10 from '@/components/AcceuilDernierItem.vue'
-import HomeOverview from '@/components/AcceuilWidgetLateral.vue'
+<script setup>
+import { computed, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { X } from 'lucide-vue-next'
+import QuickSearchBar from '@/components/home/QuickSearchBar.vue'
+import QuickAddItemForm from '@/components/home/QuickAddItemForm.vue'
+import HomeMonthlyKpis from '@/components/home/HomeMonthlyKpis.vue'
+import QuickItemModal from '@/components/home/QuickItemModal.vue'
 import SnkVenteServices from '@/services/SnkVenteServices.js'
+import StatsServices from '@/services/StatsServices.js'
 import { useAuthStore } from '@/store/authStore'
-import { isVendue, prixRetailOf, prixResellOf } from '@/utils/snkVente'
+import { calculatePeriodStats, getCurrentYearRange } from '@/utils/homeDashboard'
 
 const router = useRouter()
 const route = useRoute()
-
-type SnkVenteRow = Record<string, unknown> & {
-  dateVente?: string | number | Date
-  date_vente?: string | number | Date
-}
+const auth = useAuthStore()
 
 const ONBOARD_PENDING = 'snk_onboarding_pending'
 const ONBOARD_SEEN = 'snk_onboarding_seen'
+
 const showOnboarding = ref(false)
+const stockItems = ref([])
+const stockLoading = ref(false)
+const stockLoaded = ref(false)
+const stockError = ref('')
+const statsLoading = ref(false)
+const statsError = ref('')
+const apiSummary = ref(null)
+const selectedItem = ref(null)
+const modalSaving = ref(false)
+const modalError = ref('')
+const modalSuccessKey = ref(0)
+const quickAddSaving = ref(false)
+const quickAddError = ref('')
+const quickAddSuccessKey = ref(0)
+const quickAddSuccessMessage = ref('')
+const annualRange = getCurrentYearRange()
 
-const { user } = useAuthStore()
-const currentUser = user
+const localSummary = computed(() => calculatePeriodStats(stockItems.value, annualRange))
 
-const snkVentes = ref<SnkVenteRow[]>([])
-const loading = ref(false)
+const normalizedApiSummary = computed(() => {
+  const data = apiSummary.value
+  if (!data) return null
+  return {
+    ca: Number(data.ca ?? 0),
+    profit: Number(data.profit ?? 0),
+    profitMargin: Number(data.profitMargin ?? 0),
+    itemsVendues: Number(data.itemsVendues ?? 0),
+    itemsEnStock: Number(data.itemsEnStock ?? 0),
+    valeurStock: Number(data.valeurStock ?? 0),
+    estimatedStockValue: Number(data.valeurStock ?? 0),
+  }
+})
 
-const chargerVentes = async () => {
-  // ✅ ne lance pas l’API si pas connecté
-  if (!currentUser.value) {
-    snkVentes.value = []
-    loading.value = false
+const kpiSummary = computed(() => (stockLoaded.value ? localSummary.value : normalizedApiSummary.value || localSummary.value))
+const kpiLoading = computed(() => (statsLoading.value || stockLoading.value) && !stockLoaded.value && !apiSummary.value)
+const kpiError = computed(() => stockError.value || statsError.value)
+
+function notifyStockChanged(items = stockItems.value) {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(
+    new CustomEvent('snk:stock-items-change', {
+      detail: { items, source: 'home' },
+    }),
+  )
+}
+
+async function chargerVentes() {
+  if (!auth.token.value) {
+    stockItems.value = []
+    stockLoaded.value = true
     return
   }
 
-  loading.value = true
+  stockLoading.value = true
+  stockError.value = ''
   try {
     const { data } = await SnkVenteServices.getSnkVente()
-    snkVentes.value = Array.isArray(data) ? (data as SnkVenteRow[]) : []
-  } catch (e) {
-    console.error('Erreur chargement ventes (Accueil)', e)
-    snkVentes.value = []
+    stockItems.value = Array.isArray(data) ? data : []
+    stockLoaded.value = true
+    notifyStockChanged()
+  } catch (error) {
+    console.error('Erreur chargement stock accueil', error)
+    stockError.value = "Impossible de charger l'inventaire."
+    stockItems.value = []
+    stockLoaded.value = false
   } finally {
-    loading.value = false
+    stockLoading.value = false
+  }
+}
+
+async function chargerStatsAnnuelles() {
+  if (!auth.token.value) return
+
+  statsLoading.value = true
+  statsError.value = ''
+  try {
+    const { data } = await StatsServices.summary(annualRange.from, annualRange.to)
+    apiSummary.value = data || null
+  } catch (error) {
+    console.error('Erreur chargement KPI accueil', error)
+    statsError.value = "KPI calcules localement si l'inventaire est disponible."
+  } finally {
+    statsLoading.value = false
   }
 }
 
 onMounted(() => {
   chargerVentes()
+  chargerStatsAnnuelles()
   try {
     const pending = localStorage.getItem(ONBOARD_PENDING) === '1' || route.query.onboarding === '1'
     const seen = localStorage.getItem(ONBOARD_SEEN) === '1'
@@ -175,66 +194,127 @@ onMounted(() => {
     if (pending) {
       localStorage.removeItem(ONBOARD_PENDING)
     }
-  } catch (e) {
-    console.warn('onboarding check', e)
+  } catch (error) {
+    console.warn('onboarding check', error)
   }
 })
 
-/**
- * Stats globales stock
- */
-const nbEnStock = computed<number>(() => snkVentes.value.filter((v) => !isVendue(v)).length)
+function openItemModal(item) {
+  selectedItem.value = item
+  modalError.value = ''
+}
 
-/**
- * Stats du mois en cours
- */
-const now = new Date()
-const currentMonth = now.getMonth()
-const currentYear = now.getFullYear()
+function closeItemModal() {
+  selectedItem.value = null
+  modalError.value = ''
+}
 
-const ventesDuMois = computed<SnkVenteRow[]>(() =>
-  snkVentes.value.filter((v) => {
-    const raw = v.dateVente ?? v.date_vente
-    if (!raw) return false
-    const d = new Date(raw)
-    if (Number.isNaN(d.getTime())) return false
-    return d.getMonth() === currentMonth && d.getFullYear() === currentYear
-  }),
-)
+async function handleQuickUpdate({ id, payload }) {
+  modalSaving.value = true
+  modalError.value = ''
+  try {
+    const { data } = await SnkVenteServices.update(id, payload)
+    const saved = data || { ...payload, id }
+    const index = stockItems.value.findIndex((item) => item.id === id)
+    if (index >= 0) {
+      stockItems.value = stockItems.value.map((item, i) => (i === index ? saved : item))
+    } else {
+      stockItems.value = [saved, ...stockItems.value]
+    }
+    selectedItem.value = saved
+    modalSuccessKey.value += 1
+    notifyStockChanged()
+    await chargerStatsAnnuelles()
+  } catch (error) {
+    modalError.value = error?.response?.data?.message || 'Erreur lors de la modification.'
+  } finally {
+    modalSaving.value = false
+  }
+}
 
-const monthlyNbVendues = computed<number>(() => ventesDuMois.value.length)
+async function handleQuickAdd({ payload, quantity }) {
+  quickAddSaving.value = true
+  quickAddError.value = ''
+  quickAddSuccessMessage.value = ''
+  try {
+    const created = []
+    const safeQuantity = Math.min(50, Math.max(1, Number(quantity || 1)))
+    for (let i = 0; i < safeQuantity; i += 1) {
+      const { data } = await SnkVenteServices.create({ ...payload })
+      if (data) created.push(data)
+    }
+    if (created.length > 0) {
+      stockItems.value = [...created, ...stockItems.value]
+      stockLoaded.value = true
+    } else {
+      await chargerVentes()
+    }
+    notifyStockChanged()
+    await chargerStatsAnnuelles()
+    quickAddSuccessMessage.value =
+      safeQuantity > 1 ? `${safeQuantity} items ajoutes.` : 'Item ajoute.'
+    quickAddSuccessKey.value += 1
+  } catch (error) {
+    quickAddError.value = error?.response?.data?.message || "Erreur lors de l'ajout rapide."
+  } finally {
+    quickAddSaving.value = false
+  }
+}
 
-const monthlyTotalCA = computed<number>(() =>
-  ventesDuMois.value.reduce((sum, v) => {
-    const resell = prixResellOf(v)
-    if (Number.isNaN(resell)) return sum
-    return sum + resell
-  }, 0),
-)
-
-const monthlyTotalBenefice = computed<number>(() =>
-  ventesDuMois.value.reduce((sum, v) => {
-    const retail = prixRetailOf(v)
-    const resell = prixResellOf(v)
-    if (Number.isNaN(retail) || Number.isNaN(resell)) return sum
-    return sum + (resell - retail)
-  }, 0),
-)
-
-const closeOnboarding = () => {
+function closeOnboarding() {
   showOnboarding.value = false
 }
 
-const goToStatsFromModal = () => {
+function goToStatsFromModal() {
   closeOnboarding()
-  goToStats()
+  router.push('/stats')
 }
 
-const goToGestionFromModal = () => {
+function goToGestionFromModal() {
   closeOnboarding()
-  goToGestion()
+  router.push('/gestion')
 }
-
-const goToGestion = () => router.push('/gestion')
-const goToStats = () => router.push('/stats')
 </script>
+
+<style scoped>
+.home-page-light {
+  position: relative;
+  min-height: calc(100dvh - 7rem);
+  margin-inline: calc(clamp(16px, 2.2vw, 32px) * -1);
+  margin-top: clamp(0.75rem, 1vw, 1.25rem);
+  margin-bottom: 4rem;
+  overflow-x: clip;
+  background: #f7f4ee;
+  color: #0f172a;
+}
+
+.home-page-light::before {
+  display: none;
+  content: none;
+}
+
+.home-action-shell {
+  width: min(100%, 1540px);
+  max-width: 100%;
+  box-sizing: border-box;
+  display: grid;
+  gap: clamp(1rem, 2vw, 1.35rem);
+  margin-inline: auto;
+  padding:
+    clamp(1rem, 2vw, 1.6rem)
+    clamp(16px, 2.2vw, 32px)
+    clamp(6rem, 10vw, 8rem);
+}
+
+@media (max-width: 640px) {
+  .home-page-light {
+    margin-top: 0.25rem;
+  }
+
+  .home-action-shell {
+    gap: 0.85rem;
+    padding-inline-start: max(12px, env(safe-area-inset-left));
+    padding-inline-end: max(12px, env(safe-area-inset-right));
+  }
+}
+</style>

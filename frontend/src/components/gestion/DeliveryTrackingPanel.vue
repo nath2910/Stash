@@ -1,5 +1,5 @@
 <template>
-  <section class="delivery-tracking-panel space-y-4">
+  <section class="delivery-tracking-panel min-w-0 space-y-4">
     <Transition
       enter-active-class="transition duration-200 ease-out"
       enter-from-class="opacity-0 -translate-y-1"
@@ -44,8 +44,8 @@
       </div>
     </Transition>
 
-    <div class="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
-      <div class="space-y-4 xl:sticky xl:top-4 xl:self-start">
+    <div class="grid min-w-0 gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
+      <div class="min-w-0 space-y-4 xl:sticky xl:top-4 xl:self-start">
         <DeliveryMailAccounts
           :accounts="mailAccounts"
           :loading="accountsLoading"
@@ -173,12 +173,12 @@
                 placeholder="Tracking, transporteur, statut"
               />
             </label>
-            <div class="flex flex-wrap gap-2">
+            <div class="flex w-full flex-wrap gap-2 lg:w-auto">
               <button
                 v-for="quick in quickFilters"
                 :key="quick.value"
                 type="button"
-                class="rounded-full border px-3 py-1.5 text-xs font-semibold transition"
+                class="flex-1 rounded-full border px-3 py-1.5 text-xs font-semibold transition sm:flex-none"
                 :class="
                   activeStatusFilter === quick.value
                     ? 'border-slate-100 bg-slate-100 text-slate-950'
@@ -724,3 +724,88 @@ const bootstrapDelivery = async () => {
 
 onMounted(bootstrapDelivery)
 </script>
+
+<style scoped>
+.delivery-tracking-panel {
+  color: #0f172a;
+}
+
+.delivery-tracking-panel :deep(section),
+.delivery-tracking-panel :deep(aside) {
+  border-color: rgba(125, 211, 252, 0.34) !important;
+  background:
+    linear-gradient(135deg, rgba(14, 165, 233, 0.06), transparent 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(248, 250, 252, 0.92)) !important;
+  box-shadow: 0 22px 55px rgba(15, 23, 42, 0.08), 0 12px 34px rgba(14, 165, 233, 0.06) !important;
+}
+
+.delivery-tracking-panel :deep([class*='border-slate-']) {
+  border-color: rgba(125, 211, 252, 0.3) !important;
+}
+
+.delivery-tracking-panel :deep([class*='bg-slate-']) {
+  background-color: rgba(255, 255, 255, 0.76) !important;
+}
+
+.delivery-tracking-panel :deep(.text-white),
+.delivery-tracking-panel :deep(.text-slate-100),
+.delivery-tracking-panel :deep(.text-slate-200),
+.delivery-tracking-panel :deep(.text-slate-300) {
+  color: #0f172a !important;
+}
+
+.delivery-tracking-panel :deep(.text-slate-400),
+.delivery-tracking-panel :deep(.text-slate-500),
+.delivery-tracking-panel :deep(.text-slate-600) {
+  color: #64748b !important;
+}
+
+.delivery-tracking-panel :deep(.text-violet-100),
+.delivery-tracking-panel :deep(.text-violet-200),
+.delivery-tracking-panel :deep(.text-violet-300) {
+  color: #0f766e !important;
+}
+
+.delivery-tracking-panel :deep(.border-violet-400\/50),
+.delivery-tracking-panel :deep(.border-violet-300\/70) {
+  border-color: rgba(20, 184, 166, 0.44) !important;
+}
+
+.delivery-tracking-panel :deep(.bg-violet-500\/10) {
+  background: rgba(204, 251, 241, 0.72) !important;
+}
+
+.delivery-tracking-panel :deep(input) {
+  border-color: rgba(125, 211, 252, 0.42) !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  color: #0f172a !important;
+}
+
+.delivery-tracking-panel :deep(input::placeholder) {
+  color: #94a3b8 !important;
+}
+
+.delivery-tracking-panel :deep(button),
+.delivery-tracking-panel :deep(a) {
+  border-radius: 999px;
+}
+
+.delivery-tracking-panel :deep(button:hover),
+.delivery-tracking-panel :deep(a:hover) {
+  border-color: rgba(20, 184, 166, 0.5) !important;
+  background-color: rgba(236, 253, 245, 0.9) !important;
+  color: #0f766e !important;
+}
+
+.delivery-tracking-panel :deep(.delivery-list-scroll),
+.delivery-tracking-panel :deep(.delivery-timeline-scroll),
+.delivery-tracking-panel :deep(.delivery-accounts-scroll) {
+  scrollbar-color: rgba(14, 116, 144, 0.42) rgba(248, 250, 252, 0.82) !important;
+}
+
+.delivery-tracking-panel :deep(.delivery-list-scroll::-webkit-scrollbar-track),
+.delivery-tracking-panel :deep(.delivery-timeline-scroll::-webkit-scrollbar-track),
+.delivery-tracking-panel :deep(.delivery-accounts-scroll::-webkit-scrollbar-track) {
+  background: rgba(248, 250, 252, 0.82) !important;
+}
+</style>

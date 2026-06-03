@@ -40,10 +40,20 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     // ✅ callback OAuth en premier (avant le catch-all)
-    { path: '/auth/callback', name: 'authCallback', component: AuthCallbackPage, meta: { fullBleed: true } },
+    {
+      path: '/auth/callback',
+      name: 'authCallback',
+      component: AuthCallbackPage,
+      meta: { fullBleed: true },
+    },
 
     // auth
-    { path: '/auth', name: 'auth', component: AuthPage, meta: { fullBleed: true } },
+    {
+      path: '/auth',
+      name: 'auth',
+      component: AuthPage,
+      meta: { fullBleed: true, allowScroll: true },
+    },
     {
       path: '/discover',
       name: 'discover',
@@ -51,29 +61,38 @@ const router = createRouter({
       meta: { fullBleed: true, allowScroll: true },
     },
     {
+      path: '/admin',
+      name: 'admin',
+      redirect: (to) => ({
+        name: 'gestion',
+        query: { ...to.query, tab: 'admin' },
+      }),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/forgot-password',
       name: 'forgot-password',
       component: ForgotPasswordPage,
-      meta: { fullBleed: true },
+      meta: { fullBleed: true, allowScroll: true },
     },
     {
       path: '/reset-password',
       name: 'reset-password',
       component: ResetPasswordPage,
-      meta: { fullBleed: true },
+      meta: { fullBleed: true, allowScroll: true },
     },
     {
       path: '/verify-email',
       name: 'verify-email',
       component: VerifyEmailPage,
-      meta: { fullBleed: true },
+      meta: { fullBleed: true, allowScroll: true },
     },
     // lien court depuis l'email: /v/<token>
     {
       path: '/v/:token',
       name: 'verify-email-short',
       component: VerifyEmailPage,
-      meta: { fullBleed: true },
+      meta: { fullBleed: true, allowScroll: true },
     },
 
     // ✅ pages protégées, required auth permet de bloque des pages si pas connecte
@@ -201,7 +220,7 @@ router.beforeEach(async (to) => {
     }
     // Si abo actif et il vient sur /abo, on redirige vers la vue abonnement
     if (to.name === 'abo' && billing.status.value === 'active') {
-      const target = (to.query?.returnTo || '/')
+      const target = to.query?.returnTo || '/'
       if (target && typeof target === 'string') {
         return target.startsWith('/') ? target : { path: target }
       }

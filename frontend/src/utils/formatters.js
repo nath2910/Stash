@@ -15,6 +15,8 @@ export function formatEUR(value, opts = {}) {
   }).format(v)
 }
 
+export const formatCurrency = formatEUR
+
 export function formatNumber(value, opts = {}) {
   const v = toNumber(value, 0)
   const { compact = false, digits = compact ? 1 : 0 } = opts
@@ -33,6 +35,8 @@ export function formatPct(value, opts = {}) {
   }).format(v)
 }
 
+export const formatPercent = formatPct
+
 export function signFmt(value, suffix = '%') {
   const v = toNumber(value, 0)
   const s = v > 0 ? '+' : ''
@@ -46,3 +50,5 @@ export function formatDateFR(value, opts = {}) {
   if (Number.isNaN(d.getTime())) return fallback
   return d.toLocaleDateString('fr-FR', { day, month, year })
 }
+
+export const formatDate = formatDateFR

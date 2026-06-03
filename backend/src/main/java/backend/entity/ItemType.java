@@ -5,6 +5,12 @@ package backend.entity;
  */
 public enum ItemType {
   SNEAKER,
+  CLOTHING,
+  ACCESSORY,
+  WATCH,
+  ELECTRONICS,
+  COLLECTIBLE,
+  HOME,
   POKEMON_CARD,
   TICKET,
   OTHER

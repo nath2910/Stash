@@ -680,4 +680,117 @@ function categoryIcon(type) {
     grid-template-columns: 1fr;
   }
 }
+
+.field-label,
+.category-choice__label,
+.manager-row__label {
+  color: #0f172a;
+}
+
+.field-helper,
+.category-choice__base,
+.manager-subtitle,
+.manager-row__meta {
+  color: #64748b;
+}
+
+.manage-link {
+  border-color: rgba(20, 184, 166, 0.32);
+  background: rgba(240, 253, 250, 0.86);
+  color: #0f766e;
+}
+
+.manage-link:hover {
+  border-color: rgba(20, 184, 166, 0.54);
+  background: #ccfbf1;
+  color: #0f766e;
+}
+
+.category-choice,
+.manager-row {
+  border-color: rgba(125, 211, 252, 0.34);
+  background: rgba(255, 255, 255, 0.84);
+}
+
+.category-choice:hover {
+  border-color: rgba(20, 184, 166, 0.46);
+  background: #f0fdfa;
+}
+
+.category-choice.is-active,
+.manager-row.is-selected {
+  border-color: rgba(20, 184, 166, 0.62);
+  background: linear-gradient(135deg, #ccfbf1, #e0f2fe);
+  box-shadow: 0 0 0 1px rgba(20, 184, 166, 0.16), 0 12px 24px rgba(14, 116, 144, 0.08);
+}
+
+.category-choice__icon,
+.manager-row__icon,
+.type-sneaker .category-choice__icon,
+.manager-row__icon.type-sneaker,
+.type-pokemon_card .category-choice__icon,
+.manager-row__icon.type-pokemon_card,
+.type-ticket .category-choice__icon,
+.manager-row__icon.type-ticket,
+.type-other .category-choice__icon,
+.manager-row__icon.type-other {
+  border-color: rgba(20, 184, 166, 0.26);
+  background: rgba(236, 253, 245, 0.9);
+  color: #0f766e;
+}
+
+.category-manager-panel {
+  border-color: rgba(125, 211, 252, 0.38);
+  background:
+    linear-gradient(135deg, rgba(14, 165, 233, 0.08), transparent 40%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96)),
+    #ffffff;
+  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.18);
+}
+
+.manager-header,
+.manager-add-form {
+  border-color: rgba(125, 211, 252, 0.26);
+}
+
+.manager-kicker {
+  color: #0f766e;
+}
+
+.manager-title {
+  color: #0f172a;
+}
+
+.manager-close,
+.manager-icon {
+  border-color: rgba(125, 211, 252, 0.32);
+  background: rgba(255, 255, 255, 0.78);
+  color: #475569;
+}
+
+.manager-close:hover,
+.manager-icon:hover:not(:disabled) {
+  border-color: rgba(20, 184, 166, 0.48);
+  background: #ecfdf5;
+  color: #0f766e;
+}
+
+.manager-add-button {
+  background: linear-gradient(135deg, #0f766e, #0e7490);
+}
+
+.manager-add-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #0d9488, #0284c7);
+}
+
+.manager-input {
+  border-color: rgba(148, 163, 184, 0.28);
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.manager-input:focus {
+  border-color: rgba(20, 184, 166, 0.72);
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.14);
+}
 </style>

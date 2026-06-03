@@ -14,6 +14,7 @@ Le backend, l'authentification, Stripe, Flyway et les contrats API ne doivent pa
 - `src/components/`: composants partages et composants metier.
 - `src/components/gestion/`: stock, modales CRUD, import/export.
 - `src/components/stats/`: dashboard stats, canvas, widgets, palette, settings, templates.
+- `src/constants/`: constantes partagees pour statuts, profils admin et onglets dynamiques.
 - `src/services/`: clients API Axios par domaine.
 - `src/store/`: stores globaux simples bases sur `ref`.
 - `src/composables/`: logique Vue reutilisable (`useTheme`, `useStatsRange`).
@@ -64,9 +65,17 @@ La logique pure est centralisee dans `utils/stockImportExport.ts`:
 ## Styles
 Les styles globaux sont dans `src/assets/base.css` et `src/assets/main.css`. Les styles tres specifiques au canvas sont dans `components/stats/StatsCanvas.css`. Les composants conservent leurs styles scopes quand le rendu depend fortement du composant.
 
+La base commune legere est documentee dans `docs/design-system.md`. Les nouveaux tokens applicatifs et classes `app-card`, `app-button-*`, `app-status-badge-*` vivent dans `src/assets/main.css`.
+
+## Module administratif
+La page admin est montee dans `pages/gestionPage.vue` via l'onglet `Administratif`. Sa configuration frontend est centralisee dans `src/constants/adminModule.js` : profils, onglets, options et cles de fallback local.
+
+La logique de statuts commune est dans `src/constants/statuses.js`.
+
 ## Conventions
 - Garder les endpoints et payloads API inchanges.
 - Garder les pages dans `src/pages/`, les appels API dans `src/services/`, les helpers purs dans `src/utils/`.
+- Garder les profils admin et statuts dans `src/constants/`, pas dans une page.
 - Declarer les widgets uniquement via `widgetRegistry.js`.
 - Ne pas ajouter d'abstraction si elle ne simplifie pas clairement un composant ou un service.
 - Tester `npm test`, `npm run test:unit` et `npm run build` apres modification du frontend.

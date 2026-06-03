@@ -3,37 +3,50 @@
 ## 1) `pages/homePage.vue`
 
 ### Role
-Dashboard d'accueil synthetique.
+Dashboard d'action rapide.
 
 ### Logique
-1. Charge liste ventes via `SnkVenteServices.getSnkVente()`.
-2. Calcule KPIs (`computed`):
-- nb en stock,
-- ventes du mois,
-- CA mensuel,
-- benef mensuel,
-- prix moyen revente mensuel.
-3. Gere modal onboarding (flags `localStorage`).
-4. Navigation rapide vers gestion et stats.
+1. Charge le stock via `SnkVenteServices.getSnkVente()` pour la recherche locale.
+2. Charge les KPI initiaux via `StatsServices.summary(from, to)`.
+3. Calcule une synthese locale via `utils/homeDashboard.js` pour garder les KPI synchronises apres ajout/modification rapide.
+4. Gere la recherche predictive, l'ouverture de modale item, l'ajout rapide et l'onboarding.
 
 ### Fichiers relies
-- `AcceuilWidgetLateral.vue`
-- `AcceuilDernierItem.vue`
-- helpers `utils/snkVente.js`, `utils/formatters.js`.
+- `components/home/QuickSearchBar.vue`
+- `components/home/SearchResultsDropdown.vue`
+- `components/home/QuickItemModal.vue`
+- `components/home/QuickAddItemForm.vue`
+- `components/home/HomeMonthlyKpis.vue`
+- `components/home/KpiCard.vue`
+- helpers `utils/homeDashboard.js`, `utils/snkVente.js`, `utils/formatters.js`.
 
 ---
 
-## 2) `components/AcceuilWidgetLateral.vue`
-- Carte KPI lateral (loading + ton positif/negatif).
-- Emet navigation vers gestion/stats.
+## 2) `components/home/QuickSearchBar.vue`
+- Recherche locale debounced sur nom, categorie, description, type et metadata utiles.
+- Navigation clavier haut/bas, entree pour ouvrir, echap pour fermer.
+- Emet l'item selectionne sans changer de route.
 
-## 3) `components/AcceuilDernierItem.vue`
-- Charge `recent(6)`.
-- Affiche mini table des derniers items.
+## 3) `components/home/QuickItemModal.vue`
+- Modale courte de correction item.
+- Sauvegarde via `SnkVenteServices.update(id, payload)`.
+- Met a jour l'etat local de l'accueil sans rechargement.
+
+## 4) `components/home/QuickAddItemForm.vue`
+- Form compact d'ajout stock.
+- Sauvegarde orchestree par `homePage.vue` via `SnkVenteServices.create(payload)`.
+- Reset apres succes, quantite bornee a 50.
+
+## 5) `components/home/HomeMonthlyKpis.vue`
+- Affiche C.A. du mois, benefices, items en stock et stock en euros.
+- Utilise les stats API au chargement puis la synthese locale si le stock est charge.
+
+## 6) Legacy accueil
+- `AcceuilWidgetLateral.vue` et `AcceuilDernierItem.vue` restent presents mais ne sont plus utilises par la route `/`.
 
 ---
 
-## 4) `pages/gestionPage.vue`
+## 7) `pages/gestionPage.vue`
 
 ### Role
 Page orchestration gestion stock.
@@ -53,7 +66,7 @@ Page orchestration gestion stock.
 
 ---
 
-## 5) Composants gestion
+## 8) Composants gestion
 
 ### `GestionSearchBarre.vue`
 - Input `v-model` de recherche.
@@ -94,7 +107,7 @@ Page orchestration gestion stock.
 
 ---
 
-## 6) Utilitaires utilises par gestion
+## 9) Utilitaires utilises par gestion
 
 ### `constants/itemTypes.js`
 - liste types + champs metadata autorises par type.
@@ -110,5 +123,5 @@ Page orchestration gestion stock.
 
 ---
 
-## 7) Legacy
+## 10) Legacy
 Les anciens composants stats non references ont ete retires du frontend runtime.

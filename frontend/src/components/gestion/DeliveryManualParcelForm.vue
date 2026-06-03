@@ -1,6 +1,6 @@
 <template>
   <section
-    class="rounded-[22px] border border-slate-700/70 bg-slate-900/70 p-4 shadow-xl shadow-slate-950/20 backdrop-blur"
+    class="min-w-0 rounded-[22px] border border-slate-700/70 bg-slate-900/70 p-4 shadow-xl shadow-slate-950/20 backdrop-blur"
   >
     <div class="flex items-center justify-between gap-3">
       <div>
@@ -24,7 +24,7 @@
           type="text"
           autocomplete="off"
           spellcheck="false"
-          class="h-10 w-full rounded-full border border-slate-700/80 bg-slate-950/45 px-4 text-sm uppercase text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-violet-400/70 focus:ring-2 focus:ring-violet-500/20"
+          class="h-10 w-full min-w-0 rounded-full border border-slate-700/80 bg-slate-950/45 px-4 text-sm uppercase text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-violet-400/70 focus:ring-2 focus:ring-violet-500/20"
           placeholder="1Z999AA10123456784"
         />
       </label>
@@ -35,7 +35,7 @@
         >
         <select
           v-model="carrierSlug"
-          class="h-10 w-full rounded-full border border-slate-700/80 bg-slate-950/45 px-4 text-sm text-slate-100 outline-none transition focus:border-violet-400/70 focus:ring-2 focus:ring-violet-500/20"
+          class="h-10 w-full min-w-0 rounded-full border border-slate-700/80 bg-slate-950/45 px-4 text-sm text-slate-100 outline-none transition focus:border-violet-400/70 focus:ring-2 focus:ring-violet-500/20"
         >
           <option value="">Detection auto</option>
           <option value="colissimo">Colissimo</option>

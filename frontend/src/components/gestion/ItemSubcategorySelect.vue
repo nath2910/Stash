@@ -541,4 +541,95 @@ onBeforeUnmount(() => {
     grid-template-columns: 1fr;
   }
 }
+
+:global(.gestion-page-light) .relative label,
+:global(.gestion-page-light) .relative .text-gray-200,
+:global(.home-page-light) .relative label,
+:global(.home-page-light) .relative .text-gray-200 {
+  color: #0f172a;
+}
+
+:global(.gestion-page-light) .relative .text-purple-200,
+:global(.home-page-light) .relative .text-purple-200 {
+  color: #0f766e;
+}
+
+.subcategory-trigger {
+  border-color: rgba(148, 163, 184, 0.28);
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.subcategory-trigger:hover,
+.subcategory-trigger:focus,
+.subcategory-trigger.is-open {
+  border-color: rgba(20, 184, 166, 0.56);
+  background: #f8fafc;
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.14);
+}
+
+.subcategory-trigger :is(.text-gray-100, .text-gray-400, .text-gray-500) {
+  color: #0f172a;
+}
+
+.subcategory-menu {
+  border-color: rgba(125, 211, 252, 0.38);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 18px 55px rgba(15, 23, 42, 0.14);
+}
+
+.subcategory-option {
+  color: #334155;
+}
+
+.subcategory-option:hover,
+.subcategory-option.is-active {
+  background: #ecfdf5;
+  color: #0f766e;
+}
+
+.subcategory-option.is-empty {
+  color: #64748b;
+}
+
+.manage-menu-button,
+.subcategory-add-button {
+  border-color: rgba(20, 184, 166, 0.32);
+  background: linear-gradient(135deg, #0f766e, #0e7490);
+  color: #ffffff;
+}
+
+.manage-menu-button:hover,
+.subcategory-add-button:hover:not(:disabled) {
+  border-color: rgba(20, 184, 166, 0.54);
+  background: linear-gradient(135deg, #0d9488, #0284c7);
+}
+
+.subcategory-add-input,
+.subcategory-row-input {
+  border-color: rgba(148, 163, 184, 0.28);
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.subcategory-add-input::placeholder {
+  color: #94a3b8;
+}
+
+.subcategory-add-input:focus,
+.subcategory-row-input:focus {
+  border-color: rgba(20, 184, 166, 0.72);
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.14);
+}
+
+.subcategory-row {
+  border-color: rgba(125, 211, 252, 0.32);
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.icon-action {
+  border-color: rgba(125, 211, 252, 0.32);
+  background: rgba(255, 255, 255, 0.8);
+  color: #475569;
+}
 </style>

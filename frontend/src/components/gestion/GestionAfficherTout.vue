@@ -1,7 +1,7 @@
 <template>
-  <div class="space-y-3">
+  <div class="gestion-list space-y-3">
     <!-- mini barre selection -->
-    <div v-if="selectable" class="mb-3 flex items-center justify-between">
+    <div v-if="selectable" class="gestion-selection-bar mb-3 flex items-center justify-between">
       <p class="text-xs text-gray-400">{{ modelValue.length }} selectionnee(s)</p>
 
       <button
@@ -13,7 +13,7 @@
       </button>
     </div>
 
-    <div v-if="snkVentes.length" class="space-y-3 md:hidden">
+    <div v-if="snkVentes.length" class="space-y-3 lg:hidden">
       <article
         v-for="vente in snkVentes"
         :key="vente.id"
@@ -78,7 +78,7 @@
           </span>
         </div>
 
-        <div class="mt-3 grid grid-cols-2 gap-2">
+        <div class="mt-3 grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
           <div class="rounded-lg border border-gray-700/80 bg-gray-950/40 px-2.5 py-2">
             <p class="text-[10px] uppercase tracking-wide text-gray-500">Retail</p>
             <p class="mt-1 text-xs font-medium text-gray-200">
@@ -113,13 +113,13 @@
 
     <div
       v-else
-      class="rounded-xl border border-gray-700/70 bg-gray-900/40 px-4 py-8 text-center text-sm text-gray-400 md:hidden"
+      class="rounded-xl border border-gray-700/70 bg-gray-900/40 px-4 py-8 text-center text-sm text-gray-400 lg:hidden"
     >
       Aucun item a afficher pour le moment.
     </div>
 
-    <div class="hidden overflow-x-auto md:block">
-      <table class="min-w-full text-sm text-gray-100">
+    <div class="hidden lg:block">
+      <table class="min-w-[920px] w-full text-sm text-gray-100">
         <thead class="border-b border-gray-700 bg-gray-900">
           <tr>
             <!-- nouvelle colonne selection -->
@@ -376,3 +376,152 @@ onBeforeUnmount(() => {
   window.removeEventListener('snk:item-categories-change', onCategoryLabelsChange)
 })
 </script>
+
+<style scoped>
+.gestion-list {
+  color: #0f172a;
+}
+
+.gestion-list p,
+.gestion-list span,
+.gestion-list td,
+.gestion-list th {
+  letter-spacing: 0;
+}
+
+.gestion-list :is(.text-gray-100, .text-gray-200, .text-gray-300, .text-gray-400) {
+  color: #0f172a;
+}
+
+.gestion-list :is(.text-gray-500) {
+  color: #64748b;
+}
+
+.gestion-list :is(.bg-gray-900, .bg-gray-900\/60, .bg-gray-900\/40, .bg-gray-950\/60, .bg-gray-950\/40) {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.9)),
+    #ffffff;
+}
+
+.gestion-list :is(.border-gray-700, .border-gray-700\/70, .border-gray-700\/80, .border-gray-800) {
+  border-color: rgba(125, 211, 252, 0.32);
+}
+
+.gestion-list > div:first-child {
+  border: 1px solid rgba(125, 211, 252, 0.28);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.74);
+  padding: 0.55rem 0.85rem;
+}
+
+.gestion-list > div:first-child p,
+.gestion-list > div:first-child button {
+  color: #0f766e;
+  font-weight: 800;
+}
+
+.gestion-list article {
+  border-color: rgba(125, 211, 252, 0.34);
+  background:
+    linear-gradient(135deg, rgba(236, 253, 245, 0.5), transparent 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.92));
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.06);
+}
+
+.gestion-list article:hover {
+  border-color: rgba(20, 184, 166, 0.46);
+  box-shadow: 0 18px 38px rgba(14, 116, 144, 0.09);
+}
+
+.gestion-list input[type='checkbox'] {
+  accent-color: #0f766e;
+}
+
+.gestion-selection-bar {
+  position: sticky;
+  top: 0;
+  z-index: 8;
+  min-height: 44px;
+  border: 1px solid rgba(125, 211, 252, 0.34);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.96);
+  padding: 0.55rem 0.9rem;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.06);
+}
+
+.gestion-selection-bar p,
+.gestion-selection-bar button {
+  color: #0f766e;
+  font-weight: 900;
+}
+
+.gestion-list button {
+  border-color: rgba(14, 116, 144, 0.28);
+  background: rgba(255, 255, 255, 0.82);
+  color: #0f766e;
+}
+
+.gestion-list button:hover {
+  border-color: rgba(20, 184, 166, 0.5);
+  background: #ecfdf5;
+  color: #0f766e;
+}
+
+.gestion-list :is(.text-emerald-400) {
+  color: #047857;
+}
+
+.gestion-list :is(.text-red-400) {
+  color: #dc2626;
+}
+
+.gestion-list table {
+  overflow: hidden;
+  border: 1px solid rgba(125, 211, 252, 0.3);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #0f172a;
+}
+
+.gestion-list thead {
+  position: sticky;
+  top: 56px;
+  z-index: 7;
+  border-color: rgba(125, 211, 252, 0.28);
+  background: linear-gradient(135deg, #ecfdf5, #e0f2fe);
+}
+
+.gestion-list th {
+  color: #0f766e;
+  font-weight: 900;
+}
+
+.gestion-list tbody tr {
+  border-color: rgba(226, 232, 240, 0.9);
+}
+
+.gestion-list tbody tr:hover td {
+  background: rgba(236, 253, 245, 0.7);
+}
+
+.gestion-list td {
+  color: #334155;
+}
+
+.gestion-list td:first-child,
+.gestion-list th:first-child {
+  padding-left: 1rem;
+}
+
+.gestion-list :is(.bg-purple-500\/10, .bg-cyan-500\/15, .bg-amber-500\/15, .bg-slate-500\/15) {
+  background: rgba(240, 253, 250, 0.86);
+}
+
+.gestion-list :is(.text-purple-200, .text-cyan-200, .text-amber-200, .text-slate-200) {
+  color: #0f766e;
+}
+
+.gestion-list :is(.border-purple-400\/60, .border-cyan-400\/60, .border-amber-400\/60, .border-slate-400\/60) {
+  border-color: rgba(20, 184, 166, 0.4);
+}
+</style>

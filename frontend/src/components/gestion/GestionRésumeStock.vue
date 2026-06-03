@@ -1,15 +1,24 @@
 <template>
   <div class="stock-summary-compact" aria-label="Resume stock">
     <article class="stock-summary-item">
-      <span>Total achete</span>
+      <span class="stock-summary-label">
+        <i aria-hidden="true"></i>
+        Total achete
+      </span>
       <strong>{{ totalPaires }}</strong>
     </article>
     <article class="stock-summary-item is-success">
-      <span>En stock</span>
+      <span class="stock-summary-label">
+        <i aria-hidden="true"></i>
+        En stock
+      </span>
       <strong>{{ nbEnStock }}</strong>
     </article>
     <article class="stock-summary-item is-accent">
-      <span>Valeur stock</span>
+      <span class="stock-summary-label">
+        <i aria-hidden="true"></i>
+        Valeur stock
+      </span>
       <strong>{{ formattedStockValue }} <small>EUR</small></strong>
     </article>
   </div>
@@ -41,99 +50,106 @@ const formattedStockValue = computed(() => {
 
 <style scoped>
 .stock-summary-compact {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.45rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
   height: auto;
   min-width: 0;
 }
 
 .stock-summary-item {
-  position: relative;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: baseline;
-  column-gap: 0.55rem;
-  min-height: 42px;
-  min-width: 132px;
+  display: flex;
+  min-height: 64px;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
   overflow: hidden;
-  border: 1px solid rgba(51, 65, 85, 0.76);
-  border-radius: 999px;
-  background: rgba(15, 23, 42, 0.48);
-  padding: 0.42rem 0.72rem 0.42rem 0.9rem;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 0.78rem 0.9rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
-.stock-summary-item::before {
-  position: absolute;
-  top: 50%;
-  left: 0.5rem;
-  width: 5px;
-  height: 5px;
-  border-radius: 999px;
-  background: rgba(226, 232, 240, 0.34);
-  transform: translateY(-50%);
-  content: '';
+.stock-summary-item:hover {
+  border-color: rgba(20, 184, 166, 0.28);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
 }
 
-.stock-summary-item.is-success::before {
-  background: rgba(45, 212, 191, 0.9);
-}
-
-.stock-summary-item.is-accent::before {
-  background: rgba(250, 204, 21, 0.88);
-}
-
-.stock-summary-item span {
-  display: block;
-  color: rgb(148 163 184);
-  font-size: 9.5px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+.stock-summary-label {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.45rem;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.03em;
   line-height: 1.15;
   text-transform: uppercase;
-  white-space: nowrap;
+}
+
+.stock-summary-label i {
+  width: 0.45rem;
+  height: 0.45rem;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: #94a3b8;
+}
+
+.stock-summary-item.is-success .stock-summary-label i {
+  background: #14b8a6;
+}
+
+.stock-summary-item.is-accent .stock-summary-label i {
+  background: #f59e0b;
 }
 
 .stock-summary-item strong {
   display: flex;
   align-items: baseline;
   justify-content: flex-end;
-  gap: 0.2rem;
+  gap: 0.25rem;
   min-width: 0;
-  color: rgb(248 250 252);
-  font-size: 1.08rem;
-  font-weight: 900;
+  color: #0f172a;
+  font-size: clamp(1.35rem, 2.2vw, 1.7rem);
+  font-weight: 950;
   line-height: 1;
   letter-spacing: 0;
   white-space: nowrap;
 }
 
 .stock-summary-item small {
-  color: rgb(203 213 225);
-  font-size: 9px;
+  color: #64748b;
+  font-size: 0.68rem;
   font-weight: 850;
   letter-spacing: 0.03em;
 }
 
 .stock-summary-item.is-success strong {
-  color: rgb(94 234 212);
+  color: #0f766e;
 }
 
 .stock-summary-item.is-accent strong {
-  color: rgb(253 224 71);
-  font-size: 1.05rem;
+  color: #b45309;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 760px) {
   .stock-summary-compact {
-    display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .stock-summary-item {
+    display: grid;
+    min-height: 72px;
     min-width: 0;
+    align-content: center;
+    gap: 0.5rem;
+  }
+
+  .stock-summary-item strong {
+    justify-content: flex-start;
   }
 }
 
@@ -143,12 +159,14 @@ const formattedStockValue = computed(() => {
   }
 
   .stock-summary-item {
-    min-height: 42px;
+    display: flex;
+    min-height: 58px;
   }
 
   .stock-summary-item strong,
   .stock-summary-item.is-accent strong {
-    font-size: 1.05rem;
+    justify-content: flex-end;
+    font-size: 1.35rem;
   }
 }
 </style>

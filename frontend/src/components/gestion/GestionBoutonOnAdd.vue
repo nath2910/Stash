@@ -1,17 +1,17 @@
 <!-- src/components/boutonOnAdd.vue -->
 <template>
   <div>
-    <div class="[&_button:hover]:bg-emerald-800">
+    <div>
       <button
         v-if="!showAdd"
         type="button"
         @click="showAdd = true"
-        class="w-full rounded border border-emerald-300/30 bg-emerald-600 px-3 py-2 text-xs text-white transition active:scale-95 focus:outline-none focus:ring-2 focus:ring-emerald-400/40 sm:w-auto"
+        class="inline-flex w-full min-h-10 items-center justify-center rounded-full border border-teal-700/20 bg-gradient-to-br from-teal-700 to-cyan-700 px-4 py-2 text-xs font-extrabold text-white shadow-[0_12px_24px_rgba(15,118,110,0.18)] transition active:scale-95 focus:outline-none focus:ring-2 focus:ring-teal-400/30 sm:w-auto"
       >
         Ajouter un item
       </button>
     </div>
-    <div class="[&_button:hover]:bg-gray-500">
+    <div>
       <AjoutPaire v-if="showAdd" @close="showAdd = false" @added="handleAdded" />
     </div>
   </div>

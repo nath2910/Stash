@@ -1,62 +1,62 @@
 <template>
-  <div class="min-h-screen text-slate-100">
-    <div class="relative w-full app-page-stack">
-      <header
-        class="rounded-[24px] border border-slate-700/60 bg-slate-900/70 px-5 py-5 shadow-xl shadow-slate-950/20 backdrop-blur sm:px-7"
-      >
+  <div class="gestion-page-light text-slate-900">
+    <div class="relative w-full app-page-stack gestion-page-stack">
+      <header class="gestion-hero-panel">
         <div class="flex flex-wrap items-end justify-between gap-4">
           <div class="space-y-2">
-            <p class="text-[11px] uppercase tracking-[0.3em] text-violet-300/80">
-              Backoffice Stash
-            </p>
-            <h1 class="text-2xl font-semibold text-white sm:text-3xl">Gestion des ventes</h1>
-            <p class="max-w-2xl text-sm text-slate-400 sm:text-base">
-              Ajoute, modifie, recherche, selectionne et supprime en un seul endroit.
+            <p class="gestion-eyebrow">Inventaire centralise</p>
+            <h1 class="gestion-title">Gestion</h1>
+            <p class="gestion-subtitle">
+              Ajoute, modifie, filtre et suis tes items dans un espace coherent avec l'accueil.
             </p>
           </div>
-          <div class="hidden flex-wrap gap-2 text-xs md:flex">
-            <span
-              class="inline-flex items-center rounded-full border border-slate-700/80 bg-slate-800/70 px-3 py-1 text-slate-300"
-            >
-              Inventaire centralise
-            </span>
-            <span
-              class="inline-flex items-center rounded-full border border-violet-300/25 bg-violet-400/10 px-3 py-1 text-violet-200"
-            >
+          <div class="gestion-hero-pills">
+            <span>{{ totalPaires }} items</span>
+            <span>{{ nbEnStock }} en stock</span>
+            <span>
               Actions rapides
             </span>
           </div>
         </div>
       </header>
 
-      <div class="flex justify-center">
-        <nav
-          class="inline-flex rounded-full border border-slate-700/70 bg-slate-900/65 p-1 shadow-lg shadow-slate-950/20 backdrop-blur"
-          aria-label="Sous-onglets gestion"
-        >
+      <div class="gestion-tab-shell">
+        <nav class="gestion-tab-nav" aria-label="Sous-onglets gestion">
           <button
             type="button"
-            class="min-w-[118px] rounded-full px-4 py-2 text-sm font-semibold transition"
-            :class="
-              activeGestionTab === 'inventory'
-                ? 'bg-slate-100 text-slate-950 shadow-sm'
-                : 'text-slate-300 hover:bg-slate-800/70 hover:text-white'
-            "
+            class="gestion-tab-button"
+            :class="{ 'is-active': activeGestionTab === 'inventory' }"
             @click="setGestionTab('inventory')"
           >
-            Inventaire
+            <PackageSearch class="h-4 w-4" aria-hidden="true" />
+            <span>
+              <strong>Inventaire</strong>
+              <small>Items et stock</small>
+            </span>
           </button>
           <button
             type="button"
-            class="min-w-[138px] rounded-full px-4 py-2 text-sm font-semibold transition"
-            :class="
-              activeGestionTab === 'delivery'
-                ? 'bg-slate-100 text-slate-950 shadow-sm'
-                : 'text-slate-300 hover:bg-slate-800/70 hover:text-white'
-            "
+            class="gestion-tab-button"
+            :class="{ 'is-active': activeGestionTab === 'delivery' }"
             @click="setGestionTab('delivery')"
           >
-            Suivi Livraison
+            <Truck class="h-4 w-4" aria-hidden="true" />
+            <span>
+              <strong>Suivi livraison</strong>
+              <small>Colis et mails</small>
+            </span>
+          </button>
+          <button
+            type="button"
+            class="gestion-tab-button"
+            :class="{ 'is-active': activeGestionTab === 'admin' }"
+            @click="setGestionTab('admin')"
+          >
+            <ClipboardList class="h-4 w-4" aria-hidden="true" />
+            <span>
+              <strong>Administratif</strong>
+              <small>Documents et registres</small>
+            </span>
           </button>
         </nav>
       </div>
@@ -64,19 +64,83 @@
       <Transition name="gestion-tab-view" mode="out-in">
         <div :key="activeGestionTab">
           <section v-if="activeGestionTab === 'inventory'" class="space-y-5">
-            <div class="gestion-command-panel relative z-30">
+            <section class="gestion-summary-panel relative z-20" aria-label="Resume inventaire">
               <div class="command-panel-grid">
                 <StockSummaryRow
                   :total-paires="totalPaires"
                   :nb-en-stock="nbEnStock"
                   :valeur-stock="valeurStock"
                 />
+              </div>
+            </section>
 
-                <div class="command-controls">
-                  <div class="command-primary-row">
-                    <SearchBarre v-model="searchTerm" />
+            <!-- Tableau -->
+            <div class="inventory-list-panel relative z-0 overflow-hidden">
+              <!-- Header tableau -->
+              <div class="inventory-list-header">
+                <!-- Gauche : titre -->
+                <div>
+                  <h2 class="text-lg font-extrabold text-slate-950 leading-tight">
+                    Liste des items
+                  </h2>
+                  <p class="text-xs font-semibold text-slate-500">
+                    {{ filteredVentes.length }} item(s) trouvee(s)
+                    <span v-if="selectedIds.length">
+                      - {{ selectedIds.length }} selectionnee(s)
+                    </span>
+                  </p>
+                </div>
 
-                    <div class="filter-status-group" aria-label="Filtrer par statut">
+                <!-- Droite : actions -->
+                <div class="inventory-actions">
+                  <button
+                    type="button"
+                    class="inventory-actions-toggle"
+                    :aria-expanded="mobileActionsOpen"
+                    @click="mobileActionsOpen = !mobileActionsOpen"
+                  >
+                    <MoreHorizontal class="h-4 w-4" aria-hidden="true" />
+                    <span>Actions</span>
+                  </button>
+
+                  <div class="inventory-actions-panel" :class="{ 'is-open': mobileActionsOpen }">
+                    <GestionActionsPanel @vente-ajoutee="handleVenteAjouteeFromActions" />
+                    <div class="[&_button:hover]:bg-red-900">
+                      <button
+                        type="button"
+                        class="inventory-danger-button"
+                        @click="openDeleteFromActions"
+                      >
+                        Supprimer un item
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="inventory-search-strip">
+                <div class="inventory-search-label">
+                  <p>Recherche</p>
+                  <span>Nom, categorie, description ou identifiant</span>
+                </div>
+                <SearchBarre v-model="searchTerm" />
+              </div>
+
+              <div
+                class="inventory-filter-shell"
+                :class="{ 'is-open': filtersPanelOpen, 'has-active': activeFilterCount }"
+              >
+                <div class="inventory-filter-heading">
+                  <div>
+                    <p>Tri et filtres</p>
+                    <span>{{ activeFilterCount || 'Aucun' }} filtre actif</span>
+                  </div>
+
+                  <div class="filter-toolbar-actions">
+                    <div
+                      class="filter-status-group filter-status-group--desktop"
+                      aria-label="Filtrer par statut"
+                    >
                       <button
                         v-for="option in statusOptions"
                         :key="option.value"
@@ -88,55 +152,6 @@
                         {{ option.label }}
                       </button>
                     </div>
-                  </div>
-
-                  <div class="filter-compact-grid">
-                    <label class="filter-field">
-                      <span>Type item</span>
-                      <select v-model="filters.itemType" class="filter-control">
-                        <option value="all">Tous</option>
-                        <option
-                          v-for="option in itemTypeOptions"
-                          :key="option.value"
-                          :value="option.value"
-                        >
-                          {{ option.label }}
-                        </option>
-                      </select>
-                    </label>
-
-                    <label class="filter-field">
-                      <span>Sous-categorie</span>
-                      <select
-                        v-model="filters.category"
-                        class="filter-control"
-                        :disabled="!selectedItemType"
-                      >
-                        <option value="all">
-                          {{ selectedItemType ? 'Toutes' : "Choisir un type d'abord" }}
-                        </option>
-                        <option
-                          v-for="option in categoryOptions"
-                          :key="option.value"
-                          :value="option.value"
-                        >
-                          {{ option.label }}
-                        </option>
-                      </select>
-                    </label>
-
-                    <label class="filter-field">
-                      <span>Tri</span>
-                      <select v-model="filters.sort" class="filter-control">
-                        <option
-                          v-for="option in sortOptions"
-                          :key="option.value"
-                          :value="option.value"
-                        >
-                          {{ option.label }}
-                        </option>
-                      </select>
-                    </label>
 
                     <button
                       type="button"
@@ -155,89 +170,136 @@
                       </span>
                     </button>
 
-                    <section class="date-range-compact">
-                      <div class="date-range-title">
-                        <CalendarDays class="h-3.5 w-3.5" />
-                        <span>Achat</span>
-                      </div>
-                      <div class="date-range-inputs">
-                        <CompactDateInput
-                          v-model="filters.purchaseFrom"
-                          size="md"
-                          aria-label="Date d'achat debut"
-                        />
-                        <span class="date-range-separator" aria-hidden="true">-</span>
-                        <CompactDateInput
-                          v-model="filters.purchaseTo"
-                          size="md"
-                          aria-label="Date d'achat fin"
-                        />
-                      </div>
-                    </section>
-
-                    <section class="date-range-compact">
-                      <div class="date-range-title">
-                        <CalendarDays class="h-3.5 w-3.5" />
-                        <span>Vente</span>
-                      </div>
-                      <div class="date-range-inputs">
-                        <CompactDateInput
-                          v-model="filters.saleFrom"
-                          size="md"
-                          aria-label="Date de vente debut"
-                        />
-                        <span class="date-range-separator" aria-hidden="true">-</span>
-                        <CompactDateInput
-                          v-model="filters.saleTo"
-                          size="md"
-                          aria-label="Date de vente fin"
-                        />
-                      </div>
-                    </section>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Tableau -->
-            <div
-              class="relative z-0 overflow-hidden rounded-[24px] border border-slate-700/70 bg-slate-900/70 shadow-xl shadow-slate-950/20 backdrop-blur"
-            >
-              <!-- Header tableau -->
-              <div
-                class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800/80 px-4 py-4 sm:px-6"
-              >
-                <!-- Gauche : titre -->
-                <div>
-                  <h2 class="text-lg font-semibold text-slate-100 leading-tight">
-                    Liste des items
-                  </h2>
-                  <p class="text-xs text-slate-400">
-                    {{ filteredVentes.length }} item(s) trouvee(s)
-                    <span v-if="selectedIds.length">
-                      - {{ selectedIds.length }} selectionnee(s)
-                    </span>
-                  </p>
-                </div>
-
-                <!-- Droite : actions -->
-                <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
-                  <GestionActionsPanel @vente-ajoutee="handleVenteAjoutee" />
-                  <div class="[&_button:hover]:bg-red-900">
                     <button
                       type="button"
-                      class="w-full whitespace-nowrap rounded-full border border-red-400/40 bg-red-500/10 px-3.5 py-2 text-xs font-semibold text-red-100 transition hover:border-red-300/70 hover:bg-red-500/20 disabled:opacity-60 sm:w-auto"
-                      @click="openDeleteBulk"
+                      class="filter-panel-toggle"
+                      :class="{ 'is-active': filtersPanelOpen || activeFilterCount }"
+                      aria-controls="gestion-filter-panel"
+                      :aria-expanded="filtersPanelOpen"
+                      @click="filtersPanelOpen = !filtersPanelOpen"
                     >
-                      Supprimer un item
+                      <SlidersHorizontal class="h-4 w-4" aria-hidden="true" />
+                      <span>{{ filtersPanelOpen ? 'Masquer' : 'Filtres' }}</span>
+                      <span v-if="activeFilterCount" class="filter-toggle-badge">
+                        {{ activeFilterCount }}
+                      </span>
                     </button>
                   </div>
+                </div>
+
+                <div
+                  id="gestion-filter-panel"
+                  class="filter-compact-grid"
+                  :class="{ 'is-open': filtersPanelOpen }"
+                >
+                  <div
+                    class="filter-status-group filter-status-group--panel"
+                    aria-label="Filtrer par statut"
+                  >
+                    <button
+                      v-for="option in statusOptions"
+                      :key="`panel-${option.value}`"
+                      type="button"
+                      class="filter-status-button"
+                      :class="{ 'is-active': filters.status === option.value }"
+                      @click="filters.status = option.value"
+                    >
+                      {{ option.label }}
+                    </button>
+                  </div>
+
+                  <label class="filter-field">
+                    <span>Type item</span>
+                    <select v-model="filters.itemType" class="filter-control">
+                      <option value="all">Tous</option>
+                      <option
+                        v-for="option in itemTypeOptions"
+                        :key="option.value"
+                        :value="option.value"
+                      >
+                        {{ option.label }}
+                      </option>
+                    </select>
+                  </label>
+
+                  <label class="filter-field">
+                    <span>Sous-categorie</span>
+                    <select
+                      v-model="filters.category"
+                      class="filter-control"
+                      :disabled="!selectedItemType"
+                    >
+                      <option value="all">
+                        {{ selectedItemType ? 'Toutes' : "Choisir un type d'abord" }}
+                      </option>
+                      <option
+                        v-for="option in categoryOptions"
+                        :key="option.value"
+                        :value="option.value"
+                      >
+                        {{ option.label }}
+                      </option>
+                    </select>
+                  </label>
+
+                  <label class="filter-field">
+                    <span>Tri</span>
+                    <select v-model="filters.sort" class="filter-control">
+                      <option
+                        v-for="option in sortOptions"
+                        :key="option.value"
+                        :value="option.value"
+                      >
+                        {{ option.label }}
+                      </option>
+                    </select>
+                  </label>
+
+                  <section class="date-range-compact">
+                    <div class="date-range-title">
+                      <CalendarDays class="h-3.5 w-3.5" />
+                      <span>Achat</span>
+                    </div>
+                    <div class="date-range-inputs">
+                      <CompactDateInput
+                        v-model="filters.purchaseFrom"
+                        size="md"
+                        aria-label="Date d'achat debut"
+                      />
+                      <span class="date-range-separator" aria-hidden="true">-</span>
+                      <CompactDateInput
+                        v-model="filters.purchaseTo"
+                        size="md"
+                        aria-label="Date d'achat fin"
+                      />
+                    </div>
+                  </section>
+
+                  <section class="date-range-compact">
+                    <div class="date-range-title">
+                      <CalendarDays class="h-3.5 w-3.5" />
+                      <span>Vente</span>
+                    </div>
+                    <div class="date-range-inputs">
+                      <CompactDateInput
+                        v-model="filters.saleFrom"
+                        size="md"
+                        aria-label="Date de vente debut"
+                      />
+                      <span class="date-range-separator" aria-hidden="true">-</span>
+                      <CompactDateInput
+                        v-model="filters.saleTo"
+                        size="md"
+                        aria-label="Date de vente fin"
+                      />
+                    </div>
+                  </section>
                 </div>
               </div>
 
               <!-- Liste -->
-              <div class="p-4">
-                <div class="max-h-[68vh] overflow-y-auto pr-1 sm:max-h-[560px] sm:pr-2">
+              <div class="inventory-list-body">
+                <div class="inventory-list-scroll">
                   <afficherTout
                     :snkVentes="filteredVentes"
                     selectable
@@ -249,7 +311,8 @@
             </div>
           </section>
 
-          <DeliveryTrackingPanel v-else />
+          <DeliveryTrackingPanel v-else-if="activeGestionTab === 'delivery'" />
+          <AdminPage v-else embedded />
         </div>
       </Transition>
 
@@ -266,7 +329,7 @@
           @close="showDeleteModal = false"
           @deleted="handleDeleted"
         />
-        <div class="[&_button:hover]:bg-gray-800">
+        <div class="gestion-import-widget">
           <CsvImportExportWidget :filteredRows="filteredVentes" @imported="reloadVentes" />
         </div>
       </template>
@@ -277,7 +340,15 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { CalendarDays, RotateCcw } from 'lucide-vue-next'
+import {
+  CalendarDays,
+  ClipboardList,
+  MoreHorizontal,
+  PackageSearch,
+  RotateCcw,
+  SlidersHorizontal,
+  Truck,
+} from 'lucide-vue-next'
 import { useAuthStore } from '@/store/authStore'
 import SnkVenteServices from '@/services/SnkVenteServices.js'
 import StockSummaryRow from '@/components/gestion/GestionRésumeStock.vue'
@@ -289,6 +360,7 @@ import SupprimerModal from '@/components/gestion/GestionSupprimerModal.vue'
 import CsvImportExportWidget from '@/components/gestion/CsvImportExportWidget.vue'
 import DeliveryTrackingPanel from '@/components/gestion/DeliveryTrackingPanel.vue'
 import CompactDateInput from '@/components/ui/CompactDateInput.vue'
+import AdminPage from '@/pages/adminPage.vue'
 import { isVendue, prixRetailOf } from '@/utils/snkVente'
 import {
   buildItemCategoryAliases,
@@ -324,8 +396,14 @@ const storedSubcategories = ref(
 )
 const route = useRoute()
 const router = useRouter()
-const tabFromRoute = () => (route.query?.tab === 'delivery' ? 'delivery' : 'inventory')
+const tabFromRoute = () => {
+  if (route.query?.tab === 'delivery') return 'delivery'
+  if (route.query?.tab === 'admin') return 'admin'
+  return 'inventory'
+}
 const activeGestionTab = ref(tabFromRoute())
+const filtersPanelOpen = ref(false)
+const mobileActionsOpen = ref(false)
 
 const EMPTY_CATEGORY_VALUE = '__empty_category__'
 
@@ -342,12 +420,14 @@ const sortOptions = [
 ]
 
 const setGestionTab = (tab) => {
-  const nextTab = tab === 'delivery' ? 'delivery' : 'inventory'
+  const nextTab = tab === 'delivery' || tab === 'admin' ? tab : 'inventory'
   activeGestionTab.value = nextTab
+  filtersPanelOpen.value = false
+  mobileActionsOpen.value = false
 
   const nextQuery = { ...route.query }
-  if (nextTab === 'delivery') {
-    nextQuery.tab = 'delivery'
+  if (nextTab === 'delivery' || nextTab === 'admin') {
+    nextQuery.tab = nextTab
   } else {
     delete nextQuery.tab
   }
@@ -621,6 +701,16 @@ const onCategoryLabelsChange = (event) => {
   )
 }
 
+const onSubcategoriesChange = (event) => {
+  const detail = event?.detail || {}
+  if (String(detail.userId || 'guest') !== String(currentUserId.value || 'guest')) return
+  storedSubcategories.value = readStoredSubcategories(
+    currentUserId.value,
+    undefined,
+    categoryLabels.value,
+  )
+}
+
 watch(
   () => filters.value.itemType,
   () => {
@@ -630,10 +720,12 @@ watch(
 
 onMounted(() => {
   window.addEventListener('snk:item-categories-change', onCategoryLabelsChange)
+  window.addEventListener('snk:item-subcategories-change', onSubcategoriesChange)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('snk:item-categories-change', onCategoryLabelsChange)
+  window.removeEventListener('snk:item-subcategories-change', onSubcategoriesChange)
 })
 
 // Stats
@@ -655,6 +747,7 @@ const filteredVentes = computed(() => buildFilteredVentes())
 const resetFilters = () => {
   searchTerm.value = ''
   filters.value = emptyFilters()
+  filtersPanelOpen.value = false
 }
 
 // Selection logique : si tu filtres, on garde seulement ce qui est visible
@@ -666,6 +759,11 @@ watch(filteredVentes, (list) => {
 // Ajout
 const handleVenteAjoutee = async () => {
   await chargerVentes()
+}
+
+const handleVenteAjouteeFromActions = async () => {
+  mobileActionsOpen.value = false
+  await handleVenteAjoutee()
 }
 
 // Edition
@@ -682,6 +780,11 @@ const handleVenteUpdated = (updated) => {
 const openDeleteBulk = () => {
   deleteMode.value = 'bulk'
   showDeleteModal.value = true
+}
+
+const openDeleteFromActions = () => {
+  mobileActionsOpen.value = false
+  openDeleteBulk()
 }
 
 const handleDeleted = (ids) => {
@@ -734,6 +837,8 @@ watch(
   () => route.query.tab,
   () => {
     activeGestionTab.value = tabFromRoute()
+    filtersPanelOpen.value = false
+    mobileActionsOpen.value = false
   },
 )
 
@@ -790,6 +895,47 @@ watch(
   gap: 0.45rem;
   align-items: center;
   min-width: 0;
+}
+
+.filter-panel-toggle {
+  display: inline-flex;
+  position: relative;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border: 1px solid rgba(71, 85, 105, 0.78);
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.6);
+  color: rgb(226 232 240);
+  padding: 0 0.9rem;
+  font-size: 12px;
+  font-weight: 850;
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    color 140ms ease;
+}
+
+.filter-panel-toggle:hover,
+.filter-panel-toggle.is-active {
+  border-color: rgba(167, 139, 250, 0.6);
+  background: rgba(76, 29, 149, 0.2);
+  color: white;
+}
+
+.filter-toggle-badge {
+  display: inline-grid;
+  min-width: 18px;
+  height: 18px;
+  place-items: center;
+  border-radius: 999px;
+  background: rgb(196 181 253);
+  color: rgb(30 27 75);
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+  padding-inline: 0.25rem;
 }
 
 .filter-field {
@@ -882,6 +1028,10 @@ watch(
   border-radius: 999px;
   background: rgba(2, 6, 23, 0.28);
   padding: 3px;
+}
+
+.filter-status-group--panel {
+  display: none;
 }
 
 .filter-status-button {
@@ -1061,6 +1211,49 @@ watch(
   line-height: 1;
 }
 
+.inventory-actions {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  justify-content: flex-end;
+}
+
+.inventory-actions-toggle {
+  display: none;
+  width: 100%;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border: 1px solid rgba(71, 85, 105, 0.78);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.7);
+  color: rgb(226 232 240);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.inventory-actions-toggle:hover {
+  border-color: rgba(148, 163, 184, 0.74);
+  background: rgba(30, 41, 59, 0.82);
+  color: white;
+}
+
+.inventory-actions-panel {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+@media (min-width: 641px) {
+  .inventory-actions {
+    width: auto;
+  }
+}
+
 @media (min-width: 760px) {
   .command-primary-row {
     grid-template-columns: minmax(320px, 1fr) minmax(248px, 310px);
@@ -1087,7 +1280,63 @@ watch(
   }
 }
 
+@media (max-width: 920px) {
+  .command-controls {
+    gap: 0.5rem;
+    border-radius: 18px;
+    padding: 0.55rem;
+  }
+
+  .command-primary-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.5rem;
+  }
+
+  .filter-panel-toggle {
+    display: inline-flex;
+  }
+
+  .filter-status-group--desktop {
+    display: none;
+  }
+
+  .filter-compact-grid {
+    display: none;
+    max-height: none;
+    overflow: visible;
+    border: 1px solid rgba(71, 85, 105, 0.72);
+    border-radius: 16px;
+    background:
+      linear-gradient(180deg, rgba(15, 23, 42, 0.86), rgba(15, 23, 42, 0.68)),
+      rgba(2, 6, 23, 0.3);
+    padding: 0.6rem;
+    scrollbar-width: thin;
+  }
+
+  .filter-compact-grid.is-open {
+    display: flex;
+  }
+
+  .filter-status-group--panel {
+    display: inline-grid;
+    flex: 1 1 100%;
+    max-width: none;
+  }
+
+  .filter-field {
+    max-width: none;
+  }
+}
+
 @media (max-width: 640px) {
+  .command-primary-row {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-panel-toggle {
+    width: 100%;
+  }
+
   .filter-status-group {
     max-width: none;
   }
@@ -1096,6 +1345,7 @@ watch(
   .date-range-compact,
   .filter-reset-button {
     flex: 1 1 100%;
+    min-width: 0;
     max-width: none;
   }
 
@@ -1112,6 +1362,28 @@ watch(
 
   .date-range-compact {
     grid-template-columns: 1fr;
+  }
+
+  .inventory-actions {
+    display: grid;
+    justify-content: stretch;
+  }
+
+  .inventory-actions-toggle {
+    display: inline-flex;
+  }
+
+  .inventory-actions-panel {
+    display: none;
+    margin-top: 0.55rem;
+    border: 1px solid rgba(71, 85, 105, 0.7);
+    border-radius: 16px;
+    background: rgba(15, 23, 42, 0.66);
+    padding: 0.6rem;
+  }
+
+  .inventory-actions-panel.is-open {
+    display: grid;
   }
 }
 
@@ -1144,5 +1416,744 @@ watch(
 .gestion-tab-view-leave-to {
   opacity: 0;
   transform: translateY(-2px);
+}
+
+.gestion-page-light {
+  --gestion-border: rgba(148, 163, 184, 0.24);
+  --gestion-border-strong: rgba(14, 116, 144, 0.34);
+  --gestion-text: #0f172a;
+  --gestion-muted: #64748b;
+  --gestion-soft: rgba(241, 245, 249, 0.86);
+  --gestion-surface: rgba(255, 255, 255, 0.92);
+  --gestion-shadow: 0 24px 60px rgba(15, 23, 42, 0.07), 0 10px 32px rgba(14, 165, 233, 0.06);
+  background: transparent;
+}
+
+.gestion-page-stack {
+  gap: clamp(1rem, 1.7vw, 1.45rem);
+}
+
+.gestion-hero-panel,
+.inventory-list-panel,
+.command-controls {
+  position: relative;
+  border: 1px solid var(--gestion-border);
+  border-radius: 20px;
+  background:
+    linear-gradient(135deg, rgba(14, 165, 233, 0.08), transparent 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(248, 250, 252, 0.94));
+  box-shadow: var(--gestion-shadow);
+  backdrop-filter: blur(16px) saturate(120%);
+}
+
+.gestion-hero-panel,
+.inventory-list-panel {
+  overflow: hidden;
+}
+
+.gestion-hero-panel {
+  padding: clamp(1.05rem, 2.4vw, 1.55rem);
+}
+
+.gestion-hero-panel::before,
+.inventory-list-panel::before,
+.command-controls::before {
+  content: '';
+  position: absolute;
+  inset: 0 1rem auto;
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #0ea5e9, #14b8a6, #f59e0b);
+}
+
+.gestion-eyebrow {
+  color: #0369a1;
+  font-size: 0.74rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.gestion-title {
+  margin-top: 0.1rem;
+  color: var(--gestion-text);
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.gestion-subtitle {
+  max-width: 46rem;
+  color: var(--gestion-muted);
+  font-size: clamp(0.92rem, 1.4vw, 1.06rem);
+  font-weight: 650;
+}
+
+.gestion-hero-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  justify-content: flex-end;
+}
+
+.gestion-hero-pills span {
+  display: inline-flex;
+  min-height: 2rem;
+  align-items: center;
+  border: 1px solid rgba(100, 116, 139, 0.2);
+  border-radius: 999px;
+  background: rgba(248, 250, 252, 0.88);
+  color: #334155;
+  padding: 0 0.78rem;
+  font-size: 0.78rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.gestion-tab-shell {
+  display: flex;
+  justify-content: center;
+  overflow: visible;
+  padding-bottom: 0.1rem;
+  scrollbar-width: none;
+}
+
+.gestion-tab-shell::-webkit-scrollbar {
+  display: none;
+}
+
+.gestion-tab-nav {
+  display: inline-flex;
+  gap: 0.55rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
+}
+
+.gestion-tab-button {
+  min-width: 128px;
+  border-radius: 999px;
+  color: #475569;
+  padding: 0.62rem 1rem;
+  font-size: 0.88rem;
+  font-weight: 850;
+  transition:
+    background 150ms ease,
+    color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.gestion-tab-button:hover {
+  background: rgba(14, 116, 144, 0.08);
+  color: #0f766e;
+}
+
+.gestion-tab-button.is-active {
+  background: #0f766e;
+  color: #ffffff;
+  box-shadow: 0 10px 18px rgba(14, 116, 144, 0.14);
+}
+
+.command-controls {
+  gap: 0.62rem;
+  border-color: rgba(125, 211, 252, 0.34);
+  border-radius: 20px;
+  padding: 0.72rem;
+  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.07);
+}
+
+.filter-panel-toggle,
+.filter-field,
+.filter-status-group,
+.date-range-compact,
+.filter-reset-button,
+.inventory-actions-toggle {
+  border-color: rgba(100, 116, 139, 0.24);
+  background: rgba(248, 250, 252, 0.92);
+  color: #334155;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.filter-panel-toggle:hover,
+.filter-panel-toggle.is-active,
+.filter-field:hover,
+.filter-field:focus-within,
+.date-range-compact:hover,
+.filter-reset-button:not(:disabled):hover,
+.inventory-actions-toggle:hover {
+  border-color: rgba(20, 184, 166, 0.42);
+  background: rgba(241, 245, 249, 0.96);
+  color: #0f766e;
+  box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.12);
+}
+
+.filter-toggle-badge,
+.filter-count-badge {
+  background: #14b8a6;
+  color: #ffffff;
+}
+
+.filter-field > span,
+.date-range-title {
+  color: #0f766e;
+}
+
+.filter-control {
+  background:
+    linear-gradient(45deg, transparent 50%, #475569 50%) calc(100% - 14px) 15px / 5px 5px
+      no-repeat,
+    linear-gradient(135deg, #475569 50%, transparent 50%) calc(100% - 9px) 15px / 5px 5px
+      no-repeat;
+  color: #0f172a;
+}
+
+.filter-control:disabled {
+  color: #94a3b8;
+  background:
+    linear-gradient(45deg, transparent 50%, #94a3b8 50%) calc(100% - 14px) 15px / 5px 5px
+      no-repeat,
+    linear-gradient(135deg, #94a3b8 50%, transparent 50%) calc(100% - 9px) 15px / 5px 5px
+      no-repeat;
+}
+
+.filter-status-group {
+  background: rgba(241, 245, 249, 0.86);
+}
+
+.filter-status-button {
+  color: #475569;
+}
+
+.filter-status-button:hover {
+  background: rgba(14, 116, 144, 0.08);
+  color: #0f766e;
+}
+
+.filter-status-button.is-active {
+  background: linear-gradient(135deg, #0f766e, #0e7490);
+  color: #ffffff;
+  box-shadow: 0 9px 18px rgba(14, 116, 144, 0.18);
+}
+
+.date-range-inputs :deep(.cd-input) {
+  background: #ffffff;
+  color: #0f172a;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+}
+
+.date-range-inputs :deep(.cd-input:hover),
+.date-range-inputs :deep(.cd-input:focus-visible) {
+  background: #f8fafc;
+  box-shadow: 0 0 0 2px rgba(45, 212, 191, 0.16);
+}
+
+.date-range-separator {
+  color: #94a3b8;
+}
+
+.inventory-list-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid rgba(125, 211, 252, 0.24);
+  padding: 1rem clamp(1rem, 2vw, 1.35rem);
+}
+
+.inventory-list-body {
+  padding: clamp(0.85rem, 1.6vw, 1.1rem);
+}
+
+.inventory-list-scroll {
+  max-height: clamp(360px, 58dvh, 680px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding-right: 0.15rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(14, 116, 144, 0.42) rgba(248, 250, 252, 0.82);
+}
+
+.inventory-list-scroll::-webkit-scrollbar {
+  width: 0.55rem;
+  height: 0.55rem;
+}
+
+.inventory-list-scroll::-webkit-scrollbar-track {
+  background: rgba(248, 250, 252, 0.82);
+  border-radius: 999px;
+}
+
+.inventory-list-scroll::-webkit-scrollbar-thumb {
+  border: 2px solid rgba(248, 250, 252, 0.82);
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(14, 165, 233, 0.56), rgba(20, 184, 166, 0.56));
+}
+
+.inventory-danger-button {
+  display: inline-flex;
+  width: 100%;
+  min-height: 2.35rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(248, 113, 113, 0.32);
+  border-radius: 999px;
+  background: #fffafa;
+  color: #b91c1c;
+  padding: 0.55rem 0.9rem;
+  font-size: 0.78rem;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.inventory-danger-button:hover {
+  border-color: rgba(239, 68, 68, 0.5);
+  background: #fef2f2;
+}
+
+.gestion-import-widget {
+  border: 1px solid rgba(125, 211, 252, 0.28);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.78);
+  padding: 0.45rem;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+}
+
+@media (max-width: 920px) {
+  .filter-compact-grid {
+    border-color: rgba(148, 163, 184, 0.28);
+    background: rgba(255, 255, 255, 0.94);
+  }
+}
+
+@media (max-width: 640px) {
+  .gestion-hero-panel {
+    border-radius: 18px;
+  }
+
+  .gestion-hero-pills {
+    justify-content: flex-start;
+  }
+
+  .gestion-tab-nav {
+    width: 100%;
+  }
+
+  .gestion-tab-button {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .inventory-actions-panel {
+    border-color: rgba(125, 211, 252, 0.32);
+    background: rgba(255, 255, 255, 0.86);
+  }
+}
+
+.gestion-summary-panel {
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.78);
+  padding: clamp(0.75rem, 1.3vw, 1rem);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+  backdrop-filter: blur(14px) saturate(115%);
+}
+
+.gestion-tab-shell {
+  justify-content: center;
+}
+
+.gestion-tab-nav {
+  width: min(100%, 720px);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
+}
+
+.gestion-tab-button {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  border-radius: 17px;
+  padding: 0.72rem 0.85rem;
+  text-align: left;
+}
+
+.gestion-tab-button > svg {
+  flex: 0 0 auto;
+  color: #0e7490;
+}
+
+.gestion-tab-button > span {
+  display: grid;
+  min-width: 0;
+  gap: 0.1rem;
+}
+
+.gestion-tab-button strong,
+.gestion-tab-button small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gestion-tab-button strong {
+  font-size: 0.9rem;
+  line-height: 1.05;
+}
+
+.gestion-tab-button small {
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.gestion-tab-button.is-active {
+  background: #0f766e;
+  color: #ffffff;
+}
+
+.gestion-tab-button.is-active small {
+  color: rgba(255, 255, 255, 0.74);
+}
+
+.gestion-tab-button.is-active > svg {
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.inventory-list-panel {
+  display: grid;
+}
+
+.inventory-list-header {
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.inventory-search-strip {
+  display: grid;
+  grid-template-columns: minmax(160px, 260px) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(0.8rem, 1.4vw, 1rem);
+  border-bottom: 1px solid rgba(125, 211, 252, 0.22);
+  padding: clamp(0.95rem, 1.8vw, 1.25rem) clamp(1rem, 2vw, 1.35rem);
+  background: rgba(248, 250, 252, 0.82);
+}
+
+.inventory-search-label {
+  min-width: 0;
+}
+
+.inventory-search-label p,
+.inventory-filter-heading p {
+  color: #0f172a;
+  font-size: 0.78rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  line-height: 1.15;
+  text-transform: uppercase;
+}
+
+.inventory-search-label span,
+.inventory-filter-heading span {
+  display: block;
+  margin-top: 0.2rem;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.inventory-search-strip :deep(.gestion-search-field) {
+  min-height: 58px;
+  border-radius: 18px;
+  border-color: rgba(14, 165, 233, 0.32);
+  background: rgba(255, 255, 255, 0.96);
+  padding-inline: 1rem;
+  box-shadow:
+    0 14px 34px rgba(14, 165, 233, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.inventory-search-strip :deep(.gestion-search-icon) {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.inventory-search-strip :deep(.gestion-search-input) {
+  font-size: clamp(1rem, 1.6vw, 1.18rem);
+}
+
+.inventory-filter-shell {
+  display: grid;
+  gap: 0.7rem;
+  border-bottom: 1px solid rgba(125, 211, 252, 0.2);
+  background: rgba(241, 245, 249, 0.66);
+  padding: 0.85rem clamp(1rem, 2vw, 1.35rem) 1rem;
+}
+
+.inventory-filter-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.filter-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.filter-compact-grid {
+  display: none;
+  grid-template-columns: repeat(3, minmax(150px, 1fr)) repeat(2, minmax(260px, 1.4fr));
+  gap: 0.62rem;
+  align-items: stretch;
+}
+
+.filter-compact-grid.is-open {
+  display: grid;
+}
+
+.filter-field,
+.date-range-compact {
+  min-width: 0;
+  max-width: none;
+  height: auto;
+  min-height: 48px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.filter-field {
+  grid-template-columns: 1fr;
+  gap: 0.25rem;
+  padding: 0.55rem 0.7rem;
+}
+
+.filter-field > span {
+  padding-left: 0;
+  font-size: 0.66rem;
+}
+
+.filter-control {
+  height: 24px;
+  padding-left: 0;
+}
+
+.date-range-compact {
+  grid-template-columns: 1fr;
+  gap: 0.45rem;
+  padding: 0.55rem 0.7rem;
+}
+
+.date-range-inputs :deep(.cd-input) {
+  height: 30px;
+}
+
+.filter-reset-button {
+  width: auto;
+  min-width: 0;
+  height: 40px;
+  padding: 0 0.85rem;
+}
+
+.inventory-filter-shell .filter-reset-text {
+  position: static;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  clip: auto;
+}
+
+.inventory-actions-panel {
+  align-items: stretch;
+}
+
+.gestion-import-widget {
+  background: rgba(255, 255, 255, 0.84);
+}
+
+@media (max-width: 1180px) {
+  .filter-compact-grid {
+    grid-template-columns: repeat(3, minmax(150px, 1fr));
+  }
+
+  .date-range-compact {
+    grid-column: span 1;
+  }
+}
+
+@media (max-width: 920px) {
+  .inventory-search-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-panel-toggle {
+    display: inline-flex;
+  }
+
+  .filter-status-group--desktop {
+    display: none;
+  }
+
+  .filter-compact-grid {
+    display: none;
+    grid-template-columns: 1fr 1fr;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .filter-compact-grid.is-open {
+    display: grid;
+  }
+
+  .filter-status-group--panel {
+    display: inline-grid;
+    grid-column: 1 / -1;
+    max-width: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .gestion-summary-panel,
+  .inventory-list-panel {
+    border-radius: 18px;
+  }
+
+  .gestion-tab-button {
+    justify-content: center;
+    padding-inline: 0.65rem;
+  }
+
+  .gestion-tab-button small {
+    display: none;
+  }
+
+  .inventory-list-header,
+  .inventory-filter-heading,
+  .filter-toolbar-actions {
+    align-items: stretch;
+  }
+
+  .inventory-actions,
+  .filter-toolbar-actions {
+    width: 100%;
+  }
+
+  .filter-toolbar-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .filter-compact-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .inventory-list-scroll {
+    max-height: clamp(380px, 62dvh, 620px);
+  }
+}
+
+.gestion-page-light {
+  min-height: 100%;
+  background: #f7f4ee;
+}
+
+.gestion-hero-panel,
+.inventory-list-panel,
+.gestion-summary-panel,
+.command-controls {
+  border-color: rgba(148, 163, 184, 0.22);
+  background: #fbfaf7;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.055);
+}
+
+.gestion-hero-panel::before,
+.inventory-list-panel::before,
+.command-controls::before {
+  display: none;
+}
+
+.inventory-list-header,
+.inventory-search-strip,
+.inventory-filter-shell {
+  background: #fbfaf7;
+  border-bottom-color: rgba(148, 163, 184, 0.16);
+}
+
+.inventory-filter-shell {
+  gap: 0;
+  padding: 0.42rem clamp(0.85rem, 1.8vw, 1.2rem);
+}
+
+.inventory-filter-shell.is-open {
+  gap: 0.55rem;
+  padding-block: 0.62rem 0.72rem;
+}
+
+.inventory-filter-shell:not(.is-open) .inventory-filter-heading {
+  min-height: 34px;
+  width: 100%;
+}
+
+.inventory-filter-shell:not(.is-open) .inventory-filter-heading > div:first-child {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.inventory-filter-shell:not(.is-open) .inventory-filter-heading p {
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+}
+
+.inventory-filter-shell:not(.is-open) .inventory-filter-heading span {
+  display: inline;
+  margin-top: 0;
+  font-size: 0.7rem;
+}
+
+.inventory-filter-shell:not(.is-open):not(.has-active) .inventory-filter-heading > div:first-child > span,
+.inventory-filter-shell:not(.is-open) .filter-status-group--desktop,
+.inventory-filter-shell:not(.is-open):not(.has-active) .filter-reset-button {
+  display: none;
+}
+
+.inventory-filter-shell:not(.is-open) .filter-toolbar-actions {
+  gap: 0.35rem;
+}
+
+.inventory-filter-shell:not(.is-open) .filter-panel-toggle,
+.inventory-filter-shell:not(.is-open) .filter-reset-button {
+  min-height: 32px;
+  height: 32px;
+  border-radius: 999px;
+  padding-inline: 0.7rem;
+}
+
+.inventory-filter-shell:not(.is-open) .filter-compact-grid {
+  display: none;
+}
+
+.gestion-import-widget {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
 }
 </style>

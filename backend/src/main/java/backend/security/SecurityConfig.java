@@ -113,9 +113,17 @@ public CorsConfigurationSource corsConfigurationSource() {
 
   // ✅ IMPORTANT: patterns pour accepter des domaines render/vercel si besoin
   
+  if (isDev) {
+    for (int port = 5173; port <= 5180; port++) {
+      origins.add("http://localhost:" + port);
+      origins.add("http://127.0.0.1:" + port);
+    }
+    origins = origins.stream().distinct().collect(Collectors.toList());
+  }
+
   config.setAllowedOrigins(origins);
 
-  config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+  config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
   config.setAllowedHeaders(List.of("*"));
   config.setExposedHeaders(List.of("Authorization"));
   config.setAllowCredentials(false);

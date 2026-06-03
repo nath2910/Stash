@@ -3,8 +3,14 @@ import api from './api'
 
 class SnkVenteServices {
   // liste complete de l'utilisateur courant
-  getSnkVente() {
-    return api.get('/snkVente')
+  getSnkVente(options = {}) {
+    const params =
+      typeof options === 'number'
+        ? { limit: options }
+        : options && typeof options === 'object'
+          ? options
+          : {}
+    return api.get('/snkVente', { params })
   }
 
   recent(limit = 8) {
@@ -28,6 +34,10 @@ class SnkVenteServices {
 
   ajouter(vente) {
     return api.post('/snkVente/add', vente)
+  }
+
+  create(vente) {
+    return api.post('/snkVente', vente)
   }
 
   supprimer(id) {

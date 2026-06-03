@@ -1,7 +1,7 @@
 <template>
   <section
     v-if="loading || error || candidates.length"
-    class="rounded-[22px] border border-amber-300/25 bg-amber-500/10 p-4 shadow-xl shadow-slate-950/15 backdrop-blur sm:p-5"
+    class="min-w-0 rounded-[22px] border border-amber-300/25 bg-amber-500/10 p-4 shadow-xl shadow-slate-950/15 backdrop-blur sm:p-5"
   >
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div>

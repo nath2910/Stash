@@ -20,13 +20,18 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
       select n
       from Notification n
       where n.user.id = :userId
+        and n.dismissedAt is null
+        and n.isRead = false
       order by n.isRead asc, n.createdAt desc
       """)
   Page<Notification> findByUserIdUnreadFirst(@Param("userId") Long userId, Pageable pageable);
 
-  Page<Notification> findByUser_IdOrderByCreatedAtDesc(Long userId, Pageable pageable);
+  Page<Notification> findByUser_IdAndIsReadFalseAndDismissedAtIsNullOrderByCreatedAtDesc(
+      Long userId,
+      Pageable pageable
+  );
 
-  long countByUser_IdAndIsReadFalse(Long userId);
+  long countByUser_IdAndIsReadFalseAndDismissedAtIsNull(Long userId);
 
   Optional<Notification> findByIdAndUser_Id(Long id, Long userId);
 
@@ -42,9 +47,11 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
   @Query("""
       update Notification n
       set n.isRead = true,
-          n.readAt = :readAt
+          n.readAt = :readAt,
+          n.dismissedAt = :readAt
       where n.user.id = :userId
         and n.isRead = false
+        and n.dismissedAt is null
       """)
   int markAllRead(@Param("userId") Long userId, @Param("readAt") OffsetDateTime readAt);
 

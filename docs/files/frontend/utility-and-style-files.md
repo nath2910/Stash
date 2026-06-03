@@ -78,6 +78,8 @@ Input date compact custom (integration datepicker).
 
 ### `src/assets/main.css`
 - styles applicatifs globaux.
+- tokens applicatifs clairs `--app-color-*`, `--app-shadow-*`, `--space-*`.
+- classes communes `app-card`, `app-button`, `app-status-badge`.
 
 ### `src/components/stats/StatsCanvas.css`
 - styles specialises canvas stats.
@@ -99,3 +101,25 @@ Input date compact custom (integration datepicker).
 
 ## 9) Note reprise
 Le couple `formatters.js` + `snkVente.js` est tres utilise; toute modification peut impacter home, gestion, stats simultanement.
+
+---
+
+## 10) `src/constants/statuses.js`
+
+### Role
+Source de vérité des statuts UI récurrents : labels, tons et classes CSS.
+
+### Utilisation
+- `getStatusConfig(status)`.
+- `getStatusClass(status)`.
+- `normalizeItemStatus(item)` pour `Vendu` / `En stock`.
+
+---
+
+## 11) `src/constants/adminModule.js`
+
+### Role
+Centralise les profils admin, onglets dynamiques, types de documents, périodes et clés de stockage local.
+
+### Utilisation
+La page `adminPage.vue` doit consommer `getAdminTabsForProfile(settings)` au lieu de recalculer les onglets localement.

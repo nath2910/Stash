@@ -1,15 +1,25 @@
 <template>
   <div
-    class="h-screen flex flex-col font-poppins bg-slate-950"
-    :class="isStatsLight ? 'text-black' : 'text-slate-100'"
+    class="app-layout-root flex flex-col font-poppins"
+    :class="[
+      isLightAppShell ? 'layout-home-bg layout-document-flow' : 'bg-slate-950',
+      isGestionRoute ? 'layout-gestion-bg' : '',
+      isLightAppShell ? 'text-slate-900' : isStatsLight ? 'text-black' : 'text-slate-100',
+    ]"
     :style="layoutVars"
   >
     <!-- Header -->
     <template v-if="showAppHeader">
       <!-- Header for stats: simple bar -->
       <header
-        class="fixed left-0 right-0 z-50 pointer-events-none"
-        :class="isStats ? 'top-2' : 'top-4'"
+        class="layout-app-header fixed left-0 right-0 z-50 pointer-events-none transition-all duration-200"
+        :class="[
+          (route.path === '/' || route.path === '/gestion') && homeHeaderHidden && !mobileMenuOpen && !menuOpen
+            ? 'layout-app-header--hidden'
+            : '',
+          isStats ? 'top-2' : navBubble || mobileMenuOpen ? 'top-0 is-stuck' : 'top-4',
+          isLightAppShell || isStatsLight ? 'is-light' : 'is-dark',
+        ]"
       >
         <div
           class="layout-shell-row layout-shell-row--header flex items-center justify-between pointer-events-none"
@@ -20,7 +30,12 @@
             <button
               v-if="showHeaderNav"
               type="button"
-              class="md:hidden text-gray-300 hover:text-white p-2 rounded-xl hover:bg-white/5 transition"
+              class="md:hidden p-2 rounded-xl transition"
+              :class="
+                isLightAppShell
+                  ? 'text-gray-600 hover:text-black hover:bg-black/5'
+                  : 'text-gray-300 hover:text-white hover:bg-white/5'
+              "
               @click.stop="toggleMobileMenu"
               aria-label="Ouvrir le menu"
               :aria-expanded="mobileMenuOpen"
@@ -48,18 +63,13 @@
           <!-- Center nav -->
           <nav
             v-if="showHeaderNav"
-            v-motion
-            :initial="false"
-            :variants="navVariants"
-            :animate="navBubble ? 'compact' : 'normal'"
-            :transition="navSpring"
             class="hidden md:flex items-center justify-center pointer-events-auto mx-auto"
             :class="
-              navBubble || isStatsLight
-                ? isStatsLight
-                  ? 'gap-3 px-4 py-2 rounded-full bg-white/82 border border-slate-200/90 shadow-[0_12px_28px_rgba(15,23,42,0.15)] backdrop-blur-md'
-                  : 'gap-3 px-4 py-2 rounded-full bg-slate-900/70 border border-white/10 shadow-[0_12px_30px_rgba(0,0,0,0.35)] backdrop-blur-md'
-                : 'gap-8 px-8 py-3 rounded-full bg-transparent text-white'
+              navBubble || isStatsLight || isLightAppShell
+                ? isStatsLight || isLightAppShell
+                  ? 'gap-3 px-4 py-2 rounded-full bg-white/95 border border-slate-200/90 shadow-[0_8px_20px_rgba(15,23,42,0.12)]'
+                  : 'gap-3 px-4 py-2 rounded-full bg-slate-900/92 border border-white/10 shadow-[0_10px_24px_rgba(0,0,0,0.3)]'
+                : `gap-8 px-8 py-3 rounded-full bg-transparent ${isLightAppShell ? 'text-slate-900' : 'text-white'}`
             "
           >
             <RouterLink to="/" :class="compactLink('/')">
@@ -82,16 +92,20 @@
               <button
                 type="button"
                 @click.stop="toggleUserMenu"
-                class="h-9 w-9 rounded-full flex items-center justify-center border transition focus:outline-none backdrop-blur-md"
+                class="h-9 w-9 rounded-full flex items-center justify-center border transition focus:outline-none"
                 :class="
-                  isStatsLight
+                  isStatsLight || isLightAppShell
                     ? 'bg-white/85 border-slate-300 hover:border-emerald-500/45'
                     : 'bg-slate-900/70 border-white/10 hover:border-emerald-300/50'
                 "
                 aria-label="Menu utilisateur"
                 :aria-expanded="menuOpen"
               >
-                <span class="text-sm font-semibold" :class="isStatsLight ? 'text-black' : 'text-white'">{{ initials }}</span>
+                <span
+                  class="text-sm font-semibold"
+                  :class="isStatsLight || isLightAppShell ? 'text-slate-900' : 'text-white'"
+                  >{{ initials }}</span
+                >
               </button>
 
               <div
@@ -140,7 +154,14 @@
           class="md:hidden layout-shell-row layout-shell-row--header pb-3 pointer-events-auto"
           @click.stop
         >
-          <div class="mt-2 rounded-2xl border backdrop-blur p-2 bg-gray-900/70 border-white/10">
+          <div
+            class="layout-mobile-menu-panel mt-2 rounded-2xl border p-2 shadow-lg"
+            :class="
+              isLightAppShell || isStatsLight
+                ? 'bg-white/92 border-slate-200/90 shadow-slate-950/10'
+                : 'bg-gray-900/70 border-white/10 shadow-slate-950/30'
+            "
+          >
             <RouterLink
               to="/"
               class="block px-3 py-2 rounded-md text-base font-medium"
@@ -173,7 +194,10 @@
     </template>
 
     <!-- Body -->
-    <main class="flex-1 min-h-0 bg-slate-950/30">
+    <main
+      class="layout-main flex-1 min-h-0"
+      :class="isLightAppShell ? 'layout-main--document-flow' : 'bg-slate-950/30'"
+    >
       <div
         v-if="route.meta.fullBleed"
         class="layout-fullbleed"
@@ -185,14 +209,38 @@
         <slot />
       </div>
 
-      <div v-else ref="pageScroll" class="h-full overflow-auto">
-        <div class="relative min-h-full">
-          <div class="pointer-events-none absolute inset-0 -z-10 overflow-hidden" aria-hidden="true">
-            <div class="absolute -top-40 right-[-10%] h-96 w-96 rounded-full blur-3xl bg-emerald-400/4"></div>
-            <div class="absolute bottom-[-30%] left-[-10%] h-[30rem] w-[30rem] rounded-full blur-3xl bg-amber-400/4"></div>
-            <div class="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.25),_transparent_60%)]"></div>
+      <div
+        v-else
+        ref="pageScroll"
+        class="layout-scroll h-full overflow-auto"
+        :class="{
+          'layout-scroll--document-flow': isLightAppShell,
+          'layout-scroll--hidden-scrollbar': isLightAppShell,
+        }"
+      >
+        <div
+          class="layout-scroll-inner relative min-h-full"
+          :class="{ 'layout-scroll-inner--document-flow': isLightAppShell }"
+        >
+          <div
+            v-if="!isLightAppShell"
+            class="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
+            aria-hidden="true"
+          >
+            <div
+              class="absolute -top-40 right-[-10%] h-96 w-96 rounded-full blur-3xl bg-emerald-400/4"
+            ></div>
+            <div
+              class="absolute bottom-[-30%] left-[-10%] h-[30rem] w-[30rem] rounded-full blur-3xl bg-amber-400/4"
+            ></div>
+            <div
+              class="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.25),_transparent_60%)]"
+            ></div>
           </div>
-          <div class="layout-shell-row min-h-full py-10 sm:py-12 pb-16">
+          <div
+            class="layout-shell-row layout-page-content min-h-full"
+            :class="{ 'layout-page-content--document-flow': isLightAppShell }"
+          >
             <slot />
           </div>
         </div>
@@ -206,7 +254,12 @@
       :class="footerVisible ? 'opacity-100' : 'opacity-0'"
     >
       <div
-        class="pointer-events-auto inline-flex items-center gap-6 px-7 py-3 rounded-full border backdrop-blur-md text-sm shadow-[0_14px_32px_rgba(0,0,0,0.38)] border-white/10 bg-slate-900/85"
+        class="layout-footer-pill pointer-events-auto inline-flex items-center gap-6 px-7 py-3 rounded-full border text-sm"
+        :class="
+          isStatsLight || isLightAppShell
+            ? 'bg-white/95 border-slate-200/90 shadow-[0_8px_20px_rgba(15,23,42,0.12)]'
+            : 'bg-slate-900/92 border-white/10 shadow-[0_10px_24px_rgba(0,0,0,0.3)]'
+        "
       >
         <span class="font-jetbrains-mono">&copy; {{ new Date().getFullYear() }} - Stash</span>
         <a href="#" class="hover:underline">A propos</a>
@@ -222,6 +275,7 @@
       :unread-count="notification.unreadCount.value"
       :loading="notification.loading.value"
       :has-next="notification.hasNext.value"
+      :theme="notificationTheme"
       @close="notification.closeCenter()"
       @mark-read="markNotificationRead"
       @read-all="markAllNotificationsRead"
@@ -233,6 +287,7 @@
     <NotificationToastStack
       v-if="showNotificationSystem"
       :toasts="notification.toastItems.value"
+      :theme="notificationTheme"
       @close="notification.dismissToast"
       @open-center="notification.openCenter()"
       @cta="openNotificationTarget"
@@ -254,11 +309,11 @@
         @focusin="notificationButtonExpanded = true"
         @focusout="notificationButtonExpanded = false"
       >
-        <Bell class="h-4 w-4" :class="notificationButtonExpanded ? 'text-emerald-100' : 'text-slate-100'" />
+        <Bell class="h-4 w-4" :class="notificationIconClass" />
         <span
           v-if="notificationButtonExpanded"
           class="text-xs font-semibold tracking-[0.02em]"
-          :class="isStatsLight ? 'text-slate-900' : 'text-slate-100'"
+          :class="notificationLabelClass"
         >
           Notifications
         </span>
@@ -270,7 +325,6 @@
         </span>
       </button>
     </div>
-
   </div>
 </template>
 
@@ -290,11 +344,14 @@ const { theme } = useTheme()
 
 const isStats = computed(() => route.path === '/stats')
 const isStatsLight = computed(() => isStats.value && theme.value === 'light')
+const isGestionRoute = computed(() => route.path === '/gestion')
+const isLightAppShell = computed(() => route.path === '/' || route.path === '/gestion')
 const isFullBleedRoute = computed(() => route.meta.fullBleed === true)
 const layoutVars = computed(() => {
   const edgeGap = isFullBleedRoute.value ? 'clamp(12px, 2.4vw, 28px)' : 'clamp(16px, 2.2vw, 32px)'
+  const shellMaxWidth = route.meta.wideContent ? '1720px' : '1536px'
   return {
-    '--layout-shell-max-width': isFullBleedRoute.value ? '100%' : '1536px',
+    '--layout-shell-max-width': isFullBleedRoute.value ? '100%' : shellMaxWidth,
     '--layout-shell-gutter': edgeGap,
     '--app-edge-gap': edgeGap,
   }
@@ -319,48 +376,33 @@ const showHeaderUserMenu = computed(
 )
 const showAppHeader = computed(() => showHeaderNav.value || showHeaderUserMenu.value)
 const fullBleedHeaderOffsetClass = computed(() => {
-  const needsOffset = route.meta.fullBleed === true && route.meta.allowScroll === true && !isAuthRoute.value
+  const needsOffset =
+    route.meta.fullBleed === true && route.meta.allowScroll === true && !isAuthRoute.value
   if (!needsOffset) return ''
   if (!showAppHeader.value) return ''
   if (showHeaderNav.value && isStats.value) return 'layout-fullbleed--with-header-stats'
-  return showHeaderNav.value ? 'layout-fullbleed--with-header' : 'layout-fullbleed--with-header-compact'
+  return showHeaderNav.value
+    ? 'layout-fullbleed--with-header'
+    : 'layout-fullbleed--with-header-compact'
 })
 
-const navSpring = {
-  type: 'spring',
-  stiffness: 260,
-  damping: 32,
-  mass: 1.05,
-}
-
-const navVariants = {
-  normal: {
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    filter: 'blur(0px)',
-  },
-  compact: {
-    opacity: 1,
-    y: 0,
-    scale: 0.975,
-    rotateZ: 0.0001,
-  },
-}
-
 const navBubble = ref(false)
+const homeHeaderHidden = ref(false)
 const footerVisible = ref(false)
 const pageScroll = ref(null)
 const scrollTarget = ref(null)
+let scrollFrame = 0
 
 const compactLink = (path) => {
   const active = route.path === path
-  const idleClass = isStatsLight.value
-    ? 'text-black hover:text-black hover:bg-slate-900/8'
-    : 'text-white/80 hover:text-white hover:bg-white/5'
-  const activeClass = isStatsLight.value
-    ? 'bg-emerald-500/14 text-black'
-    : 'bg-white/10 text-emerald-200'
+  const idleClass =
+    isStatsLight.value || isLightAppShell.value
+      ? 'text-slate-900/80 hover:text-black hover:bg-slate-900/8'
+      : 'text-white/80 hover:text-white hover:bg-white/5'
+  const activeClass =
+    isStatsLight.value || isLightAppShell.value
+      ? 'bg-emerald-500/14 text-black'
+      : 'bg-white/10 text-emerald-200'
   return [
     'nav-link px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 inline-flex items-center gap-2',
     active ? activeClass : idleClass,
@@ -387,17 +429,24 @@ const unreadBadge = computed(() =>
   notification.unreadCount.value > 99 ? '99+' : String(notification.unreadCount.value),
 )
 const notificationButtonExpanded = ref(false)
+const notificationTheme = computed(() => (route.path === '/' || isStatsLight.value ? 'home' : 'dark'))
 const notificationButtonClass = computed(() => {
   const expanded = notificationButtonExpanded.value
-  if (isStatsLight.value) {
+  if (notificationTheme.value === 'home') {
     return expanded
-      ? 'bg-white/90 border-slate-300 text-slate-900 px-3.5 py-2'
-      : 'bg-white/84 border-slate-300 text-slate-900 p-2'
+      ? 'bg-gradient-to-br from-teal-600 via-cyan-600 to-sky-700 border-white/70 text-white px-3.5 py-2 shadow-[0_16px_36px_rgba(14,116,144,0.28)] hover:shadow-[0_18px_44px_rgba(14,116,144,0.34)]'
+      : 'bg-gradient-to-br from-teal-600 via-cyan-600 to-sky-700 border-white/70 text-white p-2.5 shadow-[0_16px_36px_rgba(14,116,144,0.28)] hover:shadow-[0_18px_44px_rgba(14,116,144,0.34)]'
   }
   return expanded
     ? 'bg-slate-900/88 border-slate-600 text-slate-100 px-3.5 py-2'
     : 'bg-slate-900/80 border-slate-600 text-slate-100 p-2'
 })
+const notificationIconClass = computed(() =>
+  notificationTheme.value === 'home' ? 'text-white' : 'text-emerald-100',
+)
+const notificationLabelClass = computed(() =>
+  notificationTheme.value === 'home' ? 'text-white' : 'text-slate-100',
+)
 
 const onStatsTemplateModeChange = (event) => {
   const active = Boolean(event?.detail?.active)
@@ -457,8 +506,12 @@ function stopIdleWatch() {
 
 const isActiveMobile = (path) =>
   route.path === path
-    ? 'bg-gray-900 text-purple-400'
-    : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+    ? isStatsLight.value || isLightAppShell.value
+      ? 'bg-emerald-500/14 text-slate-950'
+      : 'bg-gray-900 text-purple-400'
+    : isStatsLight.value || isLightAppShell.value
+      ? 'text-slate-700 hover:bg-slate-900/6 hover:text-slate-950'
+      : 'text-gray-300 hover:bg-gray-700 hover:text-white'
 
 const closeMenus = () => {
   menuOpen.value = false
@@ -475,23 +528,41 @@ const toggleMobileMenu = () => {
   if (mobileMenuOpen.value) menuOpen.value = false
 }
 
-const handleScroll = () => {
+const updateScrollState = () => {
+  scrollFrame = 0
   const scroller = pageScroll.value
-  const top = scroller?.scrollTop ?? window.scrollY
-  const client = scroller?.clientHeight ?? window.innerHeight
-  const scrollHeight = scroller?.scrollHeight ?? document.body.scrollHeight
-  navBubble.value = !isStats.value && top > 12
-  footerVisible.value = !isStats.value && top + client >= scrollHeight - 140
+  const useDocumentScroll = isLightAppShell.value || !scroller
+  const top = useDocumentScroll ? window.scrollY : scroller.scrollTop
+  const client = useDocumentScroll ? window.innerHeight : scroller.clientHeight
+  const scrollHeight = useDocumentScroll
+    ? Math.max(document.body.scrollHeight, document.documentElement.scrollHeight)
+    : scroller.scrollHeight
+  const nextHomeHeaderHidden = isLightAppShell.value && top > 110
+  const nextNavBubble = !isStats.value && !isLightAppShell.value && top > 12
+  const nextFooterVisible = !isStats.value && top + client >= scrollHeight - 140
+
+  if (homeHeaderHidden.value !== nextHomeHeaderHidden) homeHeaderHidden.value = nextHomeHeaderHidden
+  if (navBubble.value !== nextNavBubble) navBubble.value = nextNavBubble
+  if (footerVisible.value !== nextFooterVisible) footerVisible.value = nextFooterVisible
+}
+
+const handleScroll = () => {
+  if (scrollFrame) return
+  scrollFrame = window.requestAnimationFrame(updateScrollState)
 }
 
 const attachScroll = () => {
-  const target = pageScroll.value || window
+  const target = isLightAppShell.value ? window : pageScroll.value || window
   scrollTarget.value = target
   target.addEventListener('scroll', handleScroll, { passive: true })
-  handleScroll()
+  updateScrollState()
 }
 
 const detachScroll = () => {
+  if (scrollFrame) {
+    window.cancelAnimationFrame(scrollFrame)
+    scrollFrame = 0
+  }
   if (scrollTarget.value) {
     scrollTarget.value.removeEventListener('scroll', handleScroll)
     scrollTarget.value = null
@@ -530,7 +601,8 @@ const openNotificationTarget = async (notificationItem) => {
   if (notificationItem.ctaRoute) {
     notification.closeCenter()
     const isStockNotification =
-      notificationItem.entityType === 'STOCK_ITEM' && Number.isFinite(Number(notificationItem.entityId))
+      notificationItem.entityType === 'STOCK_ITEM' &&
+      Number.isFinite(Number(notificationItem.entityId))
     if (isStockNotification && notificationItem.ctaRoute === '/gestion') {
       router
         .push({
@@ -582,6 +654,8 @@ onBeforeUnmount(() => {
   window.removeEventListener('click', onWindowClick)
   window.removeEventListener('keydown', onKeyDown)
   window.removeEventListener('snk:stats-template-mode', onStatsTemplateModeChange)
+  document.documentElement.classList.remove('layout-light-document-scroll')
+  document.body.classList.remove('layout-light-document-scroll')
   detachScroll()
   stopIdleWatch()
   notification.teardown({ clearState: true })
@@ -591,6 +665,15 @@ watch(
   () => route.meta.fullBleed,
   (v) => {
     document.body.classList.toggle('no-scroll', !!v)
+  },
+  { immediate: true },
+)
+
+watch(
+  () => isLightAppShell.value,
+  (v) => {
+    document.documentElement.classList.toggle('layout-light-document-scroll', !!v)
+    document.body.classList.toggle('layout-light-document-scroll', !!v)
   },
   { immediate: true },
 )
@@ -691,8 +774,80 @@ body,
   height: 100%;
 }
 
+html.layout-light-document-scroll,
+body.layout-light-document-scroll {
+  height: auto;
+  min-height: 100%;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html.layout-light-document-scroll body,
+html.layout-light-document-scroll #app {
+  height: auto;
+  min-height: 100%;
+}
+
+body.layout-light-document-scroll {
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: #f7f4ee;
+}
+
+html.layout-light-document-scroll::-webkit-scrollbar,
+body.layout-light-document-scroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+.app-layout-root {
+  min-height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.app-layout-root.layout-home-bg {
+  height: auto !important;
+  min-height: 100dvh;
+  overflow: visible;
+}
+
+.app-layout-root.layout-document-flow {
+  display: block;
+}
+
+.layout-main--document-flow {
+  display: block;
+  min-height: 0 !important;
+  overflow: visible;
+}
+
+.layout-home-bg {
+  background: #f7f4ee;
+}
+
+.app-layout-root.layout-gestion-bg {
+  background: #f7f4ee;
+}
+
+.app-layout-root.layout-home-bg .layout-main--document-flow,
+.app-layout-root.layout-home-bg .layout-scroll-inner--document-flow,
+.app-layout-root.layout-home-bg .layout-page-content--document-flow,
+.app-layout-root.layout-gestion-bg .layout-main--document-flow,
+.app-layout-root.layout-gestion-bg .layout-scroll-inner--document-flow,
+.app-layout-root.layout-gestion-bg .layout-page-content--document-flow {
+  background: #f7f4ee;
+}
+
+.app-layout-root.layout-gestion-bg .layout-app-header.is-stuck.is-light {
+  background: rgba(247, 244, 238, 0.92);
+}
+
 .layout-shell-row {
   width: min(100%, var(--layout-shell-max-width, 1536px));
+  max-width: 100%;
+  box-sizing: border-box;
   margin-inline: auto;
   padding-inline: var(--layout-shell-gutter, clamp(16px, 2.2vw, 32px));
 }
@@ -702,10 +857,122 @@ body,
   max-width: none;
 }
 
+.layout-app-header {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.layout-app-header--hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(calc(-100% - 1rem));
+}
+
+.layout-app-header.is-stuck {
+  border-bottom: 1px solid transparent;
+}
+
+.layout-app-header.is-stuck.is-light {
+  border-bottom-color: rgba(203, 213, 225, 0.72);
+  background: rgba(247, 244, 238, 0.92);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(16px) saturate(130%);
+}
+
+.layout-app-header.is-stuck.is-dark {
+  border-bottom-color: rgba(148, 163, 184, 0.14);
+  background: rgba(2, 6, 23, 0.78);
+  box-shadow: 0 12px 32px rgba(2, 6, 23, 0.28);
+  backdrop-filter: blur(16px) saturate(130%);
+}
+
 .layout-fullbleed {
   position: relative;
   height: 100%;
   width: 100%;
+  min-width: 0;
+}
+
+.layout-scroll {
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  overscroll-behavior-x: none;
+  scrollbar-gutter: stable;
+  -webkit-overflow-scrolling: touch;
+}
+
+.layout-scroll--document-flow {
+  display: block;
+  height: auto !important;
+  min-height: 0;
+  overflow: visible !important;
+  overscroll-behavior: auto;
+}
+
+.layout-scroll-inner--document-flow,
+.layout-page-content--document-flow,
+.layout-document-flow .page-view {
+  height: auto !important;
+  min-height: 0 !important;
+}
+
+.layout-scroll--hidden-scrollbar {
+  scrollbar-gutter: auto;
+  scrollbar-width: none;
+}
+
+.layout-scroll--hidden-scrollbar::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+.layout-page-content {
+  padding-top: clamp(4.5rem, 7vh, 5.25rem);
+  padding-bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));
+}
+
+.layout-home-bg .layout-scroll {
+  scrollbar-color: rgba(14, 116, 144, 0.5) rgba(248, 250, 252, 0.78);
+}
+
+.layout-home-bg .layout-scroll::-webkit-scrollbar-track {
+  background: rgba(248, 250, 252, 0.78);
+}
+
+.layout-home-bg .layout-scroll::-webkit-scrollbar-thumb {
+  border-color: rgba(248, 250, 252, 0.78);
+  background-color: rgba(14, 116, 144, 0.5);
+}
+
+.layout-home-bg .layout-scroll.layout-scroll--hidden-scrollbar {
+  scrollbar-gutter: auto;
+  scrollbar-width: none;
+}
+
+.layout-home-bg .layout-scroll.layout-scroll--hidden-scrollbar::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+}
+
+.layout-home-bg .layout-scroll.layout-scroll--hidden-scrollbar::-webkit-scrollbar-track,
+.layout-home-bg .layout-scroll.layout-scroll--hidden-scrollbar::-webkit-scrollbar-thumb {
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.layout-home-bg,
+.layout-home-bg * {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none;
+}
+
+.layout-home-bg::-webkit-scrollbar,
+.layout-home-bg *::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
 }
 
 .layout-fullbleed--with-header {
@@ -730,7 +997,9 @@ body,
   text-align: left;
   padding: 8px 16px;
   font-size: 0.875rem;
-  transition: background-color 140ms ease, color 140ms ease;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease;
 }
 
 .layout-menu-actions:not(.is-dark) > button:hover,
@@ -747,7 +1016,31 @@ body,
   background: rgba(148, 163, 184, 0.18);
 }
 
+.layout-mobile-menu-panel {
+  max-height: calc(100dvh - 5.5rem);
+  overflow-y: auto;
+}
+
+.layout-footer-pill {
+  max-width: calc(100vw - 24px);
+  min-width: 0;
+}
+
+.layout-footer-pill > * {
+  white-space: nowrap;
+}
+
 @media (max-width: 767px) {
+  .layout-shell-row {
+    padding-inline-start: max(12px, env(safe-area-inset-left));
+    padding-inline-end: max(12px, env(safe-area-inset-right));
+  }
+
+  .layout-page-content {
+    padding-top: calc(4.5rem + env(safe-area-inset-top, 0px));
+    padding-bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px));
+  }
+
   .layout-fullbleed--with-header {
     padding-top: calc(66px + env(safe-area-inset-top, 0px));
   }
@@ -759,6 +1052,17 @@ body,
   .layout-fullbleed--with-header-compact {
     padding-top: calc(18px + env(safe-area-inset-top, 0px));
   }
-}
 
+  .layout-footer-pill {
+    gap: 0.75rem;
+    overflow-x: auto;
+    padding: 0.65rem 0.9rem;
+    scrollbar-width: none;
+    font-size: 0.75rem;
+  }
+
+  .layout-footer-pill::-webkit-scrollbar {
+    display: none;
+  }
+}
 </style>

@@ -65,13 +65,13 @@ public class NotificationService {
 
     Page<Notification> result = unreadFirst
         ? notificationRepository.findByUserIdUnreadFirst(userId, pageable)
-        : notificationRepository.findByUser_IdOrderByCreatedAtDesc(userId, pageable);
+        : notificationRepository.findByUser_IdAndIsReadFalseAndDismissedAtIsNullOrderByCreatedAtDesc(userId, pageable);
 
     List<NotificationResponse> items = result.getContent().stream()
         .map(NotificationResponse::fromEntity)
         .toList();
 
-    long unreadCount = notificationRepository.countByUser_IdAndIsReadFalse(userId);
+    long unreadCount = notificationRepository.countByUser_IdAndIsReadFalseAndDismissedAtIsNull(userId);
 
     return new NotificationPageResponse(
         items,
@@ -85,15 +85,19 @@ public class NotificationService {
 
   @Transactional(readOnly = true)
   public long unreadCount(Long userId) {
-    return notificationRepository.countByUser_IdAndIsReadFalse(userId);
+    return notificationRepository.countByUser_IdAndIsReadFalseAndDismissedAtIsNull(userId);
   }
 
   @Transactional
   public NotificationResponse markRead(Long userId, Long notificationId) {
     Notification notification = getForUserOrThrow(userId, notificationId);
+    OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
     if (!notification.isRead()) {
       notification.setRead(true);
-      notification.setReadAt(OffsetDateTime.now(ZoneOffset.UTC));
+      notification.setReadAt(now);
+    }
+    if (notification.getDismissedAt() == null) {
+      notification.setDismissedAt(now);
     }
     return NotificationResponse.fromEntity(notification);
   }

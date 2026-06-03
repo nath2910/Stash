@@ -219,53 +219,40 @@ async function loadMore() {
   })
 }
 
-function applyUpdatedNotification(updated) {
-  if (!updated?.id) return
-  const index = notifications.value.findIndex((item) => item.id === updated.id)
-  if (index >= 0) {
-    const clone = [...notifications.value]
-    clone[index] = updated
-    notifications.value = clone
-  }
-}
-
 async function markAsRead(notificationId) {
   const index = notifications.value.findIndex((item) => item.id === notificationId)
   if (index < 0) return null
 
   const previous = { ...notifications.value[index] }
-  if (previous.isRead) return previous
-
-  const optimistic = {
-    ...previous,
-    isRead: true,
-    readAt: previous.readAt || new Date().toISOString(),
+  notifications.value = notifications.value.filter((item) => item.id !== notificationId)
+  dismissToast(notificationId)
+  if (!previous.isRead) {
+    unreadCount.value = Math.max(0, unreadCount.value - 1)
   }
-  applyUpdatedNotification(optimistic)
-  unreadCount.value = Math.max(0, unreadCount.value - 1)
 
   try {
     const { data } = await NotificationService.markRead(notificationId)
-    if (data) {
-      applyUpdatedNotification(data)
-      return data
-    }
-    return optimistic
+    return data || previous
   } catch (err) {
-    applyUpdatedNotification(previous)
-    unreadCount.value += 1
+    const restored = [...notifications.value]
+    restored.splice(index, 0, previous)
+    notifications.value = restored
+    if (!previous.isRead) unreadCount.value += 1
     throw err
   }
 }
 
 async function markAllAsRead() {
-  const unreadIds = notifications.value.filter((item) => !item.isRead).map((item) => item.id)
-  if (unreadIds.length === 0) return 0
+  const visibleIds = notifications.value.map((item) => item.id).filter(Boolean)
+  if (visibleIds.length === 0) return 0
 
-  const nowIso = new Date().toISOString()
-  notifications.value = notifications.value.map((item) =>
-    item.isRead ? item : { ...item, isRead: true, readAt: item.readAt || nowIso },
-  )
+  const previousNotifications = notifications.value
+  const previousToasts = toastItems.value
+  const visibleIdSet = new Set(visibleIds)
+  const unreadIds = notifications.value.filter((item) => !item.isRead).map((item) => item.id)
+  notifications.value = []
+  toastItems.value = toastItems.value.filter((toast) => !visibleIdSet.has(toast.id))
+  visibleIds.forEach(clearToastTimer)
   const before = unreadCount.value
   unreadCount.value = 0
 
@@ -273,10 +260,8 @@ async function markAllAsRead() {
     const { data } = await NotificationService.markAllRead()
     return Number.isFinite(data?.updated) ? data.updated : unreadIds.length
   } catch (err) {
-    const rollback = new Set(unreadIds)
-    notifications.value = notifications.value.map((item) =>
-      rollback.has(item.id) ? { ...item, isRead: false, readAt: null } : item,
-    )
+    notifications.value = previousNotifications
+    toastItems.value = previousToasts
     unreadCount.value = before
     throw err
   }

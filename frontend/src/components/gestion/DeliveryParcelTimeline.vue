@@ -1,15 +1,15 @@
 <template>
   <aside
-    class="rounded-[22px] border border-slate-700/70 bg-slate-900/70 p-4 shadow-xl shadow-slate-950/20 backdrop-blur sm:p-5"
+    class="min-w-0 rounded-[22px] border border-slate-700/70 bg-slate-900/70 p-4 shadow-xl shadow-slate-950/20 backdrop-blur sm:p-5"
   >
-    <div class="flex items-start justify-between gap-3">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div class="min-w-0">
         <h3 class="text-base font-semibold text-white">Detail livraison</h3>
         <p class="mt-1 truncate text-xs text-slate-400">
           {{ parcel ? parcel.trackingNumber : 'Aucun colis' }}
         </p>
       </div>
-      <div v-if="parcel" class="flex shrink-0 flex-wrap items-center justify-end gap-2">
+      <div v-if="parcel" class="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
         <a
           v-if="parcel.trackingUrl"
           :href="parcel.trackingUrl"

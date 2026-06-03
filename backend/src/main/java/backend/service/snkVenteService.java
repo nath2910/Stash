@@ -41,6 +41,23 @@ public class snkVenteService {
       Map.entry("SHOES", "SNEAKER"),
       Map.entry("CHAUSSURE", "SNEAKER"),
       Map.entry("CHAUSSURES", "SNEAKER"),
+      Map.entry("VETEMENT", "CLOTHING"),
+      Map.entry("VETEMENTS", "CLOTHING"),
+      Map.entry("CLOTHES", "CLOTHING"),
+      Map.entry("ACCESSOIRE", "ACCESSORY"),
+      Map.entry("ACCESSOIRES", "ACCESSORY"),
+      Map.entry("ACCESSORIES", "ACCESSORY"),
+      Map.entry("MONTRE", "WATCH"),
+      Map.entry("MONTRES", "WATCH"),
+      Map.entry("WATCHES", "WATCH"),
+      Map.entry("ELECTRONIQUE", "ELECTRONICS"),
+      Map.entry("ELECTRONICS", "ELECTRONICS"),
+      Map.entry("ELECTRONIC", "ELECTRONICS"),
+      Map.entry("COLLECTION", "COLLECTIBLE"),
+      Map.entry("COLLECTIBLES", "COLLECTIBLE"),
+      Map.entry("MAISON", "HOME"),
+      Map.entry("MOBILIER", "HOME"),
+      Map.entry("FURNITURE", "HOME"),
       Map.entry("POKEMON", "POKEMON_CARD"),
       Map.entry("POKEMON_CARDS", "POKEMON_CARD"),
       Map.entry("CARTE_POKEMON", "POKEMON_CARD"),
@@ -324,6 +341,7 @@ public class snkVenteService {
       case "TICKET" -> key.matches("^(eventDate|venue|section|row|seat|status)$");
       case "POKEMON_CARD" -> key.matches("^(set|language|rarity|condition|grade)$");
       case "SNEAKER" -> key.matches("^(size|sku|colorway|condition|boxCondition)$");
+      case "OTHER" -> key.matches("^(size|sku|colorway|condition|reference|model|supplier|purchasePlace)$");
       default -> false;
     };
   }

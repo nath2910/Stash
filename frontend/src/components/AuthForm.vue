@@ -1,13 +1,13 @@
 <template>
-  <div class="min-h-screen overflow-hidden bg-slate-950 px-4 py-4 sm:py-6 flex items-center">
+  <div class="flex min-h-dvh items-stretch overflow-y-auto overflow-x-hidden bg-slate-950 px-4 py-5 pb-20 sm:items-center sm:py-6 sm:pb-6">
     <router-link
       :to="{ name: 'discover' }"
-      class="fixed bottom-4 left-4 z-20 inline-flex items-center justify-center rounded-lg border border-violet-400/50 bg-violet-500/15 px-3 py-1.5 text-xs font-medium text-violet-100 shadow-lg shadow-black/25 transition hover:border-violet-300/80 hover:bg-violet-500/25 sm:bottom-6 sm:left-6"
+      class="fixed bottom-4 left-4 right-4 z-20 mx-auto inline-flex w-max max-w-[calc(100vw-2rem)] items-center justify-center whitespace-nowrap rounded-lg border border-violet-400/50 bg-violet-500/15 px-3 py-1.5 text-xs font-medium text-violet-100 shadow-lg shadow-black/25 transition hover:border-violet-300/80 hover:bg-violet-500/25 sm:bottom-6 sm:left-6 sm:right-auto sm:mx-0"
     >
       Decouvrir l'offre
     </router-link>
     <div class="mx-auto w-full max-w-5xl">
-      <div class="grid items-center gap-6 md:grid-cols-[0.9fr_1.1fr]">
+      <div class="grid min-w-0 items-center gap-5 md:grid-cols-[0.9fr_1.1fr] md:gap-6">
         <div class="text-slate-200">
           <p class="text-xs uppercase tracking-[0.3em] text-violet-300/80">Compte</p>
           <h1 class="mt-2 text-2xl font-semibold text-white sm:text-3xl">
@@ -28,7 +28,7 @@
         </div>
 
         <div
-          class="w-full rounded-3xl border border-slate-800/80 bg-gradient-to-b from-slate-900/95 via-slate-900/80 to-slate-950/70 p-5 shadow-2xl backdrop-blur sm:p-6"
+          class="w-full rounded-3xl border border-slate-800/80 bg-gradient-to-b from-slate-900/95 via-slate-900/80 to-slate-950/70 p-4 shadow-2xl backdrop-blur sm:p-6"
         >
           <div class="mb-3 flex items-center justify-center">
             <div
@@ -95,7 +95,7 @@
                   id="loginPassword"
                   v-model="loginForm.password"
                   required
-                  class="block w-full pr-12 rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-2 text-sm text-slate-100 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-violet-400"
+                  class="block w-full rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-2 pr-20 text-sm text-slate-100 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-violet-400"
                 />
 
                 <button
@@ -119,7 +119,7 @@
                   Mot de passe oublié ?
                 </router-link>
               </div>
-              <div class="mt-2 grid grid-cols-2 gap-2">
+              <div class="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <button
                   type="button"
                   @click="loginWithGoogle"
@@ -235,7 +235,7 @@
                   id="signupPassword"
                   v-model="signupForm.password"
                   required
-                  class="block w-full pr-12 rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-2 text-sm text-slate-100 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-violet-400"
+                  class="block w-full rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-2 pr-20 text-sm text-slate-100 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-violet-400"
                 />
 
                 <button
@@ -277,7 +277,7 @@
                   id="confirmPassword"
                   v-model="signupForm.confirmPassword"
                   required
-                  class="block w-full pr-12 rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-2 text-sm text-slate-100 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-violet-400"
+                  class="block w-full rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-2 pr-20 text-sm text-slate-100 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-violet-400"
                 />
 
                 <button

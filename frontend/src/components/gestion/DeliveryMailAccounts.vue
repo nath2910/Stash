@@ -1,6 +1,6 @@
 <template>
   <section
-    class="rounded-[22px] border border-slate-700/70 bg-slate-900/70 p-4 shadow-xl shadow-slate-950/20 backdrop-blur"
+    class="min-w-0 rounded-[22px] border border-slate-700/70 bg-slate-900/70 p-4 shadow-xl shadow-slate-950/20 backdrop-blur"
   >
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div>
@@ -89,12 +89,12 @@
         :key="account.id"
         class="rounded-2xl border border-slate-700/70 bg-slate-950/35 p-3"
       >
-        <div class="flex items-center justify-between gap-3">
+        <div class="flex flex-col items-start gap-3 min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between">
           <div class="min-w-0">
             <div class="flex min-w-0 items-center gap-2">
               <p class="truncate text-sm font-semibold text-white">{{ account.emailAddress }}</p>
               <span
-                class="rounded-full border px-2.5 py-1 text-[11px] font-semibold"
+                class="shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-semibold"
                 :class="statusClass(account.status)"
               >
                 {{ statusLabel(account.status) }}
@@ -105,7 +105,7 @@
             </p>
           </div>
 
-          <div class="flex shrink-0 items-center gap-2">
+          <div class="flex shrink-0 items-center gap-2 self-end min-[420px]:self-auto">
             <button
               type="button"
               class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-700/80 bg-slate-900/75 text-slate-200 transition hover:border-violet-400/60 hover:text-white disabled:cursor-wait disabled:opacity-50"

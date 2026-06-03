@@ -796,6 +796,12 @@ public class StatsService {
     if ("TICKET".equals(normalized)) return "Tickets";
     if ("OTHER".equals(normalized)) return "Autres";
     if ("SNEAKER".equals(normalized)) return "Sneakers";
+    if ("CLOTHING".equals(normalized)) return "Vetements";
+    if ("ACCESSORY".equals(normalized)) return "Accessoires";
+    if ("WATCH".equals(normalized)) return "Montres";
+    if ("ELECTRONICS".equals(normalized)) return "Electronique";
+    if ("COLLECTIBLE".equals(normalized)) return "Collection";
+    if ("HOME".equals(normalized)) return "Maison";
     String human = normalized.replace('_', ' ').toLowerCase(Locale.ROOT);
     if (human.isBlank()) return "Sneakers";
     return Normalizer.normalize(human, Normalizer.Form.NFC)

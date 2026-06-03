@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen overflow-x-hidden bg-slate-950 px-4 py-8 sm:py-12">
+  <div class="min-h-dvh overflow-x-hidden bg-slate-950 px-4 py-6 sm:py-12">
     <div class="mx-auto flex w-full max-w-xl flex-col items-center">
       <div class="mb-7 flex w-full items-start justify-between text-slate-300">
         <div>
@@ -17,7 +17,7 @@
       </div>
 
       <div
-        class="w-full rounded-3xl border border-slate-800/80 bg-gradient-to-b from-slate-900/95 via-slate-900/80 to-slate-950/70 p-7 shadow-2xl backdrop-blur sm:p-9"
+        class="w-full rounded-3xl border border-slate-800/80 bg-gradient-to-b from-slate-900/95 via-slate-900/80 to-slate-950/70 p-5 shadow-2xl backdrop-blur sm:p-9"
       >
         <div
           v-if="error"

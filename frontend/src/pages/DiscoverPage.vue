@@ -1,7 +1,7 @@
 ﻿<template>
-  <div class="min-h-screen bg-slate-950 text-slate-100">
-    <main class="mx-auto w-full max-w-5xl space-y-6 px-4 py-8 sm:space-y-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
-      <section class="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 sm:p-8">
+  <div class="min-h-dvh overflow-x-hidden bg-slate-950 text-slate-100">
+    <main class="mx-auto w-full max-w-6xl space-y-5 px-4 py-6 sm:space-y-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
+      <section class="rounded-2xl border border-slate-800 bg-slate-900/70 p-5 sm:p-8">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <p class="text-xs uppercase tracking-[0.28em] text-slate-400">Stash</p>
           <router-link
@@ -21,16 +21,16 @@
               Stash aide les revendeurs, petites structures et boutiques a suivre leurs articles,
               leurs entrees/sorties et leur stock disponible sans outil trop lourd.
             </p>
-            <div class="mt-6 flex flex-wrap gap-3">
+            <div class="mt-6 flex flex-col gap-3 min-[420px]:flex-row min-[420px]:flex-wrap">
               <router-link
                 :to="{ name: 'auth', query: { mode: 'signup' } }"
-                class="inline-flex items-center justify-center rounded-lg bg-violet-500 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-violet-400"
+                class="inline-flex w-full items-center justify-center rounded-lg bg-violet-500 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-violet-400 min-[420px]:w-auto"
               >
                 Creer un compte
               </router-link>
               <router-link
                 :to="{ name: 'auth', query: { mode: 'login' } }"
-                class="inline-flex items-center justify-center rounded-lg border border-slate-600 px-4 py-2.5 text-sm font-semibold text-slate-100 transition hover:border-slate-400"
+                class="inline-flex w-full items-center justify-center rounded-lg border border-slate-600 px-4 py-2.5 text-sm font-semibold text-slate-100 transition hover:border-slate-400 min-[420px]:w-auto"
               >
                 Se connecter
               </router-link>
@@ -49,7 +49,7 @@
         </div>
       </section>
 
-      <section class="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 sm:p-8">
+      <section class="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 sm:p-8">
         <h2 class="text-xl font-semibold text-white sm:text-2xl">Le probleme</h2>
         <p class="mt-3 max-w-4xl text-sm text-slate-300 sm:text-base">
           Quand le stock est gere entre notes, fichiers Excel, messages et habitudes bricolees, on
@@ -66,7 +66,7 @@
         </div>
       </section>
 
-      <section class="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 sm:p-8">
+      <section class="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 sm:p-8">
         <h2 class="text-xl font-semibold text-white sm:text-2xl">Ce que permet Stash</h2>
         <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <article
@@ -79,7 +79,7 @@
         </div>
       </section>
 
-      <section class="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 sm:p-8">
+      <section class="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 sm:p-8">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <h2 class="text-xl font-semibold text-white sm:text-2xl">Demonstration video</h2>
           <p class="text-xs text-slate-400">
@@ -120,7 +120,7 @@
         </div>
       </section>
 
-      <section class="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 sm:p-8">
+      <section class="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 sm:p-8">
         <h2 class="text-xl font-semibold text-white sm:text-2xl">Pour qui c'est fait</h2>
         <div class="mt-4 grid gap-3 md:grid-cols-3">
           <article
@@ -134,20 +134,20 @@
         </div>
       </section>
 
-      <section class="rounded-2xl border border-violet-400/25 bg-slate-900/75 p-6 sm:p-8">
+      <section class="rounded-2xl border border-violet-400/25 bg-slate-900/75 p-5 sm:p-8">
         <h2 class="text-xl font-semibold text-white sm:text-2xl">
           Decouvre Stash et commence a organiser ton stock plus clairement.
         </h2>
-        <div class="mt-5 flex flex-wrap gap-3">
+        <div class="mt-5 flex flex-col gap-3 min-[420px]:flex-row min-[420px]:flex-wrap">
           <router-link
             :to="{ name: 'auth', query: { mode: 'signup' } }"
-            class="inline-flex items-center justify-center rounded-lg bg-violet-500 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-violet-400"
+            class="inline-flex w-full items-center justify-center rounded-lg bg-violet-500 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-violet-400 min-[420px]:w-auto"
           >
             Creer un compte
           </router-link>
           <router-link
             :to="{ name: 'auth', query: { mode: 'login' } }"
-            class="inline-flex items-center justify-center rounded-lg border border-slate-600 px-4 py-2.5 text-sm font-semibold text-slate-100 transition hover:border-slate-400"
+            class="inline-flex w-full items-center justify-center rounded-lg border border-slate-600 px-4 py-2.5 text-sm font-semibold text-slate-100 transition hover:border-slate-400 min-[420px]:w-auto"
           >
             Se connecter
           </router-link>
