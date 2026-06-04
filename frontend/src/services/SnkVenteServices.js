@@ -40,6 +40,13 @@ class SnkVenteServices {
     return api.post('/snkVente', vente)
   }
 
+  createMany(vente, quantity = 1) {
+    return api.post('/snkVente/bulk-create', {
+      ...vente,
+      quantity,
+    })
+  }
+
   supprimer(id) {
     return api.delete(`/snkVente/${id}`)
   }

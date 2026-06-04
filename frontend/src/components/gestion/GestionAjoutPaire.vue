@@ -402,13 +402,9 @@ const createSales = async () => {
   }
 
   try {
-    const n = Math.min(50, Math.max(1, Number(copies.value || 1)))
+    const n = Math.min(50, Math.max(1, Math.trunc(Number(copies.value || 1))))
     const payload = buildPayload()
-
-    // Serie = plus stable (evite de spam le backend)
-    for (let i = 0; i < n; i++) {
-      await SnkVenteServices.create({ ...payload })
-    }
+    await SnkVenteServices.createMany(payload, n)
 
     success.value = true
     if (typeof window !== 'undefined') {

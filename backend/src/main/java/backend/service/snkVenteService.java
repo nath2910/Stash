@@ -83,12 +83,30 @@ public class snkVenteService {
   @CacheEvict(cacheNames = "statsQueries", allEntries = true)
   public SnkVente creer(Long userId, SnkVenteCreateDto dto) {
     User user = getUserOrThrow(userId);
+    return snkVenteRepository.save(buildEntity(user, dto));
+  }
 
+  @Transactional
+  @CacheEvict(cacheNames = "statsQueries", allEntries = true)
+  public List<SnkVente> creerPlusieurs(Long userId, SnkVenteCreateDto dto) {
+    User user = getUserOrThrow(userId);
+    int quantity = safeQuantity(dto.quantity());
+    List<SnkVente> entities = java.util.stream.IntStream.range(0, quantity)
+        .mapToObj(i -> buildEntity(user, dto))
+        .collect(Collectors.toList());
+    return snkVenteRepository.saveAll(entities);
+  }
+
+  private SnkVente buildEntity(User user, SnkVenteCreateDto dto) {
     SnkVente v = new SnkVente();
     v.setUser(user);
     applyFields(v, dto);
+    return v;
+  }
 
-    return snkVenteRepository.save(v);
+  private int safeQuantity(Integer quantity) {
+    if (quantity == null) return 1;
+    return Math.min(50, Math.max(1, quantity));
   }
 
   @Transactional(readOnly = true)

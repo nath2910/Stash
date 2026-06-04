@@ -56,6 +56,15 @@ public class snkVenteController {
     return snkVenteService.creer(userId(currentUser), dto);
   }
 
+  @ResponseStatus(HttpStatus.CREATED)
+  @PostMapping(path = "/bulk-create", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+  public List<SnkVente> creerPlusieurs(
+      @AuthenticationPrincipal User currentUser,
+      @RequestBody @jakarta.validation.Valid SnkVenteCreateDto dto
+  ) {
+    return snkVenteService.creerPlusieurs(userId(currentUser), dto);
+  }
+
   @GetMapping(path = "{id}", produces = APPLICATION_JSON_VALUE)
   public SnkVente lire(
       @AuthenticationPrincipal User currentUser,
@@ -86,7 +95,7 @@ public class snkVenteController {
       @AuthenticationPrincipal User currentUser,
       @RequestBody @jakarta.validation.Valid SnkVenteCreateDto dto
   ) {
-    snkVenteService.creer(userId(currentUser), dto);
+    snkVenteService.creerPlusieurs(userId(currentUser), dto);
   }
 
   @GetMapping("/total")

@@ -237,12 +237,9 @@ async function handleQuickAdd({ payload, quantity }) {
   quickAddError.value = ''
   quickAddSuccessMessage.value = ''
   try {
-    const created = []
-    const safeQuantity = Math.min(50, Math.max(1, Number(quantity || 1)))
-    for (let i = 0; i < safeQuantity; i += 1) {
-      const { data } = await SnkVenteServices.create({ ...payload })
-      if (data) created.push(data)
-    }
+    const safeQuantity = Math.min(50, Math.max(1, Math.trunc(Number(quantity || 1))))
+    const { data } = await SnkVenteServices.createMany(payload, safeQuantity)
+    const created = Array.isArray(data) ? data : data ? [data] : []
     if (created.length > 0) {
       stockItems.value = [...created, ...stockItems.value]
       stockLoaded.value = true
