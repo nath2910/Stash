@@ -48,9 +48,7 @@ function partClasses(part: 'head' | 'label' | 'icon' | 'value' | 'detail') {
   min-width: 0;
   border: 1px solid rgba(148, 163, 184, 0.28);
   border-radius: 8px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 250, 252, 0.9)),
-    radial-gradient(circle at top right, rgba(99, 102, 241, 0.08), transparent 34%);
+  background: #ffffff;
   box-shadow: 0 12px 30px rgba(31, 41, 55, 0.08);
   padding: clamp(14px, 1.6vw, 18px);
   display: grid;

@@ -1669,6 +1669,8 @@ onBeforeUnmount(() => {
 <style scoped>
 .category-dashboard {
   --category-template-gap: clamp(10px, 1.35vh, 16px);
+  --category-bg: #f7f4ee;
+  --category-muted-bg: #fbfaf6;
   width: 100%;
   height: 100%;
   min-width: 0;
@@ -1677,8 +1679,8 @@ onBeforeUnmount(() => {
   overscroll-behavior: contain;
   overscroll-behavior-x: none;
   scrollbar-width: thin;
-  scrollbar-color: rgba(91, 92, 226, 0.42) rgba(226, 232, 240, 0.72);
-  background: linear-gradient(180deg, rgba(246, 248, 255, 0.98), rgba(238, 243, 250, 0.98));
+  scrollbar-color: rgba(100, 116, 139, 0.34) rgba(234, 229, 219, 0.9);
+  background: var(--category-bg);
 }
 
 .category-dashboard::-webkit-scrollbar {
@@ -1687,12 +1689,12 @@ onBeforeUnmount(() => {
 }
 
 .category-dashboard::-webkit-scrollbar-track {
-  background: rgba(226, 232, 240, 0.72);
+  background: rgba(234, 229, 219, 0.9);
 }
 
 .category-dashboard::-webkit-scrollbar-thumb {
   border-radius: 999px;
-  background: rgba(91, 92, 226, 0.42);
+  background: rgba(100, 116, 139, 0.34);
 }
 
 .category-dashboard__inner {
@@ -1757,7 +1759,7 @@ onBeforeUnmount(() => {
 .category-month {
   border: 1px solid rgba(99, 102, 241, 0.2);
   border-radius: 12px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(247, 249, 255, 0.9));
+  background: #ffffff;
   box-shadow:
     0 14px 34px rgba(31, 41, 55, 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 0.8);
@@ -1823,7 +1825,7 @@ onBeforeUnmount(() => {
 
 .category-controls__category:not(:disabled):hover {
   border-color: rgba(79, 70, 229, 0.38);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(242, 244, 255, 0.96));
+  background: var(--category-muted-bg);
   box-shadow:
     0 16px 34px rgba(31, 41, 55, 0.12),
     0 0 0 3px rgba(79, 70, 229, 0.08),
@@ -2161,7 +2163,7 @@ onBeforeUnmount(() => {
   flex: 0 0 auto;
   max-width: 45%;
   border-radius: 999px;
-  background: #eef2ff;
+  background: var(--category-muted-bg);
   color: #4338ca;
   padding: 6px 10px;
   font-size: 0.74rem;
@@ -2208,7 +2210,7 @@ onBeforeUnmount(() => {
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: #eef2ff;
+  background: var(--category-muted-bg);
   color: #4f46e5;
   padding: 8px;
 }
@@ -2252,7 +2254,7 @@ onBeforeUnmount(() => {
   min-width: 0;
   border: 1px solid rgba(148, 163, 184, 0.22);
   border-radius: 8px;
-  background: rgba(248, 250, 252, 0.88);
+  background: var(--category-muted-bg);
   padding: 10px;
   display: grid;
   gap: 4px;
@@ -2403,7 +2405,7 @@ onBeforeUnmount(() => {
   width: fit-content;
   margin-left: auto;
   border-radius: 999px;
-  background: #eef2ff;
+  background: var(--category-muted-bg);
   color: #4338ca !important;
   padding: 4px 8px;
   font-weight: 760;
@@ -2535,7 +2537,7 @@ onBeforeUnmount(() => {
   min-height: 38px;
   border: 1px solid rgba(148, 163, 184, 0.34);
   border-radius: 8px;
-  background: rgba(248, 250, 252, 0.9);
+  background: var(--category-muted-bg);
   color: #334155;
   padding: 0 12px;
   font-size: 0.78rem;
@@ -2555,7 +2557,7 @@ onBeforeUnmount(() => {
   min-height: 38px;
   border: 1px solid rgba(148, 163, 184, 0.3);
   border-radius: 999px;
-  background: rgba(248, 250, 252, 0.92);
+  background: var(--category-muted-bg);
   color: #334155;
   padding: 7px 10px;
   display: inline-flex;
@@ -2577,7 +2579,7 @@ onBeforeUnmount(() => {
 
 .category-chip.is-active {
   border-color: rgba(79, 70, 229, 0.48);
-  background: #eef2ff;
+  background: var(--category-muted-bg);
   color: #3730a3;
 }
 
@@ -2592,7 +2594,7 @@ onBeforeUnmount(() => {
   height: auto;
   border: 1px dashed rgba(148, 163, 184, 0.34);
   border-radius: 8px;
-  background: #f8fafc;
+  background: var(--category-muted-bg);
   color: #64748b;
   display: grid;
   place-items: center;
@@ -2653,7 +2655,7 @@ onBeforeUnmount(() => {
   overflow: auto;
   border: 1px solid rgba(148, 163, 184, 0.34);
   border-radius: 12px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.98));
+  background: #ffffff;
   box-shadow: 0 26px 70px rgba(2, 6, 23, 0.36);
   padding: 16px;
   display: grid;
@@ -2690,7 +2692,7 @@ onBeforeUnmount(() => {
   height: 32px;
   border: 1px solid rgba(148, 163, 184, 0.34);
   border-radius: 8px;
-  background: rgba(248, 250, 252, 0.9);
+  background: var(--category-muted-bg);
   color: #334155;
   font-weight: 760;
 }

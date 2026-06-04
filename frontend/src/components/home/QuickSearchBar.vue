@@ -286,6 +286,8 @@ h1 {
   border-radius: 16px;
   background: #f8fafc;
   color: #0f172a;
+  -webkit-appearance: none;
+  appearance: none;
   padding: 0 3rem 0 3rem;
   font-size: 1rem;
   font-weight: 700;
@@ -299,6 +301,12 @@ h1 {
 
 .search-input::placeholder {
   color: #94a3b8;
+}
+
+.search-input::-webkit-search-cancel-button,
+.search-input::-webkit-search-decoration {
+  display: none;
+  -webkit-appearance: none;
 }
 
 .search-input:focus {

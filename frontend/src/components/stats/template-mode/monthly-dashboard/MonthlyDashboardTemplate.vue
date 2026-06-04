@@ -1232,6 +1232,8 @@ onBeforeUnmount(() => {
 <style scoped>
 .monthly-dashboard {
   --monthly-template-gap: clamp(10px, 1.35vh, 16px);
+  --monthly-bg: #f7f4ee;
+  --monthly-muted-bg: #fbfaf6;
   width: 100%;
   height: 100%;
   min-width: 0;
@@ -1240,10 +1242,8 @@ onBeforeUnmount(() => {
   overscroll-behavior: contain;
   overscroll-behavior-x: none;
   scrollbar-width: thin;
-  scrollbar-color: rgba(91, 92, 226, 0.42) rgba(226, 232, 240, 0.72);
-  background:
-    linear-gradient(180deg, rgba(246, 248, 255, 0.96), rgba(236, 241, 249, 0.98)),
-    radial-gradient(circle at top left, rgba(129, 140, 248, 0.14), transparent 34%);
+  scrollbar-color: rgba(100, 116, 139, 0.34) rgba(234, 229, 219, 0.9);
+  background: var(--monthly-bg);
 }
 
 .monthly-dashboard::-webkit-scrollbar {
@@ -1252,12 +1252,12 @@ onBeforeUnmount(() => {
 }
 
 .monthly-dashboard::-webkit-scrollbar-track {
-  background: rgba(226, 232, 240, 0.72);
+  background: rgba(234, 229, 219, 0.9);
 }
 
 .monthly-dashboard::-webkit-scrollbar-thumb {
   border-radius: 999px;
-  background: rgba(91, 92, 226, 0.42);
+  background: rgba(100, 116, 139, 0.34);
 }
 
 .monthly-dashboard__inner {
@@ -1321,9 +1321,7 @@ onBeforeUnmount(() => {
   width: min(340px, 100%);
   border: 1px solid rgba(99, 102, 241, 0.2);
   border-radius: 12px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(247, 249, 255, 0.88)),
-    linear-gradient(135deg, rgba(91, 92, 226, 0.08), rgba(59, 130, 246, 0.05));
+  background: #ffffff;
   box-shadow:
     0 14px 34px rgba(31, 41, 55, 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 0.8);
@@ -1373,7 +1371,7 @@ onBeforeUnmount(() => {
 
 .monthly-month__control button:hover:not(:disabled) {
   border-color: rgba(79, 70, 229, 0.42);
-  background: #eef2ff;
+  background: var(--monthly-muted-bg);
 }
 
 .monthly-month__control button:disabled {
@@ -1410,7 +1408,7 @@ onBeforeUnmount(() => {
   min-width: 0;
   border: 1px solid rgba(148, 163, 184, 0.24);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.58);
+  background: rgba(255, 255, 255, 0.82);
   box-shadow: 0 10px 24px rgba(31, 41, 55, 0.06);
   padding: 7px 9px;
   display: grid;
@@ -1686,7 +1684,7 @@ onBeforeUnmount(() => {
   flex: 0 0 auto;
   max-width: 45%;
   border-radius: 999px;
-  background: #eef2ff;
+  background: var(--monthly-muted-bg);
   color: #4338ca;
   padding: 6px 10px;
   font-size: 0.74rem;
@@ -1718,9 +1716,7 @@ onBeforeUnmount(() => {
   padding: clamp(12px, 1.2vw, 16px);
   gap: 10px;
   grid-template-rows: auto auto minmax(0, 1fr);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 250, 252, 0.9)),
-    radial-gradient(circle at top right, rgba(79, 70, 229, 0.08), transparent 34%);
+  background: #ffffff;
 }
 
 .monthly-panel--main-chart .monthly-panel__head {
@@ -1807,9 +1803,7 @@ onBeforeUnmount(() => {
   min-height: 116px;
   border: 1px solid rgba(148, 163, 184, 0.22);
   border-radius: 8px;
-  background:
-    linear-gradient(180deg, rgba(248, 250, 252, 0.9), rgba(241, 245, 249, 0.78)),
-    radial-gradient(circle at top right, rgba(99, 102, 241, 0.08), transparent 36%);
+  background: var(--monthly-muted-bg);
   padding: 10px;
   display: grid;
   grid-template-rows: auto auto auto auto;
@@ -1897,7 +1891,7 @@ onBeforeUnmount(() => {
 .monthly-insight {
   min-width: 0;
   border-radius: 7px;
-  background: rgba(248, 250, 252, 0.96);
+  background: var(--monthly-muted-bg);
   padding: 10px 12px;
   display: grid;
   gap: 4px;
@@ -2078,7 +2072,7 @@ onBeforeUnmount(() => {
   min-width: 0;
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 7px;
-  background: rgba(248, 250, 252, 0.78);
+  background: var(--monthly-muted-bg);
   padding: 8px 10px;
   display: flex;
   align-items: center;
@@ -2160,7 +2154,7 @@ onBeforeUnmount(() => {
   height: auto;
   border: 1px dashed rgba(148, 163, 184, 0.34);
   border-radius: 8px;
-  background: #f8fafc;
+  background: var(--monthly-muted-bg);
   color: #64748b;
   display: grid;
   place-items: center;

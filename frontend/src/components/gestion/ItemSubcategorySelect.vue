@@ -352,12 +352,28 @@ function onDocumentPointerDown(event) {
   menuOpen.value = false
 }
 
+function onStoredSubcategoriesChange(event) {
+  const detail = event?.detail || {}
+  if (String(detail.userId || 'guest') !== String(props.userId || 'guest')) return
+  storedMap.value = readStoredSubcategories(
+    props.userId,
+    undefined,
+    props.categoryLabels || undefined,
+  )
+}
+
 onMounted(() => {
   document.addEventListener('pointerdown', onDocumentPointerDown, true)
+  if (typeof window !== 'undefined') {
+    window.addEventListener('snk:item-subcategories-change', onStoredSubcategoriesChange)
+  }
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('pointerdown', onDocumentPointerDown, true)
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('snk:item-subcategories-change', onStoredSubcategoriesChange)
+  }
 })
 </script>
 

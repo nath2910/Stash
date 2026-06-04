@@ -38,6 +38,7 @@
               class="field"
               label="Catégorie"
               :model-value="form.type"
+              display="dropdown"
               placeholder="Choisir une catégorie"
               :user-id="currentUserId"
               :labels="categoryLabels"

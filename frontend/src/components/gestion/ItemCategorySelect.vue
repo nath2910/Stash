@@ -1,5 +1,9 @@
 <template>
-  <div class="category-field">
+  <div
+    ref="rootEl"
+    class="category-field"
+    :class="{ 'category-field--dropdown': display === 'dropdown' }"
+  >
     <div class="field-heading">
       <div>
         <label class="field-label">Categorie principale</label>
@@ -11,7 +15,50 @@
       </button>
     </div>
 
-    <div class="category-grid" role="radiogroup" aria-label="Categorie principale">
+    <template v-if="display === 'dropdown'">
+      <button
+        type="button"
+        class="category-dropdown-trigger"
+        :class="{ 'is-open': menuOpen }"
+        :aria-expanded="menuOpen ? 'true' : 'false'"
+        @click="toggleMenu"
+      >
+        <span
+          class="category-dropdown-trigger__icon"
+          :class="`type-${selectedOption.value.toLowerCase()}`"
+        >
+          <component :is="categoryIcon(selectedOption.value)" class="h-4 w-4" />
+        </span>
+        <span class="category-dropdown-trigger__text">
+          {{ selectedOption.label || placeholder }}
+        </span>
+        <ChevronDown class="h-4 w-4 category-dropdown-trigger__chevron" />
+      </button>
+
+      <div v-if="menuOpen" class="category-dropdown-menu">
+        <button
+          v-for="option in itemTypeOptions"
+          :key="option.value"
+          type="button"
+          class="category-dropdown-option"
+          :class="[`type-${option.value.toLowerCase()}`, { 'is-active': modelValue === option.value }]"
+          @click="selectType(option.value)"
+        >
+          <span class="category-choice__icon">
+            <component :is="categoryIcon(option.value)" class="h-4 w-4" />
+          </span>
+          <span class="category-choice__text">
+            <span class="category-choice__label">{{ option.label }}</span>
+            <span v-if="option.label !== option.defaultLabel" class="category-choice__base">
+              {{ option.defaultLabel }}
+            </span>
+          </span>
+          <Check v-if="modelValue === option.value" class="h-4 w-4 category-dropdown-check" />
+        </button>
+      </div>
+    </template>
+
+    <div v-else class="category-grid" role="radiogroup" aria-label="Categorie principale">
       <button
         v-for="option in itemTypeOptions"
         :key="option.value"
@@ -161,9 +208,10 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
   Check,
+  ChevronDown,
   CircleHelp,
   Package,
   Pencil,
@@ -193,11 +241,15 @@ const props = defineProps({
   modelValue: { type: String, default: 'SNEAKER' },
   userId: { type: [String, Number], default: 'guest' },
   labels: { type: Object, default: null },
+  display: { type: String, default: 'grid' },
+  placeholder: { type: String, default: 'Choisir une categorie' },
 })
 
 const emit = defineEmits(['update:modelValue', 'labelsChange'])
 
+const rootEl = ref(null)
 const managerOpen = ref(false)
+const menuOpen = ref(false)
 const storedLabels = ref(readStoredItemCategories(props.userId))
 const editingType = ref('')
 const editDraft = ref('')
@@ -213,6 +265,15 @@ const optionLabels = computed(() => {
   return labels
 })
 const itemTypeOptions = computed(() => resolveItemTypeOptions(optionLabels.value))
+const selectedOption = computed(
+  () =>
+    itemTypeOptions.value.find((option) => modelValueIs(option.value)) ||
+    itemTypeOptions.value[0] || {
+      value: 'OTHER',
+      label: props.placeholder,
+      defaultLabel: props.placeholder,
+    },
+)
 
 watch(
   () => props.userId,
@@ -228,9 +289,15 @@ function persist(nextLabels) {
 
 function selectType(type) {
   emit('update:modelValue', normalizeItemType(type))
+  menuOpen.value = false
+}
+
+function toggleMenu() {
+  menuOpen.value = !menuOpen.value
 }
 
 function openManager() {
+  menuOpen.value = false
   managerOpen.value = true
 }
 
@@ -292,11 +359,41 @@ function categoryIcon(type) {
   if (type === 'OTHER') return CircleHelp
   return Package
 }
+
+function onDocumentPointerDown(event) {
+  if (!menuOpen.value) return
+  if (rootEl.value?.contains(event.target)) return
+  menuOpen.value = false
+}
+
+function onStoredLabelsChange(event) {
+  const detail = event?.detail || {}
+  if (String(detail.userId || 'guest') !== String(props.userId || 'guest')) return
+  storedLabels.value = readStoredItemCategories(props.userId)
+}
+
+onMounted(() => {
+  document.addEventListener('pointerdown', onDocumentPointerDown, true)
+  if (typeof window !== 'undefined') {
+    window.addEventListener('snk:item-categories-change', onStoredLabelsChange)
+  }
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('pointerdown', onDocumentPointerDown, true)
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('snk:item-categories-change', onStoredLabelsChange)
+  }
+})
 </script>
 
 <style scoped>
 .category-field {
   position: relative;
+}
+
+.category-field--dropdown {
+  z-index: 20;
 }
 
 .field-heading {
@@ -341,6 +438,147 @@ function categoryIcon(type) {
   border-color: rgba(216, 180, 254, 0.58);
   background: rgba(126, 34, 206, 0.24);
   color: rgb(243 232 255);
+}
+
+.category-dropdown-trigger {
+  display: flex;
+  min-height: 2.625rem;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 0.85rem;
+  background: #ffffff;
+  padding: 0.45rem 0.7rem;
+  color: #0f172a;
+  text-align: left;
+  font-size: 0.88rem;
+  font-weight: 750;
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.category-dropdown-trigger:hover,
+.category-dropdown-trigger.is-open {
+  border-color: rgba(20, 184, 166, 0.56);
+  background: #f8fafc;
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.14);
+}
+
+.category-dropdown-trigger__icon {
+  display: inline-grid;
+  height: 1.9rem;
+  width: 1.9rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 0.65rem;
+  border: 1px solid rgba(20, 184, 166, 0.28);
+  background: #ecfdf5;
+  color: #0f766e;
+}
+
+.category-dropdown-trigger__text {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.category-dropdown-trigger__chevron {
+  flex: 0 0 auto;
+  color: #64748b;
+  transition: transform 140ms ease;
+}
+
+.category-dropdown-trigger.is-open .category-dropdown-trigger__chevron {
+  transform: rotate(180deg);
+}
+
+.category-dropdown-menu {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 0.45rem);
+  z-index: 220;
+  display: grid;
+  width: max(100%, min(34rem, calc(100vw - 2rem)));
+  max-height: min(430px, calc(100dvh - 11rem));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+  align-content: start;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.99);
+  padding: 0.55rem;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.18);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(15, 118, 110, 0.42) rgba(241, 245, 249, 0.9);
+}
+
+.category-dropdown-menu::-webkit-scrollbar {
+  width: 7px;
+}
+
+.category-dropdown-menu::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: rgba(241, 245, 249, 0.9);
+}
+
+.category-dropdown-menu::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(15, 118, 110, 0.42);
+}
+
+.category-dropdown-option {
+  display: flex;
+  min-width: 0;
+  min-height: 2.8rem;
+  align-items: center;
+  gap: 0.6rem;
+  border: 1px solid rgba(203, 213, 225, 0.76);
+  border-radius: 0.85rem;
+  background: #ffffff;
+  padding: 0.5rem 0.6rem;
+  text-align: left;
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.category-dropdown-option:hover,
+.category-dropdown-option.is-active {
+  border-color: rgba(20, 184, 166, 0.5);
+  background: #ecfdf5;
+}
+
+.category-dropdown-option.is-active {
+  box-shadow: inset 0 0 0 1px rgba(20, 184, 166, 0.22);
+}
+
+.category-dropdown-option .category-choice__label {
+  color: #0f172a;
+  font-size: 0.84rem;
+}
+
+.category-dropdown-option .category-choice__base {
+  color: #64748b;
+}
+
+.category-dropdown-option .category-choice__icon {
+  height: 1.85rem;
+  width: 1.85rem;
+}
+
+.category-dropdown-check {
+  flex: 0 0 auto;
+  color: #0f766e;
 }
 
 .category-grid {
@@ -664,6 +902,11 @@ function categoryIcon(type) {
 
 @media (max-width: 420px) {
   .category-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .category-dropdown-menu {
+    width: 100%;
     grid-template-columns: 1fr;
   }
 
