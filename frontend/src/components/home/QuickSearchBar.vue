@@ -60,7 +60,7 @@ import { useAuthStore } from '@/store/authStore'
 import { itemTypeLabel, readStoredItemCategories } from '@/RegleItem/itemCategoryStore'
 import { formatNumber } from '@/utils/formatters'
 import { getField, typeOf } from '@/utils/snkVente'
-import { normalizeSearchText } from '@/utils/homeDashboard'
+import { matchesSearchQuery, normalizeSearchText } from '@/utils/homeDashboard'
 
 const props = defineProps({
   items: { type: Array, default: () => [] },
@@ -100,32 +100,22 @@ const stockLabel = computed(() => {
 
 const searchableText = (item) => {
   const metadata = item?.metadata || {}
-  return normalizeSearchText(
-    [
-      getField(item, 'nomItem', ''),
-      getField(item, 'categorie', ''),
-      getField(item, 'description', ''),
-      itemTypeLabel(typeOf(item), categoryLabels.value),
-      typeOf(item),
-      metadata.size,
-      metadata.sku,
-      metadata.reference,
-      metadata.model,
-      metadata.colorway,
-      metadata.condition,
-    ].join(' '),
-  )
+  return [
+    item?.id,
+    getField(item, 'nomItem', ''),
+    getField(item, 'categorie', ''),
+    getField(item, 'description', ''),
+    itemTypeLabel(typeOf(item), categoryLabels.value),
+    typeOf(item),
+    ...Object.values(metadata),
+  ]
 }
 
 const filteredItems = computed(() => {
   const q = debouncedQuery.value
   if (!q) return []
-  const tokens = q.split(/\s+/).filter(Boolean)
   return props.items
-    .filter((item) => {
-      const haystack = searchableText(item)
-      return tokens.every((token) => haystack.includes(token))
-    })
+    .filter((item) => matchesSearchQuery(searchableText(item), q))
     .slice(0, 9)
 })
 

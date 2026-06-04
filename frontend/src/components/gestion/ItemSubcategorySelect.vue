@@ -1,14 +1,14 @@
 <template>
-  <div ref="rootEl" class="relative">
-    <div class="mb-2 flex items-center justify-between gap-3">
+  <div ref="rootEl" class="subcategory-field">
+    <div class="subcategory-field-header">
       <div>
-        <label :for="buttonId" class="block text-sm font-medium text-gray-200">
+        <label :for="buttonId" class="subcategory-label">
           Sous-categorie
         </label>
       </div>
       <button
         type="button"
-        class="inline-flex items-center gap-1.5 rounded-full border border-purple-400/25 bg-purple-500/10 px-2.5 py-0.5 text-xs font-bold text-purple-200 transition hover:border-purple-300/50 hover:bg-purple-500/15 hover:text-purple-100"
+        class="subcategory-manage-button"
         @click="openManager"
       >
         <Settings2 class="h-3.5 w-3.5" />
@@ -24,17 +24,17 @@
       :aria-expanded="menuOpen ? 'true' : 'false'"
       @click="menuOpen = !menuOpen"
     >
-      <span class="min-w-0 truncate" :class="modelValue ? 'text-gray-100' : 'text-gray-500'">
+      <span class="subcategory-trigger__text" :class="{ 'is-placeholder': !modelValue }">
         {{ selectedLabel }}
       </span>
-      <ChevronDown class="h-4 w-4 shrink-0 text-gray-400" :class="{ 'rotate-180': menuOpen }" />
+      <ChevronDown class="subcategory-trigger__chevron" :class="{ 'is-open': menuOpen }" />
     </button>
 
     <div v-if="menuOpen" class="subcategory-menu">
       <div class="max-h-56 overflow-y-auto p-1.5">
         <button type="button" class="subcategory-option is-empty" @click="selectValue('')">
           <span>Aucune sous-categorie</span>
-          <Check v-if="!modelValue" class="h-4 w-4 text-purple-200" />
+          <Check v-if="!modelValue" class="h-4 w-4" />
         </button>
         <button
           v-for="option in optionsForType"
@@ -45,10 +45,10 @@
           @click="selectValue(option)"
         >
           <span class="min-w-0 truncate">{{ option }}</span>
-          <Check v-if="option === modelValue" class="h-4 w-4 shrink-0 text-purple-200" />
+          <Check v-if="option === modelValue" class="h-4 w-4 shrink-0" />
         </button>
       </div>
-      <div class="border-t border-gray-800/90 p-2">
+      <div class="subcategory-menu-footer">
         <button type="button" class="manage-menu-button" @click="openManager">
           <Settings2 class="h-3.5 w-3.5" />
           <span>Gerer les sous-categories</span>
@@ -59,26 +59,26 @@
     <teleport to="body">
       <div
         v-if="managerOpen"
-        class="fixed inset-0 z-[10000] flex items-end justify-center bg-black/75 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+        class="subcategory-manager-backdrop"
         @click.self="closeManager"
       >
         <section
-          class="w-full max-w-lg rounded-t-2xl border border-gray-700 bg-gray-900 shadow-2xl sm:rounded-2xl"
+          class="subcategory-manager-panel"
           @click.stop
         >
-          <header class="flex items-start justify-between gap-3 border-b border-gray-800 p-4">
+          <header class="subcategory-manager-header">
             <div>
-              <p class="text-[11px] font-extrabold uppercase tracking-[0.08em] text-purple-300">
+              <p class="subcategory-manager-kicker">
                 {{ currentTypeLabel }}
               </p>
-              <h3 class="mt-1 text-lg font-extrabold text-white">Sous-categories</h3>
-              <p class="mt-1 text-xs text-gray-400">
+              <h3 class="subcategory-manager-title">Sous-categories</h3>
+              <p class="subcategory-manager-subtitle">
                 Ajoute les familles de detail qui te servent vraiment pour ce type d'article.
               </p>
             </div>
             <button
               type="button"
-              class="rounded-lg p-2 text-gray-400 transition hover:bg-gray-800 hover:text-white"
+              class="subcategory-manager-close"
               aria-label="Fermer"
               @click="closeManager"
             >
@@ -86,7 +86,7 @@
             </button>
           </header>
 
-          <div class="space-y-4 p-4">
+          <div class="subcategory-manager-body">
             <form class="subcategory-add-form" @submit.prevent="addDraft">
               <input
                 v-model.trim="draftName"
@@ -101,7 +101,7 @@
               </button>
             </form>
 
-            <div v-if="managerItems.length" class="max-h-72 space-y-2 overflow-y-auto pr-1">
+            <div v-if="managerItems.length" class="subcategory-manager-list">
               <div v-for="item in managerItems" :key="item" class="subcategory-row">
                 <template v-if="renameFrom === item">
                   <input
@@ -114,7 +114,7 @@
                   />
                   <button
                     type="button"
-                    class="icon-action text-emerald-200 hover:border-emerald-400/50 hover:bg-emerald-500/10"
+                    class="icon-action is-confirm"
                     aria-label="Valider"
                     @click="commitRename"
                   >
@@ -122,7 +122,7 @@
                   </button>
                   <button
                     type="button"
-                    class="icon-action text-gray-300 hover:border-gray-500 hover:bg-gray-800"
+                    class="icon-action"
                     aria-label="Annuler"
                     @click="cancelRename"
                   >
@@ -132,14 +132,14 @@
                 <template v-else>
                   <button
                     type="button"
-                    class="min-w-0 flex-1 truncate text-left text-sm font-bold text-gray-100"
+                    class="subcategory-row-main"
                     @click="selectValue(item)"
                   >
                     {{ item }}
                   </button>
                   <button
                     type="button"
-                    class="icon-action text-gray-300 hover:border-purple-400/50 hover:bg-purple-500/10 hover:text-purple-100"
+                    class="icon-action"
                     aria-label="Renommer"
                     @click="startRename(item)"
                   >
@@ -147,7 +147,7 @@
                   </button>
                   <button
                     type="button"
-                    class="icon-action text-red-200 hover:border-red-400/50 hover:bg-red-500/10"
+                    class="icon-action is-danger"
                     aria-label="Supprimer"
                     @click="removeItem(item)"
                   >
@@ -159,7 +159,7 @@
 
             <p
               v-else
-              class="rounded-xl border border-dashed border-gray-700 bg-gray-950/60 px-4 py-6 text-center text-sm text-gray-400"
+              class="subcategory-empty-state"
             >
               Aucune sous-categorie definie.
             </p>
@@ -378,50 +378,121 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.subcategory-trigger {
-  display: flex;
-  min-height: 2.625rem;
+.subcategory-field {
+  position: relative;
+  display: grid;
   width: 100%;
+  min-width: 0;
+  gap: 0.3rem;
+}
+
+.subcategory-field-header {
+  display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  border: 1px solid rgb(75 85 99);
-  border-radius: var(--radius-lg, 0.5rem);
-  background: rgb(17 24 39);
-  padding: 0.625rem 0.75rem;
+}
+
+.subcategory-label {
+  display: block;
+  color: #334155;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.subcategory-manage-button {
+  display: inline-flex;
+  min-height: 1.85rem;
+  max-width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border: 1px solid rgba(20, 184, 166, 0.32);
+  border-radius: 999px;
+  background: rgba(240, 253, 250, 0.9);
+  padding: 0.25rem 0.62rem;
+  color: #0f766e;
+  font-size: 0.74rem;
+  font-weight: 850;
+  white-space: nowrap;
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    color 140ms ease;
+}
+
+.subcategory-manage-button:hover {
+  border-color: rgba(20, 184, 166, 0.55);
+  background: #ccfbf1;
+  color: #0f766e;
+}
+
+.subcategory-trigger {
+  display: flex;
+  min-height: 2.5rem;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border: 1px solid rgba(100, 116, 139, 0.24);
+  border-radius: 12px;
+  background: rgba(248, 250, 252, 0.92);
+  padding: 0.5rem 0.72rem;
+  color: #0f172a;
   text-align: left;
-  color: rgb(243 244 246);
-  font-size: 0.875rem;
-  line-height: 1.25rem;
+  outline: none;
   transition:
     background 140ms ease,
     border-color 140ms ease,
     box-shadow 140ms ease;
 }
 
-.subcategory-trigger:hover {
-  border-color: rgba(148, 163, 184, 0.65);
-  background: rgba(15, 23, 42, 0.92);
-}
-
+.subcategory-trigger:hover,
 .subcategory-trigger:focus,
 .subcategory-trigger.is-open {
-  border-color: rgba(168, 85, 247, 0.78);
-  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.18);
-  outline: none;
+  border-color: rgba(20, 184, 166, 0.56);
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.12);
+}
+
+.subcategory-trigger__text {
+  min-width: 0;
+  overflow: hidden;
+  color: #0f172a;
+  font-size: 0.88rem;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subcategory-trigger__text.is-placeholder {
+  color: #94a3b8;
+}
+
+.subcategory-trigger__chevron {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+  color: #475569;
+  transition: transform 140ms ease;
+}
+
+.subcategory-trigger__chevron.is-open {
+  transform: rotate(180deg);
 }
 
 .subcategory-menu {
   position: absolute;
   left: 0;
   right: 0;
-  z-index: 50;
+  z-index: 80;
   margin-top: 0.5rem;
   overflow: hidden;
-  border: 1px solid rgba(75, 85, 99, 0.92);
-  border-radius: 1rem;
-  background: rgba(2, 6, 23, 0.98);
-  box-shadow: 0 18px 55px rgba(0, 0, 0, 0.38);
+  border: 1px solid rgba(125, 211, 252, 0.38);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 18px 55px rgba(15, 23, 42, 0.14);
 }
 
 .subcategory-option {
@@ -432,170 +503,13 @@ onBeforeUnmount(() => {
   gap: 0.75rem;
   border-radius: 0.7rem;
   padding: 0.65rem 0.75rem;
+  color: #334155;
   text-align: left;
   font-size: 0.875rem;
-  font-weight: 650;
-  color: rgb(209 213 219);
+  font-weight: 700;
   transition:
     background 140ms ease,
     color 140ms ease;
-}
-
-.subcategory-option:hover,
-.subcategory-option.is-active {
-  background: rgba(124, 58, 237, 0.2);
-  color: rgb(243 244 246);
-}
-
-.subcategory-option.is-empty {
-  color: rgb(156 163 175);
-}
-
-.manage-menu-button {
-  display: flex;
-  width: 100%;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  border: 1px solid rgba(168, 85, 247, 0.34);
-  border-radius: 999px;
-  background: rgba(88, 28, 135, 0.18);
-  padding: 0.6rem 0.75rem;
-  color: rgb(233 213 255);
-  font-size: 0.78rem;
-  font-weight: 800;
-  transition:
-    background 140ms ease,
-    border-color 140ms ease;
-}
-
-.manage-menu-button:hover {
-  border-color: rgba(216, 180, 254, 0.6);
-  background: rgba(126, 34, 206, 0.24);
-}
-
-.subcategory-add-form {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 0.625rem;
-}
-
-.subcategory-add-input,
-.subcategory-row-input {
-  min-width: 0;
-  border: 1px solid rgba(75, 85, 99, 0.95);
-  border-radius: 0.85rem;
-  background: rgba(2, 6, 23, 0.55);
-  padding: 0.72rem 0.85rem;
-  color: rgb(243 244 246);
-  font-size: 0.875rem;
-  outline: none;
-}
-
-.subcategory-add-input::placeholder {
-  color: rgb(107 114 128);
-}
-
-.subcategory-add-input:focus,
-.subcategory-row-input:focus {
-  border-color: rgba(168, 85, 247, 0.78);
-  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.18);
-}
-
-.subcategory-add-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.45rem;
-  border-radius: 0.85rem;
-  background: rgb(124 58 237);
-  padding: 0.72rem 0.9rem;
-  color: white;
-  font-size: 0.86rem;
-  font-weight: 800;
-  transition:
-    background 140ms ease,
-    opacity 140ms ease;
-}
-
-.subcategory-add-button:hover:not(:disabled) {
-  background: rgb(147 51 234);
-}
-
-.subcategory-add-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.48;
-}
-
-.subcategory-row {
-  display: flex;
-  align-items: center;
-  gap: 0.625rem;
-  border: 1px solid rgba(75, 85, 99, 0.78);
-  border-radius: 0.9rem;
-  background: rgba(2, 6, 23, 0.34);
-  padding: 0.55rem;
-}
-
-.icon-action {
-  display: inline-grid;
-  height: 2.05rem;
-  width: 2.05rem;
-  flex: 0 0 auto;
-  place-items: center;
-  border-radius: 0.7rem;
-  border: 1px solid rgba(75, 85, 99, 0.9);
-  background: rgba(15, 23, 42, 0.72);
-  transition:
-    border-color 140ms ease,
-    background 140ms ease,
-    color 140ms ease;
-}
-
-@media (max-width: 440px) {
-  .subcategory-add-form {
-    grid-template-columns: 1fr;
-  }
-}
-
-:global(.gestion-page-light) .relative label,
-:global(.gestion-page-light) .relative .text-gray-200,
-:global(.home-page-light) .relative label,
-:global(.home-page-light) .relative .text-gray-200 {
-  color: #0f172a;
-}
-
-:global(.gestion-page-light) .relative .text-purple-200,
-:global(.home-page-light) .relative .text-purple-200 {
-  color: #0f766e;
-}
-
-.subcategory-trigger {
-  border-color: rgba(148, 163, 184, 0.28);
-  background: #ffffff;
-  color: #0f172a;
-}
-
-.subcategory-trigger:hover,
-.subcategory-trigger:focus,
-.subcategory-trigger.is-open {
-  border-color: rgba(20, 184, 166, 0.56);
-  background: #f8fafc;
-  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.14);
-}
-
-.subcategory-trigger :is(.text-gray-100, .text-gray-400, .text-gray-500) {
-  color: #0f172a;
-}
-
-.subcategory-menu {
-  border-color: rgba(125, 211, 252, 0.38);
-  background: rgba(255, 255, 255, 0.98);
-  box-shadow: 0 18px 55px rgba(15, 23, 42, 0.14);
-}
-
-.subcategory-option {
-  color: #334155;
 }
 
 .subcategory-option:hover,
@@ -608,24 +522,143 @@ onBeforeUnmount(() => {
   color: #64748b;
 }
 
-.manage-menu-button,
-.subcategory-add-button {
-  border-color: rgba(20, 184, 166, 0.32);
-  background: linear-gradient(135deg, #0f766e, #0e7490);
-  color: #ffffff;
+.subcategory-option svg {
+  color: #0f766e;
 }
 
-.manage-menu-button:hover,
-.subcategory-add-button:hover:not(:disabled) {
+.subcategory-menu-footer {
+  border-top: 1px solid rgba(226, 232, 240, 0.9);
+  padding: 0.5rem;
+}
+
+.manage-menu-button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid rgba(20, 184, 166, 0.32);
+  border-radius: 999px;
+  background: rgba(240, 253, 250, 0.9);
+  padding: 0.6rem 0.75rem;
+  color: #0f766e;
+  font-size: 0.78rem;
+  font-weight: 850;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease;
+}
+
+.manage-menu-button:hover {
   border-color: rgba(20, 184, 166, 0.54);
-  background: linear-gradient(135deg, #0d9488, #0284c7);
+  background: #ccfbf1;
+}
+
+.subcategory-manager-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.48);
+  padding: 0;
+  backdrop-filter: blur(10px);
+}
+
+.subcategory-manager-panel {
+  width: 100%;
+  max-height: min(88dvh, 42rem);
+  max-width: 44rem;
+  overflow: hidden;
+  border: 1px solid rgba(125, 211, 252, 0.4);
+  border-radius: 20px 20px 0 0;
+  background:
+    linear-gradient(135deg, rgba(236, 253, 245, 0.76), rgba(224, 242, 254, 0.58) 42%, transparent),
+    #fbfaf6;
+  color: #0f172a;
+  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.24);
+}
+
+.subcategory-manager-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid rgba(203, 213, 225, 0.82);
+  padding: 1.15rem 1.25rem 1rem;
+}
+
+.subcategory-manager-kicker {
+  margin: 0 0 0.25rem;
+  color: #0f766e;
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.subcategory-manager-title {
+  margin: 0;
+  color: #0f172a;
+  font-size: clamp(1.15rem, 2vw, 1.45rem);
+  font-weight: 950;
+}
+
+.subcategory-manager-subtitle {
+  margin: 0.35rem 0 0;
+  max-width: 28rem;
+  color: #64748b;
+  font-size: 0.85rem;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.subcategory-manager-close {
+  display: inline-grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.84);
+  color: #475569;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
+}
+
+.subcategory-manager-close:hover {
+  border-color: rgba(20, 184, 166, 0.5);
+  background: #ecfdf5;
+  color: #0f766e;
+}
+
+.subcategory-manager-body {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1rem 1.25rem 1.25rem;
+}
+
+.subcategory-add-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.7rem;
 }
 
 .subcategory-add-input,
 .subcategory-row-input {
-  border-color: rgba(148, 163, 184, 0.28);
+  min-width: 0;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 14px;
   background: #ffffff;
+  padding: 0.78rem 0.9rem;
   color: #0f172a;
+  font-size: 0.92rem;
+  font-weight: 700;
+  outline: none;
 }
 
 .subcategory-add-input::placeholder {
@@ -638,14 +671,136 @@ onBeforeUnmount(() => {
   box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.14);
 }
 
+.subcategory-add-button {
+  display: inline-flex;
+  min-height: 2.8rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border: 1px solid rgba(15, 118, 110, 0.2);
+  border-radius: 14px;
+  background: linear-gradient(135deg, #0f766e, #0e7490);
+  padding: 0.72rem 1rem;
+  color: #ffffff;
+  font-size: 0.88rem;
+  font-weight: 900;
+  transition:
+    background 140ms ease,
+    opacity 140ms ease;
+}
+
+.subcategory-add-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #0d9488, #0284c7);
+}
+
+.subcategory-add-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.subcategory-manager-list {
+  display: grid;
+  max-height: 18rem;
+  gap: 0.6rem;
+  overflow-y: auto;
+  padding-right: 0.1rem;
+}
+
 .subcategory-row {
-  border-color: rgba(125, 211, 252, 0.32);
-  background: rgba(255, 255, 255, 0.78);
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.6rem;
+  border: 1px solid rgba(125, 211, 252, 0.32);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.82);
+  padding: 0.62rem;
+}
+
+.subcategory-row-main {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  color: #0f172a;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.9rem;
+  font-weight: 850;
 }
 
 .icon-action {
-  border-color: rgba(125, 211, 252, 0.32);
-  background: rgba(255, 255, 255, 0.8);
+  display: inline-grid;
+  width: 2.15rem;
+  height: 2.15rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgba(125, 211, 252, 0.34);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.88);
   color: #475569;
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    color 140ms ease;
+}
+
+.icon-action:hover:not(:disabled),
+.icon-action.is-confirm:hover:not(:disabled) {
+  border-color: rgba(20, 184, 166, 0.5);
+  background: #ecfdf5;
+  color: #0f766e;
+}
+
+.icon-action.is-confirm {
+  color: #047857;
+}
+
+.icon-action.is-danger {
+  color: #b91c1c;
+}
+
+.icon-action.is-danger:hover:not(:disabled) {
+  border-color: rgba(248, 113, 113, 0.42);
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.subcategory-empty-state {
+  border: 1px dashed rgba(125, 211, 252, 0.55);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.68);
+  padding: 1.2rem;
+  color: #64748b;
+  text-align: center;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+@media (min-width: 640px) {
+  .subcategory-manager-backdrop {
+    align-items: center;
+    padding: 1rem;
+  }
+
+  .subcategory-manager-panel {
+    border-radius: 20px;
+  }
+}
+
+@media (max-width: 440px) {
+  .subcategory-field-header,
+  .subcategory-add-form {
+    grid-template-columns: 1fr;
+  }
+
+  .subcategory-field-header {
+    display: grid;
+  }
+
+  .subcategory-manage-button,
+  .subcategory-add-button {
+    width: 100%;
+  }
 }
 </style>

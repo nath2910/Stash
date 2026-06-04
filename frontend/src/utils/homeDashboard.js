@@ -28,8 +28,80 @@ export function normalizeSearchText(value) {
   return String(value ?? '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
+    .replace(/['’`]/g, ' ')
+    .replace(/[^a-zA-Z0-9]+/g, ' ')
     .toLowerCase()
     .trim()
+    .replace(/\s+/g, ' ')
+}
+
+export function searchTokens(value) {
+  return normalizeSearchText(value).split(/\s+/).filter(Boolean)
+}
+
+function compactSearchText(value) {
+  return normalizeSearchText(value).replace(/\s+/g, '')
+}
+
+function maxDistanceForToken(token) {
+  if (token.length < 3) return 0
+  if (token.length <= 5) return 1
+  return 2
+}
+
+function editDistanceWithin(a, b, maxDistance) {
+  if (!maxDistance && a !== b) return false
+  if (Math.abs(a.length - b.length) > maxDistance) return false
+  if (a.length > 32 || b.length > 32) return false
+
+  let previous = Array.from({ length: b.length + 1 }, (_, index) => index)
+  for (let i = 1; i <= a.length; i += 1) {
+    const current = [i]
+    let rowMin = current[0]
+    for (let j = 1; j <= b.length; j += 1) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1
+      const value = Math.min(
+        previous[j] + 1,
+        current[j - 1] + 1,
+        previous[j - 1] + cost,
+      )
+      current[j] = value
+      rowMin = Math.min(rowMin, value)
+    }
+    if (rowMin > maxDistance) return false
+    previous = current
+  }
+
+  return previous[b.length] <= maxDistance
+}
+
+function tokenMatchesWord(token, word) {
+  if (!token || !word) return false
+  if (word.includes(token)) return true
+  if (token.length >= 4 && word.length >= 3 && token.includes(word)) return true
+
+  const maxDistance = maxDistanceForToken(token)
+  return maxDistance > 0 && editDistanceWithin(token, word, maxDistance)
+}
+
+export function matchesSearchQuery(source, query) {
+  const normalizedQuery = normalizeSearchText(query)
+  if (!normalizedQuery) return true
+
+  const rawSource = Array.isArray(source) ? source.join(' ') : source
+  const haystack = normalizeSearchText(rawSource)
+  if (!haystack) return false
+  if (haystack.includes(normalizedQuery)) return true
+
+  const compactHaystack = compactSearchText(haystack)
+  const compactQuery = compactSearchText(normalizedQuery)
+  if (compactQuery.length >= 3 && compactHaystack.includes(compactQuery)) return true
+
+  const words = haystack.split(/\s+/).filter(Boolean)
+  return searchTokens(normalizedQuery).every((token) => {
+    if (compactHaystack.includes(token)) return true
+    return words.some((word) => tokenMatchesWord(token, word))
+  })
 }
 
 export function numberOrNull(value) {

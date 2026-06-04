@@ -56,7 +56,7 @@
           <form class="modal-form space-y-5 p-4 sm:p-6" @submit.prevent="save">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <!-- Categorie principale -->
-              <div class="sm:col-span-2">
+              <div class="metadata-section sm:col-span-2">
                 <ItemCategorySelect
                   :model-value="form.type"
                   :user-id="currentUserId || 'guest'"
@@ -164,7 +164,7 @@
             </div>
 
             <!-- Attachments -->
-            <div class="rounded-xl border border-gray-700 bg-gray-900/60 p-4 space-y-3">
+            <div class="attachments-panel rounded-xl border border-gray-700 bg-gray-900/60 p-4 space-y-3">
               <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <p class="text-sm font-semibold text-gray-100">Pièces jointes</p>
@@ -182,7 +182,7 @@
                   />
                   <button
                     type="button"
-                    class="px-3 py-2 text-xs rounded-lg border border-emerald-400/50 bg-emerald-500/10 text-emerald-100 hover:bg-emerald-500/20 transition disabled:opacity-60"
+                    class="attachment-upload-button px-3 py-2 text-xs rounded-lg border border-emerald-400/50 bg-emerald-500/10 text-emerald-100 hover:bg-emerald-500/20 transition disabled:opacity-60"
                     :disabled="uploading"
                     @click="fileInput?.click()"
                   >
@@ -481,8 +481,8 @@ const formatSize = (bytes) => {
   border-color: rgba(125, 211, 252, 0.38);
   background:
     linear-gradient(135deg, rgba(14, 165, 233, 0.08), transparent 42%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96)),
-    #ffffff;
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 244, 238, 0.98)),
+    #fbfaf6;
   color: #0f172a;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -517,7 +517,9 @@ const formatSize = (bytes) => {
   letter-spacing: 0;
 }
 .modal-form {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.35), rgba(248, 250, 252, 0.62));
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(247, 244, 238, 0.92)),
+    #fbfaf6;
 }
 .modal-footer-sticky {
   position: sticky;
@@ -528,11 +530,11 @@ const formatSize = (bytes) => {
 }
 
 .modal-card :is(.border-gray-700, .border-gray-600) {
-  border-color: rgba(125, 211, 252, 0.32);
+  border-color: rgba(14, 165, 233, 0.38);
 }
 
 .modal-card :is(.bg-gray-900\/60, .bg-gray-900, .bg-gray-800) {
-  background: rgba(255, 255, 255, 0.78);
+  background: #f8fafc;
 }
 
 .modal-card [class*='bg-slate-'],
@@ -549,11 +551,12 @@ const formatSize = (bytes) => {
 }
 
 .modal-card :is(input, textarea) {
-  border-color: rgba(148, 163, 184, 0.28);
-  background: #ffffff;
+  border-color: rgba(14, 165, 233, 0.34);
+  background: #f8fafc;
   color: #0f172a;
   min-height: 2.65rem;
   border-radius: 0.9rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95);
 }
 
 .modal-card :is(input, textarea)::placeholder {
@@ -562,7 +565,29 @@ const formatSize = (bytes) => {
 
 .modal-card :is(input, textarea):focus {
   border-color: rgba(20, 184, 166, 0.72);
+  background: #ffffff;
   box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.14);
+}
+
+.metadata-section,
+.attachments-panel {
+  border: 1px solid rgba(14, 165, 233, 0.34);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(248, 250, 252, 0.92)),
+    #f8fafc;
+  padding: 1rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+
+.metadata-section {
+  margin-top: 0.15rem;
+}
+
+.attachments-panel {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    0 10px 24px rgba(15, 23, 42, 0.05);
 }
 
 .modal-card button[type='submit'] {
@@ -580,8 +605,26 @@ const formatSize = (bytes) => {
 .modal-card :is(.text-blue-200) {
   color: #0369a1;
 }
+.modal-card :is(.text-emerald-100, .text-emerald-200) {
+  color: #047857;
+}
 .modal-card :is(.text-red-200, .text-red-300) {
   color: #b91c1c;
+}
+
+.attachment-upload-button {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.attachment-upload-button:hover:not(:disabled) {
+  background: #ccfbf1;
+}
+
+.attachment-upload-button:disabled {
+  opacity: 1;
+  background: #d1fae5;
+  color: #0f766e;
 }
 @media (max-width: 639px) {
   .modal-card {

@@ -586,7 +586,7 @@ textarea:focus {
 }
 
 .modal-form :deep(.field-label),
-.modal-form :deep(.relative label) {
+.modal-form :deep(.subcategory-label) {
   color: #334155;
   font-size: 0.76rem;
   font-weight: 800;
@@ -622,7 +622,7 @@ textarea:focus {
   padding: 0.25rem 0.55rem;
 }
 
-.modal-form :deep(.relative > .mb-2) {
+.modal-form :deep(.subcategory-field-header) {
   margin-bottom: 0.35rem;
 }
 

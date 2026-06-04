@@ -654,7 +654,7 @@ input:focus {
 }
 
 .quick-add-panel :deep(.field-label),
-.quick-add-panel :deep(.relative label) {
+.quick-add-panel :deep(.subcategory-label) {
   min-width: 0;
   color: #334155;
   font-size: 0.76rem;
@@ -692,7 +692,7 @@ input:focus {
   padding: 0.25rem 0.55rem;
 }
 
-.quick-add-panel :deep(.relative > .mb-2) {
+.quick-add-panel :deep(.subcategory-field-header) {
   margin-bottom: 0.35rem;
   min-width: 0;
 }
@@ -704,7 +704,7 @@ input:focus {
   border-radius: 12px;
 }
 
-.quick-add-panel :deep(.relative > .mb-2 button) {
+.quick-add-panel :deep(.subcategory-manage-button) {
   max-width: 100%;
   flex-shrink: 0;
   padding-inline: 0.55rem;

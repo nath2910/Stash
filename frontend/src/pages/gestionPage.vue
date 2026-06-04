@@ -362,6 +362,7 @@ import DeliveryTrackingPanel from '@/components/gestion/DeliveryTrackingPanel.vu
 import CompactDateInput from '@/components/ui/CompactDateInput.vue'
 import AdminPage from '@/pages/adminPage.vue'
 import { isVendue, prixRetailOf } from '@/utils/snkVente'
+import { matchesSearchQuery, normalizeSearchText } from '@/utils/homeDashboard'
 import {
   buildItemCategoryAliases,
   isItemCategoryAlias,
@@ -447,12 +448,7 @@ const emptyFilters = () => ({
 
 const filters = ref(emptyFilters())
 
-const normalizeText = (value) =>
-  String(value ?? '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .trim()
-    .toLowerCase()
+const normalizeText = (value) => normalizeSearchText(value)
 
 const toDateKey = (value) => {
   if (!value) return ''
@@ -574,18 +570,19 @@ const sanitizeFilters = (rawFilters) => {
 
 const venteMatchesSearch = (vente, term) => {
   if (!term) return true
-  const idStr = String(vente.id ?? '')
-  const name = normalizeText(vente.nomItem ?? vente.nom_item)
   const rawCat = String(vente.categorie ?? '').trim()
-  const cat = isItemCategoryAlias(rawCat, categoryLabels.value) ? '' : normalizeText(rawCat)
-  const desc = normalizeText(vente.description)
-  const type = normalizeText(itemTypeLabel(vente.type || 'SNEAKER', categoryLabels.value))
-  return (
-    idStr.includes(term) ||
-    name.includes(term) ||
-    cat.includes(term) ||
-    desc.includes(term) ||
-    type.includes(term)
+  const metadata = vente?.metadata || {}
+  return matchesSearchQuery(
+    [
+      vente.id,
+      vente.nomItem ?? vente.nom_item,
+      isItemCategoryAlias(rawCat, categoryLabels.value) ? '' : rawCat,
+      vente.description,
+      itemTypeLabel(vente.type || 'SNEAKER', categoryLabels.value),
+      vente.type,
+      ...Object.values(metadata),
+    ],
+    term,
   )
 }
 
