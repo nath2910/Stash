@@ -75,7 +75,7 @@
             </section>
 
             <!-- Tableau -->
-            <div class="inventory-list-panel relative z-0 overflow-hidden">
+            <div class="inventory-list-panel relative z-0">
               <!-- Header tableau -->
               <div class="inventory-list-header">
                 <!-- Gauche : titre -->
@@ -91,31 +91,6 @@
                   </p>
                 </div>
 
-                <!-- Droite : actions -->
-                <div class="inventory-actions">
-                  <button
-                    type="button"
-                    class="inventory-actions-toggle"
-                    :aria-expanded="mobileActionsOpen"
-                    @click="mobileActionsOpen = !mobileActionsOpen"
-                  >
-                    <MoreHorizontal class="h-4 w-4" aria-hidden="true" />
-                    <span>Actions</span>
-                  </button>
-
-                  <div class="inventory-actions-panel" :class="{ 'is-open': mobileActionsOpen }">
-                    <GestionActionsPanel @vente-ajoutee="handleVenteAjouteeFromActions" />
-                    <div class="[&_button:hover]:bg-red-900">
-                      <button
-                        type="button"
-                        class="inventory-danger-button"
-                        @click="openDeleteFromActions"
-                      >
-                        Supprimer un item
-                      </button>
-                    </div>
-                  </div>
-                </div>
               </div>
 
               <div class="inventory-search-strip">
@@ -137,39 +112,6 @@
                   </div>
 
                   <div class="filter-toolbar-actions">
-                    <div
-                      class="filter-status-group filter-status-group--desktop"
-                      aria-label="Filtrer par statut"
-                    >
-                      <button
-                        v-for="option in statusOptions"
-                        :key="option.value"
-                        type="button"
-                        class="filter-status-button"
-                        :class="{ 'is-active': filters.status === option.value }"
-                        @click="filters.status = option.value"
-                      >
-                        {{ option.label }}
-                      </button>
-                    </div>
-
-                    <button
-                      type="button"
-                      class="filter-reset-button"
-                      :disabled="!hasActiveFilters"
-                      :title="hasActiveFilters ? 'Reinitialiser les filtres' : 'Aucun filtre actif'"
-                      :aria-label="
-                        hasActiveFilters ? 'Reinitialiser les filtres' : 'Aucun filtre actif'
-                      "
-                      @click="resetFilters"
-                    >
-                      <RotateCcw class="h-3.5 w-3.5" />
-                      <span class="filter-reset-text">Reset</span>
-                      <span v-if="activeFilterCount" class="filter-count-badge">
-                        {{ activeFilterCount }}
-                      </span>
-                    </button>
-
                     <button
                       type="button"
                       class="filter-panel-toggle"
@@ -207,6 +149,23 @@
                       {{ option.label }}
                     </button>
                   </div>
+
+                  <button
+                    type="button"
+                    class="filter-reset-button filter-reset-button--panel"
+                    :disabled="!hasActiveFilters"
+                    :title="hasActiveFilters ? 'Reinitialiser les filtres' : 'Aucun filtre actif'"
+                    :aria-label="
+                      hasActiveFilters ? 'Reinitialiser les filtres' : 'Aucun filtre actif'
+                    "
+                    @click="resetFilters"
+                  >
+                    <RotateCcw class="h-3.5 w-3.5" />
+                    <span class="filter-reset-text">Reset</span>
+                    <span v-if="activeFilterCount" class="filter-count-badge">
+                      {{ activeFilterCount }}
+                    </span>
+                  </button>
 
                   <label class="filter-field">
                     <span>Type item</span>
@@ -298,6 +257,21 @@
               </div>
 
               <!-- Liste -->
+              <div class="inventory-actions inventory-actions--list">
+                <div class="inventory-actions-panel inventory-actions-panel--list">
+                  <GestionActionsPanel @vente-ajoutee="handleVenteAjouteeFromActions" />
+                  <div class="[&_button:hover]:bg-red-900">
+                    <button
+                      type="button"
+                      class="inventory-danger-button"
+                      @click="openDeleteFromActions"
+                    >
+                      Supprimer un item
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               <div class="inventory-list-body">
                 <div class="inventory-list-scroll">
                   <afficherTout
@@ -343,7 +317,6 @@ import { useRoute, useRouter } from 'vue-router'
 import {
   CalendarDays,
   ClipboardList,
-  MoreHorizontal,
   PackageSearch,
   RotateCcw,
   SlidersHorizontal,
@@ -404,7 +377,6 @@ const tabFromRoute = () => {
 }
 const activeGestionTab = ref(tabFromRoute())
 const filtersPanelOpen = ref(false)
-const mobileActionsOpen = ref(false)
 
 const EMPTY_CATEGORY_VALUE = '__empty_category__'
 
@@ -424,7 +396,6 @@ const setGestionTab = (tab) => {
   const nextTab = tab === 'delivery' || tab === 'admin' ? tab : 'inventory'
   activeGestionTab.value = nextTab
   filtersPanelOpen.value = false
-  mobileActionsOpen.value = false
 
   const nextQuery = { ...route.query }
   if (nextTab === 'delivery' || nextTab === 'admin') {
@@ -759,7 +730,6 @@ const handleVenteAjoutee = async () => {
 }
 
 const handleVenteAjouteeFromActions = async () => {
-  mobileActionsOpen.value = false
   await handleVenteAjoutee()
 }
 
@@ -780,7 +750,6 @@ const openDeleteBulk = () => {
 }
 
 const openDeleteFromActions = () => {
-  mobileActionsOpen.value = false
   openDeleteBulk()
 }
 
@@ -835,7 +804,6 @@ watch(
   () => {
     activeGestionTab.value = tabFromRoute()
     filtersPanelOpen.value = false
-    mobileActionsOpen.value = false
   },
 )
 
@@ -1245,9 +1213,24 @@ watch(
   gap: 0.5rem;
 }
 
+.inventory-actions--list {
+  justify-content: flex-end;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+  background: #fbfaf7;
+  padding: 0.78rem clamp(1rem, 2vw, 1.35rem);
+}
+
+.inventory-actions-panel--list {
+  gap: 0.65rem;
+}
+
 @media (min-width: 641px) {
   .inventory-actions {
     width: auto;
+  }
+
+  .inventory-actions--list {
+    width: 100%;
   }
 }
 
@@ -1381,6 +1364,21 @@ watch(
 
   .inventory-actions-panel.is-open {
     display: grid;
+  }
+
+  .inventory-actions--list {
+    display: block;
+    width: 100%;
+    padding: 0.65rem clamp(0.85rem, 1.8vw, 1.2rem);
+  }
+
+  .inventory-actions--list .inventory-actions-panel {
+    display: grid;
+    width: 100%;
+    margin-top: 0;
+    border: 0;
+    background: transparent;
+    padding: 0;
   }
 }
 
@@ -1665,10 +1663,11 @@ watch(
 }
 
 .inventory-list-scroll {
-  max-height: clamp(360px, 58dvh, 680px);
-  overflow: auto;
-  overscroll-behavior: contain;
-  padding-right: 0.15rem;
+  max-height: none;
+  overflow-x: auto;
+  overflow-y: visible;
+  overscroll-behavior: auto;
+  padding-right: 0;
   scrollbar-width: thin;
   scrollbar-color: rgba(14, 116, 144, 0.42) rgba(248, 250, 252, 0.82);
 }
@@ -1830,6 +1829,7 @@ watch(
 
 .inventory-list-panel {
   display: grid;
+  overflow: visible;
 }
 
 .inventory-list-header {
@@ -1899,8 +1899,8 @@ watch(
 }
 
 .inventory-filter-heading {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
@@ -1908,7 +1908,8 @@ watch(
 
 .filter-toolbar-actions {
   display: flex;
-  flex-wrap: wrap;
+  min-width: max-content;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: flex-end;
   gap: 0.5rem;
@@ -1923,6 +1924,14 @@ watch(
 
 .filter-compact-grid.is-open {
   display: grid;
+}
+
+.filter-panel-toggle {
+  width: 8.4rem;
+  flex: 0 0 8.4rem;
+  height: 40px;
+  min-height: 40px;
+  white-space: nowrap;
 }
 
 .filter-field,
@@ -1966,6 +1975,13 @@ watch(
   min-width: 0;
   height: 40px;
   padding: 0 0.85rem;
+}
+
+.filter-reset-button--panel {
+  width: 100%;
+  min-height: 48px;
+  height: auto;
+  justify-self: stretch;
 }
 
 .inventory-filter-shell .filter-reset-text {
@@ -2041,19 +2057,19 @@ watch(
   }
 
   .inventory-list-header,
-  .inventory-filter-heading,
-  .filter-toolbar-actions {
+  .inventory-filter-heading {
     align-items: stretch;
   }
 
-  .inventory-actions,
-  .filter-toolbar-actions {
+  .inventory-actions {
     width: 100%;
   }
 
   .filter-toolbar-actions {
-    display: grid;
-    grid-template-columns: 1fr;
+    display: flex;
+    width: auto;
+    align-items: center;
+    justify-content: flex-end;
   }
 
   .filter-compact-grid {
@@ -2061,7 +2077,7 @@ watch(
   }
 
   .inventory-list-scroll {
-    max-height: clamp(380px, 62dvh, 620px);
+    max-height: none;
   }
 }
 
@@ -2135,7 +2151,13 @@ watch(
   gap: 0.35rem;
 }
 
-.inventory-filter-shell:not(.is-open) .filter-panel-toggle,
+.inventory-filter-shell:not(.is-open) .filter-panel-toggle {
+  min-height: 40px;
+  height: 40px;
+  border-radius: 999px;
+  padding-inline: 0.7rem;
+}
+
 .inventory-filter-shell:not(.is-open) .filter-reset-button {
   min-height: 32px;
   height: 32px;

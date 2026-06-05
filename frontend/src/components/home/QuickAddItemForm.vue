@@ -17,13 +17,6 @@
       </button>
     </div>
 
-    <div v-if="localError || apiError" class="form-alert form-alert--error">
-      {{ localError || apiError }}
-    </div>
-    <div v-if="successText" class="form-alert form-alert--success">
-      {{ successText }}
-    </div>
-
     <form class="quick-form" @submit.prevent="submit">
       <ItemCategorySelect
         class="field field--category"
@@ -170,20 +163,16 @@ import { numberOrNull, toYmdLocal } from '@/utils/homeDashboard'
 
 const props = defineProps({
   saving: { type: Boolean, default: false },
-  apiError: { type: String, default: '' },
   successKey: { type: Number, default: 0 },
-  successMessage: { type: String, default: '' },
   items: { type: Array, default: () => [] },
 })
 
-const emit = defineEmits(['submit'])
+const emit = defineEmits(['submit', 'error'])
 
 const LAST_TYPE_PREFIX = 'snk_home_last_item_type_v1'
 const auth = useAuthStore()
 const currentUserId = computed(() => auth.user?.value?.id ?? auth.user?.id ?? 'guest')
 const categoryLabels = ref(readStoredItemCategories(currentUserId.value))
-const localError = ref('')
-const successText = ref('')
 const showDetails = ref(false)
 
 const itemTypes = computed(() => resolveItemTypeOptions(categoryLabels.value))
@@ -246,13 +235,8 @@ watch(
   () => props.successKey,
   () => {
     if (!props.successKey) return
-    successText.value = props.successMessage || 'Item ajoute.'
     form.value = emptyForm()
     showDetails.value = false
-    localError.value = ''
-    window.setTimeout(() => {
-      successText.value = ''
-    }, 2600)
   },
 )
 
@@ -338,6 +322,8 @@ function increaseQuantity() {
 }
 
 function validate() {
+  const today = toYmdLocal(new Date())
+  if (!form.value.type) return 'Choisis une categorie.'
   if (!form.value.nomItem.trim()) return "Le nom de l'item est obligatoire."
   const retail = numberOrNull(form.value.prixRetail)
   if (retail === null) return "Le prix d'achat est obligatoire."
@@ -348,14 +334,25 @@ function validate() {
   if (!Number.isInteger(quantity) || quantity < 1 || quantity > 50) {
     return 'La quantite doit etre comprise entre 1 et 50.'
   }
+  if (form.value.dateAchat && form.value.dateAchat > today) {
+    return "La date d'achat ne peut pas etre apres aujourd'hui."
+  }
+  if (form.value.dateVente && form.value.dateVente > today) {
+    return "La date de vente ne peut pas etre apres aujourd'hui."
+  }
+  if (form.value.dateAchat && form.value.dateVente && form.value.dateVente < form.value.dateAchat) {
+    return "La date de vente doit etre apres la date d'achat."
+  }
   return ''
 }
 
 function submit() {
   setQuantity(form.value.quantity)
-  localError.value = validate()
-  successText.value = ''
-  if (localError.value) return
+  const validationError = validate()
+  if (validationError) {
+    emit('error', validationError)
+    return
+  }
 
   const itemType = normalizeItemType(form.value.type || resolveDefaultType())
   writeLastType(itemType)
@@ -608,25 +605,6 @@ input:focus {
 .submit-button:disabled {
   cursor: not-allowed;
   opacity: 0.62;
-}
-
-.form-alert {
-  border-radius: 12px;
-  padding: 0.7rem 0.85rem;
-  font-size: 0.84rem;
-  font-weight: 700;
-}
-
-.form-alert--error {
-  border: 1px solid rgba(239, 68, 68, 0.22);
-  background: #fef2f2;
-  color: #b91c1c;
-}
-
-.form-alert--success {
-  border: 1px solid rgba(16, 185, 129, 0.24);
-  background: #ecfdf5;
-  color: #047857;
 }
 
 :deep(.cd-input) {

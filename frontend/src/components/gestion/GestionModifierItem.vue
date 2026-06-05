@@ -118,13 +118,13 @@
               <!-- Date achat -->
               <div>
                 <label class="block text-sm font-medium text-gray-200 mb-2">Date d'achat</label>
-                <CompactDateInput v-model="form.dateAchat" class="w-full" />
+                <CompactDateInput v-model="form.dateAchat" class="w-full" light size="md" />
               </div>
 
               <!-- Date vente -->
               <div>
                 <label class="block text-sm font-medium text-gray-200 mb-2">Date de vente</label>
-                <CompactDateInput v-model="form.dateVente" class="w-full" />
+                <CompactDateInput v-model="form.dateVente" class="w-full" light size="md" />
                 <p class="mt-1 text-xs text-gray-500">Laisse vide si pas vendue.</p>
               </div>
 

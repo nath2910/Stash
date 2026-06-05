@@ -60,16 +60,20 @@
           </div>
 
           <div
-            v-if="error"
-            class="mb-4 rounded-xl border border-red-500/70 bg-red-500/10 p-3 text-sm text-red-200"
+            v-if="notice"
+            class="auth-notice"
+            :class="`auth-notice--${notice.type}`"
+            :role="notice.type === 'error' ? 'alert' : 'status'"
+            aria-live="polite"
           >
-            {{ error }}
-          </div>
-          <div
-            v-if="success"
-            class="mb-4 rounded-xl border border-emerald-500/60 bg-emerald-500/10 p-3 text-sm text-emerald-100"
-          >
-            {{ success }}
+            <span class="auth-notice__icon" aria-hidden="true">
+              <AlertCircle v-if="notice.type === 'error'" class="h-4 w-4" />
+              <CheckCircle2 v-else class="h-4 w-4" />
+            </span>
+            <span class="auth-notice__content">
+              <strong>{{ notice.title }}</strong>
+              <span>{{ notice.message }}</span>
+            </span>
           </div>
 
           <form v-if="mode === 'login'" class="space-y-3" @submit.prevent="submitLogin">
@@ -312,6 +316,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { AlertCircle, CheckCircle2 } from 'lucide-vue-next'
 import AuthService from '@/services/AuthService'
 import { useAuthStore } from '@/store/authStore'
 
@@ -341,8 +346,7 @@ watch(
 )
 
 const loading = ref(false)
-const error = ref('')
-const success = ref('')
+const notice = ref(null)
 
 const loginForm = ref({
   email: '',
@@ -396,20 +400,88 @@ const signupStrengthBarColor = computed(() => {
 })
 
 const resetMessages = () => {
-  error.value = ''
-  success.value = ''
+  notice.value = null
+}
+
+const setNotice = (type, title, message) => {
+  notice.value = { type, title, message }
+}
+
+const readErrorMessage = (err) => {
+  const data = err?.response?.data
+  if (typeof data === 'string' && data.trim()) return data.trim()
+  return String(data?.message || data?.error || err?.message || '').trim()
+}
+
+const authErrorNotice = (err, fallbackTitle, fallbackMessage) => {
+  const status = err?.response?.status
+  const raw = readErrorMessage(err).toLowerCase()
+
+  if (status === 401 || raw.includes('email ou mot de passe invalide')) {
+    return {
+      title: 'Connexion impossible',
+      message: 'Email ou mot de passe incorrect. Verifie tes informations ou utilise mot de passe oublie.',
+    }
+  }
+
+  if (raw.includes('email manquant')) {
+    return {
+      title: 'Email manquant',
+      message: 'Entre ton adresse email pour continuer.',
+    }
+  }
+
+  if (raw.includes('mot de passe manquant')) {
+    return {
+      title: 'Mot de passe manquant',
+      message: 'Entre ton mot de passe pour continuer.',
+    }
+  }
+
+  if (status === 409 || raw.includes('email deja utilise') || raw.includes('compte deja')) {
+    return {
+      title: 'Compte deja existant',
+      message: 'Un compte existe deja avec cet email. Connecte-toi ou verifie ta boite mail.',
+    }
+  }
+
+  if (raw.includes('mot de passe trop court')) {
+    return {
+      title: 'Mot de passe trop court',
+      message: "Choisis un mot de passe d'au moins 6 caracteres.",
+    }
+  }
+
+  if (raw.includes('network error') || !raw) {
+    return {
+      title: 'Service indisponible',
+      message: 'Impossible de joindre le serveur. Reessaie dans un instant.',
+    }
+  }
+
+  return {
+    title: fallbackTitle,
+    message: fallbackMessage,
+  }
 }
 
 // Gestion des erreurs SSO (callback /auth/callback#error=...)
 const ssoErrorMessages = {
-  discord_not_allowed: 'Accès réservé aux membres du Discord autorisé.',
-  oauth_error: 'La connexion OAuth a échoué. Merci de réessayer.',
+  discord_not_allowed: {
+    title: 'Acces Discord refuse',
+    message: "Ce compte Discord n'est pas autorise pour acceder a Stash.",
+  },
+  oauth_error: {
+    title: 'Connexion externe impossible',
+    message: "Google ou Discord n'a pas pu finaliser la connexion. Reessaie dans un instant.",
+  },
 }
 
 const applySsoErrorFromRoute = () => {
   const code = route.query.ssoError
   if (code && ssoErrorMessages[code]) {
-    error.value = ssoErrorMessages[code]
+    const nextNotice = ssoErrorMessages[code]
+    setNotice('error', nextNotice.title, nextNotice.message)
   }
 }
 
@@ -432,11 +504,16 @@ const submitLogin = async () => {
 
     setAuth({ user, token })
 
-    success.value = 'Connexion reussie'
+    setNotice('success', 'Connexion reussie', 'Redirection vers ton espace.')
     await router.replace({ name: 'home' })
   } catch (err) {
     console.error(err)
-    error.value = err.response?.data?.message || err.message || 'Email ou mot de passe invalide.'
+    const nextNotice = authErrorNotice(
+      err,
+      'Connexion impossible',
+      'La connexion a echoue. Verifie tes informations puis reessaie.',
+    )
+    setNotice('error', nextNotice.title, nextNotice.message)
   } finally {
     loading.value = false
   }
@@ -446,7 +523,7 @@ const submitSignup = async () => {
   resetMessages()
 
   if (signupForm.value.password !== signupForm.value.confirmPassword) {
-    error.value = 'Les mots de passe ne correspondent pas.'
+    setNotice('error', 'Mots de passe differents', 'Les deux mots de passe doivent etre identiques.')
     return
   }
 
@@ -459,16 +536,18 @@ const submitSignup = async () => {
       password: signupForm.value.password,
     })
 
-    success.value = 'Compte cree, verification email envoyee.'
+    setNotice('success', 'Compte cree', "Un email de verification vient de t'etre envoye.")
     router.replace({ name: 'verify-email', query: { email: signupForm.value.email } })
   } catch (err) {
     console.error(err)
 
     // Cas frequent : compte deja cree (conflit 409) -> on renvoie vers la verification
     if (err?.response?.status === 409 && signupForm.value.email) {
-      success.value =
-        err.response?.data?.message ||
-        "Ce compte existe deja. Si l'email n'est pas valide, un lien vient d'etre renvoye."
+      setNotice(
+        'success',
+        'Compte deja existant',
+        "Si l'email n'est pas encore confirme, un nouveau lien vient d'etre envoye.",
+      )
       try {
         await AuthService.resendVerification({ email: signupForm.value.email })
       } catch (resendErr) {
@@ -478,7 +557,12 @@ const submitSignup = async () => {
       return
     }
 
-    error.value = err.response?.data?.message || 'Erreur lors de la creation du compte.'
+    const nextNotice = authErrorNotice(
+      err,
+      'Creation impossible',
+      "Le compte n'a pas pu etre cree. Verifie les champs puis reessaie.",
+    )
+    setNotice('error', nextNotice.title, nextNotice.message)
   } finally {
     loading.value = false
   }
@@ -502,3 +586,72 @@ const loginWithDiscord = () => {
   window.location.href = discordAuthUrl
 }
 </script>
+
+<style scoped>
+.auth-notice {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 18px;
+  background: rgba(15, 23, 42, 0.72);
+  padding: 0.85rem 0.95rem;
+  box-shadow:
+    0 14px 34px rgba(2, 6, 23, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.auth-notice__icon {
+  display: inline-grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border-radius: 999px;
+}
+
+.auth-notice__content {
+  display: grid;
+  min-width: 0;
+  gap: 0.18rem;
+}
+
+.auth-notice__content strong {
+  color: #f8fafc;
+  font-size: 0.9rem;
+  font-weight: 850;
+  line-height: 1.2;
+}
+
+.auth-notice__content span {
+  color: #cbd5e1;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.auth-notice--error {
+  border-color: rgba(248, 113, 113, 0.34);
+  background:
+    linear-gradient(135deg, rgba(127, 29, 29, 0.24), transparent 54%),
+    rgba(15, 23, 42, 0.76);
+}
+
+.auth-notice--error .auth-notice__icon {
+  background: rgba(248, 113, 113, 0.14);
+  color: #fca5a5;
+}
+
+.auth-notice--success {
+  border-color: rgba(52, 211, 153, 0.32);
+  background:
+    linear-gradient(135deg, rgba(6, 95, 70, 0.22), transparent 54%),
+    rgba(15, 23, 42, 0.76);
+}
+
+.auth-notice--success .auth-notice__icon {
+  background: rgba(52, 211, 153, 0.14);
+  color: #6ee7b7;
+}
+</style>

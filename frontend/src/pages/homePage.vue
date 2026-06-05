@@ -52,9 +52,8 @@
       <QuickAddItemForm
         :items="stockItems"
         :saving="quickAddSaving"
-        :api-error="quickAddError"
         :success-key="quickAddSuccessKey"
-        :success-message="quickAddSuccessMessage"
+        @error="handleQuickAddValidationError"
         @submit="handleQuickAdd"
       />
 
@@ -71,13 +70,31 @@
       @close="closeItemModal"
       @save="handleQuickUpdate"
     />
+
+    <teleport to="body">
+      <Transition name="quick-add-toast">
+        <div
+          v-if="quickAddToast.visible"
+          class="quick-add-toast"
+          :class="`quick-add-toast--${quickAddToast.type || 'success'}`"
+          role="status"
+          aria-live="polite"
+        >
+          <span class="quick-add-toast__icon">
+            <CheckCircle2 v-if="quickAddToast.type !== 'error'" class="h-4 w-4" aria-hidden="true" />
+            <CircleAlert v-else class="h-4 w-4" aria-hidden="true" />
+          </span>
+          <span>{{ quickAddToast.message }}</span>
+        </div>
+      </Transition>
+    </teleport>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { X } from 'lucide-vue-next'
+import { CheckCircle2, CircleAlert, X } from 'lucide-vue-next'
 import QuickSearchBar from '@/components/home/QuickSearchBar.vue'
 import QuickAddItemForm from '@/components/home/QuickAddItemForm.vue'
 import HomeMonthlyKpis from '@/components/home/HomeMonthlyKpis.vue'
@@ -107,10 +124,10 @@ const modalSaving = ref(false)
 const modalError = ref('')
 const modalSuccessKey = ref(0)
 const quickAddSaving = ref(false)
-const quickAddError = ref('')
 const quickAddSuccessKey = ref(0)
-const quickAddSuccessMessage = ref('')
+const quickAddToast = ref({ visible: false, message: '', type: 'success' })
 const annualRange = getCurrentYearRange()
+let quickAddToastTimer = null
 
 const localSummary = computed(() => calculatePeriodStats(stockItems.value, annualRange))
 
@@ -199,6 +216,42 @@ onMounted(() => {
   }
 })
 
+onBeforeUnmount(() => {
+  if (quickAddToastTimer) {
+    window.clearTimeout(quickAddToastTimer)
+  }
+})
+
+function showQuickAddToast(message, type = 'success') {
+  if (quickAddToastTimer) {
+    window.clearTimeout(quickAddToastTimer)
+  }
+  quickAddToast.value = { visible: true, message, type }
+  quickAddToastTimer = window.setTimeout(() => {
+    quickAddToast.value = { visible: false, message: '', type }
+    quickAddToastTimer = null
+  }, 2000)
+}
+
+function resolveQuickAddError(error) {
+  const data = error?.response?.data
+  const rawMessage =
+    (typeof data === 'string' && data) ||
+    data?.message ||
+    data?.error ||
+    error?.message ||
+    ''
+  const message = String(rawMessage || '').trim()
+  if (!message || message === 'Network Error') {
+    return "Item non ajoute. Verifie la connexion et les champs."
+  }
+  return message
+}
+
+function handleQuickAddValidationError(message) {
+  showQuickAddToast(message || "Item non ajoute. Verifie les champs.", 'error')
+}
+
 function openItemModal(item) {
   selectedItem.value = item
   modalError.value = ''
@@ -234,8 +287,6 @@ async function handleQuickUpdate({ id, payload }) {
 
 async function handleQuickAdd({ payload, quantity }) {
   quickAddSaving.value = true
-  quickAddError.value = ''
-  quickAddSuccessMessage.value = ''
   try {
     const safeQuantity = Math.min(50, Math.max(1, Math.trunc(Number(quantity || 1))))
     const { data } = await SnkVenteServices.createMany(payload, safeQuantity)
@@ -248,11 +299,10 @@ async function handleQuickAdd({ payload, quantity }) {
     }
     notifyStockChanged()
     await chargerStatsAnnuelles()
-    quickAddSuccessMessage.value =
-      safeQuantity > 1 ? `${safeQuantity} items ajoutes.` : 'Item ajoute.'
     quickAddSuccessKey.value += 1
+    showQuickAddToast(safeQuantity > 1 ? `${safeQuantity} items ajoutes` : 'Item ajoute')
   } catch (error) {
-    quickAddError.value = error?.response?.data?.message || "Erreur lors de l'ajout rapide."
+    showQuickAddToast(resolveQuickAddError(error), 'error')
   } finally {
     quickAddSaving.value = false
   }
@@ -303,6 +353,62 @@ function goToGestionFromModal() {
     clamp(6rem, 10vw, 8rem);
 }
 
+.quick-add-toast {
+  position: fixed;
+  right: clamp(1rem, 2vw, 1.5rem);
+  bottom: clamp(1rem, 2vw, 1.5rem);
+  z-index: 10020;
+  display: inline-flex;
+  max-width: min(22rem, calc(100vw - 2rem));
+  align-items: center;
+  gap: 0.6rem;
+  border: 1px solid rgba(20, 184, 166, 0.28);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.96);
+  padding: 0.72rem 0.9rem 0.72rem 0.72rem;
+  color: #0f172a;
+  font-size: 0.9rem;
+  font-weight: 850;
+  box-shadow:
+    0 18px 44px rgba(15, 23, 42, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(14px);
+}
+
+.quick-add-toast__icon {
+  display: inline-grid;
+  width: 1.85rem;
+  height: 1.85rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 999px;
+  background: #ccfbf1;
+  color: #0f766e;
+}
+
+.quick-add-toast--error {
+  border-color: rgba(248, 113, 113, 0.34);
+  background: rgba(255, 251, 251, 0.98);
+}
+
+.quick-add-toast--error .quick-add-toast__icon {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.quick-add-toast-enter-active,
+.quick-add-toast-leave-active {
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+
+.quick-add-toast-enter-from,
+.quick-add-toast-leave-to {
+  opacity: 0;
+  transform: translateY(10px) scale(0.98);
+}
+
 @media (max-width: 640px) {
   .home-page-light {
     margin-top: 0.25rem;
@@ -312,6 +418,13 @@ function goToGestionFromModal() {
     gap: 0.85rem;
     padding-inline-start: max(12px, env(safe-area-inset-left));
     padding-inline-end: max(12px, env(safe-area-inset-right));
+  }
+
+  .quick-add-toast {
+    right: 1rem;
+    bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+    left: 1rem;
+    justify-content: center;
   }
 }
 </style>

@@ -151,7 +151,7 @@
                 <label for="dateAchat" class="block text-sm font-medium text-gray-200 mb-2">
                   Date d'achat
                 </label>
-                <CompactDateInput id="dateAchat" v-model="form.dateAchat" class="w-full" />
+                <CompactDateInput id="dateAchat" v-model="form.dateAchat" class="w-full" light size="md" />
               </div>
 
               <!-- Date vente -->
@@ -159,7 +159,7 @@
                 <label for="dateVente" class="block text-sm font-medium text-gray-200 mb-2">
                   Date de vente
                 </label>
-                <CompactDateInput id="dateVente" v-model="form.dateVente" class="w-full" />
+                <CompactDateInput id="dateVente" v-model="form.dateVente" class="w-full" light size="md" />
                 <p class="mt-1 text-xs text-gray-500">Laisse vide si pas encore vendue.</p>
               </div>
 
