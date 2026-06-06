@@ -1,8 +1,9 @@
 <template>
   <teleport to="body">
+    <Transition name="modal-smooth">
     <div v-if="modelValue" class="fixed inset-0 z-[9999]">
       <!-- overlay -->
-      <div class="absolute inset-0 bg-slate-950/55 backdrop-blur-sm" @click.self="close"></div>
+      <div class="absolute inset-0 bg-slate-950/48 backdrop-blur-[2px]" @click.self="close"></div>
 
       <!-- modal -->
       <div
@@ -255,6 +256,7 @@
         </div>
       </div>
     </div>
+    </Transition>
   </teleport>
 </template>
 
@@ -488,6 +490,8 @@ const formatSize = (bytes) => {
   overscroll-behavior: contain;
   scrollbar-width: none;
   box-shadow: 0 28px 90px rgba(15, 23, 42, 0.24);
+  will-change: transform, opacity;
+  scroll-behavior: smooth;
 }
 .modal-card::before {
   content: '';
@@ -557,6 +561,10 @@ const formatSize = (bytes) => {
   min-height: 2.65rem;
   border-radius: 0.9rem;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    box-shadow 140ms ease;
 }
 
 .modal-card :is(input, textarea)::placeholder {
@@ -625,6 +633,43 @@ const formatSize = (bytes) => {
   opacity: 1;
   background: #d1fae5;
   color: #0f766e;
+}
+
+.modal-smooth-enter-active,
+.modal-smooth-leave-active {
+  transition: opacity 150ms ease;
+}
+
+.modal-smooth-enter-active .modal-card,
+.modal-smooth-leave-active .modal-card {
+  transition:
+    transform 180ms cubic-bezier(0.2, 0.9, 0.2, 1),
+    opacity 150ms ease;
+}
+
+.modal-smooth-enter-from,
+.modal-smooth-leave-to {
+  opacity: 0;
+}
+
+.modal-smooth-enter-from .modal-card {
+  opacity: 0.96;
+  transform: translateY(12px) scale(0.985);
+}
+
+.modal-smooth-leave-to .modal-card {
+  opacity: 0.98;
+  transform: translateY(8px) scale(0.99);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-smooth-enter-active,
+  .modal-smooth-leave-active,
+  .modal-smooth-enter-active .modal-card,
+  .modal-smooth-leave-active .modal-card,
+  .modal-card :is(input, textarea) {
+    transition: none;
+  }
 }
 @media (max-width: 639px) {
   .modal-card {

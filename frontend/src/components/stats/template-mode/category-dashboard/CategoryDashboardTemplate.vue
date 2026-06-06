@@ -3258,4 +3258,33 @@ onBeforeUnmount(() => {
     grid-template-columns: 1fr;
   }
 }
+
+.category-dashboard {
+  --category-bg: #f7f4ee;
+  --category-muted-bg: #fbfaf7;
+  background: #f7f4ee;
+}
+
+.category-controls__category,
+.category-month,
+.category-page-nav,
+.category-panel,
+.category-insight-panel,
+.category-rank-panel,
+.category-state,
+.category-setup {
+  border-color: rgba(148, 163, 184, 0.24);
+  background: #fbfaf7;
+  box-shadow: 0 6px 16px rgba(31, 41, 55, 0.045);
+}
+
+.category-performance-card,
+.category-insight-panel__meta div,
+.category-age,
+.category-mini-empty,
+.category-chip {
+  border-color: rgba(148, 163, 184, 0.18);
+  background: #fffdf9;
+  box-shadow: none;
+}
 </style>

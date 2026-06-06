@@ -633,9 +633,7 @@ const loginWithDiscord = () => {
 
 .auth-notice--error {
   border-color: rgba(248, 113, 113, 0.34);
-  background:
-    linear-gradient(135deg, rgba(127, 29, 29, 0.24), transparent 54%),
-    rgba(15, 23, 42, 0.76);
+  background: rgba(15, 23, 42, 0.76);
 }
 
 .auth-notice--error .auth-notice__icon {

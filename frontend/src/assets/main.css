@@ -97,6 +97,7 @@
 
   html {
     min-width: 0;
+    scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;
   }
 
@@ -147,6 +148,16 @@
   select,
   textarea {
     font: inherit;
+  }
+
+  input,
+  select,
+  textarea {
+    transition:
+      border-color 140ms ease,
+      background-color 140ms ease,
+      box-shadow 140ms ease,
+      color 140ms ease;
   }
 
   html {
@@ -208,6 +219,11 @@
     transform: translateY(0);
   }
 
+  button:disabled {
+    filter: none;
+    transform: none;
+  }
+
   a,
   .nav-link {
     transition:
@@ -228,6 +244,26 @@
   a:active,
   .nav-link:active {
     transform: translateY(0);
+  }
+
+  :focus-visible {
+    outline: 2px solid rgba(20, 184, 166, 0.55);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      scroll-behavior: auto !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
 

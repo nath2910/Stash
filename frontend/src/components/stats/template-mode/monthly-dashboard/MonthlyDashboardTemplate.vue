@@ -2671,4 +2671,29 @@ onBeforeUnmount(() => {
     text-align: left;
   }
 }
+
+.monthly-dashboard {
+  --monthly-bg: #f7f4ee;
+  --monthly-muted-bg: #fbfaf7;
+  background: #f7f4ee;
+}
+
+.monthly-month,
+.monthly-page-nav,
+.monthly-panel,
+.monthly-state {
+  border-color: rgba(148, 163, 184, 0.24);
+  background: #fbfaf7;
+  box-shadow: 0 6px 16px rgba(31, 41, 55, 0.045);
+}
+
+.monthly-action-card,
+.monthly-action-summary,
+.monthly-insight,
+.monthly-brand-row,
+.monthly-mini-empty {
+  border-color: rgba(148, 163, 184, 0.18);
+  background: #fffdf9;
+  box-shadow: none;
+}
 </style>

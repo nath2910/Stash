@@ -48,7 +48,6 @@ watch(
 )
 
 const handleAdded = () => {
-  showAdd.value = false
   emit('vente-ajoutee')
 }
 </script>

@@ -167,39 +167,21 @@
                     </span>
                   </button>
 
-                  <label class="filter-field">
-                    <span>Type item</span>
-                    <select v-model="filters.itemType" class="filter-control">
-                      <option value="all">Tous</option>
-                      <option
-                        v-for="option in itemTypeOptions"
-                        :key="option.value"
-                        :value="option.value"
-                      >
-                        {{ option.label }}
-                      </option>
-                    </select>
-                  </label>
+                  <GestionFilterDropdown
+                    v-model="filters.itemType"
+                    label="Type item"
+                    :options="filterItemTypeOptions"
+                    icon-mode="type"
+                  />
 
-                  <label class="filter-field">
-                    <span>Sous-categorie</span>
-                    <select
-                      v-model="filters.category"
-                      class="filter-control"
-                      :disabled="!selectedItemType"
-                    >
-                      <option value="all">
-                        {{ selectedItemType ? 'Toutes' : "Choisir un type d'abord" }}
-                      </option>
-                      <option
-                        v-for="option in categoryOptions"
-                        :key="option.value"
-                        :value="option.value"
-                      >
-                        {{ option.label }}
-                      </option>
-                    </select>
-                  </label>
+                  <GestionFilterDropdown
+                    v-model="filters.category"
+                    label="Sous-categorie"
+                    :options="filterCategoryOptions"
+                    :disabled="!selectedItemType"
+                    icon-mode="subcategory"
+                    :placeholder="selectedItemType ? 'Toutes' : 'Choisir un type'"
+                  />
 
                   <label class="filter-field">
                     <span>Tri</span>
@@ -332,6 +314,7 @@ import EditVenteModal from '@/components/gestion/GestionModifierItem.vue'
 import SupprimerModal from '@/components/gestion/GestionSupprimerModal.vue'
 import CsvImportExportWidget from '@/components/gestion/CsvImportExportWidget.vue'
 import DeliveryTrackingPanel from '@/components/gestion/DeliveryTrackingPanel.vue'
+import GestionFilterDropdown from '@/components/gestion/GestionFilterDropdown.vue'
 import CompactDateInput from '@/components/ui/CompactDateInput.vue'
 import AdminPage from '@/pages/adminPage.vue'
 import { isVendue, prixRetailOf } from '@/utils/snkVente'
@@ -467,6 +450,14 @@ const categoryValueOf = (vente) => {
 }
 
 const itemTypeOptions = computed(() => resolveItemTypeOptions(categoryLabels.value))
+const filterItemTypeOptions = computed(() => [
+  { value: 'all', label: 'Tous' },
+  ...itemTypeOptions.value.map((option) => ({
+    value: option.value,
+    label: option.label,
+    detail: option.label !== option.defaultLabel ? option.defaultLabel : '',
+  })),
+])
 const selectedItemType = computed(() => {
   const raw = filters.value.itemType
   if (!raw || raw === 'all') return ''
@@ -506,6 +497,11 @@ const categoryOptions = computed(() => {
   return Array.from(options.values()).sort((a, b) =>
     a.label.localeCompare(b.label, 'fr', { sensitivity: 'base', numeric: true }),
   )
+})
+
+const filterCategoryOptions = computed(() => {
+  if (!selectedItemType.value) return [{ value: 'all', label: "Choisir un type d'abord" }]
+  return [{ value: 'all', label: 'Toutes' }, ...categoryOptions.value]
 })
 
 const sanitizeFilters = (rawFilters) => {
@@ -2174,5 +2170,101 @@ watch(
   background: transparent;
   padding: 0;
   box-shadow: none;
+}
+
+.inventory-list-panel {
+  overflow: hidden;
+}
+
+.inventory-list-scroll {
+  max-height: clamp(420px, 56dvh, 690px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding-right: 0.15rem;
+}
+
+.inventory-filter-shell.is-open {
+  gap: 0.42rem;
+  padding-block: 0.5rem 0.6rem;
+}
+
+.filter-compact-grid.is-open {
+  grid-template-columns:
+    minmax(6.8rem, 0.48fr)
+    minmax(8.6rem, 0.74fr)
+    minmax(10rem, 0.88fr)
+    minmax(7.8rem, 0.66fr)
+    minmax(12.2rem, 1fr)
+    minmax(12.2rem, 1fr);
+  gap: 0.48rem;
+  align-items: stretch;
+}
+
+.filter-field,
+.date-range-compact,
+.filter-reset-button--panel {
+  min-height: 38px;
+  border-radius: 14px;
+}
+
+.filter-field {
+  gap: 0.12rem;
+  padding: 0.38rem 0.55rem;
+}
+
+.filter-field > span,
+.date-range-title {
+  font-size: 0.58rem;
+  letter-spacing: 0.08em;
+}
+
+.filter-control {
+  height: 20px;
+  font-size: 0.84rem;
+  line-height: 1;
+}
+
+.date-range-compact {
+  gap: 0.26rem;
+  padding: 0.38rem 0.5rem;
+}
+
+.date-range-title {
+  gap: 0.25rem;
+}
+
+.date-range-inputs {
+  gap: 0.26rem;
+}
+
+.date-range-inputs :deep(.cd-input) {
+  height: 24px;
+  min-height: 24px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  padding-inline: 0.24rem;
+}
+
+.filter-reset-button--panel {
+  width: auto;
+  min-width: 0;
+  height: 38px;
+  padding-inline: 0.7rem;
+}
+
+@media (max-width: 1180px) {
+  .filter-compact-grid.is-open {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .filter-compact-grid.is-open {
+    grid-template-columns: 1fr;
+  }
+
+  .inventory-list-scroll {
+    max-height: clamp(380px, 62dvh, 620px);
+  }
 }
 </style>

@@ -1974,4 +1974,28 @@ onBeforeUnmount(() => {
     min-width: 0;
   }
 }
+
+.annual-dashboard {
+  --annual-bg: #f7f4ee;
+  --annual-muted-bg: #fbfaf7;
+  background: #f7f4ee;
+}
+
+.annual-year,
+.annual-page-nav,
+.annual-panel,
+.annual-state {
+  border-color: rgba(148, 163, 184, 0.24);
+  background: #fbfaf7;
+  box-shadow: 0 6px 16px rgba(31, 41, 55, 0.045);
+}
+
+.annual-action-card,
+.annual-insight,
+.annual-age,
+.annual-mini-empty {
+  border-color: rgba(148, 163, 184, 0.18);
+  background: #fffdf9;
+  box-shadow: none;
+}
 </style>

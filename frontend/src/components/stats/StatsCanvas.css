@@ -3497,3 +3497,100 @@ body.canvas-pan-cursor * {
 /* ===== Monthly Focus: Fit Viewport (desktop) ===== */
 
 /* ===== Yearly Template: Pro Structure ===== */
+
+.canvas-root,
+.canvas-root.theme-light {
+  --bg: #f7f4ee;
+  --canvas-board-surface: #fbfaf7;
+  --canvas-widget-bg: #fbfaf7;
+  --canvas-widget-shadow: 0 8px 20px rgba(15, 23, 42, 0.055);
+  --canvas-widget-shadow-hover: 0 10px 24px rgba(15, 23, 42, 0.075);
+  --template-surface-card: #fbfaf7;
+  --template-shadow-card: 0 8px 20px rgba(15, 23, 42, 0.055);
+  background: #f7f4ee;
+}
+
+.canvas-root.theme-light .board {
+  background: #fbfaf7;
+}
+
+.template-mode,
+.canvas-root.theme-light .template-mode {
+  padding-top: 0;
+  background: #f7f4ee;
+}
+
+.template-empty-layout__content {
+  background: #fbfaf7;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.07);
+}
+
+.template-rail,
+.template-mode ~ .template-rail {
+  border-color: rgba(148, 163, 184, 0.3);
+  background: #fbfaf7;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
+  backdrop-filter: none;
+}
+
+.template-mode ~ .template-rail .template-rail__nav-btn,
+.template-mode ~ .template-rail .template-rail__meta-btn,
+.template-mode ~ .template-rail .template-rail__profile-btn,
+.template-rail__nav-btn,
+.template-rail__meta-btn,
+.template-rail__profile-btn {
+  border-color: rgba(148, 163, 184, 0.32);
+  background: #fffdf9;
+  color: #334155;
+  box-shadow: none;
+}
+
+.template-mode ~ .template-rail .template-rail__nav-btn:hover,
+.template-mode ~ .template-rail .template-rail__meta-btn:hover,
+.template-mode ~ .template-rail .template-rail__profile-btn:hover,
+.template-rail__nav-btn:hover,
+.template-rail__meta-btn:hover,
+.template-rail__profile-btn:hover {
+  border-color: rgba(14, 116, 144, 0.34);
+  background: #ffffff;
+  color: #0f766e;
+}
+
+.template-mode ~ .template-rail .template-rail__nav-btn.is-active,
+.template-mode ~ .template-rail .template-rail__meta-btn.is-active,
+.template-mode ~ .template-rail .template-rail__profile-btn.is-active,
+.template-rail__nav-btn.is-active,
+.template-rail__meta-btn.is-active,
+.template-rail__profile-btn.is-active {
+  border-color: rgba(16, 185, 129, 0.36);
+  background: #dff7ea;
+  color: #047857;
+  box-shadow: none;
+}
+
+.template-mode ~ .template-rail .template-rail__meta-btn--danger,
+.template-rail__meta-btn--danger {
+  border-color: rgba(244, 63, 94, 0.26);
+  background: #fff1f2;
+  color: #be123c;
+}
+
+.template-rail__meta-btn--accent {
+  border-color: rgba(14, 116, 144, 0.28);
+  background: #ecfeff;
+  color: #0e7490;
+}
+
+.template-rail-date-popover {
+  border-color: rgba(148, 163, 184, 0.34);
+  background: #fbfaf7;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.12);
+}
+
+@media (max-width: 960px) {
+  .template-rail,
+  .template-mode ~ .template-rail {
+    background: #fbfaf7;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+  }
+}

@@ -1,9 +1,10 @@
 <!-- src/components/AjoutPaire.vue -->
 <template>
   <teleport to="body">
-    <div class="fixed inset-0 z-[9999]">
+    <Transition name="modal-smooth">
+    <div v-if="visible" class="fixed inset-0 z-[9999]">
       <!-- overlay -->
-      <div class="absolute inset-0 bg-slate-950/55 backdrop-blur-sm" @click.self="handleClose"></div>
+      <div class="absolute inset-0 bg-slate-950/48 backdrop-blur-[2px]" @click.self="handleClose"></div>
 
       <!-- modal -->
       <div
@@ -236,11 +237,12 @@
         </div>
       </div>
     </div>
+    </Transition>
   </teleport>
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import SnkVenteServices from '@/services/SnkVenteServices.js'
 import { useAuthStore } from '@/store/authStore'
 import CompactDateInput from '@/components/ui/CompactDateInput.vue'
@@ -258,6 +260,8 @@ const currentUserId = computed(() => authStore.user?.value?.id ?? authStore.user
 const loading = ref(false)
 const success = ref(false)
 const error = ref(null)
+const visible = ref(true)
+const closeTimer = ref(null)
 
 const copies = ref(1)
 const keepCommonFields = ref(true)
@@ -306,7 +310,11 @@ const handleClose = () => {
   copies.value = 1
   keepCommonFields.value = true
   resetState()
-  emit('close')
+  visible.value = false
+  if (closeTimer.value) clearTimeout(closeTimer.value)
+  closeTimer.value = window.setTimeout(() => {
+    emit('close')
+  }, 180)
 }
 
 const buildPayload = () => ({
@@ -391,6 +399,10 @@ const loadExistingSubcategories = async () => {
 
 onMounted(loadExistingSubcategories)
 
+onBeforeUnmount(() => {
+  if (closeTimer.value) clearTimeout(closeTimer.value)
+})
+
 const createSales = async () => {
   loading.value = true
   success.value = false
@@ -451,6 +463,8 @@ const createSales = async () => {
   overscroll-behavior: contain;
   scrollbar-width: none;
   box-shadow: 0 28px 90px rgba(15, 23, 42, 0.24);
+  will-change: transform, opacity;
+  scroll-behavior: smooth;
 }
 .modal-card::before {
   content: '';
@@ -508,6 +522,10 @@ const createSales = async () => {
   color: #0f172a;
   min-height: 2.65rem;
   border-radius: 0.9rem;
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    box-shadow 140ms ease;
 }
 
 .modal-card :is(input, textarea)::placeholder {
@@ -530,6 +548,43 @@ const createSales = async () => {
 .modal-card button:not([type='submit']) {
   border-radius: 999px;
   font-weight: 800;
+}
+
+.modal-smooth-enter-active,
+.modal-smooth-leave-active {
+  transition: opacity 150ms ease;
+}
+
+.modal-smooth-enter-active .modal-card,
+.modal-smooth-leave-active .modal-card {
+  transition:
+    transform 180ms cubic-bezier(0.2, 0.9, 0.2, 1),
+    opacity 150ms ease;
+}
+
+.modal-smooth-enter-from,
+.modal-smooth-leave-to {
+  opacity: 0;
+}
+
+.modal-smooth-enter-from .modal-card {
+  opacity: 0.96;
+  transform: translateY(12px) scale(0.985);
+}
+
+.modal-smooth-leave-to .modal-card {
+  opacity: 0.98;
+  transform: translateY(8px) scale(0.99);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-smooth-enter-active,
+  .modal-smooth-leave-active,
+  .modal-smooth-enter-active .modal-card,
+  .modal-smooth-leave-active .modal-card,
+  .modal-card :is(input, textarea) {
+    transition: none;
+  }
 }
 @media (max-width: 639px) {
   .modal-card {

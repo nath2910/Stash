@@ -26,7 +26,7 @@ const themeMode = computed(() => (theme.value === 'light' ? 'light' : 'dark'))
 }
 
 .stats-page-shell--light {
-  background: #edf3fb;
+  background: #f7f4ee;
   color: #000;
 }
 </style>

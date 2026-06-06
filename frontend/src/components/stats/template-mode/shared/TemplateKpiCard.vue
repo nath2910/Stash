@@ -48,8 +48,8 @@ function partClasses(part: 'head' | 'label' | 'icon' | 'value' | 'detail') {
   min-width: 0;
   border: 1px solid rgba(148, 163, 184, 0.28);
   border-radius: 8px;
-  background: #ffffff;
-  box-shadow: 0 12px 30px rgba(31, 41, 55, 0.08);
+  background: #fbfaf7;
+  box-shadow: 0 6px 16px rgba(31, 41, 55, 0.045);
   padding: clamp(14px, 1.6vw, 18px);
   display: grid;
   gap: 10px;
