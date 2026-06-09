@@ -1261,7 +1261,7 @@ onBeforeUnmount(() => {
 }
 
 .monthly-dashboard__inner {
-  width: min(1640px, 100%);
+  width: min(1780px, 100%);
   min-height: 100%;
   min-width: 0;
   margin: 0 auto;

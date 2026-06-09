@@ -1017,7 +1017,7 @@ onBeforeUnmount(() => {
 }
 
 .annual-dashboard__inner {
-  width: min(1480px, 100%);
+  width: min(1680px, 100%);
   min-height: 100%;
   min-width: 0;
   margin: 0 auto;

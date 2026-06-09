@@ -335,4 +335,30 @@ h1 {
     justify-self: start;
   }
 }
+
+@media (max-width: 420px) {
+  .quick-search-panel {
+    gap: 0.75rem;
+    border-radius: 16px;
+    padding: 0.85rem;
+  }
+
+  h1 {
+    font-size: 1.75rem;
+  }
+
+  .search-input {
+    min-height: 52px;
+    border-radius: 14px;
+    padding-inline: 2.65rem 2.4rem;
+  }
+
+  .search-icon {
+    left: 0.85rem;
+  }
+
+  .clear-button {
+    right: 0.65rem;
+  }
+}
 </style>

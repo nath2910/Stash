@@ -348,8 +348,8 @@ const isGestionRoute = computed(() => route.path === '/gestion')
 const isLightAppShell = computed(() => route.path === '/' || route.path === '/gestion')
 const isFullBleedRoute = computed(() => route.meta.fullBleed === true)
 const layoutVars = computed(() => {
-  const edgeGap = isFullBleedRoute.value ? 'clamp(12px, 2.4vw, 28px)' : 'clamp(16px, 2.2vw, 32px)'
-  const shellMaxWidth = route.meta.wideContent ? '1720px' : '1536px'
+  const edgeGap = isFullBleedRoute.value ? 'clamp(10px, 2vw, 32px)' : 'clamp(14px, 2vw, 40px)'
+  const shellMaxWidth = route.meta.wideContent ? '1840px' : '1640px'
   return {
     '--layout-shell-max-width': isFullBleedRoute.value ? '100%' : shellMaxWidth,
     '--layout-shell-gutter': edgeGap,
@@ -804,6 +804,7 @@ body.layout-light-document-scroll::-webkit-scrollbar {
 .app-layout-root {
   min-height: 100vh;
   height: 100dvh;
+  min-width: 0;
   overflow: hidden;
 }
 
@@ -889,6 +890,16 @@ body.layout-light-document-scroll::-webkit-scrollbar {
   position: relative;
   height: 100%;
   width: 100%;
+  min-width: 0;
+}
+
+.layout-main,
+.layout-scroll-inner,
+.layout-page-content {
+  min-width: 0;
+}
+
+.layout-page-content > * {
   min-width: 0;
 }
 
@@ -1063,6 +1074,28 @@ body.layout-light-document-scroll::-webkit-scrollbar {
 
   .layout-footer-pill::-webkit-scrollbar {
     display: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .layout-shell-row {
+    padding-inline-start: max(10px, env(safe-area-inset-left));
+    padding-inline-end: max(10px, env(safe-area-inset-right));
+  }
+
+  .layout-page-content {
+    padding-top: calc(4rem + env(safe-area-inset-top, 0px));
+    padding-bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (min-width: 1800px) {
+  .layout-shell-row:not(.layout-shell-row--header) {
+    padding-inline: clamp(32px, 3vw, 56px);
+  }
+
+  .layout-page-content {
+    padding-top: clamp(5rem, 5vh, 6rem);
   }
 }
 </style>

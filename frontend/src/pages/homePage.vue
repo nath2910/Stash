@@ -341,7 +341,7 @@ function goToGestionFromModal() {
 }
 
 .home-action-shell {
-  width: min(100%, 1540px);
+  width: min(100%, 1700px);
   max-width: 100%;
   box-sizing: border-box;
   display: grid;
@@ -425,6 +425,33 @@ function goToGestionFromModal() {
     bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
     left: 1rem;
     justify-content: center;
+  }
+}
+
+@media (max-width: 420px) {
+  .home-page-light {
+    margin-inline: -10px;
+  }
+
+  .home-action-shell {
+    gap: 0.75rem;
+    padding-top: 0.7rem;
+    padding-bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));
+    padding-inline-start: max(10px, env(safe-area-inset-left));
+    padding-inline-end: max(10px, env(safe-area-inset-right));
+  }
+
+  .quick-add-toast {
+    border-radius: 16px;
+    font-size: 0.82rem;
+  }
+}
+
+@media (min-width: 1800px) {
+  .home-action-shell {
+    width: min(100%, 1840px);
+    gap: clamp(1.25rem, 1.4vw, 1.75rem);
+    padding-inline: clamp(32px, 3vw, 56px);
   }
 }
 </style>

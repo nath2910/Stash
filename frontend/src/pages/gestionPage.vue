@@ -2267,4 +2267,62 @@ watch(
     max-height: clamp(380px, 62dvh, 620px);
   }
 }
+
+@media (max-width: 420px) {
+  .gestion-page-stack {
+    gap: 0.75rem;
+  }
+
+  .gestion-hero-panel,
+  .gestion-summary-panel,
+  .inventory-list-panel {
+    border-radius: 16px;
+  }
+
+  .gestion-hero-panel {
+    padding: 0.9rem;
+  }
+
+  .gestion-title {
+    font-size: 1.8rem;
+  }
+
+  .gestion-subtitle {
+    font-size: 0.88rem;
+  }
+
+  .gestion-tab-button {
+    gap: 0.35rem;
+    padding: 0.62rem 0.45rem;
+  }
+
+  .gestion-tab-button strong {
+    font-size: 0.76rem;
+  }
+
+  .inventory-list-header,
+  .inventory-search-strip,
+  .inventory-filter-shell {
+    padding-inline: 0.85rem;
+  }
+
+  .inventory-search-strip :deep(.gestion-search-field) {
+    min-height: 50px;
+    border-radius: 14px;
+  }
+
+  .inventory-list-body {
+    padding: 0.7rem;
+  }
+}
+
+@media (min-width: 1800px) {
+  .gestion-page-stack {
+    gap: clamp(1.2rem, 1.25vw, 1.7rem);
+  }
+
+  .inventory-list-scroll {
+    max-height: clamp(540px, 64dvh, 900px);
+  }
+}
 </style>

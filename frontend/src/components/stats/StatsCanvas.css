@@ -3516,8 +3516,22 @@ body.canvas-pan-cursor * {
 
 .template-mode,
 .canvas-root.theme-light .template-mode {
-  padding-top: 0;
+  padding-top: clamp(18px, 2.2vh, 30px);
   background: #f7f4ee;
+}
+
+@media (max-height: 760px) and (min-width: 961px) {
+  .template-mode,
+  .canvas-root.theme-light .template-mode {
+    padding-top: clamp(8px, 1.2vh, 12px);
+  }
+}
+
+@media (max-width: 960px) {
+  .template-mode,
+  .canvas-root.theme-light .template-mode {
+    padding-top: 10px;
+  }
 }
 
 .template-empty-layout__content {
@@ -3592,5 +3606,74 @@ body.canvas-pan-cursor * {
   .template-mode ~ .template-rail {
     background: #fbfaf7;
     box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+  }
+}
+
+@media (max-width: 380px) {
+  .template-mode,
+  .canvas-root.theme-light .template-mode {
+    padding-top: 8px;
+  }
+
+  .template-rail,
+  .template-mode ~ .template-rail {
+    left: 5px;
+    right: 5px;
+    height: 54px;
+    gap: 6px;
+    padding: 5px 6px;
+  }
+
+  .template-rail__nav,
+  .template-rail__meta,
+  .template-rail__profiles {
+    gap: 6px;
+  }
+
+  .template-rail__user,
+  .template-rail__nav-btn,
+  .template-rail__meta-btn,
+  .template-rail__profile-btn,
+  .template-mode ~ .template-rail .template-rail__user,
+  .template-mode ~ .template-rail .template-rail__nav-btn,
+  .template-mode ~ .template-rail .template-rail__meta-btn,
+  .template-mode ~ .template-rail .template-rail__profile-btn {
+    width: 34px;
+    height: 34px;
+  }
+}
+
+@media (min-width: 1800px) {
+  .canvas-root {
+    --stats-side-gap: clamp(24px, 2vw, 40px);
+    --stats-rail-offset: clamp(18px, 1.3vw, 26px);
+    --template-rail-width: 70px;
+  }
+
+  .template-rail,
+  .template-mode ~ .template-rail {
+    top: 16px;
+    bottom: 16px;
+    padding: 10px 7px;
+  }
+
+  .template-rail__user,
+  .template-mode ~ .template-rail .template-rail__user {
+    width: 56px;
+    height: 56px;
+  }
+
+  .template-rail__nav-btn,
+  .template-mode ~ .template-rail .template-rail__nav-btn {
+    width: 46px;
+    height: 46px;
+  }
+
+  .template-rail__meta-btn,
+  .template-rail__profile-btn,
+  .template-mode ~ .template-rail .template-rail__meta-btn,
+  .template-mode ~ .template-rail .template-rail__profile-btn {
+    width: 46px;
+    height: 40px;
   }
 }

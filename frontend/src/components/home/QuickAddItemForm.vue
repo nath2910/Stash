@@ -743,4 +743,31 @@ input:focus {
     width: 100%;
   }
 }
+
+@media (max-width: 420px) {
+  .quick-add-panel {
+    gap: 0.7rem;
+    border-radius: 16px;
+    padding: 0.85rem;
+  }
+
+  .panel-heading {
+    gap: 0.7rem;
+  }
+
+  .ghost-button,
+  .submit-button {
+    min-height: 2.5rem;
+    border-radius: 11px;
+    padding-inline: 0.75rem;
+  }
+
+  input,
+  :deep(.cd-input),
+  .quantity-stepper,
+  .quantity-button,
+  .quantity-input {
+    min-height: 42px;
+  }
+}
 </style>
