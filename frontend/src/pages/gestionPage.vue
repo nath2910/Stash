@@ -317,11 +317,11 @@ import DeliveryTrackingPanel from '@/components/gestion/DeliveryTrackingPanel.vu
 import GestionFilterDropdown from '@/components/gestion/GestionFilterDropdown.vue'
 import CompactDateInput from '@/components/ui/CompactDateInput.vue'
 import AdminPage from '@/pages/adminPage.vue'
-import { isVendue, prixRetailOf } from '@/utils/snkVente'
-import { matchesSearchQuery, normalizeSearchText } from '@/utils/homeDashboard'
+import { getField, isVendue, prixRetailOf } from '@/utils/snkVente'
+import { normalizeSearchText, searchTokens } from '@/utils/homeDashboard'
+import { METADATA_FIELDS } from '@/RegleItem/CategorieItem'
 import {
   buildItemCategoryAliases,
-  isItemCategoryAlias,
   itemTypeLabel,
   normalizeItemType,
   readStoredItemCategories,
@@ -362,6 +362,23 @@ const activeGestionTab = ref(tabFromRoute())
 const filtersPanelOpen = ref(false)
 
 const EMPTY_CATEGORY_VALUE = '__empty_category__'
+const SEARCH_DEBOUNCE_MS = 90
+const SEARCH_EXTRA_FIELDS = [
+  'marque',
+  'brand',
+  'size',
+  'taille',
+  'pointure',
+  'sku',
+  'reference',
+  'colorway',
+  'couleur',
+  'condition',
+  'status',
+  'statut',
+  'venue',
+  'lieu',
+]
 
 const statusOptions = [
   { value: 'all', label: 'Tous' },
@@ -401,8 +418,27 @@ const emptyFilters = () => ({
 })
 
 const filters = ref(emptyFilters())
+const debouncedSearchTerm = ref('')
+let searchDebounceTimer = null
 
 const normalizeText = (value) => normalizeSearchText(value)
+const compactText = (value) => normalizeText(value).replace(/\s+/g, '')
+
+const appendSearchPart = (parts, value) => {
+  if (value === null || value === undefined || value === '') return
+  if (Array.isArray(value)) {
+    value.forEach((item) => appendSearchPart(parts, item))
+    return
+  }
+  if (typeof value === 'object') {
+    Object.entries(value).forEach(([key, nestedValue]) => {
+      appendSearchPart(parts, key)
+      appendSearchPart(parts, nestedValue)
+    })
+    return
+  }
+  parts.push(String(value))
+}
 
 const toDateKey = (value) => {
   if (!value) return ''
@@ -445,7 +481,7 @@ const dateInRange = (value, from, to) => {
 
 const categoryValueOf = (vente) => {
   const raw = String(vente?.categorie ?? '').trim()
-  if (isItemCategoryAlias(raw, categoryLabels.value)) return EMPTY_CATEGORY_VALUE
+  if (isMainCategoryAliasValue(raw)) return EMPTY_CATEGORY_VALUE
   return raw || EMPTY_CATEGORY_VALUE
 }
 
@@ -465,6 +501,13 @@ const selectedItemType = computed(() => {
   return itemTypeOptions.value.some((option) => option.value === normalized) ? normalized : ''
 })
 const mainCategoryAliases = computed(() => buildItemCategoryAliases(categoryLabels.value))
+const mainCategoryAliasKeys = computed(
+  () => new Set(Array.from(mainCategoryAliases.value, (alias) => normalizeText(alias))),
+)
+const isMainCategoryAliasValue = (value) => {
+  const cleaned = normalizeText(value)
+  return Boolean(cleaned && mainCategoryAliasKeys.value.has(cleaned))
+}
 const discoveredSubcategories = computed(() =>
   extractSubcategoriesByType(snkVentes.value, categoryLabels.value),
 )
@@ -504,6 +547,73 @@ const filterCategoryOptions = computed(() => {
   return [{ value: 'all', label: 'Toutes' }, ...categoryOptions.value]
 })
 
+const buildVenteSearchRecord = (vente) => {
+  const type = normalizeItemType(vente?.type || 'SNEAKER')
+  const metadata = vente?.metadata && typeof vente.metadata === 'object' ? vente.metadata : {}
+  const metadataFieldLabels = new Map(
+    (METADATA_FIELDS[type] || []).map((field) => [field.key, field.label]),
+  )
+  const parts = []
+
+  ;[
+    vente?.id,
+    vente?.nomItem ?? vente?.nom_item,
+    vente?.categorie,
+    itemTypeLabel(type, categoryLabels.value),
+    type,
+    vente?.description,
+    getField(vente, 'prixRetail'),
+    getField(vente, 'prixResell'),
+    getField(vente, 'dateAchat'),
+    getField(vente, 'dateVente'),
+    isVendue(vente) ? 'vendu vendue vente sold' : 'stock disponible en stock',
+  ].forEach((value) => appendSearchPart(parts, value))
+
+  SEARCH_EXTRA_FIELDS.forEach((field) => appendSearchPart(parts, getField(vente, field)))
+
+  Object.entries(metadata).forEach(([key, value]) => {
+    appendSearchPart(parts, key)
+    appendSearchPart(parts, metadataFieldLabels.get(key))
+    appendSearchPart(parts, value)
+  })
+
+  const text = normalizeText(parts.join(' '))
+  return {
+    vente,
+    text,
+    compact: text.replace(/\s+/g, ''),
+    words: text.split(/\s+/).filter(Boolean),
+  }
+}
+
+const indexedVentes = computed(() => snkVentes.value.map((vente) => buildVenteSearchRecord(vente)))
+
+const searchDescriptor = computed(() => {
+  const query = normalizeText(debouncedSearchTerm.value)
+  return {
+    query,
+    compact: compactText(query),
+    tokens: searchTokens(query),
+  }
+})
+
+const recordMatchesSearch = (record, search) => {
+  if (!search.query) return true
+  if (record.text.includes(search.query)) return true
+  if (search.compact.length >= 2 && record.compact.includes(search.compact)) return true
+
+  return search.tokens.every((token) => {
+    if (record.text.includes(token)) return true
+    if (token.length >= 2 && record.compact.includes(token)) return true
+    return record.words.some(
+      (word) =>
+        word.startsWith(token) ||
+        word.includes(token) ||
+        (token.length >= 4 && token.includes(word)),
+    )
+  })
+}
+
 const sanitizeFilters = (rawFilters) => {
   const itemType =
     rawFilters?.itemType === 'all'
@@ -533,24 +643,6 @@ const sanitizeFilters = (rawFilters) => {
     saleFrom: saleRange.from,
     saleTo: saleRange.to,
   }
-}
-
-const venteMatchesSearch = (vente, term) => {
-  if (!term) return true
-  const rawCat = String(vente.categorie ?? '').trim()
-  const metadata = vente?.metadata || {}
-  return matchesSearchQuery(
-    [
-      vente.id,
-      vente.nomItem ?? vente.nom_item,
-      isItemCategoryAlias(rawCat, categoryLabels.value) ? '' : rawCat,
-      vente.description,
-      itemTypeLabel(vente.type || 'SNEAKER', categoryLabels.value),
-      vente.type,
-      ...Object.values(metadata),
-    ],
-    term,
-  )
 }
 
 const venteMatchesFilters = (vente, activeFilters) => {
@@ -590,13 +682,14 @@ const sortVentes = (list, sort) => {
 
 const buildFilteredVentes = () => {
   const activeFilters = sanitizeFilters(filters.value)
-  const term = normalizeText(searchTerm.value)
-  let list = snkVentes.value
+  const search = searchDescriptor.value
+  let records = indexedVentes.value
 
-  if (term) {
-    list = list.filter((vente) => venteMatchesSearch(vente, term))
+  if (search.query) {
+    records = records.filter((record) => recordMatchesSearch(record, search))
   }
 
+  let list = records.map((record) => record.vente)
   list = list.filter((vente) => venteMatchesFilters(vente, activeFilters))
   return sortVentes(list, activeFilters.sort)
 }
@@ -682,12 +775,31 @@ watch(
   },
 )
 
+watch(searchTerm, (value) => {
+  if (searchDebounceTimer) {
+    window.clearTimeout(searchDebounceTimer)
+    searchDebounceTimer = null
+  }
+
+  const nextValue = String(value ?? '')
+  if (!normalizeText(nextValue)) {
+    debouncedSearchTerm.value = ''
+    return
+  }
+
+  searchDebounceTimer = window.setTimeout(() => {
+    debouncedSearchTerm.value = nextValue
+    searchDebounceTimer = null
+  }, SEARCH_DEBOUNCE_MS)
+})
+
 onMounted(() => {
   window.addEventListener('snk:item-categories-change', onCategoryLabelsChange)
   window.addEventListener('snk:item-subcategories-change', onSubcategoriesChange)
 })
 
 onBeforeUnmount(() => {
+  if (searchDebounceTimer) window.clearTimeout(searchDebounceTimer)
   window.removeEventListener('snk:item-categories-change', onCategoryLabelsChange)
   window.removeEventListener('snk:item-subcategories-change', onSubcategoriesChange)
 })

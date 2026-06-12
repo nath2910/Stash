@@ -27,13 +27,16 @@ public class BillingController {
   @GetMapping("/status")
   public BillingStatusResponse status(
       @AuthenticationPrincipal User user,
-      @RequestParam(name = "includePortal", defaultValue = "false") boolean includePortal
+      @RequestParam(name = "includePortal", defaultValue = "false") boolean includePortal,
+      @RequestParam(name = "forceRefresh", defaultValue = "false") boolean forceRefresh
   ) {
     if (!billingService.isConfigured()) {
       throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Stripe non configuré");
     }
     try {
-      billingService.refreshStatus(user);
+      if (forceRefresh) {
+        billingService.refreshStatus(user);
+      }
       String portalUrl = "";
       if (includePortal && isPortalEligibleStatus(user.getSubscriptionStatus())) {
         var portal = billingService.createPortal(user);
@@ -43,6 +46,10 @@ public class BillingController {
     } catch (Exception e) {
       return new BillingStatusResponse(user.getSubscriptionStatus(), "");
     }
+  }
+
+  public BillingStatusResponse status(User user, boolean includePortal) {
+    return status(user, includePortal, true);
   }
 
   @PostMapping("/checkout")

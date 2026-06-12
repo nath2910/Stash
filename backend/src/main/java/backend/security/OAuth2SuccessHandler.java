@@ -1,8 +1,10 @@
 package backend.security;
 
+import backend.dto.UserMapper;
 import backend.entity.User;
 import backend.repository.UserRepository;
 import backend.service.DiscordAccessService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -16,6 +18,7 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Optional;
 
 @Component
@@ -24,14 +27,21 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
   private final UserRepository userRepository;
   private final JwtService jwtService;
   private final DiscordAccessService discordAccessService;
+  private final ObjectMapper objectMapper;
 
   @Value("${app.oauth2.success-redirect}")
   private String successRedirect;
 
-  public OAuth2SuccessHandler(UserRepository userRepository, JwtService jwtService, DiscordAccessService discordAccessService) {
+  public OAuth2SuccessHandler(
+      UserRepository userRepository,
+      JwtService jwtService,
+      DiscordAccessService discordAccessService,
+      ObjectMapper objectMapper
+  ) {
     this.userRepository = userRepository;
     this.jwtService = jwtService;
     this.discordAccessService = discordAccessService;
+    this.objectMapper = objectMapper;
   }
 
   private static String norm(String s) { return s == null ? "" : s.trim(); }
@@ -104,9 +114,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
     user.setEmailVerified(Boolean.TRUE.equals(emailVerified));
     if (changed) user = userRepository.save(user);
 
-    String jwt = jwtService.generateToken(user.getId());
-    String token = URLEncoder.encode(jwt, StandardCharsets.UTF_8);
-    response.sendRedirect(successRedirect + "#token=" + token);
+    redirectWithSession(user, response);
   }
 
   private void handleDiscord(OAuth2User oauthUser, HttpServletResponse response) throws IOException {
@@ -175,8 +183,15 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
       userRepository.save(user);
     }
 
+    redirectWithSession(user, response);
+  }
+
+  private void redirectWithSession(User user, HttpServletResponse response) throws IOException {
     String jwt = jwtService.generateToken(user.getId());
     String token = URLEncoder.encode(jwt, StandardCharsets.UTF_8);
-    response.sendRedirect(successRedirect + "#token=" + token);
+    String userPayload = Base64.getUrlEncoder()
+        .withoutPadding()
+        .encodeToString(objectMapper.writeValueAsBytes(UserMapper.toMe(user)));
+    response.sendRedirect(successRedirect + "#token=" + token + "&user=" + userPayload);
   }
 }

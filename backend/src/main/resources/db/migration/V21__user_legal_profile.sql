@@ -1,0 +1,12 @@
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS legal_profile_type VARCHAR(64),
+  ADD COLUMN IF NOT EXISTS siret VARCHAR(14),
+  ADD COLUMN IF NOT EXISTS tax_category VARCHAR(40),
+  ADD COLUMN IF NOT EXISTS business_regime VARCHAR(40),
+  ADD COLUMN IF NOT EXISTS business_activity_type VARCHAR(40),
+  ADD COLUMN IF NOT EXISTS declared_revenue_threshold VARCHAR(40),
+  ADD COLUMN IF NOT EXISTS vat_number VARCHAR(32),
+  ADD COLUMN IF NOT EXISTS vat_status VARCHAR(20),
+  ADD COLUMN IF NOT EXISTS declaration_frequency VARCHAR(20),
+  ADD COLUMN IF NOT EXISTS legal_profile_completed BOOLEAN DEFAULT false NOT NULL,
+  ADD COLUMN IF NOT EXISTS legal_profile_updated_at TIMESTAMPTZ;

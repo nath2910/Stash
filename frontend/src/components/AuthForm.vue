@@ -314,7 +314,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { AlertCircle, CheckCircle2 } from 'lucide-vue-next'
 import AuthService from '@/services/AuthService'
@@ -585,6 +585,22 @@ const discordAuthUrl =
 const loginWithDiscord = () => {
   window.location.href = discordAuthUrl
 }
+
+onMounted(() => {
+  if (!('requestIdleCallback' in window)) {
+    void import('@/pages/homePage.vue')
+    return
+  }
+
+  window.requestIdleCallback(
+    () => {
+      void import('@/pages/homePage.vue')
+      void import('@/pages/gestionPage.vue')
+      void import('@/pages/statsPage.vue')
+    },
+    { timeout: 1200 },
+  )
+})
 </script>
 
 <style scoped>

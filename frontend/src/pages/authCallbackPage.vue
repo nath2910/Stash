@@ -7,10 +7,24 @@ import AuthService from '@/services/AuthService.js'
 const router = useRouter()
 const auth = useAuthStore()
 
+function decodeUserPayload(value) {
+  if (!value) return null
+  try {
+    const normalized = value.replace(/-/g, '+').replace(/_/g, '/')
+    const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4)
+    const binary = window.atob(padded)
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0))
+    return JSON.parse(new TextDecoder().decode(bytes))
+  } catch {
+    return null
+  }
+}
+
 onMounted(async () => {
   const hash = window.location.hash || ''
   const params = new URLSearchParams(hash.replace('#', ''))
   const token = params.get('token')
+  const userPayload = decodeUserPayload(params.get('user'))
   const error = params.get('error')
 
   if (error) {
@@ -25,6 +39,12 @@ onMounted(async () => {
 
   auth.setToken(token)
   window.history.replaceState({}, document.title, window.location.pathname)
+
+  if (userPayload) {
+    auth.setAuth({ user: userPayload, token })
+    router.replace({ name: 'home' })
+    return
+  }
 
   try {
     const me = await AuthService.me()

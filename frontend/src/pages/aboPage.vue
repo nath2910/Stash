@@ -179,10 +179,12 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import BillingService from '@/services/BillingService'
 import { useAuthStore } from '@/store/authStore'
+import { useBillingStore } from '@/store/billingStore'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+const billing = useBillingStore()
 
 const status = ref<'unknown' | 'inactive' | 'active' | 'past_due' | 'canceled'>('unknown')
 const portalUrl = ref('')
@@ -303,11 +305,12 @@ const statusMeta = computed(() => {
   }
 })
 
-const fetchStatus = async (includePortal = false) => {
+const fetchStatus = async (includePortal = false, forceRefresh = false) => {
   try {
-    const res = await BillingService.status(includePortal)
+    const res = await BillingService.status(includePortal, forceRefresh)
     status.value = (res?.data?.status as typeof status.value) || 'inactive'
     portalUrl.value = res?.data?.portalUrl || ''
+    billing.seedStatus(status.value)
 
     if (previousStatus !== 'active' && status.value === 'active') {
       try {
@@ -357,7 +360,7 @@ const startCheckout = async () => {
 
 const openPortal = async () => {
   if (!portalUrl.value) {
-    await fetchStatus(true)
+    await fetchStatus(true, false)
   }
   if (portalUrl.value) window.open(portalUrl.value, '_blank', 'noopener')
 }
@@ -369,12 +372,12 @@ const redirectIfActive = () => {
 }
 
 onMounted(async () => {
-  await fetchStatus(true)
+  await fetchStatus(false, shouldPollAfterCheckout.value)
   redirectIfActive()
 
   if (shouldPollAfterCheckout.value) {
     poll = window.setInterval(async () => {
-      await fetchStatus(false)
+      await fetchStatus(false, true)
       redirectIfActive()
     }, 15000)
   }

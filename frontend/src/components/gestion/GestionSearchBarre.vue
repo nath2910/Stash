@@ -20,7 +20,10 @@
       <input
         :value="modelValue"
         @input="$emit('update:modelValue', $event.target.value)"
-        type="text"
+        type="search"
+        autocomplete="off"
+        autocapitalize="none"
+        spellcheck="false"
         placeholder="Rechercher nom, categorie, description..."
         class="gestion-search-input min-w-0 flex-1 border-0 bg-transparent text-[14px] font-semibold leading-none text-slate-950 placeholder:text-slate-400 focus:outline-none focus:ring-0"
       />

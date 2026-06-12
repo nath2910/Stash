@@ -1,6 +1,10 @@
 <template>
   <div class="admin-page" :class="{ 'is-embedded': embedded }">
-    <section class="admin-workspace">
+    <section
+      class="admin-workspace"
+      :class="{ 'is-legal-locked': showLegalProfileModal }"
+      :aria-hidden="showLegalProfileModal ? 'true' : null"
+    >
       <header class="admin-header">
         <div>
           <p class="admin-eyebrow">Dashboard administratif</p>
@@ -21,9 +25,9 @@
       </div>
 
       <template v-else>
-        <div v-if="apiWarning || adminError" class="notice-row">
+        <div v-if="apiWarning || adminError || legalProfileLoadError" class="notice-row">
           <AlertTriangle class="notice-icon" aria-hidden="true" />
-          <span>{{ apiWarning || adminError }}</span>
+          <span>{{ apiWarning || adminError || legalProfileLoadError }}</span>
         </div>
 
         <div v-if="feedback" class="success-row">
@@ -43,9 +47,9 @@
             </RouterLink>
           </div>
 
-          <div class="profile-trait-row" aria-label="Particularites du profil">
+          <div class="profile-trait-row" aria-label="Particularités du profil">
             <span
-              v-for="trait in currentProfile.traits"
+              v-for="trait in activeProfileTraits"
               :key="trait"
               class="profile-trait-pill"
             >
@@ -201,39 +205,35 @@
               </span>
             </div>
 
-            <div v-if="currentProfile.requiredFields.length" class="form-grid">
-              <label v-if="currentProfile.requiredFields.includes('tradeName')">
+            <div v-if="adminFormFields.length" class="form-grid">
+              <label v-if="adminFormFields.includes('tradeName')">
                 Nom commercial
                 <input v-model.trim="settings.tradeName" placeholder="Nom de la boutique" />
               </label>
-              <label v-if="currentProfile.requiredFields.includes('legalName')">
+              <label v-if="adminFormFields.includes('legalName')">
                 Nom légal
                 <input v-model.trim="settings.legalName" placeholder="Entreprise individuelle, société..." />
               </label>
-              <label v-if="currentProfile.requiredFields.includes('siren')">
-                SIREN
-                <input v-model.trim="settings.siren" inputmode="numeric" placeholder="9 chiffres" />
-              </label>
-              <label v-if="currentProfile.requiredFields.includes('siret')">
+              <label v-if="adminFormFields.includes('siret')">
                 SIRET
                 <input v-model.trim="settings.siret" inputmode="numeric" placeholder="14 chiffres" />
               </label>
-              <label v-if="currentProfile.requiredFields.includes('address')" class="wide">
+              <label v-if="adminFormFields.includes('address')" class="wide">
                 Adresse administrative
                 <input v-model.trim="settings.address" placeholder="Adresse complète" />
               </label>
-              <label v-if="currentProfile.requiredFields.includes('email')">
+              <label v-if="adminFormFields.includes('email')">
                 Email administratif
                 <input v-model.trim="settings.email" type="email" placeholder="contact@exemple.fr" />
               </label>
-              <label v-if="currentProfile.requiredFields.includes('declarationFrequency')">
+              <label v-if="adminFormFields.includes('declarationFrequency')">
                 Déclarations
                 <select v-model="settings.declarationFrequency">
                   <option value="monthly">Mensuelles</option>
                   <option value="quarterly">Trimestrielles</option>
                 </select>
               </label>
-              <label v-if="currentProfile.requiredFields.includes('vatMode')">
+              <label v-if="adminFormFields.includes('vatMode')">
                 TVA
                 <select v-model="settings.vatMode">
                   <option value="franchise">Franchise en base</option>
@@ -251,25 +251,11 @@
                   <small v-if="!isStarterProfile">Active le suivi des relevés et récapitulatifs.</small>
                 </span>
               </label>
-              <label v-if="!isStarterProfile && !isSimpleResellerProfile" class="switch-row">
-                <input v-model="settings.sellsToProfessionals" type="checkbox" />
-                <span>
-                  <strong>Clients professionnels</strong>
-                  <small>Met la facturation au premier plan.</small>
-                </span>
-              </label>
               <label class="switch-row">
                 <input v-model="settings.buysFromIndividuals" type="checkbox" />
                 <span>
                   <strong>Achats particuliers</strong>
                   <small v-if="!isStarterProfile">Renforce le suivi de provenance.</small>
-                </span>
-              </label>
-              <label v-if="currentProfile.key === 'independent_shop'" class="switch-row">
-                <input v-model="settings.hasCashSoftware" type="checkbox" />
-                <span>
-                  <strong>Logiciel ou système de caisse</strong>
-                  <small>Affiche le contrôle caisse si vous l'utilisez.</small>
                 </span>
               </label>
             </div>
@@ -480,6 +466,13 @@
       type="file"
       @change="handleFileImport"
     />
+
+    <LegalProfileModal
+      :model-value="showLegalProfileModal"
+      :initial-profile="legalProfile"
+      mandatory
+      @saved="handleLegalProfileSaved"
+    />
   </div>
 </template>
 
@@ -497,14 +490,20 @@ import {
   Upload,
   UserRoundCheck,
 } from 'lucide-vue-next'
+import LegalProfileModal from '@/components/legal/LegalProfileModal.vue'
+import { useAuthStore } from '@/store/authStore'
 import AdminService from '../services/AdminService.js'
+import AuthService from '../services/AuthService.js'
+import LegalProfileService from '../services/LegalProfileService.js'
 import SnkVenteServices from '../services/SnkVenteServices.js'
 import {
-  ADMIN_ACTION_PROFILES as SHARED_PROFILE_DEFINITIONS,
-  ADMIN_ACTION_STORAGE_KEY,
-  DEFAULT_ADMIN_ACTION_SETTINGS,
-  normalizeAdminActionProfileKey,
-} from '../constants/adminActionProfiles.js'
+  DEFAULT_LEGAL_PROFILE_ADMIN_SETTINGS,
+  LEGAL_PROFILE_ADMIN_DEFINITIONS,
+  LEGAL_PROFILE_ADMIN_STORAGE_KEY,
+  getLegalProfileAdminKey,
+  isLegalProfileCompleted,
+  normalizeLegalProfile,
+} from '../constants/legalProfile.js'
 import { formatDateFR, formatEUR, toNumber } from '../utils/formatters.js'
 import { getField, isVendue, prixResellOf, prixRetailOf } from '../utils/snkVente.js'
 
@@ -515,7 +514,7 @@ defineProps({
   },
 })
 
-const STORAGE_KEY = ADMIN_ACTION_STORAGE_KEY
+const STORAGE_KEY = LEGAL_PROFILE_ADMIN_STORAGE_KEY
 const CURRENT_YEAR = new Date().getFullYear()
 const SOCIAL_RATE_GOODS = 12.3
 const VAT_BASE_THRESHOLD_GOODS = 85000
@@ -527,14 +526,14 @@ const CFE_REVENUE_THRESHOLD = 5000
 const MICRO_GOODS_THRESHOLD = 203100
 const RESELLER_REGISTRY_URL = 'https://www.formulaires.service-public.fr/gf/cerfa_11733_02.do'
 
-const PROFILE_DEFINITIONS = SHARED_PROFILE_DEFINITIONS
+const PROFILE_DEFINITIONS = LEGAL_PROFILE_ADMIN_DEFINITIONS
 
 const TASK_DEFINITIONS = [
   {
     id: 'keep_purchase_proofs',
     title: 'Ajouter les preuves d’achat',
     description: 'Factures, reçus ou captures.',
-    profiles: ['light_reseller', 'regular_reseller', 'strict_reseller', 'independent_shop'],
+    profiles: ['light_reseller', 'regular_reseller'],
     obligation: 'required',
     actionType: 'inventory',
     sourceLabel: 'Preuves',
@@ -552,18 +551,18 @@ const TASK_DEFINITIONS = [
   },
   {
     id: 'complete_identity',
-    title: 'Renseigner l’identité professionnelle',
-    description: 'Nom légal, SIREN et informations utiles aux documents.',
-    profiles: ['regular_reseller', 'strict_reseller', 'independent_shop'],
+    title: 'Vérifier le SIRET',
+    description: 'Le SIRET validé dans le profil légal est repris pour les documents.',
+    profiles: ['regular_reseller'],
     obligation: 'required',
     actionType: 'settings',
-    sourceLabel: 'Facturation',
+    sourceLabel: 'Profil légal',
   },
   {
     id: 'prepare_ca_declaration',
     title: 'Préparer la déclaration de chiffre d’affaires',
     description: 'Récapitulatif de CA encaissé avant saisie sur le portail officiel.',
-    profiles: ['regular_reseller', 'strict_reseller', 'independent_shop'],
+    profiles: ['regular_reseller'],
     obligation: 'required',
     actionType: 'declaration',
     documentId: 'urssaf_recap',
@@ -574,7 +573,7 @@ const TASK_DEFINITIONS = [
     id: 'revenue_book',
     title: 'Tenir le livre des recettes',
     description: 'Montant, origine, mode de règlement et pièce justificative.',
-    profiles: ['regular_reseller', 'strict_reseller', 'independent_shop'],
+    profiles: ['regular_reseller'],
     obligation: 'required',
     actionType: 'generate',
     documentId: 'sales_register',
@@ -584,7 +583,7 @@ const TASK_DEFINITIONS = [
     id: 'purchase_register',
     title: 'Tenir le registre des achats',
     description: 'Suivi annuel des achats et références des justificatifs.',
-    profiles: ['regular_reseller', 'strict_reseller', 'independent_shop'],
+    profiles: ['regular_reseller'],
     obligation: 'required',
     actionType: 'generate',
     documentId: 'purchase_register',
@@ -595,8 +594,8 @@ const TASK_DEFINITIONS = [
   {
     id: 'invoice_drafts',
     title: 'Préparer les factures ou brouillons',
-    description: 'Numérotation, identité, lignes, TVA et mentions à vérifier.',
-    profiles: ['strict_reseller', 'independent_shop'],
+    description: 'Numérotation, SIRET, lignes, TVA et mentions à vérifier.',
+    profiles: ['regular_reseller'],
     obligation: 'required',
     actionType: 'generate',
     documentId: 'invoice_draft',
@@ -606,7 +605,7 @@ const TASK_DEFINITIONS = [
     id: 'secondhand_reseller_declaration',
     title: 'Déclaration revendeur d’occasion',
     description: 'À faire si vous achetez des biens d’occasion à des particuliers.',
-    profiles: ['regular_reseller', 'strict_reseller', 'independent_shop'],
+    profiles: ['regular_reseller'],
     obligation: 'required',
     actionType: 'external',
     url: RESELLER_REGISTRY_URL,
@@ -617,7 +616,7 @@ const TASK_DEFINITIONS = [
     id: 'vat_watch',
     title: 'Surveiller les seuils TVA',
     description: 'Comparez le CA aux seuils de franchise et de tolérance.',
-    profiles: ['strict_reseller', 'independent_shop'],
+    profiles: ['regular_reseller'],
     obligation: 'required',
     actionType: 'generate',
     documentId: 'vat_watch',
@@ -627,27 +626,16 @@ const TASK_DEFINITIONS = [
     id: 'archive_10_years',
     title: 'Archiver les pièces comptables',
     description: 'Factures, registres et justificatifs doivent rester retrouvables.',
-    profiles: ['regular_reseller', 'strict_reseller', 'independent_shop'],
+    profiles: ['regular_reseller'],
     obligation: 'required',
     actionType: 'mark',
     sourceLabel: 'Entreprendre',
   },
   {
-    id: 'cash_register',
-    title: 'Contrôler le journal de caisse',
-    description: 'À suivre si vous utilisez un logiciel ou système de caisse.',
-    profiles: ['independent_shop'],
-    obligation: 'recommended',
-    actionType: 'generate',
-    documentId: 'cash_register',
-    sourceLabel: 'Impôts',
-    when: (settings) => settings.hasCashSoftware,
-  },
-  {
     id: 'accounting_export',
     title: 'Préparer l’export comptable',
     description: 'Fichier propre pour comptable ou logiciel de gestion.',
-    profiles: ['strict_reseller', 'independent_shop'],
+    profiles: ['regular_reseller'],
     obligation: 'recommended',
     actionType: 'generate',
     documentId: 'accounting_export',
@@ -663,7 +651,7 @@ const DOCUMENT_DEFINITIONS = [
     format: 'Import fichier',
     canImport: true,
     canGenerate: false,
-    requiredProfiles: ['strict_reseller', 'independent_shop'],
+    requiredProfiles: ['regular_reseller'],
   },
   {
     id: 'sales_register',
@@ -672,7 +660,7 @@ const DOCUMENT_DEFINITIONS = [
     format: 'CSV',
     canImport: true,
     canGenerate: true,
-    requiredProfiles: ['regular_reseller', 'strict_reseller', 'independent_shop'],
+    requiredProfiles: ['regular_reseller'],
   },
   {
     id: 'purchase_register',
@@ -681,7 +669,7 @@ const DOCUMENT_DEFINITIONS = [
     format: 'CSV',
     canImport: true,
     canGenerate: true,
-    requiredProfiles: ['strict_reseller', 'independent_shop'],
+    requiredProfiles: ['regular_reseller'],
     recommendedProfiles: ['regular_reseller'],
   },
   {
@@ -692,7 +680,7 @@ const DOCUMENT_DEFINITIONS = [
     canImport: true,
     canGenerate: true,
     requiresIdentity: true,
-    requiredProfiles: ['strict_reseller', 'independent_shop'],
+    requiredProfiles: ['regular_reseller'],
   },
   {
     id: 'urssaf_recap',
@@ -701,7 +689,7 @@ const DOCUMENT_DEFINITIONS = [
     format: 'CSV',
     canImport: true,
     canGenerate: true,
-    requiredProfiles: ['regular_reseller', 'strict_reseller', 'independent_shop'],
+    requiredProfiles: ['regular_reseller'],
   },
   {
     id: 'vat_watch',
@@ -710,18 +698,7 @@ const DOCUMENT_DEFINITIONS = [
     format: 'TXT',
     canImport: false,
     canGenerate: true,
-    requiredProfiles: ['strict_reseller', 'independent_shop'],
-  },
-  {
-    id: 'cash_register',
-    title: 'Journal de caisse',
-    description: 'Brouillon d’export des ventes comptoir et modes de paiement.',
-    format: 'CSV',
-    canImport: true,
-    canGenerate: true,
-    requiredProfiles: [],
-    recommendedProfiles: ['independent_shop'],
-    when: (settings) => settings.hasCashSoftware,
+    requiredProfiles: ['regular_reseller'],
   },
   {
     id: 'accounting_export',
@@ -731,7 +708,7 @@ const DOCUMENT_DEFINITIONS = [
     canImport: false,
     canGenerate: true,
     requiredProfiles: [],
-    recommendedProfiles: ['strict_reseller', 'independent_shop'],
+    recommendedProfiles: ['regular_reseller'],
   },
 ]
 
@@ -749,18 +726,34 @@ const hasHydrated = ref(false)
 const lastServerState = ref({})
 let saveTimer = null
 
-const settings = reactive({ ...DEFAULT_ADMIN_ACTION_SETTINGS })
+const settings = reactive({ ...DEFAULT_LEGAL_PROFILE_ADMIN_SETTINGS })
 
 const taskStatus = reactive({})
 const router = useRouter()
+const auth = useAuthStore()
+const legalProfile = ref(normalizeLegalProfile(auth.user.value || {}))
+const legalProfileReady = ref(false)
+const legalProfileLoadError = ref('')
+
+const showLegalProfileModal = computed(
+  () => legalProfileReady.value && !isLegalProfileCompleted(legalProfile.value),
+)
 
 const currentProfile = computed(() => {
   return PROFILE_DEFINITIONS.find((profile) => profile.key === settings.profileType) || PROFILE_DEFINITIONS[0]
 })
 
+const adminFormFields = computed(() => [
+  ...new Set([...(currentProfile.value.requiredFields || []), ...(currentProfile.value.optionalFields || [])]),
+])
 const isStarterProfile = computed(() => currentProfile.value.key === 'light_reseller')
 const isSimpleResellerProfile = computed(() => currentProfile.value.key === 'regular_reseller')
 const showItemProofPanel = computed(() => isStarterProfile.value || isSimpleResellerProfile.value)
+const activeProfileTraits = computed(() => {
+  const traits = [...currentProfile.value.traits]
+  if (!isSimpleResellerProfile.value || !legalProfile.value.siret) return traits
+  return [`SIRET ${legalProfile.value.siret}`, ...traits.filter((trait) => trait !== 'SIRET obligatoire')]
+})
 
 const dashboardSubtitle = computed(() => {
   if (isSimpleResellerProfile.value) {
@@ -1150,6 +1143,18 @@ watch(
 
 onMounted(async () => {
   loading.value = true
+  await loadLegalProfile()
+
+  if (!isLegalProfileCompleted(legalProfile.value)) {
+    loading.value = false
+    return
+  }
+
+  await hydrateAdminPage()
+})
+
+async function hydrateAdminPage() {
+  loading.value = true
   const [stateResult, stockResult] = await Promise.allSettled([loadAdminState(), loadStockItems()])
 
   if (stateResult.status === 'rejected') {
@@ -1163,7 +1168,65 @@ onMounted(async () => {
 
   hasHydrated.value = true
   loading.value = false
-})
+}
+
+async function loadLegalProfile() {
+  legalProfileLoadError.value = ''
+  try {
+    applyLegalProfile(await LegalProfileService.getLegalProfile())
+  } catch {
+    legalProfile.value = normalizeLegalProfile(auth.user.value || {})
+    if (!isLegalProfileCompleted(legalProfile.value)) {
+      legalProfileLoadError.value =
+        'Profil administratif indisponible : renseigne ton profil pour accéder à cette page.'
+    }
+  } finally {
+    legalProfileReady.value = true
+  }
+}
+
+async function handleLegalProfileSaved(savedProfile) {
+  applyLegalProfile(savedProfile)
+  feedback.value = 'Profil administratif valide.'
+  try {
+    const me = await AuthService.me()
+    auth.setUser(me)
+    applyLegalProfile(me)
+  } catch {
+    mergeLegalProfileIntoUser(savedProfile)
+  }
+  await hydrateAdminPage()
+}
+
+function applyLegalProfile(profile) {
+  legalProfile.value = normalizeLegalProfile(profile)
+  settings.profileType = legalProfileAdminKey()
+  if (legalProfile.value.siret) {
+    settings.siret = legalProfile.value.siret
+  }
+  if (!settings.email && auth.user.value?.email) {
+    settings.email = auth.user.value.email
+  }
+  if (!settings.legalName) {
+    settings.legalName = [auth.user.value?.firstName, auth.user.value?.lastName].filter(Boolean).join(' ')
+  }
+  mergeLegalProfileIntoUser(profile)
+}
+
+function legalProfileAdminKey() {
+  return getLegalProfileAdminKey(legalProfile.value)
+}
+
+function mergeLegalProfileIntoUser(profile) {
+  const currentUser = auth.user.value
+  if (!currentUser) return
+  const nextProfile = normalizeLegalProfile(profile)
+  auth.setUser({
+    ...currentUser,
+    legalProfile: nextProfile,
+    legalProfileCompleted: nextProfile.completed,
+  })
+}
 
 function handleTaskAction(task) {
   if (task.actionType === 'generate' && task.documentId) {
@@ -1322,7 +1385,6 @@ function buildGeneratedDocument(documentItem) {
     invoice_draft: buildInvoiceDraft,
     urssaf_recap: buildUrssafRecap,
     vat_watch: buildVatWatch,
-    cash_register: buildCashRegister,
     accounting_export: buildAccountingExport,
   }
   const builder = builders[documentItem.id] || buildGenericDocument
@@ -1384,7 +1446,7 @@ function buildInvoiceDraft() {
       'BROUILLON DE FACTURE - À VÉRIFIER',
       '',
       `Vendeur : ${settings.legalName || settings.tradeName || 'à compléter'}`,
-      `SIREN : ${settings.siren || 'à compléter'}`,
+      `SIRET : ${settings.siret || 'à compléter'}`,
       `Adresse : ${settings.address || 'à compléter'}`,
       `Email : ${settings.email || 'à compléter'}`,
       '',
@@ -1437,23 +1499,6 @@ function buildVatWatch() {
       'À vérifier selon votre régime, la composition de votre activité et les sources fiscales à jour.',
     ].join('\n'),
   }
-}
-
-function buildCashRegister() {
-  const rows = [['date', 'designation', 'montant_ttc', 'mode_reglement', 'piece']]
-  stockItems.value
-    .filter((item) => isVendue(item))
-    .forEach((item) => {
-      rows.push([
-        toYmd(parseItemDate(item, 'dateVente')),
-        itemLabel(item),
-        prixResellOf(item),
-        'a_preciser',
-        itemHasProof(item) ? 'ok' : 'a_completer',
-      ])
-    })
-
-  return csvPayload(`journal-caisse-${CURRENT_YEAR}.csv`, rows)
 }
 
 function buildAccountingExport() {
@@ -1533,9 +1578,7 @@ function hydrateState(payload = {}) {
       settings[key] = sourceSettings[key]
     }
   })
-  settings.profileType = normalizeAdminActionProfileKey(
-    source.selectedProfile || sourceSettings.profileType,
-  )
+  settings.profileType = legalProfileAdminKey()
 
   replaceReactiveMap(taskStatus, source.taskStatus)
   archivedDocuments.value = normalizeDocuments(source.documents || source.archivedDocuments)
@@ -1938,6 +1981,12 @@ function downloadContent(content, filename, mime) {
   gap: 1rem;
   margin-inline: auto;
   padding: clamp(1rem, 2vw, 1.6rem) clamp(16px, 2.2vw, 32px) clamp(5rem, 9vw, 7rem);
+}
+
+.admin-workspace.is-legal-locked {
+  pointer-events: none;
+  user-select: none;
+  filter: blur(6px);
 }
 
 .admin-page.is-embedded .admin-workspace {

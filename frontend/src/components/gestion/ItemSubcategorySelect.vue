@@ -567,9 +567,12 @@ onBeforeUnmount(() => {
 }
 
 .subcategory-manager-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   width: 100%;
-  max-height: min(88dvh, 42rem);
+  max-height: min(calc(100dvh - 1.5rem), 42rem);
   max-width: 44rem;
+  min-height: 0;
   overflow: hidden;
   border: 1px solid rgba(125, 211, 252, 0.4);
   border-radius: 20px 20px 0 0;
@@ -638,7 +641,9 @@ onBeforeUnmount(() => {
 
 .subcategory-manager-body {
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   gap: 0.9rem;
+  min-height: 0;
   padding: 1rem 1.25rem 1.25rem;
 }
 
@@ -700,10 +705,13 @@ onBeforeUnmount(() => {
 
 .subcategory-manager-list {
   display: grid;
-  max-height: 18rem;
   gap: 0.6rem;
+  min-height: 0;
+  max-height: 100%;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding-right: 0.1rem;
+  scrollbar-gutter: stable;
 }
 
 .subcategory-row {
@@ -796,6 +804,10 @@ onBeforeUnmount(() => {
 
   .subcategory-field-header {
     display: grid;
+  }
+
+  .subcategory-manager-panel {
+    max-height: calc(100dvh - 0.75rem);
   }
 
   .subcategory-manage-button,

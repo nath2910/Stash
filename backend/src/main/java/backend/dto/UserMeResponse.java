@@ -1,5 +1,7 @@
 package backend.dto;
 
+import java.time.OffsetDateTime;
+
 public record UserMeResponse(
     Long id,
     String email,
@@ -7,5 +9,9 @@ public record UserMeResponse(
     String lastName,
     String pictureUrl,
     String provider,
-    boolean emailVerified
+    boolean emailVerified,
+    String subscriptionStatus,
+    OffsetDateTime subscriptionCurrentPeriodEnd,
+    boolean legalProfileCompleted,
+    LegalProfileResponse legalProfile
 ) {}

@@ -103,15 +103,7 @@ public class AuthController {
 
     @GetMapping("/me")
     public UserMeResponse me(@AuthenticationPrincipal User currentUser) {
-        return new UserMeResponse(
-            currentUser.getId(),
-            currentUser.getEmail(),
-            currentUser.getFirstName(),
-            currentUser.getLastName(),
-            currentUser.getPictureUrl(),
-            currentUser.getProvider(),
-            currentUser.isEmailVerified()
-        );
+        return UserMapper.toMe(currentUser);
     }
 
     @DeleteMapping("/me")

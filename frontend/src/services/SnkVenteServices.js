@@ -1,16 +1,65 @@
 // src/services/SnkVenteServices.js
 import api from './api'
 
+const LIST_CACHE_TTL_MS = 20_000
+const listCache = new Map()
+const listInflight = new Map()
+
+function normalizeOptions(options = {}) {
+  if (typeof options === 'number') return { limit: options }
+  return options && typeof options === 'object' ? { ...options } : {}
+}
+
+function cacheKeyFor(options = {}) {
+  return JSON.stringify(
+    Object.keys(options)
+      .sort((a, b) => a.localeCompare(b))
+      .reduce((acc, key) => {
+        const value = options[key]
+        if (value !== undefined && value !== null && value !== '') acc[key] = value
+        return acc
+      }, {}),
+  )
+}
+
+function invalidateListCache() {
+  listCache.clear()
+  listInflight.clear()
+}
+
 class SnkVenteServices {
   // liste complete de l'utilisateur courant
   getSnkVente(options = {}) {
-    const params =
-      typeof options === 'number'
-        ? { limit: options }
-        : options && typeof options === 'object'
-          ? options
-          : {}
-    return api.get('/snkVente', { params })
+    const params = normalizeOptions(options)
+    const bypassCache = params.forceRefresh || params.noCache
+    delete params.forceRefresh
+    delete params.noCache
+
+    const key = cacheKeyFor(params)
+    const now = Date.now()
+    const cached = listCache.get(key)
+    if (!bypassCache && cached && cached.expiresAt > now) {
+      return Promise.resolve(cached.response)
+    }
+
+    const pending = listInflight.get(key)
+    if (!bypassCache && pending) return pending
+
+    const request = api
+      .get('/snkVente', { params })
+      .then((response) => {
+        listCache.set(key, {
+          response,
+          expiresAt: Date.now() + LIST_CACHE_TTL_MS,
+        })
+        return response
+      })
+      .finally(() => {
+        listInflight.delete(key)
+      })
+
+    if (!bypassCache) listInflight.set(key, request)
+    return request
   }
 
   recent(limit = 8) {
@@ -33,26 +82,43 @@ class SnkVenteServices {
   }
 
   ajouter(vente) {
-    return api.post('/snkVente/add', vente)
-  }
-
-  create(vente) {
-    return api.post('/snkVente', vente)
-  }
-
-  createMany(vente, quantity = 1) {
-    return api.post('/snkVente/bulk-create', {
-      ...vente,
-      quantity,
+    return api.post('/snkVente/add', vente).then((response) => {
+      invalidateListCache()
+      return response
     })
   }
 
+  create(vente) {
+    return api.post('/snkVente', vente).then((response) => {
+      invalidateListCache()
+      return response
+    })
+  }
+
+  createMany(vente, quantity = 1) {
+    return api
+      .post('/snkVente/bulk-create', {
+        ...vente,
+        quantity,
+      })
+      .then((response) => {
+        invalidateListCache()
+        return response
+      })
+  }
+
   supprimer(id) {
-    return api.delete(`/snkVente/${id}`)
+    return api.delete(`/snkVente/${id}`).then((response) => {
+      invalidateListCache()
+      return response
+    })
   }
 
   supprimerEnMasse(ids) {
-    return api.post('/snkVente/bulk-delete', ids)
+    return api.post('/snkVente/bulk-delete', ids).then((response) => {
+      invalidateListCache()
+      return response
+    })
   }
 
   topVentes() {
@@ -60,13 +126,21 @@ class SnkVenteServices {
   }
 
   update(id, vente) {
-    return api.put(`/snkVente/${id}`, vente)
+    return api.put(`/snkVente/${id}`, vente).then((response) => {
+      invalidateListCache()
+      return response
+    })
   }
 
   importBulk(items) {
-    return api.post('/snkVente/import', items, {
-      timeout: 120000,
-    })
+    return api
+      .post('/snkVente/import', items, {
+        timeout: 120000,
+      })
+      .then((response) => {
+        invalidateListCache()
+        return response
+      })
   }
 
   // Attachments

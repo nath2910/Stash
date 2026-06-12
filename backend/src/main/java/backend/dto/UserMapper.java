@@ -13,7 +13,27 @@ public final class UserMapper {
       u.getLastName(),
       u.getPictureUrl(),
       u.getProvider(),
-      u.isEmailVerified()
+      u.isEmailVerified(),
+      u.getSubscriptionStatus(),
+      u.getSubscriptionCurrentPeriodEnd(),
+      u.isLegalProfileCompleted(),
+      toLegalProfile(u)
+    );
+  }
+
+  public static LegalProfileResponse toLegalProfile(User u) {
+    return new LegalProfileResponse(
+      u.getLegalProfileType(),
+      u.getSiret(),
+      u.getTaxCategory(),
+      u.getBusinessRegime(),
+      u.getBusinessActivityType(),
+      u.getDeclaredRevenueThreshold(),
+      u.getVatNumber(),
+      u.getVatStatus(),
+      u.getDeclarationFrequency(),
+      u.isLegalProfileCompleted(),
+      u.getLegalProfileUpdatedAt()
     );
   }
 }

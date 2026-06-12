@@ -50,26 +50,25 @@
             </div>
           </div>
 
-          <div class="account-profile-panel mt-6">
+          <div class="account-profile-panel account-profile-panel--legal mt-6">
             <div class="account-profile-head">
               <div class="min-w-0">
-                <p class="account-profile-eyebrow">Profil revendeur</p>
-                <h2>Mon profil actuel</h2>
+                <p class="account-profile-eyebrow">Administratif</p>
+                <h2>Profil légal</h2>
               </div>
               <button
                 type="button"
                 class="account-profile-change"
-                :class="{ 'is-open': profileChooserOpen }"
-                :disabled="adminProfileSaving"
-                @click="profileChooserOpen = !profileChooserOpen"
+                :disabled="legalProfileLoading"
+                @click="openLegalProfileEdit"
               >
                 <RefreshCw
-                  v-if="adminProfileSaving"
+                  v-if="legalProfileLoading"
                   class="h-4 w-4 animate-spin"
                   aria-hidden="true"
                 />
                 <ChevronDown v-else class="h-4 w-4" aria-hidden="true" />
-                <span>{{ profileChooserOpen ? 'Fermer' : 'Changer' }}</span>
+                <span>{{ legalProfileCompleted ? 'Modifier' : 'Compléter' }}</span>
               </button>
             </div>
 
@@ -77,61 +76,55 @@
               <UserRoundCheck class="account-profile-icon" aria-hidden="true" />
               <div class="min-w-0">
                 <div class="account-profile-title-row">
-                  <strong>{{ currentAdminProfile.label }}</strong>
-                  <span class="account-profile-level" :class="currentAdminProfile.level">
-                    {{ currentAdminProfile.levelLabel }}
+                  <strong>{{ legalProfileTitle }}</strong>
+                  <span
+                    class="account-profile-level"
+                    :class="legalProfileCompleted ? 'low' : 'medium'"
+                  >
+                    {{ legalProfileCompleted ? 'Valide' : 'À compléter' }}
                   </span>
                 </div>
-                <p>{{ currentAdminProfile.description }}</p>
+                <p>{{ legalProfileDescription }}</p>
               </div>
             </div>
 
-            <div class="account-profile-traits" aria-label="Particularites du profil">
-              <span v-for="trait in currentAdminProfile.traits" :key="trait">{{ trait }}</span>
+            <div v-if="legalProfileDetails.length" class="account-profile-traits">
+              <span v-for="detail in legalProfileDetails" :key="detail">{{ detail }}</span>
             </div>
 
-            <div v-if="adminProfileError" class="account-profile-message is-error">
-              {{ adminProfileError }}
+            <div v-if="legalProfileError" class="account-profile-message is-error">
+              {{ legalProfileError }}
             </div>
-            <div v-if="adminProfileSuccess" class="account-profile-message is-success">
-              {{ adminProfileSuccess }}
+            <div v-if="legalProfileSuccess" class="account-profile-message is-success">
+              {{ legalProfileSuccess }}
             </div>
 
-            <div v-if="profileChooserOpen" class="account-profile-options">
-              <button
-                v-for="profile in adminProfileList"
-                :key="profile.key"
-                type="button"
-                class="account-profile-option"
-                :class="{ 'is-active': profile.key === adminProfileKey }"
-                :disabled="adminProfileSaving || adminProfileLoading"
-                @click="selectAdminProfile(profile.key)"
-              >
-                <span class="account-profile-option-copy">
-                  <span class="account-profile-option-title">
-                    <strong>{{ profile.label }}</strong>
-                    <small :class="profile.level">{{ profile.levelLabel }}</small>
-                  </span>
-                  <span>{{ profile.description }}</span>
-                </span>
-                <CheckCircle2
-                  v-if="profile.key === adminProfileKey"
-                  class="account-profile-option-check"
-                  aria-hidden="true"
-                />
-              </button>
+            <div v-if="legalProfileConfirmOpen" class="account-profile-confirm">
+              <p>
+                Changer de profil administratif peut nécessiter de ressaisir certaines informations
+                obligatoires. Tu devras valider à nouveau tes informations avant d'accéder à la
+                partie administrative.
+              </p>
+              <div class="account-profile-confirm-actions">
+                <button type="button" class="account-profile-secondary" @click="cancelLegalProfileEdit">
+                  Annuler
+                </button>
+                <button type="button" class="account-profile-primary" @click="confirmLegalProfileEdit">
+                  Continuer
+                </button>
+              </div>
             </div>
           </div>
 
           <div class="mt-6 rounded-2xl border border-red-500/20 bg-red-500/5 p-4 sm:p-5">
             <p class="text-sm text-slate-400">
-              Cette action supprime definitivement ton compte et tes donnees.
+              Cette action supprime définitivement ton compte et tes données.
             </p>
 
             <div class="mt-4 space-y-3 text-sm text-slate-200">
               <label class="flex items-start gap-2">
                 <input v-model="deleteConfirmChecked" type="checkbox" class="mt-0.5 h-4 w-4" />
-                <span>Je comprends que cette action est irreversible.</span>
+                <span>Je comprends que cette action est irréversible.</span>
               </label>
 
               <div>
@@ -169,7 +162,7 @@
         <section
           class="rounded-2xl border border-slate-800/80 bg-gradient-to-b from-slate-900/95 via-slate-900/80 to-slate-950/70 p-4 shadow-2xl backdrop-blur sm:rounded-3xl sm:p-6 lg:p-7"
         >
-          <h2 class="text-lg font-semibold text-white">Securite</h2>
+          <h2 class="text-lg font-semibold text-white">Sécurité</h2>
           <p class="mt-1 text-sm text-slate-400">Modifie ton mot de passe.</p>
 
           <div
@@ -223,30 +216,37 @@
               :disabled="loading"
               class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-violet-500 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-400 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {{ loading ? 'Modification...' : 'Mettre a jour' }}
+              {{ loading ? 'Modification...' : 'Mettre à jour' }}
             </button>
           </form>
         </section>
       </div>
     </div>
+
+    <LegalProfileModal
+      v-model="legalProfileModalOpen"
+      :initial-profile="legalProfile"
+      :mandatory="false"
+      @saved="handleLegalProfileSaved"
+      @cancel="cancelLegalProfileEdit"
+    />
   </div>
 </template>
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { CheckCircle2, ChevronDown, RefreshCw, UserRoundCheck } from 'lucide-vue-next'
+import { ChevronDown, RefreshCw, UserRoundCheck } from 'lucide-vue-next'
+import LegalProfileModal from '@/components/legal/LegalProfileModal.vue'
 import { useAuthStore } from '@/store/authStore'
 import { useBillingStore } from '@/store/billingStore'
 import {
-  ADMIN_ACTION_PROFILES,
-  ADMIN_ACTION_STORAGE_KEY,
-  buildAdminActionProfilePayload,
-  getAdminActionProfile,
-  resolveAdminActionProfileKey,
-} from '@/constants/adminActionProfiles'
-import AdminService from '@/services/AdminService'
+  getLegalProfileDetails,
+  getLegalProfileOption,
+  normalizeLegalProfile,
+} from '@/constants/legalProfile'
 import AuthService from '@/services/AuthService'
+import LegalProfileService from '@/services/LegalProfileService'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -273,14 +273,13 @@ const deleteConfirmChecked = ref(false)
 const deleteConfirmText = ref('')
 const deleting = ref(false)
 const deleteError = ref('')
-const adminProfileKey = ref('light_reseller')
-const adminProfilePayload = ref({})
-const adminProfileLoading = ref(false)
-const adminProfileSaving = ref(false)
-const profileChooserOpen = ref(false)
-const adminProfileError = ref('')
-const adminProfileSuccess = ref('')
-let adminProfileMessageTimer = null
+const legalProfile = ref(normalizeLegalProfile(currentUser.value || {}))
+const legalProfileLoading = ref(false)
+const legalProfileModalOpen = ref(false)
+const legalProfileConfirmOpen = ref(false)
+const legalProfileError = ref('')
+const legalProfileSuccess = ref('')
+let legalProfileMessageTimer = null
 
 const canDelete = computed(
   () => deleteConfirmChecked.value && deleteConfirmText.value.trim() === 'SUPPRIMER',
@@ -288,16 +287,19 @@ const canDelete = computed(
 const showSubscriptionButton = computed(() =>
   ['active', 'past_due', 'canceled'].includes(billing.status.value),
 )
-const adminProfileList = ADMIN_ACTION_PROFILES
-const currentAdminProfile = computed(() => getAdminActionProfile(adminProfileKey.value))
+const legalProfileCompleted = computed(() => Boolean(legalProfile.value.completed))
+const legalProfileOption = computed(() => getLegalProfileOption(legalProfile.value.legalProfileType))
+const legalProfileTitle = computed(() => legalProfileOption.value.title)
+const legalProfileDescription = computed(() => legalProfileOption.value.description)
+const legalProfileDetails = computed(() => getLegalProfileDetails(legalProfile.value))
 
 onMounted(() => {
   void billing.fetchStatus()
-  void loadAdminProfile()
+  void loadLegalProfile()
 })
 
 onBeforeUnmount(() => {
-  clearTimeout(adminProfileMessageTimer)
+  clearTimeout(legalProfileMessageTimer)
 })
 
 const resetMessages = () => {
@@ -305,61 +307,72 @@ const resetMessages = () => {
   success.value = ''
 }
 
-const readLocalAdminProfilePayload = () => {
-  try {
-    const raw = localStorage.getItem(ADMIN_ACTION_STORAGE_KEY)
-    return raw ? { adminActionPage: JSON.parse(raw) } : {}
-  } catch {
-    return {}
+const clearLegalProfileMessageLater = () => {
+  clearTimeout(legalProfileMessageTimer)
+  legalProfileMessageTimer = setTimeout(() => {
+    legalProfileSuccess.value = ''
+  }, 2600)
+}
+
+const applyLegalProfile = (profile) => {
+  const nextProfile = normalizeLegalProfile(profile)
+  legalProfile.value = nextProfile
+  if (auth.user.value) {
+    auth.setUser({
+      ...auth.user.value,
+      legalProfile: nextProfile,
+      legalProfileCompleted: nextProfile.completed,
+    })
   }
 }
 
-const applyAdminProfilePayload = (payload = {}) => {
-  adminProfilePayload.value = payload && typeof payload === 'object' ? payload : {}
-  adminProfileKey.value = resolveAdminActionProfileKey(adminProfilePayload.value)
-}
-
-const clearAdminProfileMessageLater = () => {
-  clearTimeout(adminProfileMessageTimer)
-  adminProfileMessageTimer = setTimeout(() => {
-    adminProfileSuccess.value = ''
-  }, 2400)
-}
-
-const loadAdminProfile = async () => {
-  adminProfileLoading.value = true
-  adminProfileError.value = ''
+const loadLegalProfile = async () => {
+  legalProfileLoading.value = true
+  legalProfileError.value = ''
 
   try {
-    const payload = await AdminService.state()
-    applyAdminProfilePayload(payload)
+    applyLegalProfile(await LegalProfileService.getLegalProfile())
   } catch {
-    applyAdminProfilePayload(readLocalAdminProfilePayload())
-    adminProfileError.value = 'Profil charge depuis la sauvegarde locale.'
+    legalProfile.value = normalizeLegalProfile(currentUser.value || {})
+    legalProfileError.value = 'Profil administratif chargé depuis le compte local.'
   } finally {
-    adminProfileLoading.value = false
+    legalProfileLoading.value = false
   }
 }
 
-const selectAdminProfile = async (profileKey) => {
-  const payload = buildAdminActionProfilePayload(adminProfilePayload.value, profileKey)
-  applyAdminProfilePayload(payload)
-  profileChooserOpen.value = false
-  adminProfileSaving.value = true
-  adminProfileError.value = ''
-  adminProfileSuccess.value = ''
-  localStorage.setItem(ADMIN_ACTION_STORAGE_KEY, JSON.stringify(payload.adminActionPage))
+const openLegalProfileEdit = () => {
+  legalProfileError.value = ''
+  legalProfileSuccess.value = ''
+  if (legalProfileCompleted.value) {
+    legalProfileConfirmOpen.value = true
+    return
+  }
+  legalProfileModalOpen.value = true
+}
+
+const confirmLegalProfileEdit = () => {
+  legalProfileConfirmOpen.value = false
+  legalProfileModalOpen.value = true
+}
+
+const cancelLegalProfileEdit = () => {
+  legalProfileConfirmOpen.value = false
+  legalProfileModalOpen.value = false
+}
+
+const handleLegalProfileSaved = async (savedProfile) => {
+  applyLegalProfile(savedProfile)
+  legalProfileConfirmOpen.value = false
+  legalProfileModalOpen.value = false
+  legalProfileSuccess.value = 'Profil administratif mis à jour.'
 
   try {
-    const savedPayload = await AdminService.saveState(payload)
-    applyAdminProfilePayload(savedPayload || payload)
-    adminProfileSuccess.value = 'Profil mis a jour. La page administrative utilisera ce profil.'
+    auth.setUser(await AuthService.me())
+    legalProfile.value = normalizeLegalProfile(auth.user.value || {})
   } catch {
-    adminProfileError.value =
-      'Profil mis a jour localement. Il sera synchronise quand le backend admin sera disponible.'
+    applyLegalProfile(savedProfile)
   } finally {
-    adminProfileSaving.value = false
-    clearAdminProfileMessageLater()
+    clearLegalProfileMessageLater()
   }
 }
 
@@ -371,7 +384,7 @@ const submitChangePassword = async () => {
     return
   }
   if (form.value.newPassword.length < 6) {
-    error.value = 'Le nouveau mot de passe doit faire au moins 6 caracteres.'
+    error.value = 'Le nouveau mot de passe doit faire au moins 6 caractères.'
     return
   }
 
@@ -382,7 +395,7 @@ const submitChangePassword = async () => {
       newPassword: form.value.newPassword,
     })
 
-    success.value = 'Mot de passe modifie avec succes.'
+    success.value = 'Mot de passe modifié avec succès.'
     form.value.currentPassword = ''
     form.value.newPassword = ''
     form.value.confirmPassword = ''
@@ -450,8 +463,7 @@ const goAbo = () => {
 }
 
 .account-profile-head,
-.account-profile-title-row,
-.account-profile-option-title {
+.account-profile-title-row {
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -477,8 +489,7 @@ const goAbo = () => {
   font-weight: 700;
 }
 
-.account-profile-change,
-.account-profile-option {
+.account-profile-change {
   border: 1px solid rgba(71, 85, 105, 0.82);
   background: rgba(15, 23, 42, 0.74);
   color: rgb(226 232 240);
@@ -500,10 +511,7 @@ const goAbo = () => {
   font-weight: 800;
 }
 
-.account-profile-change:hover,
-.account-profile-change.is-open,
-.account-profile-option:hover,
-.account-profile-option.is-active {
+.account-profile-change:hover {
   border-color: rgba(167, 139, 250, 0.72);
   background: rgba(76, 29, 149, 0.32);
   color: #ffffff;
@@ -527,23 +535,20 @@ const goAbo = () => {
   justify-content: space-between;
 }
 
-.account-profile-title-row strong,
-.account-profile-option-title strong {
+.account-profile-title-row strong {
   color: #ffffff;
   font-size: 0.96rem;
   line-height: 1.25;
 }
 
-.account-profile-current p,
-.account-profile-option-copy > span:last-child {
+.account-profile-current p {
   margin-top: 0.35rem;
   color: rgb(148 163 184);
   font-size: 0.86rem;
   line-height: 1.45;
 }
 
-.account-profile-level,
-.account-profile-option-title small {
+.account-profile-level {
   display: inline-flex;
   min-height: 24px;
   align-items: center;
@@ -553,24 +558,14 @@ const goAbo = () => {
   font-weight: 850;
 }
 
-.account-profile-level.low,
-.account-profile-option-title small.low {
+.account-profile-level.low {
   background: rgba(16, 185, 129, 0.15);
   color: rgb(167 243 208);
 }
 
-.account-profile-level.medium,
-.account-profile-option-title small.medium {
+.account-profile-level.medium {
   background: rgba(245, 158, 11, 0.16);
   color: rgb(252 211 77);
-}
-
-.account-profile-level.high,
-.account-profile-level.shop,
-.account-profile-option-title small.high,
-.account-profile-option-title small.shop {
-  background: rgba(139, 92, 246, 0.22);
-  color: rgb(221 214 254);
 }
 
 .account-profile-traits {
@@ -610,38 +605,48 @@ const goAbo = () => {
   color: rgb(167 243 208);
 }
 
-.account-profile-options {
+.account-profile-confirm {
   display: grid;
+  gap: 0.85rem;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: 12px;
+  background: rgba(120, 53, 15, 0.18);
+  padding: 0.9rem;
+}
+
+.account-profile-confirm p {
+  margin: 0;
+  color: rgb(253 230 138);
+  font-size: 0.86rem;
+  line-height: 1.5;
+  font-weight: 700;
+}
+
+.account-profile-confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 0.55rem;
 }
 
-.account-profile-option {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 0.8rem;
-  align-items: center;
-  width: 100%;
-  padding: 0.85rem;
-  text-align: left;
+.account-profile-primary,
+.account-profile-secondary {
+  min-height: 38px;
+  border: 0;
+  border-radius: 12px;
+  padding: 0 0.9rem;
+  font-size: 0.82rem;
+  font-weight: 850;
 }
 
-.account-profile-option:disabled {
-  cursor: not-allowed;
-  opacity: 0.62;
+.account-profile-primary {
+  background: rgb(16 185 129);
+  color: rgb(2 6 23);
 }
 
-.account-profile-option-copy {
-  min-width: 0;
-}
-
-.account-profile-option-title {
-  flex-wrap: wrap;
-}
-
-.account-profile-option-check {
-  width: 18px;
-  height: 18px;
-  color: rgb(196 181 253);
+.account-profile-secondary {
+  background: rgba(30, 41, 59, 0.9);
+  color: rgb(226 232 240);
 }
 
 @media (max-width: 640px) {
@@ -651,6 +656,12 @@ const goAbo = () => {
   }
 
   .account-profile-change {
+    width: 100%;
+  }
+
+  .account-profile-confirm-actions,
+  .account-profile-primary,
+  .account-profile-secondary {
     width: 100%;
   }
 }

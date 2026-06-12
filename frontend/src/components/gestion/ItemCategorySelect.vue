@@ -691,9 +691,12 @@ onBeforeUnmount(() => {
 }
 
 .category-manager-panel {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
   width: 100%;
-  max-height: min(88vh, 42rem);
+  max-height: min(calc(100dvh - 1.5rem), 42rem);
   max-width: 36rem;
+  min-height: 0;
   overflow: hidden;
   border: 1px solid rgba(71, 85, 105, 0.85);
   border-radius: 1.25rem 1.25rem 0 0;
@@ -757,8 +760,12 @@ onBeforeUnmount(() => {
 .manager-list {
   display: grid;
   gap: 0.625rem;
+  min-height: 0;
+  max-height: 100%;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 1rem;
+  scrollbar-gutter: stable;
 }
 
 .manager-add-form {
@@ -921,6 +928,10 @@ onBeforeUnmount(() => {
 
   .manager-add-form {
     grid-template-columns: 1fr;
+  }
+
+  .category-manager-panel {
+    max-height: calc(100dvh - 0.75rem);
   }
 }
 

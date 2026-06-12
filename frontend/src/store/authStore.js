@@ -36,6 +36,14 @@ function loadFromStorage() {
   }
   // token (toujours string)
   token.value = safeGet('snk_token') || ''
+
+  if (user.value?.subscriptionStatus) {
+    try {
+      useBillingStore().seedFromUser(user.value)
+    } catch (e) {
+      console.warn('billingStore seed failed', e)
+    }
+  }
 }
 loadFromStorage()
 
@@ -62,6 +70,14 @@ function setAuth(payload) {
       useBillingStore().reset()
     } catch (e) {
       console.warn('billingStore reset failed', e)
+    }
+  }
+
+  if (user.value?.subscriptionStatus) {
+    try {
+      useBillingStore().seedFromUser(user.value)
+    } catch (e) {
+      console.warn('billingStore seed failed', e)
     }
   }
 }
