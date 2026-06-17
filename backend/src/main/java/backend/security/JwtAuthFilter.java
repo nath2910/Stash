@@ -50,11 +50,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         Long userId;
         try {
-            if (!jwtService.isValid(token)) {
-                SecurityContextHolder.clearContext();
-                filterChain.doFilter(request, response);
-                return;
-            }
             userId = jwtService.extractUserId(token);
         } catch (RuntimeException ex) {
             log.debug("JWT ignored: invalid token payload", ex);

@@ -6,6 +6,7 @@ import backend.dto.TrackingCandidateResponse;
 import backend.entity.MailAccount;
 import backend.entity.MailTrackingCandidate;
 import backend.entity.Parcel;
+import backend.entity.ParcelEvent;
 import backend.entity.ParcelStatus;
 import backend.entity.TrackingCandidateStatus;
 import backend.entity.User;
@@ -16,6 +17,7 @@ import backend.repository.UserRepository;
 import backend.service.TrackingParserService.TrackingCandidate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -55,11 +57,18 @@ public class DeliveryTrackingService {
 
   @Transactional(readOnly = true)
   public List<ParcelResponse> listForUser(Long userId) {
-    return parcelRepository.findByUser_IdOrderByUpdatedAtDesc(userId).stream()
-        .map(parcel -> ParcelResponse.fromEntity(
-            parcel,
-            parcelEventRepository.findByParcel_IdOrderByEventTimeDesc(parcel.getId())
-        ))
+    List<Parcel> parcels = parcelRepository.findByUser_IdOrderByUpdatedAtDesc(userId);
+    if (parcels.isEmpty()) return List.of();
+
+    List<Long> parcelIds = parcels.stream().map(Parcel::getId).toList();
+    Map<Long, List<ParcelEvent>> eventsByParcelId = new HashMap<>();
+    for (ParcelEvent event : parcelEventRepository.findByParcel_IdInOrderByParcel_IdAscEventTimeDesc(parcelIds)) {
+      Long parcelId = event.getParcel().getId();
+      eventsByParcelId.computeIfAbsent(parcelId, ignored -> new ArrayList<>()).add(event);
+    }
+
+    return parcels.stream()
+        .map(parcel -> ParcelResponse.fromEntity(parcel, eventsByParcelId.getOrDefault(parcel.getId(), List.of())))
         .toList();
   }
 

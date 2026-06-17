@@ -1,7 +1,7 @@
 // src/services/SnkVenteServices.js
 import api from './api'
 
-const LIST_CACHE_TTL_MS = 20_000
+const LIST_CACHE_TTL_MS = 60_000
 const listCache = new Map()
 const listInflight = new Map()
 

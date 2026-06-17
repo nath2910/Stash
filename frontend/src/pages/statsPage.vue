@@ -5,11 +5,11 @@
 </template>
 
 <script setup lang="ts">
-import StatsCanvas from '@/components/stats/StatsCanvas.vue'
 import { useStatsRange } from '@/composables/useStatsRange'
-import { computed } from 'vue'
+import { computed, defineAsyncComponent } from 'vue'
 import { useTheme } from '@/composables/useTheme'
 
+const StatsCanvas = defineAsyncComponent(() => import('@/components/stats/StatsCanvas.vue'))
 const { from, to } = useStatsRange()
 const { theme } = useTheme()
 const themeMode = computed(() => (theme.value === 'light' ? 'light' : 'dark'))

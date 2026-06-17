@@ -2,6 +2,7 @@ package backend.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 
 @Entity
@@ -55,6 +56,45 @@ public class User {
 
   @Column(name = "siret", length = 14)
   private String siret;
+
+  @Column(name = "siren", length = 9)
+  private String siren;
+
+  @Column(name = "administrative_display_name", length = 240)
+  private String administrativeDisplayName;
+
+  @Column(name = "trade_name", length = 240)
+  private String tradeName;
+
+  @Column(name = "administrative_address", length = 500)
+  private String administrativeAddress;
+
+  @Column(name = "main_activity", length = 160)
+  private String mainActivity;
+
+  @Column(name = "fiscal_regime", length = 120)
+  private String fiscalRegime;
+
+  @Column(name = "withholding_tax_option", length = 20)
+  private String withholdingTaxOption;
+
+  @Column(name = "vat_franchise", length = 20)
+  private String vatFranchise;
+
+  @Column(name = "activity_start_date")
+  private LocalDate activityStartDate;
+
+  @Column(name = "administrative_notes", columnDefinition = "text")
+  private String administrativeNotes;
+
+  @Column(name = "administrative_verification_status", length = 80)
+  private String administrativeVerificationStatus;
+
+  @Column(name = "admin_uses_online_platforms", nullable = false)
+  private boolean adminUsesOnlinePlatforms = false;
+
+  @Column(name = "admin_buys_for_resale", nullable = false)
+  private boolean adminBuysForResale = false;
 
   @Enumerated(EnumType.STRING)
   @Column(name = "tax_category", length = 40)
@@ -136,6 +176,61 @@ public class User {
 
   public String getSiret() { return siret; }
   public void setSiret(String siret) { this.siret = siret; }
+
+  public String getSiren() { return siren; }
+  public void setSiren(String siren) { this.siren = siren; }
+
+  public String getAdministrativeDisplayName() { return administrativeDisplayName; }
+  public void setAdministrativeDisplayName(String administrativeDisplayName) {
+    this.administrativeDisplayName = administrativeDisplayName;
+  }
+
+  public String getTradeName() { return tradeName; }
+  public void setTradeName(String tradeName) { this.tradeName = tradeName; }
+
+  public String getAdministrativeAddress() { return administrativeAddress; }
+  public void setAdministrativeAddress(String administrativeAddress) {
+    this.administrativeAddress = administrativeAddress;
+  }
+
+  public String getMainActivity() { return mainActivity; }
+  public void setMainActivity(String mainActivity) { this.mainActivity = mainActivity; }
+
+  public String getFiscalRegime() { return fiscalRegime; }
+  public void setFiscalRegime(String fiscalRegime) { this.fiscalRegime = fiscalRegime; }
+
+  public String getWithholdingTaxOption() { return withholdingTaxOption; }
+  public void setWithholdingTaxOption(String withholdingTaxOption) {
+    this.withholdingTaxOption = withholdingTaxOption;
+  }
+
+  public String getVatFranchise() { return vatFranchise; }
+  public void setVatFranchise(String vatFranchise) { this.vatFranchise = vatFranchise; }
+
+  public LocalDate getActivityStartDate() { return activityStartDate; }
+  public void setActivityStartDate(LocalDate activityStartDate) {
+    this.activityStartDate = activityStartDate;
+  }
+
+  public String getAdministrativeNotes() { return administrativeNotes; }
+  public void setAdministrativeNotes(String administrativeNotes) {
+    this.administrativeNotes = administrativeNotes;
+  }
+
+  public String getAdministrativeVerificationStatus() { return administrativeVerificationStatus; }
+  public void setAdministrativeVerificationStatus(String administrativeVerificationStatus) {
+    this.administrativeVerificationStatus = administrativeVerificationStatus;
+  }
+
+  public boolean isAdminUsesOnlinePlatforms() { return adminUsesOnlinePlatforms; }
+  public void setAdminUsesOnlinePlatforms(boolean adminUsesOnlinePlatforms) {
+    this.adminUsesOnlinePlatforms = adminUsesOnlinePlatforms;
+  }
+
+  public boolean isAdminBuysForResale() { return adminBuysForResale; }
+  public void setAdminBuysForResale(boolean adminBuysForResale) {
+    this.adminBuysForResale = adminBuysForResale;
+  }
 
   public TaxCategory getTaxCategory() { return taxCategory; }
   public void setTaxCategory(TaxCategory taxCategory) { this.taxCategory = taxCategory; }

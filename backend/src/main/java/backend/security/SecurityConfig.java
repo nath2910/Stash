@@ -125,7 +125,7 @@ public CorsConfigurationSource corsConfigurationSource() {
 
   config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
   config.setAllowedHeaders(List.of("*"));
-  config.setExposedHeaders(List.of("Authorization"));
+  config.setExposedHeaders(List.of("Authorization", "Content-Disposition"));
   config.setAllowCredentials(false);
 
   UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

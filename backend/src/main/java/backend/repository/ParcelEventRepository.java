@@ -11,4 +11,6 @@ public interface ParcelEventRepository extends JpaRepository<ParcelEvent, Long> 
   boolean existsByParcel_IdAndEventHash(Long parcelId, String eventHash);
 
   List<ParcelEvent> findByParcel_IdOrderByEventTimeDesc(Long parcelId);
+
+  List<ParcelEvent> findByParcel_IdInOrderByParcel_IdAscEventTimeDesc(List<Long> parcelIds);
 }

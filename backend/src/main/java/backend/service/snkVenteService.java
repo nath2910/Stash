@@ -209,6 +209,7 @@ public class snkVenteService {
     return getDernieresVentesParUser(userId, 7);
   }
 
+  @Transactional
   @CacheEvict(cacheNames = "statsQueries", allEntries = true)
   public int importBulk(Long userId, List<SnkVenteImportDto> items) {
     User user = getUserOrThrow(userId);

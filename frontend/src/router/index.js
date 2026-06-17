@@ -36,6 +36,33 @@ function isTokenExpired(token) {
   return now >= exp * 1000 - 30_000
 }
 
+let protectedChunksWarmed = false
+
+function canWarmRouteChunks() {
+  if (typeof navigator === 'undefined') return true
+  const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection
+  if (!connection) return true
+  if (connection.saveData) return false
+  return !['slow-2g', '2g'].includes(connection.effectiveType)
+}
+
+function runWhenIdle(callback) {
+  if (typeof window === 'undefined') return
+  if ('requestIdleCallback' in window) {
+    window.requestIdleCallback(callback, { timeout: 2500 })
+    return
+  }
+  window.setTimeout(callback, 1200)
+}
+
+function warmProtectedRouteChunks() {
+  if (protectedChunksWarmed || !canWarmRouteChunks()) return
+  protectedChunksWarmed = true
+  runWhenIdle(() => {
+    Promise.allSettled([GestionPage(), StatsPage(), AccountPage()]).catch(() => {})
+  })
+}
+
 const router = createRouter({
   history: createWebHistory(),
   routes: [
@@ -226,6 +253,12 @@ router.beforeEach(async (to) => {
       }
       return { name: 'home' }
     }
+  }
+})
+
+router.afterEach((to) => {
+  if (!publicRoutes.has(to.name) && useAuthStore().token.value) {
+    warmProtectedRouteChunks()
   }
 })
 

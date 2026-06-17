@@ -1,5 +1,7 @@
 package backend.dto;
 
+import java.time.LocalDate;
+
 public record LegalProfileUpdateRequest(
     String legalProfileType,
     String siret,
@@ -9,5 +11,8 @@ public record LegalProfileUpdateRequest(
     String declaredRevenueThreshold,
     String vatNumber,
     String vatStatus,
-    String declarationFrequency
+    String declarationFrequency,
+    String withholdingTaxOption,
+    String vatFranchise,
+    LocalDate activityStartDate
 ) {}

@@ -1,6 +1,8 @@
 package backend.entity;
 
 public enum LegalProfileType {
+  PARTICULIER,
+  MICRO_ENTREPRISE,
   INDIVIDUAL_UNDER_5K_MONTH,
   MICRO_ENTREPRISE_UNDER_200K_YEAR
 }

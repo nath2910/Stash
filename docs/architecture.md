@@ -60,6 +60,7 @@ Controllers principaux:
 4. `BillingController`: status/checkout/webhook Stripe.
 5. `DiscordController`: link/check Discord.
 6. `HealthController`: `/health`, `/ping`.
+7. `AdministrativeController`: profil administratif, resumes de periode/annee, documents PDF preparatoires.
 
 ### 3.2 Services (metier)
 Role: logique metier, validation, orchestration repository/API externe. Coordonner DB + services externes.
@@ -74,6 +75,7 @@ Services structurants:
 7. `AttachmentService` + `FileStorageService`.
 8. `StatsLayoutService`.
 9. `DiscordAccessService`.
+10. `AdministrativeService` + `AdministrativePdfService`.
 
 ### 3.3 Repositories (acces donnees)
 - `SnkVenteRepository` concentre une grande partie des requetes SQL analytiques.
@@ -103,6 +105,7 @@ Services structurants:
 - `pages/homePage.vue`: KPIs rapides.
 - `pages/gestionPage.vue`: inventory management.
 - `pages/statsPage.vue`: canvas stats avancé.
+- `pages/adminPage.vue`: fiche administrative courte (montant URSSAF a recopier, lien portail officiel, PDF utiles).
 - `pages/aboPage.vue` / `aboViewPage.vue`: subscription.
 - `pages/AuthPage.vue` + pages reset/verify/callback OAuth.
 
@@ -137,6 +140,17 @@ Widgets -> `StatsServices` -> `/stats/*` -> `StatsService` -> `SnkVenteRepositor
 `StatsCanvas` persiste:
 1. localStorage immediate.
 2. backend `/stats/layout` en differe (debounce).
+
+### 5.6 Administratif
+`adminPage` -> `AdminService` -> `/administrative/*` -> `AdministrativeService` -> donnees `users` + `tableauventes`.
+
+Documents PDF generes cote backend:
+1. recapitulatif URSSAF de periode;
+2. recapitulatif annuel fiscal preparatoire;
+3. registre des recettes;
+4. registre des achats.
+
+Ces documents sont des aides preparatoires non officielles et doivent etre verifies puis reportes sur les services officiels competents.
 
 ---
 

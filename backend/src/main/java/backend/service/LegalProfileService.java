@@ -47,7 +47,7 @@ public class LegalProfileService {
 
     user.setLegalProfileType(profileType);
 
-    if (profileType == LegalProfileType.MICRO_ENTREPRISE_UNDER_200K_YEAR) {
+    if (isMicroProfile(profileType)) {
       String siret = trimToNull(request.siret());
       if (siret == null) {
         throw badRequest("Le SIRET est obligatoire pour une micro-entreprise");
@@ -57,6 +57,9 @@ public class LegalProfileService {
       }
 
       user.setSiret(siret);
+      user.setSiren(siret.substring(0, 9));
+      user.setMainActivity("Achat-revente de marchandises");
+      user.setFiscalRegime("Micro-BIC achat-revente");
       user.setTaxCategory(parseOptionalEnum(TaxCategory.class, request.taxCategory(), TaxCategory.BIC, "taxCategory"));
       user.setBusinessRegime(parseOptionalEnum(
           BusinessRegime.class,
@@ -84,8 +87,14 @@ public class LegalProfileService {
           DeclarationFrequency.UNKNOWN,
           "declarationFrequency"
       ));
+      user.setWithholdingTaxOption(parseTriState(request.withholdingTaxOption()));
+      user.setVatFranchise(parseTriState(request.vatFranchise()));
+      user.setActivityStartDate(request.activityStartDate());
+      user.setAdministrativeVerificationStatus("A_VERIFIER");
     } else {
       clearMicroProfileFields(user);
+      user.setAdminUsesOnlinePlatforms(false);
+      user.setAdminBuysForResale(false);
     }
 
     user.setLegalProfileCompleted(true);
@@ -107,6 +116,10 @@ public class LegalProfileService {
 
   private void clearMicroProfileFields(User user) {
     user.setSiret(null);
+    user.setSiren(null);
+    user.setTradeName(null);
+    user.setMainActivity(null);
+    user.setFiscalRegime(null);
     user.setTaxCategory(null);
     user.setBusinessRegime(null);
     user.setBusinessActivityType(null);
@@ -114,6 +127,14 @@ public class LegalProfileService {
     user.setVatNumber(null);
     user.setVatStatus(null);
     user.setDeclarationFrequency(null);
+    user.setWithholdingTaxOption(null);
+    user.setVatFranchise(null);
+    user.setActivityStartDate(null);
+  }
+
+  private boolean isMicroProfile(LegalProfileType profileType) {
+    return profileType == LegalProfileType.MICRO_ENTREPRISE
+        || profileType == LegalProfileType.MICRO_ENTREPRISE_UNDER_200K_YEAR;
   }
 
   private <T extends Enum<T>> T parseRequiredEnum(Class<T> enumType, String value, String fieldName) {
@@ -146,6 +167,19 @@ public class LegalProfileService {
     }
     String trimmed = value.trim();
     return trimmed.isEmpty() ? null : trimmed;
+  }
+
+  private String parseTriState(String value) {
+    String text = trimToNull(value);
+    if (text == null) {
+      return "UNKNOWN";
+    }
+    return switch (text.trim().toUpperCase()) {
+      case "YES", "OUI", "TRUE" -> "YES";
+      case "NO", "NON", "FALSE" -> "NO";
+      case "UNKNOWN", "INCONNU", "A_VERIFIER" -> "UNKNOWN";
+      default -> throw badRequest("Valeur oui/non/inconnu invalide");
+    };
   }
 
   private ResponseStatusException badRequest(String message) {

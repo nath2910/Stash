@@ -1,6 +1,15 @@
 export const LEGAL_PROFILE_TYPE = Object.freeze({
-  individual: 'INDIVIDUAL_UNDER_5K_MONTH',
-  micro: 'MICRO_ENTREPRISE_UNDER_200K_YEAR',
+  individual: 'PARTICULIER',
+  micro: 'MICRO_ENTREPRISE',
+})
+
+const LEGAL_PROFILE_TYPE_ALIASES = Object.freeze({
+  PARTICULIER: LEGAL_PROFILE_TYPE.individual,
+  INDIVIDUAL: LEGAL_PROFILE_TYPE.individual,
+  INDIVIDUAL_UNDER_5K_MONTH: LEGAL_PROFILE_TYPE.individual,
+  MICRO: LEGAL_PROFILE_TYPE.micro,
+  MICRO_ENTREPRISE: LEGAL_PROFILE_TYPE.micro,
+  MICRO_ENTREPRISE_UNDER_200K_YEAR: LEGAL_PROFILE_TYPE.micro,
 })
 
 export const LEGAL_PROFILE_ADMIN_KEY = Object.freeze({
@@ -21,16 +30,15 @@ export const LEGAL_PROFILE_OPTIONS = Object.freeze([
   {
     type: LEGAL_PROFILE_TYPE.individual,
     title: 'Particulier',
-    description: "Je fais moins de 5 000 € de chiffre d'affaires par mois.",
-    traits: ['Aucun SIRET requis', 'Suivi administratif'],
+    description: 'Je revends occasionnellement des biens personnels, sans achat organise pour revente.',
+    traits: ['Aucun SIRET requis', 'Cas particuliers a verifier'],
   },
   {
     type: LEGAL_PROFILE_TYPE.micro,
     title: 'Micro-entreprise achat-revente',
-    description:
-      "Je suis en micro-entreprise achat-revente, avec moins de 200 000 € de chiffre d'affaires par an.",
-    detail: 'Soit environ 16 666 € par mois.',
-    traits: ['SIRET obligatoire', 'BIC', 'Achat-revente'],
+    description: "Je suis micro-entrepreneur et je declare le chiffre d'affaires brut encaisse.",
+    detail: 'Achat-revente generalement rattache au micro-BIC vente de marchandises.',
+    traits: ['SIRET obligatoire', 'Micro-BIC', 'CA brut encaisse'],
   },
 ])
 
@@ -85,14 +93,21 @@ const LEGAL_PROFILE_ADMIN_ALIASES = Object.freeze({
   employer: LEGAL_PROFILE_ADMIN_KEY.micro,
 })
 
+export function normalizeLegalProfileType(type) {
+  if (!type) return null
+  const key = String(type).trim().toUpperCase()
+  return LEGAL_PROFILE_TYPE_ALIASES[key] || key
+}
+
 export function normalizeLegalProfile(source = {}) {
   const raw = source?.legalProfile && typeof source.legalProfile === 'object' ? source.legalProfile : source
-  const legalProfileType = raw?.legalProfileType || null
+  const legalProfileType = normalizeLegalProfileType(raw?.legalProfileType || raw?.profileType || null)
   const isMicro = legalProfileType === LEGAL_PROFILE_TYPE.micro
 
   return {
     legalProfileType,
     siret: isMicro ? raw?.siret || '' : '',
+    siren: isMicro ? raw?.siren || (raw?.siret ? String(raw.siret).slice(0, 9) : '') : '',
     taxCategory: isMicro ? raw?.taxCategory || MICRO_LEGAL_PROFILE_DEFAULTS.taxCategory : null,
     businessRegime: isMicro ? raw?.businessRegime || MICRO_LEGAL_PROFILE_DEFAULTS.businessRegime : null,
     businessActivityType:
@@ -100,8 +115,11 @@ export function normalizeLegalProfile(source = {}) {
     declaredRevenueThreshold:
       isMicro ? raw?.declaredRevenueThreshold || MICRO_LEGAL_PROFILE_DEFAULTS.declaredRevenueThreshold : null,
     vatNumber: isMicro ? raw?.vatNumber || '' : '',
-    vatStatus: isMicro ? raw?.vatStatus || 'UNKNOWN' : null,
+    vatStatus: isMicro ? raw?.vatStatus || raw?.vatFranchise || 'UNKNOWN' : null,
     declarationFrequency: isMicro ? raw?.declarationFrequency || 'UNKNOWN' : null,
+    withholdingTaxOption: isMicro ? raw?.withholdingTaxOption || 'UNKNOWN' : null,
+    vatFranchise: isMicro ? raw?.vatFranchise || 'UNKNOWN' : null,
+    activityStartDate: isMicro ? raw?.activityStartDate || '' : '',
     completed: Boolean(raw?.completed ?? raw?.legalProfileCompleted ?? false),
     updatedAt: raw?.updatedAt || raw?.legalProfileUpdatedAt || null,
   }
@@ -116,12 +134,13 @@ export function isLegalProfileCompleted(source = {}) {
 }
 
 export function getLegalProfileOption(type) {
+  const normalizedType = normalizeLegalProfileType(type)
   return (
-    LEGAL_PROFILE_OPTIONS.find((option) => option.type === type) || {
+    LEGAL_PROFILE_OPTIONS.find((option) => option.type === normalizedType) || {
       type: null,
-      title: 'Profil non renseigné',
-      description: 'Profil administratif à compléter.',
-      traits: ['À compléter'],
+      title: 'Profil non renseigne',
+      description: 'Profil administratif a completer.',
+      traits: ['A completer'],
     }
   )
 }
@@ -133,17 +152,22 @@ export function getLegalProfileLabel(profile = {}) {
 export function getLegalProfileDetails(profile = {}) {
   const normalized = normalizeLegalProfile(profile)
 
-  if (!normalized.completed) return ['Profil à compléter']
+  if (!normalized.completed) return ['Profil a completer']
 
   if (normalized.legalProfileType === LEGAL_PROFILE_TYPE.micro) {
     return [
       normalized.siret ? `SIRET ${normalized.siret}` : 'SIRET manquant',
-      'BIC',
-      'Achat-revente',
+      normalized.declarationFrequency === 'QUARTERLY'
+        ? 'Declaration trimestrielle'
+        : normalized.declarationFrequency === 'MONTHLY'
+          ? 'Declaration mensuelle'
+          : 'Periodicite a renseigner',
+      'Micro-BIC',
+      'CA brut encaisse',
     ]
   }
 
-  return ['Moins de 5 000 € de CA par mois']
+  return ['Vente occasionnelle de biens personnels', 'Pas de seuil simplifie automatique']
 }
 
 export function normalizeLegalProfileAdminKey(profileKey) {
@@ -167,7 +191,8 @@ export function isValidSiret(value) {
 }
 
 export function buildLegalProfilePayload(type, form = {}) {
-  if (type === LEGAL_PROFILE_TYPE.individual) {
+  const normalizedType = normalizeLegalProfileType(type)
+  if (normalizedType === LEGAL_PROFILE_TYPE.individual) {
     return { legalProfileType: LEGAL_PROFILE_TYPE.individual }
   }
 
@@ -183,5 +208,8 @@ export function buildLegalProfilePayload(type, form = {}) {
     vatNumber: String(form.vatNumber || '').trim() || null,
     vatStatus: form.vatStatus || 'UNKNOWN',
     declarationFrequency: form.declarationFrequency || 'UNKNOWN',
+    withholdingTaxOption: form.withholdingTaxOption || 'UNKNOWN',
+    vatFranchise: form.vatFranchise || 'UNKNOWN',
+    activityStartDate: form.activityStartDate || null,
   }
 }

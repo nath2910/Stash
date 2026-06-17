@@ -134,22 +134,6 @@
                   class="filter-compact-grid"
                   :class="{ 'is-open': filtersPanelOpen }"
                 >
-                  <div
-                    class="filter-status-group filter-status-group--panel"
-                    aria-label="Filtrer par statut"
-                  >
-                    <button
-                      v-for="option in statusOptions"
-                      :key="`panel-${option.value}`"
-                      type="button"
-                      class="filter-status-button"
-                      :class="{ 'is-active': filters.status === option.value }"
-                      @click="filters.status = option.value"
-                    >
-                      {{ option.label }}
-                    </button>
-                  </div>
-
                   <button
                     type="button"
                     class="filter-reset-button filter-reset-button--panel"
@@ -182,6 +166,19 @@
                     icon-mode="subcategory"
                     :placeholder="selectedItemType ? 'Toutes' : 'Choisir un type'"
                   />
+
+                  <label class="filter-field filter-field--status">
+                    <span>Statut</span>
+                    <select v-model="filters.status" class="filter-control">
+                      <option
+                        v-for="option in statusOptions"
+                        :key="option.value"
+                        :value="option.value"
+                      >
+                        {{ option.label }}
+                      </option>
+                    </select>
+                  </label>
 
                   <label class="filter-field">
                     <span>Tri</span>
@@ -294,7 +291,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed, watch, defineAsyncComponent } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   CalendarDays,
@@ -310,13 +307,8 @@ import StockSummaryRow from '@/components/gestion/GestionRésumeStock.vue'
 import SearchBarre from '@/components/gestion/GestionSearchBarre.vue'
 import GestionActionsPanel from '@/components/gestion/GestionBlocBoutonAddDelete.vue'
 import afficherTout from '@/components/gestion/GestionAfficherTout.vue'
-import EditVenteModal from '@/components/gestion/GestionModifierItem.vue'
-import SupprimerModal from '@/components/gestion/GestionSupprimerModal.vue'
-import CsvImportExportWidget from '@/components/gestion/CsvImportExportWidget.vue'
-import DeliveryTrackingPanel from '@/components/gestion/DeliveryTrackingPanel.vue'
 import GestionFilterDropdown from '@/components/gestion/GestionFilterDropdown.vue'
 import CompactDateInput from '@/components/ui/CompactDateInput.vue'
-import AdminPage from '@/pages/adminPage.vue'
 import { getField, isVendue, prixRetailOf } from '@/utils/snkVente'
 import { normalizeSearchText, searchTokens } from '@/utils/homeDashboard'
 import { METADATA_FIELDS } from '@/RegleItem/CategorieItem'
@@ -332,6 +324,12 @@ import {
   readStoredSubcategories,
   resolveSubcategoryOptions,
 } from '@/RegleItem/subcategoryStore'
+
+const EditVenteModal = defineAsyncComponent(() => import('@/components/gestion/GestionModifierItem.vue'))
+const SupprimerModal = defineAsyncComponent(() => import('@/components/gestion/GestionSupprimerModal.vue'))
+const CsvImportExportWidget = defineAsyncComponent(() => import('@/components/gestion/CsvImportExportWidget.vue'))
+const DeliveryTrackingPanel = defineAsyncComponent(() => import('@/components/gestion/DeliveryTrackingPanel.vue'))
+const AdminPage = defineAsyncComponent(() => import('@/pages/adminPage.vue'))
 
 const snkVentes = ref([])
 const searchTerm = ref('')
@@ -362,7 +360,6 @@ const activeGestionTab = ref(tabFromRoute())
 const filtersPanelOpen = ref(false)
 
 const EMPTY_CATEGORY_VALUE = '__empty_category__'
-const SEARCH_DEBOUNCE_MS = 90
 const SEARCH_EXTRA_FIELDS = [
   'marque',
   'brand',
@@ -419,7 +416,6 @@ const emptyFilters = () => ({
 
 const filters = ref(emptyFilters())
 const debouncedSearchTerm = ref('')
-let searchDebounceTimer = null
 
 const normalizeText = (value) => normalizeSearchText(value)
 const compactText = (value) => normalizeText(value).replace(/\s+/g, '')
@@ -597,20 +593,23 @@ const searchDescriptor = computed(() => {
   }
 })
 
+const wordMatchesSearchToken = (word, token) => {
+  if (!word || !token) return false
+  if (word === token) return true
+  if (word.startsWith(token)) return true
+  return token.length >= 2 && word.includes(token)
+}
+
 const recordMatchesSearch = (record, search) => {
   if (!search.query) return true
   if (record.text.includes(search.query)) return true
-  if (search.compact.length >= 2 && record.compact.includes(search.compact)) return true
+  if (search.compact.length >= 3 && record.compact.includes(search.compact)) return true
 
   return search.tokens.every((token) => {
+    if (token.length === 1) return record.words.some((word) => word === token)
     if (record.text.includes(token)) return true
-    if (token.length >= 2 && record.compact.includes(token)) return true
-    return record.words.some(
-      (word) =>
-        word.startsWith(token) ||
-        word.includes(token) ||
-        (token.length >= 4 && token.includes(word)),
-    )
+    if (token.length >= 3 && record.compact.includes(token)) return true
+    return record.words.some((word) => wordMatchesSearchToken(word, token))
   })
 }
 
@@ -776,21 +775,13 @@ watch(
 )
 
 watch(searchTerm, (value) => {
-  if (searchDebounceTimer) {
-    window.clearTimeout(searchDebounceTimer)
-    searchDebounceTimer = null
-  }
-
   const nextValue = String(value ?? '')
   if (!normalizeText(nextValue)) {
     debouncedSearchTerm.value = ''
     return
   }
 
-  searchDebounceTimer = window.setTimeout(() => {
-    debouncedSearchTerm.value = nextValue
-    searchDebounceTimer = null
-  }, SEARCH_DEBOUNCE_MS)
+  debouncedSearchTerm.value = nextValue
 })
 
 onMounted(() => {
@@ -799,7 +790,6 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
-  if (searchDebounceTimer) window.clearTimeout(searchDebounceTimer)
   window.removeEventListener('snk:item-categories-change', onCategoryLabelsChange)
   window.removeEventListener('snk:item-subcategories-change', onSubcategoriesChange)
 })
@@ -2302,13 +2292,14 @@ watch(
 
 .filter-compact-grid.is-open {
   grid-template-columns:
-    minmax(6.8rem, 0.48fr)
-    minmax(8.6rem, 0.74fr)
-    minmax(10rem, 0.88fr)
-    minmax(7.8rem, 0.66fr)
-    minmax(12.2rem, 1fr)
-    minmax(12.2rem, 1fr);
-  gap: 0.48rem;
+    minmax(5.8rem, 0.38fr)
+    minmax(8.4rem, 0.72fr)
+    minmax(9.4rem, 0.78fr)
+    minmax(7.1rem, 0.5fr)
+    minmax(6.4rem, 0.44fr)
+    minmax(10.8rem, 0.9fr)
+    minmax(10.8rem, 0.9fr);
+  gap: 0.42rem;
   align-items: stretch;
 }
 

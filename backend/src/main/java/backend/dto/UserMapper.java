@@ -25,6 +25,7 @@ public final class UserMapper {
     return new LegalProfileResponse(
       u.getLegalProfileType(),
       u.getSiret(),
+      u.getSiren(),
       u.getTaxCategory(),
       u.getBusinessRegime(),
       u.getBusinessActivityType(),
@@ -32,6 +33,9 @@ public final class UserMapper {
       u.getVatNumber(),
       u.getVatStatus(),
       u.getDeclarationFrequency(),
+      u.getWithholdingTaxOption(),
+      u.getVatFranchise(),
+      u.getActivityStartDate(),
       u.isLegalProfileCompleted(),
       u.getLegalProfileUpdatedAt()
     );

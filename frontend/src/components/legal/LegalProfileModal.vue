@@ -58,11 +58,43 @@
             <small v-if="siretMessage">{{ siretMessage }}</small>
           </label>
 
+          <label class="legal-profile-field">
+            <span>Periodicite URSSAF</span>
+            <select v-model="form.declarationFrequency">
+              <option value="MONTHLY">Mensuelle</option>
+              <option value="QUARTERLY">Trimestrielle</option>
+              <option value="UNKNOWN">Je ne sais pas encore</option>
+            </select>
+          </label>
+
+          <label class="legal-profile-field">
+            <span>Versement liberatoire</span>
+            <select v-model="form.withholdingTaxOption">
+              <option value="UNKNOWN">Inconnu</option>
+              <option value="YES">Oui</option>
+              <option value="NO">Non</option>
+            </select>
+          </label>
+
+          <label class="legal-profile-field">
+            <span>Franchise en base de TVA</span>
+            <select v-model="form.vatFranchise">
+              <option value="UNKNOWN">Inconnu</option>
+              <option value="YES">Oui</option>
+              <option value="NO">Non</option>
+            </select>
+          </label>
+
+          <label class="legal-profile-field">
+            <span>Date de debut d'activite</span>
+            <input v-model="form.activityStartDate" type="date" />
+          </label>
+
           <div class="legal-profile-readonly-list" aria-label="Paramètres retenus">
             <p>Catégorie fiscale : BIC - bénéfices industriels et commerciaux</p>
             <p>Régime : micro-entreprise</p>
             <p>Activité : achat-revente / vente de marchandises</p>
-            <p>Seuil déclaré : moins de 200 000 € de CA par an</p>
+            <p>CA a declarer : montant brut encaisse, sans deduction des achats ou frais</p>
           </div>
         </form>
 
@@ -158,6 +190,9 @@ const form = reactive({
   vatNumber: '',
   vatStatus: 'UNKNOWN',
   declarationFrequency: 'UNKNOWN',
+  withholdingTaxOption: 'UNKNOWN',
+  vatFranchise: 'UNKNOWN',
+  activityStartDate: '',
 })
 
 const modalTitle = computed(() => props.title)
@@ -205,6 +240,9 @@ function resetFromInitialProfile() {
   form.vatNumber = profile.vatNumber || ''
   form.vatStatus = profile.vatStatus || 'UNKNOWN'
   form.declarationFrequency = profile.declarationFrequency || 'UNKNOWN'
+  form.withholdingTaxOption = profile.withholdingTaxOption || 'UNKNOWN'
+  form.vatFranchise = profile.vatFranchise || 'UNKNOWN'
+  form.activityStartDate = profile.activityStartDate || ''
 }
 
 function selectType(type) {
@@ -421,7 +459,8 @@ async function submit() {
   font-weight: 850;
 }
 
-.legal-profile-field input {
+.legal-profile-field input,
+.legal-profile-field select {
   min-height: 42px;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
@@ -432,7 +471,8 @@ async function submit() {
   outline: none;
 }
 
-.legal-profile-field input:focus {
+.legal-profile-field input:focus,
+.legal-profile-field select:focus {
   border-color: #0f766e;
   box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.14);
 }
