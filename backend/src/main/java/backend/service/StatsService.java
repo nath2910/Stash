@@ -579,6 +579,52 @@ public class StatsService {
     return repo.distinctCategories(userId);
   }
 
+  @Cacheable(
+      cacheNames = "statsQueries",
+      key = "T(backend.service.StatsCacheKeys).monthlyDashboard(#userId,#year,#month)"
+  )
+  public MonthlyDashboardResponse monthlyDashboard(Long userId, int year, int month) {
+    LocalDate today = LocalDate.now();
+    int safeYear = Math.min(Math.max(year, 2000), today.getYear() + 1);
+    int safeMonth = Math.min(Math.max(month, 1), 12);
+
+    LocalDate start = LocalDate.of(safeYear, safeMonth, 1);
+    LocalDate end = start.withDayOfMonth(start.lengthOfMonth());
+    if (start.isAfter(today)) {
+      start = today.withDayOfMonth(1);
+      end = today;
+      safeYear = today.getYear();
+      safeMonth = today.getMonthValue();
+    } else if (end.isAfter(today)) {
+      end = today;
+    }
+
+    LocalDate previousStart = start.minusMonths(1).withDayOfMonth(1);
+    LocalDate previousEnd = previousStart.withDayOfMonth(
+        Math.min(end.getDayOfMonth(), previousStart.lengthOfMonth())
+    );
+
+    AnnualDashboardResponse annual = annualDashboard(userId, safeYear);
+
+    return new MonthlyDashboardResponse(
+        safeYear,
+        safeMonth,
+        start,
+        end,
+        summary(userId, start, end, end, null, null),
+        summary(userId, previousStart, previousEnd, previousEnd, null, null),
+        timeseries(userId, start, end, "day", null, null),
+        brandBreakdown(userId, start, end, null, null),
+        topSales(userId, start, end, 8, null, null),
+        rank(userId, start, end, "topCategoriesProfit", 6, null, null),
+        annual.monthly()
+    );
+  }
+
+  @Cacheable(
+      cacheNames = "statsQueries",
+      key = "T(backend.service.StatsCacheKeys).annualDashboard(#userId,#year)"
+  )
   public AnnualDashboardResponse annualDashboard(Long userId, int year) {
     LocalDate today = LocalDate.now();
     int safeYear = Math.min(Math.max(year, 2000), 2100);

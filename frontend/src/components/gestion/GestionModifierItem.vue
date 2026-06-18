@@ -83,6 +83,7 @@
                   v-model="form.categorie"
                   :type="form.type"
                   :user-id="currentUserId || 'guest'"
+                  :discovered="discoveredSubcategories"
                   :category-labels="categoryLabels"
                 />
               </div>
@@ -261,18 +262,24 @@
 </template>
 
 <script setup>
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, onBeforeUnmount } from 'vue'
 import SnkVenteServices from '@/services/SnkVenteServices.js'
 import CompactDateInput from '@/components/ui/CompactDateInput.vue'
 import ItemCategorySelect from '@/components/gestion/ItemCategorySelect.vue'
 import ItemSubcategorySelect from '@/components/gestion/ItemSubcategorySelect.vue'
 import { METADATA_FIELDS } from '@/RegleItem/CategorieItem'
-import { itemTypeLabel, readStoredItemCategories } from '@/RegleItem/itemCategoryStore'
+import {
+  itemTypeLabel,
+  normalizeItemType,
+  readStoredItemCategories,
+} from '@/RegleItem/itemCategoryStore'
+import { extractSubcategoriesByType } from '@/RegleItem/subcategoryStore'
 import { useAuthStore } from '@/store/authStore'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false }, // v-model
   vente: { type: Object, default: null },
+  items: { type: Array, default: () => [] },
 })
 
 const emit = defineEmits(['update:modelValue', 'saved'])
@@ -302,15 +309,25 @@ const form = ref({
   metadata: {},
 })
 
+const discoveredSubcategories = computed(() =>
+  extractSubcategoriesByType(props.items, categoryLabels.value),
+)
+
+const defaultMetadata = (type) => {
+  const fields = METADATA_FIELDS[type] || []
+  return fields.some((field) => field.key === 'condition') ? { condition: 'Neuf' } : {}
+}
+
 const setType = (type) => {
-  if (form.value.type === type) return
-  form.value.type = type
+  const nextType = normalizeItemType(type)
+  if (form.value.type === nextType) return
+  form.value.type = nextType
   form.value.categorie = ''
-  form.value.metadata = {}
+  form.value.metadata = defaultMetadata(nextType)
 }
 
 const setCategoryLabels = (labels) => {
-  categoryLabels.value = labels
+  categoryLabels.value = labels || readStoredItemCategories(currentUserId.value || 'guest')
 }
 
 // quand on recoit une vente a editer => on pre-remplit
@@ -318,6 +335,7 @@ watch(
   () => props.vente,
   (v) => {
     if (!v) return
+    const itemType = normalizeItemType(v.type ?? 'SNEAKER')
     form.value = {
       id: v.id,
       nomItem: v.nomItem ?? v.nom_item ?? '',
@@ -328,8 +346,8 @@ watch(
         (v.dateVente ?? v.date_vente ?? '') ? (v.dateVente ?? v.date_vente).slice(0, 10) : null,
       description: v.description ?? '',
       categorie: v.categorie ?? '',
-      type: v.type ?? 'SNEAKER',
-      metadata: { ...(v.metadata || {}) },
+      type: itemType,
+      metadata: { ...defaultMetadata(itemType), ...(v.metadata || {}) },
     }
     success.value = false
     error.value = null
@@ -371,6 +389,29 @@ watch(
   },
 )
 
+const onCategoryLabelsChange = (event) => {
+  const detail = event?.detail || {}
+  if (String(detail.userId || 'guest') !== String(currentUserId.value || 'guest')) return
+  categoryLabels.value = readStoredItemCategories(currentUserId.value || 'guest')
+}
+
+const onSubcategoriesChange = (event) => {
+  const detail = event?.detail || {}
+  if (String(detail.userId || 'guest') !== String(currentUserId.value || 'guest')) return
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('snk:item-categories-change', onCategoryLabelsChange)
+  window.addEventListener('snk:item-subcategories-change', onSubcategoriesChange)
+}
+
+onBeforeUnmount(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('snk:item-categories-change', onCategoryLabelsChange)
+    window.removeEventListener('snk:item-subcategories-change', onSubcategoriesChange)
+  }
+})
+
 const save = async () => {
   requireDateVente.value =
     form.value.prixResell !== null &&
@@ -392,14 +433,14 @@ const save = async () => {
 
   try {
     const { data } = await SnkVenteServices.update(form.value.id, {
-      nomItem: form.value.nomItem,
+      nomItem: String(form.value.nomItem || '').trim(),
       prixRetail: form.value.prixRetail,
       prixResell: form.value.prixResell,
       dateAchat: form.value.dateAchat,
       dateVente: form.value.dateVente,
-      description: form.value.description,
-      categorie: form.value.categorie,
-      type: form.value.type,
+      description: String(form.value.description || '').trim(),
+      categorie: String(form.value.categorie || '').trim() || null,
+      type: normalizeItemType(form.value.type || 'OTHER'),
       metadata: cleanedMetadata.value,
     })
 

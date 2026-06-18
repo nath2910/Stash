@@ -184,6 +184,15 @@ public class StatsController {
     return statsService.annualDashboard(currentUser.getId(), year);
   }
 
+  @GetMapping({"/monthly-dashboard"})
+  public MonthlyDashboardResponse monthlyDashboard(
+      @AuthenticationPrincipal User currentUser,
+      @RequestParam int year,
+      @RequestParam int month
+  ) {
+    return statsService.monthlyDashboard(currentUser.getId(), year, month);
+  }
+
   @GetMapping({"/layout"})
   public StatsLayoutResponse getLayout(@AuthenticationPrincipal User currentUser) {
     return new StatsLayoutResponse(statsLayoutService.getLayout(currentUser.getId()));

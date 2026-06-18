@@ -117,7 +117,11 @@
             @lostpointercapture="resetPointerDrag"
           >
             <div class="monthly-pages" :style="pageTrackStyle">
-              <article class="monthly-page monthly-page--flow" aria-label="Flux du mois">
+              <article
+                v-if="activePage === 0"
+                class="monthly-page monthly-page--flow"
+                aria-label="Flux du mois"
+              >
                 <div class="monthly-page__heading">
                   <div>
                     <p>Flux quotidien</p>
@@ -163,7 +167,11 @@
                 </div>
               </article>
 
-              <article class="monthly-page monthly-page--main" aria-label="Pilotage mensuel">
+              <article
+                v-else-if="activePage === 1"
+                class="monthly-page monthly-page--main"
+                aria-label="Pilotage mensuel"
+              >
                 <div class="monthly-main-stack">
                   <section class="monthly-kpi-grid" aria-label="KPI mensuels">
                     <MonthlyKpiCard
@@ -214,7 +222,11 @@
                 </section>
               </article>
 
-              <article class="monthly-page monthly-page--details" aria-label="Details du mois">
+              <article
+                v-else
+                class="monthly-page monthly-page--details"
+                aria-label="Details du mois"
+              >
                 <div class="monthly-page__heading">
                   <div>
                     <p>Analyse operationnelle</p>
@@ -431,7 +443,7 @@ const periodShortLabel = computed(() => {
 })
 const currentPage = computed(() => pages[activePage.value] ?? pages[1])
 const pageTrackStyle = computed(() => ({
-  transform: `translate3d(-${activePage.value * 100}%, 0, 0)`,
+  transform: 'translate3d(0, 0, 0)',
 }))
 const canGoPreviousMonth = computed(() => !minMonthKey.value || selectedMonthKey.value > minMonthKey.value)
 const canGoNextMonth = computed(() => !maxMonthKey.value || selectedMonthKey.value < maxMonthKey.value)
@@ -860,18 +872,6 @@ function buildMonthRange(monthKey: string) {
   return { from, to }
 }
 
-function previousMonthRange() {
-  const currentStart = parseYmd(periodRange.value.from)
-  const currentEnd = parseYmd(periodRange.value.to)
-  const previousStart = new Date(currentStart.getFullYear(), currentStart.getMonth() - 1, 1)
-  const previousEndDay = Math.min(currentEnd.getDate(), monthLastDay(previousStart))
-  const previousEnd = new Date(previousStart.getFullYear(), previousStart.getMonth(), previousEndDay)
-  return {
-    from: formatYmd(previousStart),
-    to: formatYmd(previousEnd),
-  }
-}
-
 function formatMonthKey(date: Date) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}`
 }
@@ -1170,28 +1170,19 @@ async function loadDashboard() {
   const id = ++requestId
   loading.value = true
   error.value = ''
-  const range = periodRange.value
-  const previous = previousMonthRange()
   try {
-    const [summaryRes, previousSummaryRes, timeseriesRes, brandsRes, topSalesRes, categoryRes, annualRes] =
-      await Promise.all([
-        StatsServices.summary({ from: range.from, to: range.to, asOf: range.to }),
-        StatsServices.summary({ from: previous.from, to: previous.to, asOf: previous.to }),
-        StatsServices.timeseries(range.from, range.to, 'day'),
-        StatsServices.brands(range.from, range.to),
-        StatsServices.topSales(range.from, range.to, 8),
-        StatsServices.rank('topCategoriesProfit', range.from, range.to, 6),
-        StatsServices.annualDashboard(selectedYear.value),
-      ])
-
+    const { data } = await StatsServices.monthlyDashboard(
+      selectedYear.value,
+      selectedMonthNumber.value,
+    )
     if (id !== requestId) return
-    summary.value = normalizeSummary(summaryRes.data)
-    previousSummary.value = normalizeSummary(previousSummaryRes.data)
-    timeseries.value = normalizeTimeseries(timeseriesRes.data)
-    brands.value = normalizeBrands(brandsRes.data)
-    topSales.value = normalizeTopSales(topSalesRes.data)
-    categoryProfit.value = normalizeRank(categoryRes.data)
-    annualMonths.value = normalizeAnnualMonths(annualRes.data?.monthly)
+    summary.value = normalizeSummary(data?.summary)
+    previousSummary.value = normalizeSummary(data?.previousSummary)
+    timeseries.value = normalizeTimeseries(data?.timeseries)
+    brands.value = normalizeBrands(data?.brands)
+    topSales.value = normalizeTopSales(data?.topSales)
+    categoryProfit.value = normalizeRank(data?.categoryProfit)
+    annualMonths.value = normalizeAnnualMonths(data?.annualMonths)
     hasLoadedOnce.value = true
   } catch (err: unknown) {
     if (id !== requestId) return

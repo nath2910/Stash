@@ -23,6 +23,7 @@ const toastItems = ref([])
 let activeToken = ''
 let pollTimer = null
 let initPromise = null
+let backgroundRefreshTimer = null
 const displayedToastIds = new Set()
 const toastTimers = new Map()
 
@@ -292,6 +293,9 @@ async function dismissNotification(notificationId) {
 
 function openCenter() {
   centerOpen.value = true
+  if (!notifications.value.length && !loading.value) {
+    refreshLatest({ captureToasts: false }).catch(() => {})
+  }
 }
 
 function closeCenter() {
@@ -300,6 +304,9 @@ function closeCenter() {
 
 function toggleCenter() {
   centerOpen.value = !centerOpen.value
+  if (centerOpen.value && !notifications.value.length && !loading.value) {
+    refreshLatest({ captureToasts: false }).catch(() => {})
+  }
 }
 
 async function syncNow() {
@@ -317,9 +324,7 @@ async function syncNow() {
 function startPolling() {
   if (pollTimer || !activeToken) return
   pollTimer = window.setInterval(() => {
-    refreshLatest({ captureToasts: true }).catch(() => {
-      // silent: polling must remain non intrusive
-    })
+    refreshUnreadCount().catch(() => {})
   }, POLL_INTERVAL_MS)
 }
 
@@ -331,6 +336,10 @@ function stopPolling() {
 
 function resetState() {
   stopPolling()
+  if (backgroundRefreshTimer) {
+    window.clearTimeout(backgroundRefreshTimer)
+    backgroundRefreshTimer = null
+  }
   clearAllToastTimers()
   displayedToastIds.clear()
 
@@ -346,6 +355,17 @@ function resetState() {
   syncing.value = false
   toastItems.value = []
   initPromise = null
+}
+
+function scheduleBackgroundRefresh() {
+  if (backgroundRefreshTimer || !activeToken) return
+  backgroundRefreshTimer = window.setTimeout(() => {
+    backgroundRefreshTimer = null
+    syncNow()
+      .then(() => refreshLatest({ captureToasts: true }))
+      .then(() => refreshUnreadCount())
+      .catch(() => {})
+  }, 1800)
 }
 
 async function init({ force = false } = {}) {
@@ -367,10 +387,9 @@ async function init({ force = false } = {}) {
 
   initPromise = (async () => {
     ensureLastSeenBaseline()
-    await syncNow()
-    await refreshLatest({ captureToasts: true })
     await refreshUnreadCount()
     startPolling()
+    scheduleBackgroundRefresh()
   })()
 
   try {
@@ -382,6 +401,10 @@ async function init({ force = false } = {}) {
 
 function teardown({ clearState = false } = {}) {
   stopPolling()
+  if (backgroundRefreshTimer) {
+    window.clearTimeout(backgroundRefreshTimer)
+    backgroundRefreshTimer = null
+  }
   if (clearState) {
     activeToken = ''
     resetState()

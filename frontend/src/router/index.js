@@ -137,7 +137,6 @@ const router = createRouter({
         fullBleed: true,
         requiresAuth: true,
         transition: 'page-canvas',
-        transitionMode: 'out-in',
       },
     },
     {
@@ -156,7 +155,6 @@ const router = createRouter({
         allowScroll: true,
         hidePrimaryNav: true,
         transition: 'page-canvas',
-        transitionMode: 'out-in',
       },
     },
     {

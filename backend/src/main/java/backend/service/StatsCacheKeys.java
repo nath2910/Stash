@@ -120,4 +120,12 @@ public final class StatsCacheKeys {
   public static String dateBounds(Long userId) {
     return "dateBounds|" + n(userId);
   }
+
+  public static String annualDashboard(Long userId, Integer year) {
+    return "annualDashboard|" + n(userId) + "|" + n(year);
+  }
+
+  public static String monthlyDashboard(Long userId, Integer year, Integer month) {
+    return "monthlyDashboard|" + n(userId) + "|" + n(year) + "|" + n(month);
+  }
 }

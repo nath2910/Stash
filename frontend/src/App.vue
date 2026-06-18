@@ -5,7 +5,7 @@
     <RouterView v-slot="{ Component, route }">
       <Transition
         :name="route.meta.transition || 'page'"
-        :mode="route.meta.transitionMode || 'out-in'"
+        :mode="route.meta.transitionMode"
       >
         <component :is="Component" :key="routeKey(route)" class="page-view" />
       </Transition>
@@ -32,25 +32,23 @@ const routeKey = (r) => {
 }
 
 .page-enter-active {
-  transition: opacity 180ms cubic-bezier(0.22, 1, 0.36, 1),
-    transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: opacity, transform;
+  transition: opacity 90ms ease;
+  will-change: opacity;
 }
 
 .page-leave-active {
-  transition: opacity 140ms ease-in, transform 140ms ease-in;
-  will-change: opacity, transform;
+  transition: opacity 70ms ease;
+  will-change: opacity;
 }
 
 .page-enter-from,
 .page-leave-to {
   opacity: 0;
-  transform: translateY(8px);
 }
 
 .page-canvas-enter-active,
 .page-canvas-leave-active {
-  transition: opacity 160ms ease;
+  transition: opacity 90ms ease;
   will-change: opacity;
 }
 

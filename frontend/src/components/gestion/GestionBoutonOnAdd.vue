@@ -12,7 +12,7 @@
       </button>
     </div>
     <div>
-      <AjoutPaire v-if="showAdd" @close="showAdd = false" @added="handleAdded" />
+      <AjoutPaire v-if="showAdd" :items="items" @close="showAdd = false" @added="handleAdded" />
     </div>
   </div>
 </template>
@@ -21,6 +21,10 @@
 import { onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AjoutPaire from '@/components/gestion/GestionAjoutPaire.vue'
+
+defineProps({
+  items: { type: Array, default: () => [] },
+})
 
 const emit = defineEmits(['vente-ajoutee'])
 const showAdd = ref(false)

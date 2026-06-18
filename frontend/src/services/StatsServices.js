@@ -199,6 +199,10 @@ function annualDashboard(year) {
   return cachedGet('/stats/annual-dashboard', { year }, { ttlMs: 20_000 })
 }
 
+function monthlyDashboard(year, month) {
+  return cachedGet('/stats/monthly-dashboard', { year, month }, { ttlMs: 60_000 })
+}
+
 // Persistance du layout cote backend (prive / multi-appareil).
 function getLayout() {
   return api.get('/stats/layout')
@@ -218,6 +222,7 @@ export default {
   breakdown,
   rank,
   annualDashboard,
+  monthlyDashboard,
   dateBounds,
   categories,
   getLayout,

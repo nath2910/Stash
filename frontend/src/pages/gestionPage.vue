@@ -238,7 +238,10 @@
               <!-- Liste -->
               <div class="inventory-actions inventory-actions--list">
                 <div class="inventory-actions-panel inventory-actions-panel--list">
-                  <GestionActionsPanel @vente-ajoutee="handleVenteAjouteeFromActions" />
+                  <GestionActionsPanel
+                    :items="snkVentes"
+                    @vente-ajoutee="handleVenteAjouteeFromActions"
+                  />
                   <div class="[&_button:hover]:bg-red-900">
                     <button
                       type="button"
@@ -271,7 +274,12 @@
 
       <template v-if="activeGestionTab === 'inventory'">
         <!-- Edition -->
-        <EditVenteModal v-model="showEditModal" :vente="venteToEdit" @saved="handleVenteUpdated" />
+        <EditVenteModal
+          v-model="showEditModal"
+          :vente="venteToEdit"
+          :items="snkVentes"
+          @saved="handleVenteUpdated"
+        />
 
         <!-- Delete modal (unique) -->
         <SupprimerModal
@@ -416,6 +424,7 @@ const emptyFilters = () => ({
 
 const filters = ref(emptyFilters())
 const debouncedSearchTerm = ref('')
+let searchDebounceTimer = null
 
 const normalizeText = (value) => normalizeSearchText(value)
 const compactText = (value) => normalizeText(value).replace(/\s+/g, '')
@@ -776,12 +785,20 @@ watch(
 
 watch(searchTerm, (value) => {
   const nextValue = String(value ?? '')
+  if (searchDebounceTimer) {
+    window.clearTimeout(searchDebounceTimer)
+    searchDebounceTimer = null
+  }
+
   if (!normalizeText(nextValue)) {
     debouncedSearchTerm.value = ''
     return
   }
 
-  debouncedSearchTerm.value = nextValue
+  searchDebounceTimer = window.setTimeout(() => {
+    debouncedSearchTerm.value = nextValue
+    searchDebounceTimer = null
+  }, 140)
 })
 
 onMounted(() => {
@@ -792,20 +809,32 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener('snk:item-categories-change', onCategoryLabelsChange)
   window.removeEventListener('snk:item-subcategories-change', onSubcategoriesChange)
+  if (searchDebounceTimer) {
+    window.clearTimeout(searchDebounceTimer)
+    searchDebounceTimer = null
+  }
 })
 
 // Stats
-const totalPaires = computed(() => snkVentes.value.length)
-const nbEnStock = computed(() => snkVentes.value.filter((v) => !isVendue(v)).length)
-const valeurStock = computed(() =>
-  snkVentes.value
-    .filter((v) => !isVendue(v))
-    .reduce((sum, v) => {
+const inventorySummary = computed(() => {
+  let stockCount = 0
+  let stockValue = 0
+  for (const v of snkVentes.value) {
+    if (!isVendue(v)) {
+      stockCount += 1
       const prix = prixRetailOf(v)
-      if (Number.isNaN(prix)) return sum
-      return sum + prix
-    }, 0),
-)
+      if (!Number.isNaN(prix)) stockValue += prix
+    }
+  }
+  return {
+    totalPaires: snkVentes.value.length,
+    nbEnStock: stockCount,
+    valeurStock: stockValue,
+  }
+})
+const totalPaires = computed(() => inventorySummary.value.totalPaires)
+const nbEnStock = computed(() => inventorySummary.value.nbEnStock)
+const valeurStock = computed(() => inventorySummary.value.valeurStock)
 
 // Recherche + filtres
 const filteredVentes = computed(() => buildFilteredVentes())
@@ -2280,9 +2309,31 @@ watch(
 
 .inventory-list-scroll {
   max-height: clamp(420px, 56dvh, 690px);
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: scroll;
   overscroll-behavior: contain;
   padding-right: 0.15rem;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(14, 116, 144, 0.52) rgba(248, 250, 252, 0.92) !important;
+  -ms-overflow-style: auto !important;
+}
+
+.inventory-list-scroll::-webkit-scrollbar {
+  display: block !important;
+  width: 0.6rem !important;
+  height: 0.6rem !important;
+}
+
+.inventory-list-scroll::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: rgba(248, 250, 252, 0.92) !important;
+}
+
+.inventory-list-scroll::-webkit-scrollbar-thumb {
+  border: 2px solid rgba(248, 250, 252, 0.92) !important;
+  border-radius: 999px;
+  background: rgba(14, 116, 144, 0.56) !important;
 }
 
 .inventory-filter-shell.is-open {

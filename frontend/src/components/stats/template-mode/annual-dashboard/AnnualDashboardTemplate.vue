@@ -116,7 +116,11 @@
             @lostpointercapture="resetPointerDrag"
           >
             <div class="annual-pages" :style="pageTrackStyle">
-              <article class="annual-page annual-page--side" aria-label="Flux et mix produit">
+              <article
+                v-if="activePage === 0"
+                class="annual-page annual-page--side"
+                aria-label="Flux et mix produit"
+              >
                 <div class="annual-page__heading">
                   <p>Flux de tresorerie</p>
                   <h2>Achats, ventes et categories</h2>
@@ -158,7 +162,11 @@
                 </section>
               </article>
 
-              <article class="annual-page annual-page--main" aria-label="Pilotage annuel">
+              <article
+                v-else-if="activePage === 1"
+                class="annual-page annual-page--main"
+                aria-label="Pilotage annuel"
+              >
                 <div class="annual-main-stack">
                   <section class="annual-kpi-grid" aria-label="KPI annuels">
                     <AnnualKpiCard
@@ -197,7 +205,11 @@
                 </section>
               </article>
 
-              <article class="annual-page annual-page--details" aria-label="Details metier">
+              <article
+                v-else
+                class="annual-page annual-page--details"
+                aria-label="Details metier"
+              >
                 <div class="annual-page__heading">
                   <p>Analyse operationnelle</p>
                   <h2>Rentabilite et stock dormant</h2>
@@ -482,7 +494,7 @@ const summary = computed(() => dashboard.value?.summary ?? emptySummary)
 const monthlyRows = computed(() => normalizeMonthly(dashboard.value?.monthly ?? []))
 const currentPage = computed(() => pages[activePage.value] ?? pages[1])
 const pageTrackStyle = computed(() => ({
-  transform: `translate3d(-${activePage.value * 100}%, 0, 0)`,
+  transform: 'translate3d(0, 0, 0)',
 }))
 const topProductsPreview = computed(() => dashboard.value?.topProducts.slice(0, DETAILS_ROW_LIMIT) ?? [])
 const inventoryPreview = computed(() => dashboard.value?.inventoryAging.slice(0, DETAILS_ROW_LIMIT) ?? [])
@@ -976,8 +988,7 @@ watch(selectedYear, () => {
 
 onMounted(async () => {
   window.addEventListener('keydown', onKeyDown)
-  await loadYearBounds()
-  await loadDashboard()
+  await Promise.all([loadYearBounds(), loadDashboard()])
 })
 
 onBeforeUnmount(() => {

@@ -13,7 +13,7 @@
       </button>
     </div>
 
-    <div v-if="snkVentes.length" class="space-y-3 lg:hidden">
+    <div v-if="!isDesktop && snkVentes.length" class="space-y-3 lg:hidden">
       <article
         v-for="vente in snkVentes"
         :key="vente.id"
@@ -112,13 +112,13 @@
     </div>
 
     <div
-      v-else
+      v-else-if="!isDesktop"
       class="rounded-xl border border-gray-700/70 bg-gray-900/40 px-4 py-8 text-center text-sm text-gray-400 lg:hidden"
     >
       Aucun item a afficher pour le moment.
     </div>
 
-    <div class="hidden lg:block">
+    <div v-if="isDesktop" class="hidden lg:block">
       <table class="min-w-[920px] w-full text-sm text-gray-100">
         <thead class="border-b border-gray-700 bg-gray-900">
           <tr>
@@ -298,12 +298,22 @@ const emit = defineEmits(['edit', 'update:modelValue'])
 const authStore = useAuthStore()
 const currentUserId = computed(() => authStore.user?.value?.id ?? authStore.user?.id ?? 'guest')
 const categoryLabels = ref(readStoredItemCategories(currentUserId.value))
+const isDesktop = ref(
+  typeof window === 'undefined' ? true : window.matchMedia('(min-width: 1024px)').matches,
+)
+let desktopMediaQuery = null
+const onDesktopChange = (event) => {
+  isDesktop.value = event.matches
+}
 
-const isSelected = (id) => props.modelValue.includes(id)
+const selectedSet = computed(() => new Set(props.modelValue))
+const visibleIds = computed(() => props.snkVentes.map((v) => v.id))
+
+const isSelected = (id) => selectedSet.value.has(id)
 
 const allSelected = computed(() => {
   if (!props.snkVentes.length) return false
-  return props.snkVentes.every((v) => props.modelValue.includes(v.id))
+  return visibleIds.value.every((id) => selectedSet.value.has(id))
 })
 
 const toggleOne = (id) => {
@@ -314,16 +324,15 @@ const toggleOne = (id) => {
 }
 
 const toggleAll = () => {
-  const visibleIds = props.snkVentes.map((v) => v.id)
-
   if (allSelected.value) {
     // enleve ceux visibles
-    const next = props.modelValue.filter((id) => !visibleIds.includes(id))
+    const visible = new Set(visibleIds.value)
+    const next = props.modelValue.filter((id) => !visible.has(id))
     emit('update:modelValue', next)
   } else {
     // ajoute ceux visibles
     const next = new Set(props.modelValue)
-    visibleIds.forEach((id) => next.add(id))
+    visibleIds.value.forEach((id) => next.add(id))
     emit('update:modelValue', Array.from(next))
   }
 }
@@ -370,10 +379,14 @@ function onCategoryLabelsChange(event) {
 
 onMounted(() => {
   window.addEventListener('snk:item-categories-change', onCategoryLabelsChange)
+  desktopMediaQuery = window.matchMedia('(min-width: 1024px)')
+  isDesktop.value = desktopMediaQuery.matches
+  desktopMediaQuery.addEventListener('change', onDesktopChange)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('snk:item-categories-change', onCategoryLabelsChange)
+  desktopMediaQuery?.removeEventListener('change', onDesktopChange)
 })
 </script>
 

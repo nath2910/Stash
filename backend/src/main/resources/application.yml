@@ -23,7 +23,7 @@ spring:
     type: caffeine
     cache-names: statsQueries
     caffeine:
-      spec: maximumSize=${APP_STATS_CACHE_MAX_SIZE:10000},expireAfterWrite=${APP_STATS_CACHE_TTL:30s}
+      spec: maximumSize=${APP_STATS_CACHE_MAX_SIZE:10000},expireAfterWrite=${APP_STATS_CACHE_TTL:120s}
 
   mail:
     host: ${SPRING_MAIL_HOST:}

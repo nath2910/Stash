@@ -242,18 +242,29 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import SnkVenteServices from '@/services/SnkVenteServices.js'
 import { useAuthStore } from '@/store/authStore'
 import CompactDateInput from '@/components/ui/CompactDateInput.vue'
 import ItemCategorySelect from '@/components/gestion/ItemCategorySelect.vue'
 import ItemSubcategorySelect from '@/components/gestion/ItemSubcategorySelect.vue'
 import { METADATA_FIELDS } from '@/RegleItem/CategorieItem'
-import { itemTypeLabel, readStoredItemCategories } from '@/RegleItem/itemCategoryStore'
+import {
+  itemTypeLabel,
+  normalizeItemType,
+  readStoredItemCategories,
+  resolveItemTypeOptions,
+} from '@/RegleItem/itemCategoryStore'
 import { extractSubcategoriesByType } from '@/RegleItem/subcategoryStore'
+import { numberOrNull, toYmdLocal } from '@/utils/homeDashboard'
+
+const props = defineProps({
+  items: { type: Array, default: () => [] },
+})
 
 const emit = defineEmits(['close', 'added'])
 
+const LAST_TYPE_PREFIX = 'snk_home_last_item_type_v1'
 const authStore = useAuthStore()
 const currentUserId = computed(() => authStore.user?.value?.id ?? authStore.user?.id ?? null)
 
@@ -265,23 +276,61 @@ const closeTimer = ref(null)
 
 const copies = ref(1)
 const keepCommonFields = ref(true)
-const discoveredSubcategories = ref({})
 const categoryLabels = ref(readStoredItemCategories(currentUserId.value || 'guest'))
 
-const getToday = () => new Date().toISOString().split('T')[0]
+const itemTypes = computed(() => resolveItemTypeOptions(categoryLabels.value))
+const discoveredSubcategories = computed(() =>
+  extractSubcategoriesByType(props.items, categoryLabels.value),
+)
 
-const emptyForm = (prefill = {}) => ({
-  nomItem: '',
-  prixRetail: null,
-  prixResell: null,
-  dateAchat: getToday(),
-  dateVente: null,
-  description: '',
-  categorie: '',
-  type: 'SNEAKER',
-  metadata: {},
-  ...prefill,
-})
+function lastTypeStorageKey(userId = currentUserId.value) {
+  return `${LAST_TYPE_PREFIX}_${String(userId || 'guest')}`
+}
+
+function readLastType() {
+  try {
+    return localStorage.getItem(lastTypeStorageKey()) || ''
+  } catch {
+    return ''
+  }
+}
+
+function writeLastType(type) {
+  try {
+    localStorage.setItem(lastTypeStorageKey(), type)
+  } catch {
+    // Local storage can be unavailable in private contexts.
+  }
+}
+
+function resolveDefaultType() {
+  const options = itemTypes.value
+  const lastType = normalizeItemType(readLastType())
+  if (options.some((option) => option.value === lastType)) return lastType
+  return options[0]?.value || 'OTHER'
+}
+
+function defaultMetadata(type) {
+  const fields = METADATA_FIELDS[type] || []
+  return fields.some((field) => field.key === 'condition') ? { condition: 'Neuf' } : {}
+}
+
+const emptyForm = (prefill = {}) => {
+  const type = normalizeItemType(prefill.type || resolveDefaultType())
+  return {
+    nomItem: '',
+    prixRetail: null,
+    prixResell: null,
+    dateAchat: toYmdLocal(new Date()),
+    dateVente: '',
+    description: '',
+    categorie: '',
+    type,
+    metadata: defaultMetadata(type),
+    ...prefill,
+    type,
+  }
+}
 
 const form = ref(emptyForm())
 const requiresDateVente = computed(
@@ -289,14 +338,15 @@ const requiresDateVente = computed(
 )
 
 const setType = (type) => {
-  if (form.value.type === type) return
-  form.value.type = type
+  const nextType = normalizeItemType(type)
+  if (form.value.type === nextType) return
+  form.value.type = nextType
   form.value.categorie = ''
-  form.value.metadata = {}
+  form.value.metadata = defaultMetadata(nextType)
 }
 
 const setCategoryLabels = (labels) => {
-  categoryLabels.value = labels
+  categoryLabels.value = labels || readStoredItemCategories(currentUserId.value || 'guest')
 }
 
 const resetState = () => {
@@ -317,18 +367,22 @@ const handleClose = () => {
   }, 180)
 }
 
-const buildPayload = () => ({
-  nomItem: form.value.nomItem,
-  prixRetail: form.value.prixRetail,
-  prixResell: form.value.prixResell,
-  dateAchat: form.value.dateAchat,
-  dateVente: form.value.dateVente,
-  description: form.value.description,
-  categorie: form.value.categorie,
-  type: form.value.type,
-  metadata: cleanedMetadata.value,
-  user: currentUserId.value ? { id: currentUserId.value } : null,
-})
+const buildPayload = () => {
+  const itemType = normalizeItemType(form.value.type || resolveDefaultType())
+  writeLastType(itemType)
+
+  return {
+    nomItem: String(form.value.nomItem || '').trim(),
+    prixRetail: numberOrNull(form.value.prixRetail),
+    prixResell: numberOrNull(form.value.prixResell),
+    dateAchat: form.value.dateAchat || null,
+    dateVente: form.value.dateVente || null,
+    description: String(form.value.description || '').trim(),
+    categorie: String(form.value.categorie || '').trim() || null,
+    type: itemType,
+    metadata: cleanedMetadata.value,
+  }
+}
 
 const validateResellAndDate = () => {
   const hasResell = requiresDateVente.value
@@ -378,29 +432,32 @@ watch(
   () => currentUserId.value,
   (userId) => {
     categoryLabels.value = readStoredItemCategories(userId || 'guest')
+    form.value = emptyForm()
   },
 )
 
-const loadExistingSubcategories = async () => {
-  if (!currentUserId.value) {
-    discoveredSubcategories.value = {}
-    return
-  }
-  try {
-    const { data } = await SnkVenteServices.getSnkVente()
-    discoveredSubcategories.value = extractSubcategoriesByType(
-      Array.isArray(data) ? data : [],
-      categoryLabels.value,
-    )
-  } catch {
-    discoveredSubcategories.value = {}
-  }
+const onCategoryLabelsChange = (event) => {
+  const detail = event?.detail || {}
+  if (String(detail.userId || 'guest') !== String(currentUserId.value || 'guest')) return
+  categoryLabels.value = readStoredItemCategories(currentUserId.value || 'guest')
 }
 
-onMounted(loadExistingSubcategories)
+const onSubcategoriesChange = (event) => {
+  const detail = event?.detail || {}
+  if (String(detail.userId || 'guest') !== String(currentUserId.value || 'guest')) return
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('snk:item-categories-change', onCategoryLabelsChange)
+  window.addEventListener('snk:item-subcategories-change', onSubcategoriesChange)
+}
 
 onBeforeUnmount(() => {
   if (closeTimer.value) clearTimeout(closeTimer.value)
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('snk:item-categories-change', onCategoryLabelsChange)
+    window.removeEventListener('snk:item-subcategories-change', onSubcategoriesChange)
+  }
 })
 
 const createSales = async () => {
