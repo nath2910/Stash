@@ -1,224 +1,155 @@
 <template>
-  <div
-    class="fixed inset-0 z-40 flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-4"
-    @click.self="close"
-  >
-    <div class="w-full max-w-md max-h-[92dvh] overflow-y-auto rounded-t-2xl bg-white p-4 shadow-lg sm:rounded-lg sm:p-5">
-      <div class="flex items-start justify-between gap-3 mb-3">
+  <div class="delete-sheet-backdrop" @click.self="close">
+    <section class="delete-sheet" role="dialog" aria-modal="true" aria-labelledby="delete-title">
+      <header class="delete-sheet-header">
         <div>
-          <h3 class="text-xl font-semibold text-gray-900">Supprimer</h3>
-          <p class="text-xs text-gray-500">
-            {{ modeLabel }}
-          </p>
+          <p>Suppression</p>
+          <h3 id="delete-title">{{ modeLabel }}</h3>
+          <span>Annulable quelques secondes via le toast.</span>
         </div>
-        <div class="[&_button:hover]:bg-gray-300">
-          <button
-            class="rounded px-2 py-1 text-sm text-gray-600"
-            @click="close"
-            :disabled="loading"
-          >
-            X
-          </button>
-        </div>
-      </div>
+      </header>
 
-      <!-- Switch mode -->
-      <div class="mb-4 flex flex-wrap gap-2">
+      <div class="delete-mode-switch" role="tablist" aria-label="Mode de suppression">
         <button
           type="button"
-          class="px-3 py-1.5 text-xs rounded border"
-          :class="
-            mode === 'name'
-              ? 'bg-gray-900 text-white border-gray-900'
-              : 'bg-white text-gray-700 border-gray-300 '
-          "
+          :class="{ 'is-active': mode === 'name' }"
+          role="tab"
+          :aria-selected="mode === 'name'"
           @click="setMode('name')"
-          :disabled="loading"
         >
           Par nom
         </button>
 
         <button
           type="button"
-          class="px-3 py-1.5 text-xs rounded border"
-          :class="
-            mode === 'bulk'
-              ? 'bg-gray-900 text-white border-gray-900'
-              : 'bg-white text-gray-700 border-gray-300 '
-          "
+          :class="{ 'is-active': mode === 'bulk' }"
+          role="tab"
+          :aria-selected="mode === 'bulk'"
           @click="setMode('bulk')"
-          :disabled="loading"
         >
-          Selection ({{ selectedIds.length }})
+          Selection
+          <span>{{ selectedIds.length }}</span>
         </button>
       </div>
 
-      <!-- Success / Error -->
-      <div
-        v-if="success"
-        class="mb-3 rounded border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800"
-      >
-        OK. Suppression effectuee.
-      </div>
-
-      <div
-        v-if="error"
-        class="mb-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
-      >
+      <div v-if="error" class="delete-feedback">
         {{ error }}
       </div>
 
-      <!-- MODE: PAR NOM -->
-      <div v-if="mode === 'name'" class="space-y-3">
-        <div>
-          <label class="block text-sm font-medium text-gray-900 mb-1">Nom de l'item</label>
+      <div v-if="mode === 'name'" class="delete-name-mode">
+        <label class="delete-search-field">
+          <Search class="h-4 w-4" aria-hidden="true" />
           <input
             v-model.trim="query"
             type="text"
-            class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
-            placeholder="Tape un nom (Jordan, dunk...)"
+            placeholder="Jordan, Dunk, SKU, categorie..."
             autocomplete="off"
             @focus="openList = true"
           />
+        </label>
 
-          <div
-            v-if="openList && suggestions.length"
-            class="mt-1 max-h-56 overflow-auto rounded border border-gray-200 bg-white shadow"
+        <div v-if="openList && suggestions.length" class="delete-suggestions">
+          <button
+            v-for="vente in suggestions"
+            :key="vente.id"
+            type="button"
+            :class="{ 'is-selected': selected?.id === vente.id }"
+            @click="selectVente(vente)"
           >
-            <button
-              v-for="v in suggestions"
-              :key="v.id"
-              type="button"
-              class="w-full text-left px-3 py-2 text-sm"
-              @click="selectVente(v)"
-            >
-              <div class="font-medium text-gray-900">{{ v.nomItem || v.nom_item }}</div>
-              <div class="text-xs text-gray-500">ID: {{ v.id }} - {{ v.categorie || '-' }}</div>
-            </button>
-          </div>
+            <span>{{ vente.nomItem || vente.nom_item }}</span>
+            <small>ID {{ vente.id }} - {{ vente.categorie || 'Sans categorie' }}</small>
+          </button>
+        </div>
 
-          <p v-if="selected" class="mt-2 text-xs text-gray-600">
-            Selection : <b>{{ selected.nomItem || selected.nom_item }}</b> (ID {{ selected.id }})
+        <p v-else-if="query" class="delete-empty">Aucun item proche trouve.</p>
+      </div>
+
+      <div v-else class="delete-bulk-mode">
+        <div>
+          <Trash2 class="h-4 w-4" aria-hidden="true" />
+          <p>
+            <strong>{{ selectedIds.length }}</strong>
+            item(s) selectionne(s)
           </p>
         </div>
-
-        <div class="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
-          <div class="[&_button:hover]:bg-gray-300">
-            <button
-              type="button"
-              class="w-full rounded border border-gray-300 px-4 py-1.5 text-sm text-gray-700 sm:w-auto"
-              @click="close"
-              :disabled="loading"
-            >
-              Annuler
-            </button>
-          </div>
-          <div class="[&_button:hover]:bg-red-800">
-            <button
-              type="button"
-              class="w-full rounded bg-red-600 px-4 py-1.5 text-sm text-white disabled:opacity-60 sm:w-auto"
-              :disabled="loading || !selected"
-              @click="deleteOne"
-            >
-              {{ loading ? 'Suppression...' : 'Supprimer' }}
-            </button>
-          </div>
-        </div>
+        <span>La liste se mettra a jour tout de suite, puis tu pourras annuler.</span>
       </div>
 
-      <!-- MODE: BULK -->
-      <div v-else class="space-y-3">
-        <p class="text-sm text-gray-700">
-          Tu vas supprimer <b>{{ selectedIds.length }}</b> item(s). Action definitive.
-        </p>
-
-        <div class="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
-          <div class="[&_button:hover]:bg-gray-300">
-            <button
-              type="button"
-              class="w-full rounded border border-gray-300 px-4 py-1.5 text-sm text-gray-700 sm:w-auto"
-              @click="close"
-              :disabled="loading"
-            >
-              Annuler
-            </button>
-          </div>
-          <div class="[&_button:hover]:bg-red-800">
-            <button
-              type="button"
-              class="inline-flex w-full items-center justify-center gap-2 rounded bg-red-600 px-4 py-1.5 text-sm text-white sm:w-auto"
-              :disabled="loading || !selectedIds.length"
-              @click="deleteBulk"
-            >
-              <span
-                v-if="loading"
-                class="h-4 w-4 border-2 border-white/60 border-t-transparent rounded-full animate-spin"
-              ></span>
-              {{ loading ? 'Suppression...' : 'Supprimer la selection' }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+      <footer class="delete-sheet-actions">
+        <button type="button" class="delete-secondary-button" @click="close">Annuler</button>
+        <button
+          type="button"
+          class="delete-danger-button"
+          :disabled="mode === 'name' ? !selected : !selectedIds.length"
+          @click="queueDelete"
+        >
+          <Trash2 class="h-4 w-4" aria-hidden="true" />
+          <span>{{ mode === 'name' ? 'Supprimer cet item' : 'Supprimer la selection' }}</span>
+        </button>
+      </footer>
+    </section>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
-import SnkVenteServices from '@/services/SnkVenteServices.js'
+import { computed, ref, watch } from 'vue'
+import { Search, Trash2 } from 'lucide-vue-next'
+import { normalizeSearchText, searchTokens } from '@/utils/homeDashboard'
 
 const props = defineProps({
   snkVentes: { type: Array, default: () => [] },
   selectedIds: { type: Array, default: () => [] },
-  defaultMode: { type: String, default: 'name' }, // 'name' | 'bulk'
+  defaultMode: { type: String, default: 'name' },
 })
 
-const emit = defineEmits(['close', 'deleted'])
+const emit = defineEmits(['close', 'delete-requested'])
 
 const mode = ref(props.defaultMode)
-const loading = ref(false)
-const success = ref(false)
 const error = ref('')
-
-// name mode
 const query = ref('')
 const selected = ref(null)
 const openList = ref(false)
 
-const normalize = (s) => (s || '').toString().toLowerCase()
-const suggestions = computed(() => {
-  const q = normalize(query.value)
-  const list = props.snkVentes || []
-  if (!q) return list.slice(0, 8)
-  return list.filter((v) => normalize(v.nomItem || v.nom_item).includes(q)).slice(0, 8)
-})
+const searchTextForVente = (vente) =>
+  normalizeSearchText([
+    vente?.id,
+    vente?.nomItem ?? vente?.nom_item,
+    vente?.categorie,
+    vente?.description,
+    vente?.sku,
+    vente?.reference,
+  ].join(' '))
 
-watch(query, () => {
-  selected.value = null
-  success.value = false
-  error.value = ''
-  openList.value = true
+const suggestions = computed(() => {
+  const list = props.snkVentes || []
+  const q = normalizeSearchText(query.value)
+  if (!q) return list.slice(0, 8)
+
+  const tokens = searchTokens(q)
+  return list
+    .map((vente) => ({ vente, text: searchTextForVente(vente) }))
+    .filter((record) => tokens.every((token) => record.text.includes(token)))
+    .slice(0, 8)
+    .map((record) => record.vente)
 })
 
 const modeLabel = computed(() =>
-  mode.value === 'name' ? 'Suppression par nom (autocomplete)' : 'Suppression multiple',
+  mode.value === 'name' ? 'Choisir un item' : 'Supprimer la selection',
 )
 
-const setMode = (m) => {
-  mode.value = m
-  success.value = false
+const setMode = (nextMode) => {
+  mode.value = nextMode
   error.value = ''
 }
 
-const selectVente = (v) => {
-  selected.value = v
-  query.value = v.nomItem || v.nom_item
+const selectVente = (vente) => {
+  selected.value = vente
+  query.value = vente.nomItem || vente.nom_item
   openList.value = false
+  error.value = ''
 }
 
 const close = () => {
-  loading.value = false
-  success.value = false
   error.value = ''
   query.value = ''
   selected.value = null
@@ -226,52 +157,327 @@ const close = () => {
   emit('close')
 }
 
-const deleteOne = async () => {
-  if (!selected.value) return
-  loading.value = true
-  success.value = false
-  error.value = ''
-
-  try {
-    await SnkVenteServices.supprimer(selected.value.id)
-    emit('deleted', [selected.value.id]) // tableau d'IDs pour uniformiser
-    success.value = true
-    setTimeout(() => close(), 400)
-  } catch (e) {
-    console.error(e)
-    error.value = 'Erreur lors de la suppression'
-  } finally {
-    loading.value = false
+const queueDelete = () => {
+  const ids = mode.value === 'name' ? [selected.value?.id].filter(Boolean) : props.selectedIds
+  if (!ids.length) {
+    error.value = 'Aucun item a supprimer.'
+    return
   }
+
+  emit('delete-requested', ids)
+  close()
 }
 
-const deleteBulk = async () => {
-  if (!props.selectedIds.length) return
-  loading.value = true
-  success.value = false
+watch(query, () => {
+  selected.value = null
   error.value = ''
+  openList.value = true
+})
 
-  try {
-    const res = await SnkVenteServices.supprimerEnMasse(props.selectedIds)
-    const deleted = res?.data?.deleted ?? 0
-
-    if (!deleted) {
-      error.value = "Aucune suppression n'a reussi."
-      return
-    }
-
-    emit('deleted', props.selectedIds.slice(0, deleted))
-    success.value = true
-    if (deleted < props.selectedIds.length) {
-      error.value = `${props.selectedIds.length - deleted} suppression(s) ont echoue.`
-    } else {
-      setTimeout(() => close(), 400)
-    }
-  } catch (e) {
-    console.error(e)
-    error.value = 'Erreur lors de la suppression de la selection'
-  } finally {
-    loading.value = false
-  }
-}
+watch(
+  () => props.defaultMode,
+  (nextMode) => {
+    mode.value = nextMode
+  },
+)
 </script>
+
+<style scoped>
+.delete-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.38);
+  padding: 0;
+  backdrop-filter: blur(8px);
+}
+
+.delete-sheet {
+  display: grid;
+  width: min(100%, 30rem);
+  max-height: 92dvh;
+  gap: 1rem;
+  overflow-y: auto;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 20px 20px 0 0;
+  background: #fbfaf7;
+  padding: 1rem;
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.22);
+}
+
+.delete-sheet-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.delete-sheet-header p {
+  color: #b91c1c;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.delete-sheet-header h3 {
+  margin-top: 0.1rem;
+  color: #0f172a;
+  font-size: 1.25rem;
+  font-weight: 900;
+}
+
+.delete-sheet-header span,
+.delete-bulk-mode > span,
+.delete-empty {
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.delete-icon-button,
+.delete-mode-switch button,
+.delete-suggestions button,
+.delete-secondary-button,
+.delete-danger-button {
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease,
+    transform 140ms ease;
+}
+
+.delete-icon-button {
+  display: inline-grid;
+  width: 2.35rem;
+  height: 2.35rem;
+  place-items: center;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.86);
+  color: #475569;
+}
+
+.delete-mode-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+  border-radius: 16px;
+  background: #f1f5f9;
+  padding: 0.25rem;
+}
+
+.delete-mode-switch button {
+  display: inline-flex;
+  min-height: 2.4rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border: 1px solid transparent;
+  border-radius: 13px;
+  color: #475569;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.delete-mode-switch button span {
+  display: inline-grid;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.18);
+  color: inherit;
+  font-size: 0.72rem;
+}
+
+.delete-mode-switch button.is-active {
+  border-color: rgba(15, 118, 110, 0.18);
+  background: #ffffff;
+  color: #0f766e;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.07);
+}
+
+.delete-search-field {
+  display: flex;
+  min-height: 3rem;
+  align-items: center;
+  gap: 0.65rem;
+  border: 1px solid rgba(14, 165, 233, 0.28);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.94);
+  color: #0f766e;
+  padding: 0 0.85rem;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.delete-search-field:focus-within,
+.delete-search-field:hover {
+  border-color: rgba(20, 184, 166, 0.46);
+  box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.12);
+}
+
+.delete-search-field input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  background: transparent;
+  color: #0f172a;
+  font-size: 0.92rem;
+  font-weight: 750;
+  outline: none;
+}
+
+.delete-name-mode {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.delete-suggestions {
+  display: grid;
+  max-height: 15rem;
+  gap: 0.35rem;
+  overflow-y: auto;
+  padding-right: 0.1rem;
+}
+
+.delete-suggestions button {
+  display: grid;
+  gap: 0.12rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.82);
+  padding: 0.75rem;
+  text-align: left;
+}
+
+.delete-suggestions button span {
+  color: #0f172a;
+  font-size: 0.9rem;
+  font-weight: 850;
+}
+
+.delete-suggestions button small {
+  color: #64748b;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.delete-suggestions button:hover,
+.delete-suggestions button.is-selected {
+  border-color: rgba(20, 184, 166, 0.44);
+  background: #ecfdf5;
+  transform: translateY(-1px);
+}
+
+.delete-bulk-mode {
+  display: grid;
+  gap: 0.55rem;
+  border: 1px solid rgba(248, 113, 113, 0.2);
+  border-radius: 16px;
+  background: #fff7f7;
+  padding: 0.9rem;
+}
+
+.delete-bulk-mode > div {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: #b91c1c;
+  font-weight: 850;
+}
+
+.delete-feedback {
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  border-radius: 14px;
+  background: #fef2f2;
+  color: #b91c1c;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.delete-sheet-actions {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 0.55rem;
+}
+
+.delete-secondary-button,
+.delete-danger-button {
+  display: inline-flex;
+  min-height: 2.65rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  padding: 0 1rem;
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.delete-secondary-button {
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(255, 255, 255, 0.8);
+  color: #334155;
+}
+
+.delete-danger-button {
+  border: 1px solid rgba(239, 68, 68, 0.22);
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  color: #ffffff;
+  box-shadow: 0 14px 28px rgba(185, 28, 28, 0.18);
+}
+
+.delete-danger-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  transform: none;
+}
+
+.delete-icon-button:hover,
+.delete-secondary-button:hover {
+  border-color: rgba(20, 184, 166, 0.42);
+  background: #ecfdf5;
+  color: #0f766e;
+  transform: translateY(-1px);
+}
+
+.delete-danger-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  box-shadow: 0 18px 34px rgba(185, 28, 28, 0.22);
+  transform: translateY(-1px);
+}
+
+.delete-icon-button:active,
+.delete-mode-switch button:active,
+.delete-suggestions button:active,
+.delete-secondary-button:active,
+.delete-danger-button:active:not(:disabled) {
+  transform: translateY(0) scale(0.97);
+}
+
+@media (min-width: 640px) {
+  .delete-sheet-backdrop {
+    align-items: center;
+    padding: 1rem;
+  }
+
+  .delete-sheet {
+    border-radius: 20px;
+    padding: 1.1rem;
+  }
+
+  .delete-sheet-actions {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+}
+</style>

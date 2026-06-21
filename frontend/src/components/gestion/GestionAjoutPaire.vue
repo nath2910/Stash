@@ -1,272 +1,74 @@
-<!-- src/components/AjoutPaire.vue -->
 <template>
   <teleport to="body">
     <Transition name="modal-smooth">
-    <div v-if="visible" class="fixed inset-0 z-[9999]">
-      <!-- overlay -->
-      <div class="absolute inset-0 bg-slate-950/48 backdrop-blur-[2px]" @click.self="handleClose"></div>
+      <div v-if="visible" class="fixed inset-0 z-[9999]">
+        <div class="absolute inset-0 bg-slate-950/48 backdrop-blur-[2px]" @click.self="handleClose"></div>
 
-      <!-- modal -->
-      <div
-        class="relative z-10 flex min-h-full items-end justify-center p-0 sm:items-center sm:p-4"
-      >
-        <div
-          class="modal-card w-full max-w-4xl max-h-[100dvh] rounded-t-2xl rounded-b-none border border-gray-700 bg-gray-800 shadow-2xl sm:max-h-[92vh] sm:rounded-2xl"
-          @click.stop
-        >
-          <!-- Header -->
-          <div class="modal-card-header flex items-start justify-between border-b border-gray-700 p-4 sm:p-5">
-            <div>
-              <h3 class="text-xl font-semibold text-gray-100">Ajouter un item</h3>
-              <p class="text-sm text-gray-400 mt-1">
-                Categorie, nom et prix suffisent pour l'ajouter rapidement.
-              </p>
-            </div>
-
-            <!-- Close -->
-            <button
-              type="button"
-              @click="handleClose"
-              class="rounded-lg p-2 text-gray-300 transition hover:bg-gray-700/60 hover:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/30"
-              aria-label="Fermer"
-            >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          </div>
-
-          <!-- Alerts -->
-          <div
-            v-if="error"
-            class="mx-4 mt-4 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200 sm:mx-6"
+        <div class="relative z-10 flex min-h-full items-end justify-center p-0 sm:items-center sm:p-4">
+          <section
+            class="modal-card w-full max-w-4xl max-h-[100dvh] rounded-t-2xl rounded-b-none border bg-white shadow-2xl sm:max-h-[92vh] sm:rounded-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="add-item-title"
+            @click.stop
           >
-            {{ error }}
-          </div>
-
-          <div
-            v-if="success"
-            class="mx-4 mt-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm text-emerald-200 sm:mx-6"
-          >
-            Item{{ copies > 1 ? 's' : '' }} ajoute{{ copies > 1 ? 's' : '' }} avec succes.
-          </div>
-
-          <!-- Form -->
-          <form class="modal-form space-y-5 p-4 sm:p-6" @submit.prevent="createSales">
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <!-- Categorie principale -->
-              <div class="sm:col-span-2">
-                <ItemCategorySelect
-                  :model-value="form.type"
-                  :user-id="currentUserId || 'guest'"
-                  :labels="categoryLabels"
-                  @update:modelValue="setType"
-                  @labels-change="setCategoryLabels"
-                />
-              </div>
-
-              <!-- Nom -->
+            <header class="modal-card-header flex items-start justify-between border-b p-4 sm:p-5">
               <div>
-                <label for="nomItem" class="block text-sm font-medium text-gray-200 mb-2">
-                  Nom de l'item
-                </label>
-                <input
-                  id="nomItem"
-                  type="text"
-                  v-model.trim="form.nomItem"
-                  placeholder="Dunk low, Bundle 151, Ruinart ..."
-                  required
-                  class="w-full rounded-lg border border-gray-600 bg-gray-900 text-gray-100 px-3 py-2.5 text-sm placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500"
-                />
+                <h3 id="add-item-title">Ajouter un item</h3>
+                <p>Categorie, nom, prix et dates suivent la meme logique que la modification.</p>
               </div>
 
-              <!-- Sous-categorie -->
-              <div>
-                <ItemSubcategorySelect
-                  v-model="form.categorie"
-                  :type="form.type"
-                  :user-id="currentUserId || 'guest'"
-                  :discovered="discoveredSubcategories"
-                  :category-labels="categoryLabels"
-                />
-              </div>
-
-              <!-- Nombre d'exemplaires -->
-              <div>
-                <label for="copies" class="block text-sm font-medium text-gray-200 mb-2">
-                  Nombre d'exemplaires
-                </label>
-                <input
-                  id="copies"
-                  type="number"
-                  v-model.number="copies"
-                  min="1"
-                  max="50"
-                  step="1"
-                  required
-                  class="w-full rounded-lg border border-gray-600 bg-gray-900 text-gray-100 px-3 py-2.5 text-sm placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500"
-                />
-                <p class="mt-1 text-xs text-gray-500">Determine la quantite voulue.</p>
-              </div>
-
-              <!-- Prix retail -->
-              <div>
-                <label for="prixRetail" class="block text-sm font-medium text-gray-200 mb-2">
-                  Prix d'achat (EUR)
-                </label>
-                <input
-                  id="prixRetail"
-                  type="number"
-                  v-model.number="form.prixRetail"
-                  placeholder="110"
-                  min="0"
-                  step="0.01"
-                  required
-                  class="w-full rounded-lg border border-gray-600 bg-gray-900 text-gray-100 px-3 py-2.5 text-sm placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500"
-                />
-              </div>
-
-              <!-- Prix revente -->
-              <div>
-                <label for="prixResell" class="block text-sm font-medium text-gray-200 mb-2">
-                  Prix de vente (EUR)
-                </label>
-                <input
-                  id="prixResell"
-                  type="number"
-                  v-model.number="form.prixResell"
-                  placeholder="180"
-                  min="0"
-                  step="0.01"
-                  class="w-full rounded-lg border border-gray-600 bg-gray-900 text-gray-100 px-3 py-2.5 text-sm placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500"
-                />
-              </div>
-
-              <!-- Date achat -->
-              <div>
-                <label for="dateAchat" class="block text-sm font-medium text-gray-200 mb-2">
-                  Date d'achat
-                </label>
-                <CompactDateInput id="dateAchat" v-model="form.dateAchat" class="w-full" light size="md" />
-              </div>
-
-              <!-- Date vente -->
-              <div>
-                <label for="dateVente" class="block text-sm font-medium text-gray-200 mb-2">
-                  Date de vente
-                </label>
-                <CompactDateInput id="dateVente" v-model="form.dateVente" class="w-full" light size="md" />
-                <p class="mt-1 text-xs text-gray-500">Laisse vide si pas encore vendue.</p>
-              </div>
-
-              <!-- Description -->
-              <div class="sm:col-span-2">
-                <label for="description" class="block text-sm font-medium text-gray-200 mb-2">
-                  Description
-                </label>
-                <textarea
-                  id="description"
-                  v-model.trim="form.description"
-                  rows="3"
-                  placeholder="Etat, taille, notes perso..."
-                  class="w-full rounded-lg border border-gray-600 bg-gray-900 text-gray-100 px-3 py-2.5 text-sm placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500"
-                ></textarea>
-              </div>
-
-              <!-- Champs spécifiques -->
-              <div class="sm:col-span-2">
-                <div class="flex items-center justify-between mb-2">
-                  <p class="text-sm font-medium text-gray-200">Champs spécifiques</p>
-                  <p class="text-xs text-gray-400">
-                    Adaptés au type {{ currentTypeLabel.toLowerCase() }}
-                  </p>
-                </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div v-for="field in metadataFields" :key="field.key" class="space-y-1">
-                    <label class="text-xs text-gray-300">{{ field.label }}</label>
-                    <input
-                      type="text"
-                      v-model.trim="form.metadata[field.key]"
-                      :placeholder="field.placeholder"
-                      class="w-full rounded-lg border border-gray-600 bg-gray-900 text-gray-100 px-3 py-2 text-sm placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/40 focus:border-purple-500"
-                    />
-                  </div>
-                </div>
-                <p v-if="form.type === 'TICKET'" class="mt-2 text-xs text-amber-200/80">
-                  Tu pourras ensuite ajouter un PDF ou une image du ticket dans la fiche (onglet
-                  pièces jointes).
-                </p>
-              </div>
-            </div>
-
-            <!-- Footer -->
-            <div
-              class="modal-footer-sticky flex flex-col-reverse gap-2 border-t border-gray-700 pt-4 sm:flex-row sm:items-center sm:justify-end"
-            >
               <button
                 type="button"
+                class="modal-close-button"
+                aria-label="Fermer"
                 @click="handleClose"
-                class="w-full rounded-lg border border-gray-600 px-4 py-2 text-sm text-gray-200 transition hover:bg-gray-700/50 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
-                :disabled="loading"
               >
-                Annuler
+                <X class="h-5 w-5" aria-hidden="true" />
               </button>
+            </header>
 
-              <button
-                type="submit"
-                :disabled="loading"
-                class="inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-purple-600 px-5 py-2 text-sm text-white transition hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
-              >
-                <span>
-                  {{
-                    loading
-                      ? 'Enregistrement...'
-                      : copies > 1
-                        ? `Ajouter ${copies} items`
-                        : "Ajouter l'item"
-                  }}
-                </span>
-              </button>
+            <div v-if="error" class="modal-alert modal-alert--error">
+              {{ error }}
             </div>
-          </form>
+
+            <div v-if="success" class="modal-alert modal-alert--success">
+              Item ajoute.
+            </div>
+
+            <div class="modal-form">
+              <ItemFormFields
+                mode="create"
+                surface="modal"
+                :items="items"
+                :saving="loading"
+                details-default-open
+                quantity-enabled
+                :show-details-toggle="false"
+                submit-label="Ajouter"
+                @cancel="handleClose"
+                @error="handleValidationError"
+                @submit="createSales"
+              />
+            </div>
+          </section>
         </div>
       </div>
-    </div>
     </Transition>
   </teleport>
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { onBeforeUnmount, ref } from 'vue'
+import { X } from 'lucide-vue-next'
 import SnkVenteServices from '@/services/SnkVenteServices.js'
-import { useAuthStore } from '@/store/authStore'
-import CompactDateInput from '@/components/ui/CompactDateInput.vue'
-import ItemCategorySelect from '@/components/gestion/ItemCategorySelect.vue'
-import ItemSubcategorySelect from '@/components/gestion/ItemSubcategorySelect.vue'
-import { METADATA_FIELDS } from '@/RegleItem/CategorieItem'
-import {
-  itemTypeLabel,
-  normalizeItemType,
-  readStoredItemCategories,
-  resolveItemTypeOptions,
-} from '@/RegleItem/itemCategoryStore'
-import { extractSubcategoriesByType } from '@/RegleItem/subcategoryStore'
-import { numberOrNull, toYmdLocal } from '@/utils/homeDashboard'
+import ItemFormFields from '@/components/gestion/ItemFormFields.vue'
 
-const props = defineProps({
+defineProps({
   items: { type: Array, default: () => [] },
 })
 
 const emit = defineEmits(['close', 'added'])
-
-const LAST_TYPE_PREFIX = 'snk_home_last_item_type_v1'
-const authStore = useAuthStore()
-const currentUserId = computed(() => authStore.user?.value?.id ?? authStore.user?.id ?? null)
 
 const loading = ref(false)
 const success = ref(false)
@@ -274,238 +76,53 @@ const error = ref(null)
 const visible = ref(true)
 const closeTimer = ref(null)
 
-const copies = ref(1)
-const keepCommonFields = ref(true)
-const categoryLabels = ref(readStoredItemCategories(currentUserId.value || 'guest'))
-
-const itemTypes = computed(() => resolveItemTypeOptions(categoryLabels.value))
-const discoveredSubcategories = computed(() =>
-  extractSubcategoriesByType(props.items, categoryLabels.value),
-)
-
-function lastTypeStorageKey(userId = currentUserId.value) {
-  return `${LAST_TYPE_PREFIX}_${String(userId || 'guest')}`
-}
-
-function readLastType() {
-  try {
-    return localStorage.getItem(lastTypeStorageKey()) || ''
-  } catch {
-    return ''
-  }
-}
-
-function writeLastType(type) {
-  try {
-    localStorage.setItem(lastTypeStorageKey(), type)
-  } catch {
-    // Local storage can be unavailable in private contexts.
-  }
-}
-
-function resolveDefaultType() {
-  const options = itemTypes.value
-  const lastType = normalizeItemType(readLastType())
-  if (options.some((option) => option.value === lastType)) return lastType
-  return options[0]?.value || 'OTHER'
-}
-
-function defaultMetadata(type) {
-  const fields = METADATA_FIELDS[type] || []
-  return fields.some((field) => field.key === 'condition') ? { condition: 'Neuf' } : {}
-}
-
-const emptyForm = (prefill = {}) => {
-  const type = normalizeItemType(prefill.type || resolveDefaultType())
-  return {
-    nomItem: '',
-    prixRetail: null,
-    prixResell: null,
-    dateAchat: toYmdLocal(new Date()),
-    dateVente: '',
-    description: '',
-    categorie: '',
-    type,
-    metadata: defaultMetadata(type),
-    ...prefill,
-    type,
-  }
-}
-
-const form = ref(emptyForm())
-const requiresDateVente = computed(
-  () => form.value.prixResell !== null && form.value.prixResell !== '',
-)
-
-const setType = (type) => {
-  const nextType = normalizeItemType(type)
-  if (form.value.type === nextType) return
-  form.value.type = nextType
-  form.value.categorie = ''
-  form.value.metadata = defaultMetadata(nextType)
-}
-
-const setCategoryLabels = (labels) => {
-  categoryLabels.value = labels || readStoredItemCategories(currentUserId.value || 'guest')
-}
-
-const resetState = () => {
+function resetState() {
   success.value = false
   error.value = null
   loading.value = false
 }
 
-const handleClose = () => {
-  form.value = emptyForm()
-  copies.value = 1
-  keepCommonFields.value = true
+function handleClose() {
   resetState()
   visible.value = false
-  if (closeTimer.value) clearTimeout(closeTimer.value)
+  if (closeTimer.value) window.clearTimeout(closeTimer.value)
   closeTimer.value = window.setTimeout(() => {
     emit('close')
-  }, 180)
+  }, 120)
 }
 
-const buildPayload = () => {
-  const itemType = normalizeItemType(form.value.type || resolveDefaultType())
-  writeLastType(itemType)
-
-  return {
-    nomItem: String(form.value.nomItem || '').trim(),
-    prixRetail: numberOrNull(form.value.prixRetail),
-    prixResell: numberOrNull(form.value.prixResell),
-    dateAchat: form.value.dateAchat || null,
-    dateVente: form.value.dateVente || null,
-    description: String(form.value.description || '').trim(),
-    categorie: String(form.value.categorie || '').trim() || null,
-    type: itemType,
-    metadata: cleanedMetadata.value,
-  }
+function handleValidationError(message) {
+  error.value = message
+  success.value = false
 }
 
-const validateResellAndDate = () => {
-  const hasResell = requiresDateVente.value
-  const hasDateVente = !!form.value.dateVente
-
-  if (hasResell && !hasDateVente) {
-    error.value = 'Ajoute une date de vente si tu saisis un prix de revente.'
-    return false
-  }
-
-  if (hasDateVente && !hasResell) {
-    form.value.prixResell = 0
-  }
-  return true
-}
-
-// si date saisie sans prix, forcer prixResell = 0
-watch(
-  () => form.value.dateVente,
-  (val) => {
-    if (val && (form.value.prixResell === null || form.value.prixResell === '')) {
-      form.value.prixResell = 0
-    }
-  },
-)
-
-// si on remplit prixResell et qu'une date existe deja, nettoyer erreur eventuelle
-watch(
-  () => form.value.prixResell,
-  () => {
-    if (requiresDateVente.value && form.value.dateVente) error.value = null
-  },
-)
-
-const metadataFields = computed(() => METADATA_FIELDS[form.value.type] || [])
-const cleanedMetadata = computed(() => {
-  const out = {}
-  for (const f of metadataFields.value) {
-    const v = form.value.metadata?.[f.key]
-    if (v !== undefined && v !== null && String(v).trim() !== '') out[f.key] = String(v).trim()
-  }
-  return out
-})
-const currentTypeLabel = computed(() => itemTypeLabel(form.value.type, categoryLabels.value))
-
-watch(
-  () => currentUserId.value,
-  (userId) => {
-    categoryLabels.value = readStoredItemCategories(userId || 'guest')
-    form.value = emptyForm()
-  },
-)
-
-const onCategoryLabelsChange = (event) => {
-  const detail = event?.detail || {}
-  if (String(detail.userId || 'guest') !== String(currentUserId.value || 'guest')) return
-  categoryLabels.value = readStoredItemCategories(currentUserId.value || 'guest')
-}
-
-const onSubcategoriesChange = (event) => {
-  const detail = event?.detail || {}
-  if (String(detail.userId || 'guest') !== String(currentUserId.value || 'guest')) return
-}
-
-if (typeof window !== 'undefined') {
-  window.addEventListener('snk:item-categories-change', onCategoryLabelsChange)
-  window.addEventListener('snk:item-subcategories-change', onSubcategoriesChange)
-}
-
-onBeforeUnmount(() => {
-  if (closeTimer.value) clearTimeout(closeTimer.value)
-  if (typeof window !== 'undefined') {
-    window.removeEventListener('snk:item-categories-change', onCategoryLabelsChange)
-    window.removeEventListener('snk:item-subcategories-change', onSubcategoriesChange)
-  }
-})
-
-const createSales = async () => {
+async function createSales({ payload, quantity }) {
   loading.value = true
   success.value = false
   error.value = null
 
-  if (!validateResellAndDate()) {
-    loading.value = false
-    return
-  }
-
   try {
-    const n = Math.min(50, Math.max(1, Math.trunc(Number(copies.value || 1))))
-    const payload = buildPayload()
+    const n = Math.min(50, Math.max(1, Math.trunc(Number(quantity || 1))))
     await SnkVenteServices.createMany(payload, n)
-
     success.value = true
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('snk:stock-items-change', { detail: { source: 'gestion' } }))
     }
     emit('added')
-
-    const prefill = keepCommonFields.value
-      ? {
-          nomItem: form.value.nomItem,
-          type: form.value.type,
-          categorie: form.value.categorie,
-          description: form.value.description,
-        }
-      : {}
-
-    // Reset form (garde eventuellement certains champs)
-    setTimeout(() => {
-      form.value = emptyForm(prefill)
-      copies.value = 1
-      success.value = false
-      // Si tu preferes garder le modal ouvert, commente la ligne suivante :
+    window.setTimeout(() => {
       handleClose()
-    }, 700)
+    }, 220)
   } catch (err) {
     error.value = err?.response?.data?.message || "Erreur lors de la creation de l'item"
-
     console.error('Erreur:', err)
   } finally {
     loading.value = false
   }
 }
+
+onBeforeUnmount(() => {
+  if (closeTimer.value) window.clearTimeout(closeTimer.value)
+})
 </script>
 
 <style scoped>
@@ -518,11 +135,10 @@ const createSales = async () => {
   color: #0f172a;
   overflow-y: auto;
   overscroll-behavior: contain;
-  scrollbar-width: none;
-  box-shadow: 0 28px 90px rgba(15, 23, 42, 0.24);
-  will-change: transform, opacity;
-  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.22);
 }
+
 .modal-card::before {
   content: '';
   position: sticky;
@@ -532,91 +148,83 @@ const createSales = async () => {
   height: 4px;
   background: linear-gradient(90deg, #0ea5e9, #14b8a6, #f59e0b);
 }
-.modal-card::-webkit-scrollbar {
-  display: none;
-}
+
 .modal-card-header {
   position: sticky;
   top: 4px;
   z-index: 3;
+  border-color: rgba(125, 211, 252, 0.26);
   background:
     linear-gradient(135deg, rgba(236, 253, 245, 0.94), rgba(224, 242, 254, 0.78)),
     rgba(255, 255, 255, 0.96);
   backdrop-filter: blur(10px);
 }
+
 .modal-card-header h3 {
   color: #0f172a;
   font-size: clamp(1.25rem, 2vw, 1.55rem);
   font-weight: 950;
   letter-spacing: 0;
 }
-.modal-form {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.35), rgba(248, 250, 252, 0.62));
-}
-.modal-footer-sticky {
-  position: sticky;
-  bottom: 0;
-  z-index: 2;
-  background: linear-gradient(180deg, rgba(248, 250, 252, 0.86), rgba(255, 255, 255, 0.98));
-  backdrop-filter: blur(6px);
-}
 
-.modal-card :is(.border-gray-700, .border-gray-600) {
-  border-color: rgba(125, 211, 252, 0.32);
-}
-
-.modal-card :is(.text-gray-100, .text-gray-200, .text-gray-300) {
-  color: #0f172a;
-}
-
-.modal-card :is(.text-gray-400, .text-gray-500) {
+.modal-card-header p {
+  margin-top: 0.25rem;
   color: #64748b;
+  font-size: 0.86rem;
+  font-weight: 650;
 }
 
-.modal-card :is(input, textarea) {
-  border-color: rgba(148, 163, 184, 0.28);
-  background: #ffffff;
-  color: #0f172a;
-  min-height: 2.65rem;
-  border-radius: 0.9rem;
-  transition:
-    border-color 140ms ease,
-    background 140ms ease,
-    box-shadow 140ms ease;
-}
-
-.modal-card :is(input, textarea)::placeholder {
-  color: #94a3b8;
-}
-
-.modal-card :is(input, textarea):focus {
-  border-color: rgba(20, 184, 166, 0.72);
-  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.14);
-}
-
-.modal-card button[type='submit'] {
-  border-color: rgba(15, 118, 110, 0.2);
-  background: linear-gradient(135deg, #0f766e, #0e7490);
-  color: #ffffff;
+.modal-close-button {
+  display: inline-grid;
+  width: 2.35rem;
+  height: 2.35rem;
+  place-items: center;
+  border: 1px solid rgba(148, 163, 184, 0.3);
   border-radius: 999px;
-  font-weight: 900;
-  min-height: 2.55rem;
+  background: rgba(255, 255, 255, 0.82);
+  color: #475569;
 }
-.modal-card button:not([type='submit']) {
-  border-radius: 999px;
-  font-weight: 800;
+
+.modal-close-button:hover {
+  border-color: rgba(20, 184, 166, 0.48);
+  background: #ecfdf5;
+  color: #0f766e;
+}
+
+.modal-form {
+  padding: 1rem;
+}
+
+.modal-alert {
+  margin: 0.85rem 1rem 0;
+  border-radius: 12px;
+  padding: 0.7rem 0.85rem;
+  font-size: 0.84rem;
+  font-weight: 750;
+}
+
+.modal-alert--error {
+  border: 1px solid rgba(239, 68, 68, 0.22);
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.modal-alert--success {
+  border: 1px solid rgba(16, 185, 129, 0.24);
+  background: #ecfdf5;
+  color: #047857;
 }
 
 .modal-smooth-enter-active,
 .modal-smooth-leave-active {
-  transition: opacity 150ms ease;
+  transition: opacity 110ms ease;
 }
 
 .modal-smooth-enter-active .modal-card,
 .modal-smooth-leave-active .modal-card {
   transition:
-    transform 180ms cubic-bezier(0.2, 0.9, 0.2, 1),
-    opacity 150ms ease;
+    transform 140ms cubic-bezier(0.2, 0.9, 0.2, 1),
+    opacity 110ms ease;
 }
 
 .modal-smooth-enter-from,
@@ -626,29 +234,26 @@ const createSales = async () => {
 
 .modal-smooth-enter-from .modal-card {
   opacity: 0.96;
-  transform: translateY(12px) scale(0.985);
+  transform: translateY(10px) scale(0.99);
 }
 
 .modal-smooth-leave-to .modal-card {
   opacity: 0.98;
-  transform: translateY(8px) scale(0.99);
+  transform: translateY(6px) scale(0.995);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .modal-smooth-enter-active,
   .modal-smooth-leave-active,
   .modal-smooth-enter-active .modal-card,
-  .modal-smooth-leave-active .modal-card,
-  .modal-card :is(input, textarea) {
+  .modal-smooth-leave-active .modal-card {
     transition: none;
   }
 }
+
 @media (max-width: 639px) {
   .modal-card {
     padding-bottom: max(env(safe-area-inset-bottom), 0.75rem);
-  }
-  .modal-footer-sticky {
-    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
   }
 }
 </style>

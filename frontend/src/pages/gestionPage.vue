@@ -76,67 +76,59 @@
 
             <!-- Tableau -->
             <div class="inventory-list-panel relative z-0">
-              <!-- Header tableau -->
-              <div class="inventory-list-header">
-                <!-- Gauche : titre -->
-                <div>
-                  <h2 class="text-lg font-extrabold text-slate-950 leading-tight">
-                    Liste des items
-                  </h2>
-                  <p class="text-xs font-semibold text-slate-500">
-                    {{ filteredVentes.length }} item(s) trouvee(s)
-                    <span v-if="selectedIds.length">
-                      - {{ selectedIds.length }} selectionnee(s)
-                    </span>
-                  </p>
-                </div>
-
-              </div>
-
-              <div class="inventory-search-strip">
-                <div class="inventory-search-label">
-                  <p>Recherche</p>
-                  <span>Nom, categorie, description ou identifiant</span>
-                </div>
-                <SearchBarre v-model="searchTerm" />
-              </div>
-
-              <div
-                class="inventory-filter-shell"
-                :class="{ 'is-open': filtersPanelOpen, 'has-active': activeFilterCount }"
-              >
-                <div class="inventory-filter-heading">
-                  <div>
-                    <p>Tri et filtres</p>
-                    <span>{{ activeFilterCount || 'Aucun' }} filtre actif</span>
+              <div class="inventory-sticky-tools" :class="{ 'is-condensed': hasScrolledInventory }">
+                <div class="inventory-toolbar">
+                  <div class="inventory-toolbar-copy">
+                    <h2>Liste des items</h2>
+                    <p>
+                      {{ filteredVentes.length }} resultat(s)
+                      <span v-if="hasMoreFilteredVentes">
+                        - {{ visibleFilteredVentes.length }} affiche(s)
+                      </span>
+                      <span v-if="selectedIds.length">
+                        - {{ selectedIds.length }} selectionne(s)
+                      </span>
+                    </p>
                   </div>
 
-                  <div class="filter-toolbar-actions">
+                  <div class="inventory-toolbar-actions">
+                    <GestionActionsPanel
+                      :items="snkVentes"
+                      @vente-ajoutee="handleVenteAjouteeFromActions"
+                    />
                     <button
                       type="button"
-                      class="filter-panel-toggle"
-                      :class="{ 'is-active': filtersPanelOpen || activeFilterCount }"
-                      aria-controls="gestion-filter-panel"
-                      :aria-expanded="filtersPanelOpen"
-                      @click="filtersPanelOpen = !filtersPanelOpen"
+                      class="inventory-danger-button"
+                      @click="openDeleteFromActions"
                     >
-                      <SlidersHorizontal class="h-4 w-4" aria-hidden="true" />
-                      <span>{{ filtersPanelOpen ? 'Masquer' : 'Filtres' }}</span>
-                      <span v-if="activeFilterCount" class="filter-toggle-badge">
-                        {{ activeFilterCount }}
-                      </span>
+                      {{
+                        selectedIds.length
+                          ? `Supprimer (${selectedIds.length})`
+                          : 'Supprimer un item'
+                      }}
                     </button>
                   </div>
                 </div>
 
-                <div
-                  id="gestion-filter-panel"
-                  class="filter-compact-grid"
-                  :class="{ 'is-open': filtersPanelOpen }"
-                >
+                <div class="inventory-control-row">
+                  <SearchBarre v-model="searchTerm" />
                   <button
                     type="button"
-                    class="filter-reset-button filter-reset-button--panel"
+                    class="filter-panel-toggle"
+                    :class="{ 'is-active': filtersPanelOpen || activeFilterCount }"
+                    aria-controls="gestion-filter-panel"
+                    :aria-expanded="filtersPanelOpen"
+                    @click="filtersPanelOpen = !filtersPanelOpen"
+                  >
+                    <SlidersHorizontal class="h-4 w-4" aria-hidden="true" />
+                    <span>{{ filtersPanelOpen ? 'Masquer' : 'Filtres' }}</span>
+                    <span v-if="activeFilterCount" class="filter-toggle-badge">
+                      {{ activeFilterCount }}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    class="filter-reset-button filter-reset-button--inline"
                     :disabled="!hasActiveFilters"
                     :title="hasActiveFilters ? 'Reinitialiser les filtres' : 'Aucun filtre actif'"
                     :aria-label="
@@ -146,122 +138,139 @@
                   >
                     <RotateCcw class="h-3.5 w-3.5" />
                     <span class="filter-reset-text">Reset</span>
-                    <span v-if="activeFilterCount" class="filter-count-badge">
-                      {{ activeFilterCount }}
-                    </span>
                   </button>
-
-                  <GestionFilterDropdown
-                    v-model="filters.itemType"
-                    label="Type item"
-                    :options="filterItemTypeOptions"
-                    icon-mode="type"
-                  />
-
-                  <GestionFilterDropdown
-                    v-model="filters.category"
-                    label="Sous-categorie"
-                    :options="filterCategoryOptions"
-                    :disabled="!selectedItemType"
-                    icon-mode="subcategory"
-                    :placeholder="selectedItemType ? 'Toutes' : 'Choisir un type'"
-                  />
-
-                  <label class="filter-field filter-field--status">
-                    <span>Statut</span>
-                    <select v-model="filters.status" class="filter-control">
-                      <option
-                        v-for="option in statusOptions"
-                        :key="option.value"
-                        :value="option.value"
-                      >
-                        {{ option.label }}
-                      </option>
-                    </select>
-                  </label>
-
-                  <label class="filter-field">
-                    <span>Tri</span>
-                    <select v-model="filters.sort" class="filter-control">
-                      <option
-                        v-for="option in sortOptions"
-                        :key="option.value"
-                        :value="option.value"
-                      >
-                        {{ option.label }}
-                      </option>
-                    </select>
-                  </label>
-
-                  <section class="date-range-compact">
-                    <div class="date-range-title">
-                      <CalendarDays class="h-3.5 w-3.5" />
-                      <span>Achat</span>
-                    </div>
-                    <div class="date-range-inputs">
-                      <CompactDateInput
-                        v-model="filters.purchaseFrom"
-                        size="md"
-                        aria-label="Date d'achat debut"
-                      />
-                      <span class="date-range-separator" aria-hidden="true">-</span>
-                      <CompactDateInput
-                        v-model="filters.purchaseTo"
-                        size="md"
-                        aria-label="Date d'achat fin"
-                      />
-                    </div>
-                  </section>
-
-                  <section class="date-range-compact">
-                    <div class="date-range-title">
-                      <CalendarDays class="h-3.5 w-3.5" />
-                      <span>Vente</span>
-                    </div>
-                    <div class="date-range-inputs">
-                      <CompactDateInput
-                        v-model="filters.saleFrom"
-                        size="md"
-                        aria-label="Date de vente debut"
-                      />
-                      <span class="date-range-separator" aria-hidden="true">-</span>
-                      <CompactDateInput
-                        v-model="filters.saleTo"
-                        size="md"
-                        aria-label="Date de vente fin"
-                      />
-                    </div>
-                  </section>
                 </div>
-              </div>
 
-              <!-- Liste -->
-              <div class="inventory-actions inventory-actions--list">
-                <div class="inventory-actions-panel inventory-actions-panel--list">
-                  <GestionActionsPanel
-                    :items="snkVentes"
-                    @vente-ajoutee="handleVenteAjouteeFromActions"
-                  />
-                  <div class="[&_button:hover]:bg-red-900">
+                <div
+                  class="inventory-filter-shell"
+                  :class="{ 'is-open': filtersPanelOpen, 'has-active': activeFilterCount }"
+                >
+                  <div
+                    id="gestion-filter-panel"
+                    class="filter-compact-grid"
+                    :class="{ 'is-open': filtersPanelOpen }"
+                  >
                     <button
                       type="button"
-                      class="inventory-danger-button"
-                      @click="openDeleteFromActions"
+                      class="filter-reset-button filter-reset-button--panel"
+                      :disabled="!hasActiveFilters"
+                      :title="hasActiveFilters ? 'Reinitialiser les filtres' : 'Aucun filtre actif'"
+                      :aria-label="
+                        hasActiveFilters ? 'Reinitialiser les filtres' : 'Aucun filtre actif'
+                      "
+                      @click="resetFilters"
                     >
-                      Supprimer un item
+                      <RotateCcw class="h-3.5 w-3.5" />
+                      <span class="filter-reset-text">Reset</span>
+                      <span v-if="activeFilterCount" class="filter-count-badge">
+                        {{ activeFilterCount }}
+                      </span>
                     </button>
+
+                    <GestionFilterDropdown
+                      v-model="filters.itemType"
+                      label="Type item"
+                      :options="filterItemTypeOptions"
+                      icon-mode="type"
+                    />
+
+                    <GestionFilterDropdown
+                      v-model="filters.category"
+                      label="Sous-categorie"
+                      :options="filterCategoryOptions"
+                      :disabled="!selectedItemType"
+                      icon-mode="subcategory"
+                      :placeholder="selectedItemType ? 'Toutes' : 'Choisir un type'"
+                    />
+
+                    <label class="filter-field filter-field--status">
+                      <span>Statut</span>
+                      <select v-model="filters.status" class="filter-control">
+                        <option
+                          v-for="option in statusOptions"
+                          :key="option.value"
+                          :value="option.value"
+                        >
+                          {{ option.label }}
+                        </option>
+                      </select>
+                    </label>
+
+                    <label class="filter-field">
+                      <span>Tri</span>
+                      <select v-model="filters.sort" class="filter-control">
+                        <option
+                          v-for="option in sortOptions"
+                          :key="option.value"
+                          :value="option.value"
+                        >
+                          {{ option.label }}
+                        </option>
+                      </select>
+                    </label>
+
+                    <section class="date-range-compact">
+                      <div class="date-range-title">
+                        <CalendarDays class="h-3.5 w-3.5" />
+                        <span>Achat</span>
+                      </div>
+                      <div class="date-range-inputs">
+                        <CompactDateInput
+                          v-model="filters.purchaseFrom"
+                          size="md"
+                          aria-label="Date d'achat debut"
+                        />
+                        <span class="date-range-separator" aria-hidden="true">-</span>
+                        <CompactDateInput
+                          v-model="filters.purchaseTo"
+                          size="md"
+                          aria-label="Date d'achat fin"
+                        />
+                      </div>
+                    </section>
+
+                    <section class="date-range-compact">
+                      <div class="date-range-title">
+                        <CalendarDays class="h-3.5 w-3.5" />
+                        <span>Vente</span>
+                      </div>
+                      <div class="date-range-inputs">
+                        <CompactDateInput
+                          v-model="filters.saleFrom"
+                          size="md"
+                          aria-label="Date de vente debut"
+                        />
+                        <span class="date-range-separator" aria-hidden="true">-</span>
+                        <CompactDateInput
+                          v-model="filters.saleTo"
+                          size="md"
+                          aria-label="Date de vente fin"
+                        />
+                      </div>
+                    </section>
                   </div>
                 </div>
               </div>
 
               <div class="inventory-list-body">
-                <div class="inventory-list-scroll">
+                <div
+                  ref="inventoryScrollRef"
+                  class="inventory-list-scroll"
+                  @scroll.passive="handleInventoryScroll"
+                >
                   <afficherTout
-                    :snkVentes="filteredVentes"
+                    :snkVentes="visibleFilteredVentes"
                     selectable
                     v-model="selectedIds"
                     @edit="openEditModal"
+                    @delete="requestDeleteItems"
                   />
+                  <div v-if="hasMoreFilteredVentes" class="inventory-load-more">
+                    <button type="button" @click="loadMoreFilteredVentes">
+                      Afficher plus
+                      <span>{{ visibleFilteredVentes.length }} / {{ filteredVentes.length }}</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -288,11 +297,44 @@
           :selectedIds="selectedIds"
           :defaultMode="deleteMode"
           @close="showDeleteModal = false"
-          @deleted="handleDeleted"
+          @delete-requested="requestDeleteItems"
         />
         <div class="gestion-import-widget">
           <CsvImportExportWidget :filteredRows="filteredVentes" @imported="reloadVentes" />
         </div>
+
+        <Transition name="back-to-top">
+          <button
+            v-if="showBackToTop"
+            type="button"
+            class="gestion-back-to-top"
+            aria-label="Retour en haut de la liste"
+            @click="scrollInventoryToTop"
+          >
+            <ArrowUp class="h-4 w-4" aria-hidden="true" />
+          </button>
+        </Transition>
+
+        <TransitionGroup name="gestion-undo-toast" tag="div" class="gestion-undo-stack">
+          <article
+            v-for="toast in pendingDeleteToasts"
+            :key="toast.id"
+            class="gestion-undo-toast"
+            :class="`is-${toast.state}`"
+          >
+            <div>
+              <p>{{ toast.title }}</p>
+              <span>{{ toast.message }}</span>
+            </div>
+            <button
+              v-if="toast.state === 'pending'"
+              type="button"
+              @click="undoPendingDelete(toast.id)"
+            >
+              Annuler
+            </button>
+          </article>
+        </TransitionGroup>
       </template>
     </div>
   </div>
@@ -302,6 +344,7 @@
 import { ref, onMounted, onBeforeUnmount, computed, watch, defineAsyncComponent } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
+  ArrowUp,
   CalendarDays,
   ClipboardList,
   PackageSearch,
@@ -366,11 +409,26 @@ const tabFromRoute = () => {
 }
 const activeGestionTab = ref(tabFromRoute())
 const filtersPanelOpen = ref(false)
+const inventoryScrollRef = ref(null)
+const showBackToTop = ref(false)
+const hasScrolledInventory = ref(false)
+const renderLimit = ref(80)
+const pendingDeleteToasts = ref([])
+const pendingDeleteTimers = new Map()
+let pendingDeleteSequence = 0
 
 const EMPTY_CATEGORY_VALUE = '__empty_category__'
+const INITIAL_RENDER_LIMIT = 80
+const RENDER_BATCH_SIZE = 80
+const DELETE_UNDO_DELAY_MS = 5200
+const MAX_SEARCH_WORDS = 120
 const SEARCH_EXTRA_FIELDS = [
   'marque',
   'brand',
+  'tags',
+  'tag',
+  'labels',
+  'label',
   'size',
   'taille',
   'pointure',
@@ -587,7 +645,7 @@ const buildVenteSearchRecord = (vente) => {
     vente,
     text,
     compact: text.replace(/\s+/g, ''),
-    words: text.split(/\s+/).filter(Boolean),
+    words: Array.from(new Set(text.split(/\s+/).filter(Boolean))).slice(0, MAX_SEARCH_WORDS),
   }
 }
 
@@ -602,24 +660,112 @@ const searchDescriptor = computed(() => {
   }
 })
 
-const wordMatchesSearchToken = (word, token) => {
-  if (!word || !token) return false
-  if (word === token) return true
-  if (word.startsWith(token)) return true
-  return token.length >= 2 && word.includes(token)
+const maxDistanceForToken = (token) => {
+  if (token.length < 3) return 0
+  if (token.length <= 5) return 1
+  return 2
 }
 
-const recordMatchesSearch = (record, search) => {
-  if (!search.query) return true
-  if (record.text.includes(search.query)) return true
-  if (search.compact.length >= 3 && record.compact.includes(search.compact)) return true
+const editDistanceWithin = (a, b, maxDistance) => {
+  if (!maxDistance && a !== b) return false
+  if (Math.abs(a.length - b.length) > maxDistance) return false
+  if (a.length > 36 || b.length > 36) return false
 
-  return search.tokens.every((token) => {
-    if (token.length === 1) return record.words.some((word) => word === token)
-    if (record.text.includes(token)) return true
-    if (token.length >= 3 && record.compact.includes(token)) return true
-    return record.words.some((word) => wordMatchesSearchToken(word, token))
-  })
+  let previous = Array.from({ length: b.length + 1 }, (_, index) => index)
+  for (let i = 1; i <= a.length; i += 1) {
+    const current = [i]
+    let rowMin = current[0]
+
+    for (let j = 1; j <= b.length; j += 1) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1
+      const value = Math.min(previous[j] + 1, current[j - 1] + 1, previous[j - 1] + cost)
+      current[j] = value
+      rowMin = Math.min(rowMin, value)
+    }
+
+    if (rowMin > maxDistance) return false
+    previous = current
+  }
+
+  return previous[b.length] <= maxDistance
+}
+
+const hasSimpleTransposition = (a, b) => {
+  if (a.length !== b.length || a.length < 4 || a === b) return false
+
+  const diffs = []
+  for (let index = 0; index < a.length; index += 1) {
+    if (a[index] !== b[index]) diffs.push(index)
+    if (diffs.length > 2) return false
+  }
+
+  return (
+    diffs.length === 2 &&
+    a[diffs[0]] === b[diffs[1]] &&
+    a[diffs[1]] === b[diffs[0]]
+  )
+}
+
+const searchScoreForWord = (word, token) => {
+  if (!word || !token) return 0
+  if (word === token) return 48
+  if (word.startsWith(token)) return 38
+  if (word.includes(token)) return 30
+  if (token.length >= 4 && token.includes(word)) return 20
+  if (hasSimpleTransposition(word, token)) return 24
+
+  const maxDistance = maxDistanceForToken(token)
+  if (!maxDistance) return 0
+
+  if (editDistanceWithin(token, word, maxDistance)) return 18
+
+  const prefix = word.slice(0, Math.min(word.length, token.length + maxDistance))
+  if (prefix.length >= token.length - maxDistance && editDistanceWithin(token, prefix, maxDistance)) {
+    return 16
+  }
+
+  return 0
+}
+
+const searchScoreForRecord = (record, search) => {
+  if (!search.query) return 1
+  if (record.text.includes(search.query)) return 1000 + search.query.length
+  if (search.compact.length >= 3 && record.compact.includes(search.compact)) {
+    return 900 + search.compact.length
+  }
+
+  let score = 0
+
+  for (const token of search.tokens) {
+    if (!token) continue
+    if (token.length === 1) {
+      const exactShortToken = record.words.some((word) => word === token)
+      if (!exactShortToken) return 0
+      score += 8
+      continue
+    }
+
+    if (record.text.includes(token)) {
+      score += 72
+      continue
+    }
+
+    if (token.length >= 3 && record.compact.includes(token)) {
+      score += 56
+      continue
+    }
+
+    let bestWordScore = 0
+    for (const word of record.words) {
+      bestWordScore = Math.max(bestWordScore, searchScoreForWord(word, token))
+      if (bestWordScore >= 48) break
+    }
+
+    if (!bestWordScore) return 0
+    score += bestWordScore
+  }
+
+  return score
 }
 
 const sanitizeFilters = (rawFilters) => {
@@ -694,11 +840,18 @@ const buildFilteredVentes = () => {
   let records = indexedVentes.value
 
   if (search.query) {
-    records = records.filter((record) => recordMatchesSearch(record, search))
+    records = records
+      .map((record) => ({ ...record, searchScore: searchScoreForRecord(record, search) }))
+      .filter((record) => record.searchScore > 0)
   }
 
-  let list = records.map((record) => record.vente)
-  list = list.filter((vente) => venteMatchesFilters(vente, activeFilters))
+  records = records.filter((record) => venteMatchesFilters(record.vente, activeFilters))
+
+  if (search.query && activeFilters.sort === 'none') {
+    records = [...records].sort((a, b) => (b.searchScore || 0) - (a.searchScore || 0))
+  }
+
+  const list = records.map((record) => record.vente)
   return sortVentes(list, activeFilters.sort)
 }
 
@@ -804,14 +957,20 @@ watch(searchTerm, (value) => {
 onMounted(() => {
   window.addEventListener('snk:item-categories-change', onCategoryLabelsChange)
   window.addEventListener('snk:item-subcategories-change', onSubcategoriesChange)
+  window.addEventListener('scroll', updateBackToTopState, { passive: true })
+  updateBackToTopState()
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('snk:item-categories-change', onCategoryLabelsChange)
   window.removeEventListener('snk:item-subcategories-change', onSubcategoriesChange)
+  window.removeEventListener('scroll', updateBackToTopState)
   if (searchDebounceTimer) {
     window.clearTimeout(searchDebounceTimer)
     searchDebounceTimer = null
+  }
+  for (const toastId of pendingDeleteTimers.keys()) {
+    clearPendingDeleteTimer(toastId)
   }
 })
 
@@ -838,6 +997,33 @@ const valeurStock = computed(() => inventorySummary.value.valeurStock)
 
 // Recherche + filtres
 const filteredVentes = computed(() => buildFilteredVentes())
+const visibleFilteredVentes = computed(() => filteredVentes.value.slice(0, renderLimit.value))
+const hasMoreFilteredVentes = computed(() => visibleFilteredVentes.value.length < filteredVentes.value.length)
+
+const loadMoreFilteredVentes = () => {
+  renderLimit.value = Math.min(renderLimit.value + RENDER_BATCH_SIZE, filteredVentes.value.length)
+}
+
+const updateBackToTopState = () => {
+  const listTop = inventoryScrollRef.value?.scrollTop ?? 0
+  const pageTop = window.scrollY || document.documentElement.scrollTop || 0
+  hasScrolledInventory.value = listTop > 10
+  showBackToTop.value = listTop > 240 || pageTop > 520
+}
+
+const handleInventoryScroll = (event) => {
+  const target = event?.currentTarget
+  updateBackToTopState()
+
+  if (!target || !hasMoreFilteredVentes.value) return
+  const distanceToBottom = target.scrollHeight - target.scrollTop - target.clientHeight
+  if (distanceToBottom < 180) loadMoreFilteredVentes()
+}
+
+const scrollInventoryToTop = () => {
+  inventoryScrollRef.value?.scrollTo({ top: 0, behavior: 'smooth' })
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
 
 const resetFilters = () => {
   searchTerm.value = ''
@@ -847,8 +1033,10 @@ const resetFilters = () => {
 
 // Selection logique : si tu filtres, on garde seulement ce qui est visible
 watch(filteredVentes, (list) => {
+  renderLimit.value = Math.min(INITIAL_RENDER_LIMIT, Math.max(list.length, INITIAL_RENDER_LIMIT))
   const visible = new Set(list.map((v) => v.id))
   selectedIds.value = selectedIds.value.filter((id) => visible.has(id))
+  requestAnimationFrame(updateBackToTopState)
 })
 
 // Ajout
@@ -871,19 +1059,137 @@ const handleVenteUpdated = (updated) => {
   if (index !== -1) snkVentes.value[index] = updated
 }
 
-const openDeleteBulk = () => {
-  deleteMode.value = 'bulk'
+const openDeleteFromActions = () => {
+  if (selectedIds.value.length) {
+    requestDeleteItems(selectedIds.value)
+    return
+  }
+
+  deleteMode.value = 'name'
   showDeleteModal.value = true
 }
 
-const openDeleteFromActions = () => {
-  openDeleteBulk()
+const itemName = (vente) => String(vente?.nomItem ?? vente?.nom_item ?? 'Item').trim() || 'Item'
+
+const clearPendingDeleteTimer = (toastId) => {
+  const timer = pendingDeleteTimers.get(toastId)
+  if (timer) window.clearTimeout(timer)
+  pendingDeleteTimers.delete(toastId)
 }
 
-const handleDeleted = (ids) => {
-  const set = new Set(ids)
-  snkVentes.value = snkVentes.value.filter((v) => !set.has(v.id))
-  selectedIds.value = selectedIds.value.filter((id) => !set.has(id))
+const updatePendingDeleteToast = (toastId, patch) => {
+  pendingDeleteToasts.value = pendingDeleteToasts.value.map((toast) =>
+    toast.id === toastId ? { ...toast, ...patch } : toast,
+  )
+}
+
+const removePendingDeleteToast = (toastId) => {
+  clearPendingDeleteTimer(toastId)
+  pendingDeleteToasts.value = pendingDeleteToasts.value.filter((toast) => toast.id !== toastId)
+}
+
+const restoreDeletedSnapshots = (snapshots) => {
+  const next = [...snkVentes.value]
+  for (const snapshot of [...snapshots].sort((a, b) => a.index - b.index)) {
+    if (!snapshot.vente || next.some((vente) => vente.id === snapshot.vente.id)) continue
+    next.splice(Math.min(snapshot.index, next.length), 0, snapshot.vente)
+  }
+  snkVentes.value = next
+}
+
+const commitPendingDelete = async (toastId) => {
+  const toast = pendingDeleteToasts.value.find((item) => item.id === toastId)
+  if (!toast || toast.state !== 'pending') return
+
+  clearPendingDeleteTimer(toastId)
+  updatePendingDeleteToast(toastId, {
+    state: 'syncing',
+    message: 'Suppression en cours...',
+  })
+
+  try {
+    if (toast.ids.length === 1) {
+      await SnkVenteServices.supprimer(toast.ids[0])
+    } else {
+      const response = await SnkVenteServices.supprimerEnMasse(toast.ids)
+      const deleted = response?.data?.deleted ?? toast.ids.length
+      if (deleted < toast.ids.length) {
+        await reloadVentes()
+        updatePendingDeleteToast(toastId, {
+          state: 'error',
+          title: 'Suppression partielle',
+          message: `${toast.ids.length - deleted} item(s) n'ont pas pu etre supprime(s).`,
+        })
+        window.setTimeout(() => removePendingDeleteToast(toastId), 3600)
+        return
+      }
+    }
+
+    removePendingDeleteToast(toastId)
+  } catch (error) {
+    console.error('Erreur suppression differee', error)
+    restoreDeletedSnapshots(toast.snapshots)
+    updatePendingDeleteToast(toastId, {
+      state: 'error',
+      title: 'Suppression annulee',
+      message: "L'appel serveur a echoue. Les items sont revenus dans la liste.",
+    })
+    window.setTimeout(() => removePendingDeleteToast(toastId), 4200)
+  }
+}
+
+const requestDeleteItems = (ids = []) => {
+  const uniqueIds = Array.from(new Set(ids)).filter((id) => id !== null && id !== undefined)
+  if (!uniqueIds.length) return
+
+  showDeleteModal.value = false
+
+  const idSet = new Set(uniqueIds)
+  const snapshots = []
+  snkVentes.value.forEach((vente, index) => {
+    if (idSet.has(vente.id)) snapshots.push({ vente, index })
+  })
+
+  if (!snapshots.length) return
+
+  const deletedIds = snapshots.map((snapshot) => snapshot.vente.id)
+  const deletedSet = new Set(deletedIds)
+  snkVentes.value = snkVentes.value.filter((vente) => !deletedSet.has(vente.id))
+  selectedIds.value = selectedIds.value.filter((id) => !deletedSet.has(id))
+
+  pendingDeleteSequence += 1
+  const toastId = `gestion-delete-${Date.now()}-${pendingDeleteSequence}`
+  const count = snapshots.length
+  const title = count === 1 ? `${itemName(snapshots[0].vente)} retire` : `${count} items retires`
+  const message =
+    count === 1
+      ? 'Suppression definitive dans quelques secondes.'
+      : 'Suppression definitive de la selection dans quelques secondes.'
+
+  pendingDeleteToasts.value = [
+    {
+      id: toastId,
+      ids: deletedIds,
+      snapshots,
+      state: 'pending',
+      title,
+      message,
+    },
+    ...pendingDeleteToasts.value,
+  ].slice(0, 3)
+
+  const timer = window.setTimeout(() => {
+    void commitPendingDelete(toastId)
+  }, DELETE_UNDO_DELAY_MS)
+  pendingDeleteTimers.set(toastId, timer)
+}
+
+const undoPendingDelete = (toastId) => {
+  const toast = pendingDeleteToasts.value.find((item) => item.id === toastId)
+  if (!toast || toast.state !== 'pending') return
+
+  restoreDeletedSnapshots(toast.snapshots)
+  removePendingDeleteToast(toastId)
 }
 
 const reloadVentes = async () => {
@@ -2477,6 +2783,407 @@ watch(
 
   .inventory-list-scroll {
     max-height: clamp(540px, 64dvh, 900px);
+  }
+}
+
+.gestion-page-light :is(button, [role='button'], select, summary) {
+  cursor: pointer;
+}
+
+.gestion-page-light :is(button, [role='button']):active {
+  transform: translateY(0) scale(0.97);
+}
+
+.gestion-tab-button,
+.filter-panel-toggle,
+.filter-reset-button,
+.filter-control,
+.inventory-danger-button {
+  transition:
+    border-color 170ms ease,
+    background-color 170ms ease,
+    color 170ms ease,
+    box-shadow 170ms ease,
+    transform 140ms ease;
+}
+
+.gestion-tab-button:hover,
+.filter-panel-toggle:hover,
+.filter-reset-button:not(:disabled):hover,
+.inventory-danger-button:hover {
+  transform: translateY(-1px);
+}
+
+.inventory-list-panel {
+  overflow: visible;
+}
+
+.inventory-sticky-tools {
+  position: sticky;
+  top: max(0.75rem, env(safe-area-inset-top));
+  z-index: 24;
+  overflow: hidden;
+  border-radius: 20px 20px 16px 16px;
+  background: rgba(251, 250, 247, 0.94);
+  box-shadow:
+    0 16px 34px rgba(15, 23, 42, 0.08),
+    0 1px 0 rgba(255, 255, 255, 0.8) inset;
+  backdrop-filter: blur(14px) saturate(115%);
+  transition:
+    box-shadow 180ms ease,
+    transform 180ms ease,
+    background-color 180ms ease;
+}
+
+.inventory-sticky-tools.is-condensed {
+  background: rgba(251, 250, 247, 0.98);
+  box-shadow:
+    0 18px 38px rgba(15, 23, 42, 0.12),
+    0 1px 0 rgba(255, 255, 255, 0.88) inset;
+}
+
+.inventory-list-scroll {
+  scroll-behavior: smooth;
+  will-change: scroll-position;
+}
+
+.inventory-load-more {
+  display: flex;
+  justify-content: center;
+  padding: 0.85rem 0 0.2rem;
+}
+
+.inventory-load-more button {
+  display: inline-flex;
+  min-height: 2.45rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  border: 1px solid rgba(20, 184, 166, 0.3);
+  border-radius: 999px;
+  background: #ecfdf5;
+  color: #0f766e;
+  padding: 0 0.95rem;
+  font-size: 0.82rem;
+  font-weight: 900;
+  box-shadow: 0 10px 22px rgba(14, 116, 144, 0.08);
+}
+
+.inventory-load-more button:hover {
+  border-color: rgba(20, 184, 166, 0.5);
+  background: #ccfbf1;
+  transform: translateY(-1px);
+}
+
+.inventory-load-more button span {
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+.gestion-back-to-top {
+  position: fixed;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  z-index: 35;
+  display: inline-grid;
+  width: 2.8rem;
+  height: 2.8rem;
+  place-items: center;
+  border: 1px solid rgba(20, 184, 166, 0.34);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #0f766e;
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.16);
+  backdrop-filter: blur(10px);
+}
+
+.gestion-back-to-top:hover {
+  border-color: rgba(20, 184, 166, 0.56);
+  background: #ecfdf5;
+  transform: translateY(-2px);
+}
+
+.back-to-top-enter-active,
+.back-to-top-leave-active {
+  transition:
+    opacity 170ms ease,
+    transform 170ms ease;
+}
+
+.back-to-top-enter-from,
+.back-to-top-leave-to {
+  opacity: 0;
+  transform: translateY(8px) scale(0.94);
+}
+
+.gestion-undo-stack {
+  position: fixed;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: max(4.35rem, calc(env(safe-area-inset-bottom) + 4.35rem));
+  z-index: 45;
+  display: grid;
+  width: min(24rem, calc(100vw - 2rem));
+  gap: 0.6rem;
+  pointer-events: none;
+}
+
+.gestion-undo-toast {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  border: 1px solid rgba(20, 184, 166, 0.32);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.96);
+  color: #0f172a;
+  padding: 0.78rem;
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.16);
+  backdrop-filter: blur(12px) saturate(115%);
+  pointer-events: auto;
+}
+
+.gestion-undo-toast.is-syncing {
+  border-color: rgba(14, 165, 233, 0.32);
+}
+
+.gestion-undo-toast.is-error {
+  border-color: rgba(239, 68, 68, 0.34);
+  background: #fff7f7;
+}
+
+.gestion-undo-toast p {
+  color: #0f172a;
+  font-size: 0.85rem;
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+.gestion-undo-toast span {
+  display: block;
+  margin-top: 0.16rem;
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.gestion-undo-toast button {
+  min-height: 2.2rem;
+  border: 1px solid rgba(20, 184, 166, 0.34);
+  border-radius: 999px;
+  background: #ecfdf5;
+  color: #0f766e;
+  padding: 0 0.78rem;
+  font-size: 0.78rem;
+  font-weight: 950;
+}
+
+.gestion-undo-toast button:hover {
+  border-color: rgba(20, 184, 166, 0.56);
+  background: #ccfbf1;
+  transform: translateY(-1px);
+}
+
+.gestion-undo-toast-enter-active,
+.gestion-undo-toast-leave-active,
+.gestion-undo-toast-move {
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+
+.gestion-undo-toast-enter-from,
+.gestion-undo-toast-leave-to {
+  opacity: 0;
+  transform: translateY(10px) scale(0.96);
+}
+
+@media (max-width: 760px) {
+  .inventory-sticky-tools {
+    top: 0.45rem;
+    border-radius: 18px;
+  }
+
+  .gestion-undo-stack {
+    right: 0.75rem;
+    bottom: 4rem;
+    width: calc(100vw - 1.5rem);
+  }
+
+  .gestion-back-to-top {
+    right: 0.75rem;
+    bottom: 0.75rem;
+  }
+}
+
+.inventory-sticky-tools {
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.075);
+}
+
+.inventory-sticky-tools.is-condensed {
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
+}
+
+.inventory-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.9rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+  padding: 0.86rem clamp(0.95rem, 1.8vw, 1.25rem) 0.72rem;
+}
+
+.inventory-toolbar-copy {
+  min-width: 0;
+}
+
+.inventory-toolbar-copy h2 {
+  color: #0f172a;
+  font-size: 1.05rem;
+  font-weight: 950;
+  line-height: 1.1;
+}
+
+.inventory-toolbar-copy p {
+  margin-top: 0.22rem;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.inventory-toolbar-actions {
+  display: inline-flex;
+  min-width: max-content;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.55rem;
+}
+
+.inventory-toolbar-actions > * {
+  min-width: 0;
+}
+
+.inventory-control-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.68rem clamp(0.95rem, 1.8vw, 1.25rem);
+}
+
+.inventory-control-row :deep(.gestion-search-field) {
+  min-height: 46px;
+  border-radius: 14px;
+  border-color: rgba(148, 163, 184, 0.26);
+  box-shadow: none;
+}
+
+.inventory-control-row :deep(.gestion-search-field:hover),
+.inventory-control-row :deep(.gestion-search-field:focus-within) {
+  border-color: rgba(20, 184, 166, 0.42);
+  box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.11);
+}
+
+.inventory-control-row :deep(.gestion-search-icon) {
+  width: 1.08rem;
+  height: 1.08rem;
+}
+
+.inventory-control-row :deep(.gestion-search-input) {
+  font-size: 0.94rem;
+}
+
+.inventory-control-row .filter-panel-toggle {
+  width: auto;
+  min-width: 7rem;
+  height: 46px;
+  border-radius: 14px;
+  padding-inline: 0.9rem;
+}
+
+.filter-reset-button--inline {
+  width: 46px;
+  min-width: 46px;
+  height: 46px;
+  border-radius: 14px;
+}
+
+.inventory-filter-shell:not(.is-open) {
+  display: none;
+}
+
+.inventory-filter-shell.is-open {
+  display: grid;
+  border-top: 1px solid rgba(148, 163, 184, 0.14);
+  border-bottom: 0;
+  background: rgba(248, 250, 252, 0.76);
+  padding: 0.68rem clamp(0.95rem, 1.8vw, 1.25rem) 0.8rem;
+}
+
+.inventory-filter-shell.is-open .filter-compact-grid.is-open {
+  grid-template-columns:
+    minmax(5.5rem, 0.34fr)
+    minmax(8rem, 0.7fr)
+    minmax(9rem, 0.76fr)
+    minmax(7rem, 0.48fr)
+    minmax(6.2rem, 0.42fr)
+    minmax(10.5rem, 0.88fr)
+    minmax(10.5rem, 0.88fr);
+}
+
+.inventory-danger-button {
+  width: auto;
+  min-height: 44px;
+  border-radius: 14px;
+  padding-inline: 1rem;
+  font-size: 0.82rem;
+}
+
+.inventory-toolbar-actions :deep(button) {
+  min-height: 44px;
+  border-radius: 14px;
+}
+
+.inventory-list-body {
+  padding-top: 0.8rem;
+}
+
+@media (max-width: 920px) {
+  .inventory-toolbar {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .inventory-toolbar-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-width: 0;
+  }
+
+  .inventory-control-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .filter-reset-button--inline {
+    display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .inventory-toolbar-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .inventory-control-row {
+    grid-template-columns: 1fr;
+  }
+
+  .inventory-control-row .filter-panel-toggle {
+    width: 100%;
   }
 }
 </style>
