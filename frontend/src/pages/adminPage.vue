@@ -53,7 +53,19 @@
 
             <div class="info-grid">
               <article v-for="row in generalRows" :key="row.label" class="info-row">
-                <span>{{ row.label }}</span>
+                <div class="info-row-head">
+                  <span>{{ row.label }}</span>
+                  <button
+                    v-if="!row.missing"
+                    type="button"
+                    class="copy-chip"
+                    :aria-label="`Copier ${row.label}`"
+                    @click="copyGeneralRow(row)"
+                  >
+                    <Copy class="copy-chip-icon" aria-hidden="true" />
+                    <span>Copier</span>
+                  </button>
+                </div>
                 <strong v-if="!row.missing">{{ row.value }}</strong>
                 <RouterLink v-else :to="{ name: 'account' }" class="missing-link">
                   A completer dans Mon compte
@@ -76,18 +88,33 @@
               <div class="period-card" aria-label="Periode declarative">
                 <div class="period-card-title">
                   <CalendarDays class="button-icon" aria-hidden="true" />
-                  <span>Periode</span>
+                  <span>Periode declaree</span>
                 </div>
                 <div class="period-controls">
                   <label>
-                    Debut
-                    <input v-model="periodStart" type="date" @change="handlePeriodChange" />
+                    Annee
+                    <select v-model.number="periodYear" @change="handlePeriodChange">
+                      <option v-for="year in yearOptions" :key="year" :value="year">{{ year }}</option>
+                    </select>
                   </label>
-                  <label>
-                    Fin
-                    <input v-model="periodEnd" type="date" @change="handlePeriodChange" />
+                  <label v-if="isQuarterlyDeclaration">
+                    Trimestre
+                    <select v-model.number="selectedQuarter" @change="handlePeriodChange">
+                      <option v-for="quarter in quarterOptions" :key="quarter.value" :value="quarter.value">
+                        {{ quarter.label }}
+                      </option>
+                    </select>
+                  </label>
+                  <label v-else>
+                    Mois
+                    <select v-model.number="selectedMonth" @change="handlePeriodChange">
+                      <option v-for="month in monthOptions" :key="month.value" :value="month.value">
+                        {{ month.label }}
+                      </option>
+                    </select>
                   </label>
                 </div>
+                <p class="period-help">{{ periodSelectorHelp }}</p>
                 <button
                   type="button"
                   class="icon-button ghost icon-button--compact"
@@ -132,19 +159,15 @@
               <span>Ne deduis pas les achats, frais, commissions, livraison, charges ou autres couts.</span>
             </div>
 
-            <div v-if="visibleAlerts.length" class="alert-list">
-              <div
-                v-for="alert in visibleAlerts"
-                :key="`${alert.title}-${alert.message}`"
-                class="inline-alert"
-                :class="alertClass(alert.severity)"
-              >
-                <AlertTriangle v-if="alert.severity !== 'info'" class="notice-icon" aria-hidden="true" />
-                <Info v-else class="notice-icon" aria-hidden="true" />
-                <div>
-                  <strong>{{ alert.title }}</strong>
-                  <p>{{ alert.message }}</p>
-                </div>
+            <div class="annual-note">
+              <Info class="notice-icon" aria-hidden="true" />
+              <div>
+                <strong>Declaration annuelle</strong>
+                <p>
+                  Oui, il y a aussi la declaration annuelle d'impot sur le revenu. Elle se fait cote impots,
+                  avec le formulaire 2042 C PRO. Elle ne remplace pas les declarations URSSAF mensuelles
+                  ou trimestrielles.
+                </p>
               </div>
             </div>
 
@@ -266,8 +289,9 @@ const summary = ref(null)
 const documents = ref([])
 const activeTab = ref('urssaf')
 const periodTouched = ref(false)
-const periodStart = ref(dateToInputValue(new Date(today.getFullYear(), today.getMonth(), 1)))
-const periodEnd = ref(dateToInputValue(today))
+const periodYear = ref(initialYear)
+const selectedMonth = ref(today.getMonth() + 1)
+const selectedQuarter = ref(Math.floor(today.getMonth() / 3) + 1)
 
 const profileType = computed(() => profile.value?.profileType || '')
 const isMicroProfile = computed(() => profileType.value === PROFILE.micro)
@@ -276,8 +300,61 @@ const profileTypeLabel = computed(() => {
   if (profileType.value === PROFILE.individual) return 'Particulier'
   return 'Non renseigne'
 })
-const selectedYear = computed(() => Number(String(periodStart.value || '').slice(0, 4)) || initialYear)
+const isQuarterlyDeclaration = computed(() => profile.value?.declarationFrequency === 'QUARTERLY')
+const selectedYear = computed(() => Number(periodYear.value) || initialYear)
+const periodRange = computed(() => {
+  const year = selectedYear.value
+  if (isQuarterlyDeclaration.value) {
+    const quarter = clampNumber(selectedQuarter.value, 1, 4)
+    const startMonth = (quarter - 1) * 3
+    return {
+      start: dateToInputValue(new Date(year, startMonth, 1)),
+      end: dateToInputValue(new Date(year, startMonth + 3, 0)),
+    }
+  }
+
+  const month = clampNumber(selectedMonth.value, 1, 12)
+  const startMonth = month - 1
+  return {
+    start: dateToInputValue(new Date(year, startMonth, 1)),
+    end: dateToInputValue(new Date(year, startMonth + 1, 0)),
+  }
+})
+const periodStart = computed(() => periodRange.value.start)
+const periodEnd = computed(() => periodRange.value.end)
 const periodLabel = computed(() => `${formatDate(periodStart.value)} - ${formatDate(periodEnd.value)}`)
+const yearOptions = computed(() =>
+  Array.from({ length: 6 }, (_, index) => initialYear - index),
+)
+const monthOptions = computed(() => [
+  { value: 1, label: 'Janvier' },
+  { value: 2, label: 'Fevrier' },
+  { value: 3, label: 'Mars' },
+  { value: 4, label: 'Avril' },
+  { value: 5, label: 'Mai' },
+  { value: 6, label: 'Juin' },
+  { value: 7, label: 'Juillet' },
+  { value: 8, label: 'Aout' },
+  { value: 9, label: 'Septembre' },
+  { value: 10, label: 'Octobre' },
+  { value: 11, label: 'Novembre' },
+  { value: 12, label: 'Decembre' },
+])
+const quarterOptions = computed(() => [
+  { value: 1, label: 'T1 - Janvier a mars' },
+  { value: 2, label: 'T2 - Avril a juin' },
+  { value: 3, label: 'T3 - Juillet a septembre' },
+  { value: 4, label: 'T4 - Octobre a decembre' },
+])
+const periodSelectorHelp = computed(() => {
+  if (isQuarterlyDeclaration.value) {
+    return 'Ton profil est en declaration trimestrielle : le montant couvre le trimestre choisi.'
+  }
+  if (profile.value?.declarationFrequency === 'MONTHLY') {
+    return 'Ton profil est en declaration mensuelle : le montant couvre le mois choisi.'
+  }
+  return 'Periodicite a completer dans Mon compte. La page affiche un mois par defaut.'
+})
 const sirenValue = computed(() => cleanText(profile.value?.siren) || deriveSiren(profile.value?.siret))
 const generalRows = computed(() => [
   row('SIRET', profile.value?.siret, true),
@@ -316,11 +393,6 @@ const tabItems = computed(() => {
   }
   return tabs
 })
-const visibleAlerts = computed(() => {
-  if (!isMicroProfile.value) return []
-  return Array.isArray(summary.value?.alerts) ? summary.value.alerts : []
-})
-
 watch(tabItems, (items) => {
   if (!items.some((tab) => tab.id === activeTab.value)) {
     activeTab.value = items[0]?.id || 'general'
@@ -377,11 +449,22 @@ function handlePeriodChange() {
 
 async function copyRevenue() {
   const value = formatAmountForCopy(summary.value?.periodRevenue)
+  await copyText(value, `Montant copie : ${value} EUR.`, `Montant a recopier : ${value} EUR.`)
+}
+
+async function copyGeneralRow(row) {
+  const value = cleanText(row?.value)
+  if (!value) return
+  await copyText(value, `${row.label} copie.`, `${row.label} a recopier : ${value}`)
+}
+
+async function copyText(value, successMessage, fallbackMessage) {
   try {
+    if (!navigator?.clipboard) throw new Error('Clipboard unavailable')
     await navigator.clipboard.writeText(value)
-    feedback.value = `Montant copie : ${value} EUR.`
+    feedback.value = successMessage
   } catch {
-    feedback.value = `Montant a recopier : ${value} EUR.`
+    feedback.value = fallbackMessage
   }
 }
 
@@ -405,14 +488,11 @@ async function generateDocument(documentId) {
 
 function applyDefaultPeriodForProfile() {
   if (periodTouched.value) return
+  periodYear.value = initialYear
+  selectedMonth.value = today.getMonth() + 1
   if (profile.value?.declarationFrequency === 'QUARTERLY') {
-    const quarterMonth = Math.floor(today.getMonth() / 3) * 3
-    periodStart.value = dateToInputValue(new Date(today.getFullYear(), quarterMonth, 1))
-    periodEnd.value = dateToInputValue(today)
-    return
+    selectedQuarter.value = Math.floor(today.getMonth() / 3) + 1
   }
-  periodStart.value = dateToInputValue(new Date(today.getFullYear(), today.getMonth(), 1))
-  periodEnd.value = dateToInputValue(today)
 }
 
 function hasDocument(documentId) {
@@ -485,10 +565,10 @@ function triStateLabel(value) {
   return 'Inconnu'
 }
 
-function alertClass(severity) {
-  if (severity === 'danger') return 'danger'
-  if (severity === 'info') return 'info'
-  return 'warning'
+function clampNumber(value, min, max) {
+  const numberValue = Number(value)
+  if (!Number.isFinite(numberValue)) return min
+  return Math.min(max, Math.max(min, Math.trunc(numberValue)))
 }
 
 function errorMessage(errorObject, fallback) {
@@ -661,9 +741,50 @@ h3 {
   padding: 0.85rem;
 }
 
+.info-row-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
 .info-row span {
   font-size: 0.78rem;
   font-weight: 850;
+}
+
+.copy-chip {
+  display: inline-flex;
+  min-height: 1.7rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 0.32rem;
+  border: 1px solid #b9e6df;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #0f766e;
+  padding: 0 0.55rem;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 900;
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    color 140ms ease;
+}
+
+.copy-chip:hover {
+  border-color: #0f766e;
+  background: #ecfdf5;
+}
+
+.copy-chip-icon {
+  width: 13px;
+  height: 13px;
+  flex: 0 0 auto;
 }
 
 .info-row strong,
@@ -737,9 +858,32 @@ input {
   outline: none;
 }
 
-input:focus {
+select {
+  width: 100%;
+  min-height: 38px;
+  box-sizing: border-box;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #0f172a;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 750;
+  padding: 0 0.65rem;
+  outline: none;
+}
+
+input:focus,
+select:focus {
   border-color: #0f766e;
   box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.14);
+}
+
+.period-help {
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.35;
 }
 
 .urssaf-summary {
@@ -807,6 +951,7 @@ input:focus {
 }
 
 .rule-line,
+.annual-note,
 .notice,
 .inline-alert,
 .primary-actions,
@@ -825,6 +970,30 @@ input:focus {
   padding: 0.75rem 0.85rem;
   font-size: 0.86rem;
   font-weight: 850;
+}
+
+.annual-note {
+  align-items: flex-start;
+  border: 1px solid #dce5f1;
+  border-radius: 8px;
+  background: #fbfdff;
+  color: #334155;
+  padding: 0.85rem;
+}
+
+.annual-note strong {
+  display: block;
+  color: #0f172a;
+  font-size: 0.9rem;
+  font-weight: 900;
+}
+
+.annual-note p {
+  margin-top: 0.16rem;
+  color: #64748b;
+  font-size: 0.84rem;
+  font-weight: 650;
+  line-height: 1.4;
 }
 
 .alert-list {

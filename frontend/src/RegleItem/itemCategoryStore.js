@@ -8,6 +8,7 @@ import {
 
 const STORAGE_PREFIX = 'snk_item_categories_v1'
 const MAX_CATEGORY_LABEL_LENGTH = 40
+const REMOVED_ITEM_TYPES_KEY = '__removedItemTypes'
 
 export { DEFAULT_ITEM_TYPES, ITEM_TYPE_KEYS }
 
@@ -26,6 +27,33 @@ function isPlainObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value)
 }
 
+function hasOwn(value, key) {
+  return Object.prototype.hasOwnProperty.call(value, key)
+}
+
+function isInternalCategoryKey(key) {
+  return key === REMOVED_ITEM_TYPES_KEY
+}
+
+function normalizeRemovedItemTypes(value) {
+  const out = new Set()
+  if (!Array.isArray(value)) return out
+  for (const type of value) {
+    const itemType = normalizeItemTypeValue(type, '')
+    if (itemType) out.add(itemType)
+  }
+  return out
+}
+
+function withRemovedItemTypes(labels, removedTypes) {
+  const removed = Array.from(removedTypes || [])
+    .map((type) => normalizeItemTypeValue(type, ''))
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }))
+  if (removed.length) labels[REMOVED_ITEM_TYPES_KEY] = removed
+  return labels
+}
+
 function applyLabel(out, type, label, fallbackLabel) {
   const itemType = normalizeItemTypeValue(type, '')
   if (!itemType) return
@@ -36,24 +64,36 @@ function applyLabel(out, type, label, fallbackLabel) {
 export function sanitizeItemCategoryLabels(value, fallback = DEFAULT_ITEM_TYPE_LABELS) {
   const input = isPlainObject(value) ? value : {}
   const fallbackInput = isPlainObject(fallback) ? fallback : DEFAULT_ITEM_TYPE_LABELS
+  const removedTypes = normalizeRemovedItemTypes(input[REMOVED_ITEM_TYPES_KEY])
   const out = {}
 
   for (const item of DEFAULT_ITEM_TYPES) {
-    applyLabel(out, item.value, input[item.value] ?? fallbackInput[item.value], item.label)
+    const hasInputLabel = hasOwn(input, item.value) && normalizeCategoryLabel(input[item.value])
+    if (removedTypes.has(item.value) && !hasInputLabel) continue
+    applyLabel(
+      out,
+      item.value,
+      hasInputLabel ? input[item.value] : fallbackInput[item.value],
+      item.label,
+    )
+    removedTypes.delete(item.value)
   }
 
   for (const [type, label] of Object.entries(fallbackInput)) {
+    if (isInternalCategoryKey(type)) continue
     if (ITEM_TYPE_KEYS.includes(normalizeItemTypeValue(type, ''))) continue
     applyLabel(out, type, input[type] ?? label, label)
   }
 
   for (const [type, label] of Object.entries(input)) {
+    if (isInternalCategoryKey(type)) continue
     const itemType = normalizeItemTypeValue(type, '')
     if (!itemType || ITEM_TYPE_KEYS.includes(itemType)) continue
     applyLabel(out, itemType, label, formatItemTypeLabel(itemType))
+    removedTypes.delete(itemType)
   }
 
-  return out
+  return withRemovedItemTypes(out, removedTypes)
 }
 
 export function itemCategoryStorageKey(userId) {
@@ -122,7 +162,7 @@ export function addItemCategory(labels, label) {
   const sanitized = sanitizeItemCategoryLabels(labels)
   if (!cleaned) return { labels: sanitized, type: '' }
 
-  const existing = new Set(Object.keys(sanitized))
+  const existing = new Set(Object.keys(sanitized).filter((key) => !isInternalCategoryKey(key)))
   const base = normalizeItemTypeValue(cleaned, 'CUSTOM').slice(0, 72).replace(/_+$/g, '') || 'CUSTOM'
   let type = base
   let suffix = 2
@@ -142,7 +182,7 @@ export function addItemCategory(labels, label) {
 
 export function canRemoveItemCategory(type) {
   const itemType = normalizeItemTypeValue(type, '')
-  return Boolean(itemType && !ITEM_TYPE_KEYS.includes(itemType))
+  return Boolean(itemType)
 }
 
 export function removeItemCategory(labels, type) {
@@ -150,21 +190,28 @@ export function removeItemCategory(labels, type) {
   const sanitized = sanitizeItemCategoryLabels(labels)
   if (!itemType || !canRemoveItemCategory(itemType)) return sanitized
   const next = { ...sanitized }
+  const removedTypes = normalizeRemovedItemTypes(sanitized[REMOVED_ITEM_TYPES_KEY])
   delete next[itemType]
+  delete next[REMOVED_ITEM_TYPES_KEY]
+  if (ITEM_TYPE_KEYS.includes(itemType)) removedTypes.add(itemType)
+  else removedTypes.delete(itemType)
+  withRemovedItemTypes(next, removedTypes)
   return sanitizeItemCategoryLabels(next)
 }
 
 export function resolveItemTypeOptions(labels = DEFAULT_ITEM_TYPE_LABELS) {
   const sanitized = sanitizeItemCategoryLabels(labels)
-  const options = DEFAULT_ITEM_TYPES.map((item) => ({
-    ...item,
-    label: sanitized[item.value] || item.label,
-    defaultLabel: item.label,
-    custom: false,
-  }))
+  const options = DEFAULT_ITEM_TYPES
+    .filter((item) => sanitized[item.value])
+    .map((item) => ({
+      ...item,
+      label: sanitized[item.value] || item.label,
+      defaultLabel: item.label,
+      custom: false,
+    }))
 
   Object.keys(sanitized)
-    .filter((type) => !ITEM_TYPE_KEYS.includes(type))
+    .filter((type) => !isInternalCategoryKey(type) && !ITEM_TYPE_KEYS.includes(type))
     .forEach((type) => {
       options.push({
         value: type,
@@ -196,6 +243,7 @@ export function buildItemCategoryAliases(labels = DEFAULT_ITEM_TYPE_LABELS) {
     add(item.label)
   })
   Object.entries(sanitizeItemCategoryLabels(labels)).forEach(([type, label]) => {
+    if (isInternalCategoryKey(type)) return
     add(type)
     add(label)
   })

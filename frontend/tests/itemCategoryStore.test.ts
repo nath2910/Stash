@@ -10,6 +10,7 @@ import {
   renameItemCategory,
   resetItemCategory,
   resolveItemTypeOptions,
+  writeStoredItemCategories,
 } from '../src/RegleItem/itemCategoryStore'
 
 function memoryStorage(seed = {}) {
@@ -66,6 +67,29 @@ describe('itemCategoryStore', () => {
 
     labels = removeItemCategory(labels, added.type)
     expect(resolveItemTypeOptions(labels).some((option) => option.value === added.type)).toBe(false)
+  })
+
+  it('removes and restores default main categories', () => {
+    const storage = memoryStorage()
+    let labels = readStoredItemCategories('u1', storage)
+
+    expect(canRemoveItemCategory('SNEAKER')).toBe(true)
+    labels = removeItemCategory(labels, 'SNEAKER')
+    expect(resolveItemTypeOptions(labels).some((option) => option.value === 'SNEAKER')).toBe(false)
+
+    writeStoredItemCategories('u1', labels, storage)
+    const reloaded = readStoredItemCategories('u1', storage)
+    const reloadedOptions = resolveItemTypeOptions(reloaded)
+    expect(reloadedOptions.some((option) => option.value === 'SNEAKER')).toBe(false)
+    expect(reloadedOptions.some((option) => option.value === '__removedItemTypes')).toBe(false)
+
+    labels = resetItemCategory(reloaded, 'SNEAKER')
+    expect(resolveItemTypeOptions(labels)).toContainEqual(
+      expect.objectContaining({
+        value: 'SNEAKER',
+        label: 'Sneakers',
+      }),
+    )
   })
 
   it('normalizes unknown values as custom type keys', () => {

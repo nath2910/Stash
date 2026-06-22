@@ -180,20 +180,10 @@
                   <Pencil class="h-4 w-4" />
                 </button>
                 <button
-                  v-if="!option.custom"
-                  type="button"
-                  class="manager-icon"
-                  aria-label="Reinitialiser"
-                  :disabled="option.label === option.defaultLabel"
-                  @click="resetLabel(option.value)"
-                >
-                  <RotateCcw class="h-4 w-4" />
-                </button>
-                <button
-                  v-else
                   type="button"
                   class="manager-icon is-danger"
                   aria-label="Supprimer"
+                  :disabled="!canDeleteCategory(option)"
                   @click="deleteCategory(option)"
                 >
                   <Trash2 class="h-4 w-4" />
@@ -216,7 +206,6 @@ import {
   Package,
   Pencil,
   Plus,
-  RotateCcw,
   Settings2,
   Tag,
   Ticket,
@@ -232,7 +221,6 @@ import {
   readStoredItemCategories,
   removeItemCategory,
   renameItemCategory,
-  resetItemCategory,
   resolveItemTypeOptions,
   writeStoredItemCategories,
 } from '@/RegleItem/itemCategoryStore'
@@ -335,16 +323,17 @@ function addCategory() {
   newCategoryDraft.value = ''
 }
 
-function resetLabel(type) {
-  persist(resetItemCategory(effectiveLabels.value, type))
+function canDeleteCategory(option) {
+  return canRemoveItemCategory(option?.value) && itemTypeOptions.value.length > 1
 }
 
 function deleteCategory(option) {
-  if (!canRemoveItemCategory(option?.value)) return
+  if (!canDeleteCategory(option)) return
   const nextLabels = removeItemCategory(effectiveLabels.value, option.value)
   persist(nextLabels)
-  if (modelValueIs(option.value)) {
-    emit('update:modelValue', 'SNEAKER')
+  const nextOptions = resolveItemTypeOptions(nextLabels)
+  if (modelValueIs(option.value) || !nextOptions.some((item) => modelValueIs(item.value))) {
+    emit('update:modelValue', nextOptions[0]?.value || '')
   }
   if (editingType.value === option.value) cancelEdit()
 }
@@ -1027,6 +1016,26 @@ onBeforeUnmount(() => {
   border-color: rgba(20, 184, 166, 0.48);
   background: #ecfdf5;
   color: #0f766e;
+}
+
+.manager-icon.is-danger {
+  border-color: rgba(220, 38, 38, 0.9);
+  background: #ef4444;
+  color: #ffffff;
+  box-shadow: 0 10px 18px rgba(220, 38, 38, 0.16);
+}
+
+.manager-icon.is-danger:hover:not(:disabled) {
+  border-color: #b91c1c;
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.manager-icon.is-danger:disabled {
+  border-color: rgba(252, 165, 165, 0.9);
+  background: #fecaca;
+  color: #ffffff;
+  box-shadow: none;
 }
 
 .manager-add-button {
