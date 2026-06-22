@@ -78,17 +78,43 @@
             <div class="urssaf-header">
               <div class="panel-heading">
                 <p class="eyebrow">Declaration URSSAF</p>
-                <h2>Montant a declarer</h2>
-                <p class="muted">
-                  Recopie le chiffre d'affaires brut encaisse sur la periode. Les couts et achats
-                  ne se deduisent pas dans cette case.
-                </p>
+                <h2>{{ declarationPageTitle }}</h2>
+                <p class="muted">Montant, rubrique et informations utiles pour remplir la declaration.</p>
               </div>
+
+              <a
+                class="icon-button primary urssaf-open-link"
+                href="https://www.autoentrepreneur.urssaf.fr/"
+                target="_blank"
+                rel="noreferrer"
+              >
+                <ExternalLink class="button-icon" aria-hidden="true" />
+                <span>Ouvrir l'URSSAF</span>
+              </a>
+            </div>
+
+            <section class="declaration-board" aria-label="Declaration URSSAF">
+              <article class="amount-card">
+                <div class="amount-card-header">
+                  <span>Montant a saisir</span>
+                  <button
+                    type="button"
+                    class="copy-chip copy-chip--strong"
+                    aria-label="Copier le montant a saisir"
+                    @click="copyDeclarationAmount"
+                  >
+                    <Copy class="copy-chip-icon" aria-hidden="true" />
+                    <span>Copier</span>
+                  </button>
+                </div>
+                <strong>{{ money(summary?.periodRevenue) }}</strong>
+                <p>Rubrique : Vente de marchandises</p>
+              </article>
 
               <div class="period-card" aria-label="Periode declarative">
                 <div class="period-card-title">
                   <CalendarDays class="button-icon" aria-hidden="true" />
-                  <span>Periode declaree</span>
+                  <span>Periode utilisee</span>
                 </div>
                 <div class="period-controls">
                   <label>
@@ -125,79 +151,64 @@
                   <span>Recalculer</span>
                 </button>
               </div>
-            </div>
+            </section>
 
-            <div class="urssaf-summary">
-              <article class="amount-block">
-                <span>Montant a saisir</span>
-                <strong>{{ money(summary?.periodRevenue) }}</strong>
-                <p>Vente de marchandises / achat-revente</p>
-              </article>
-
-              <dl class="declaration-list">
-                <div>
-                  <dt>Periode retenue</dt>
-                  <dd>{{ periodLabel }}</dd>
-                </div>
-                <div>
-                  <dt>Periodicite</dt>
-                  <dd>{{ declarationFrequencyLabel(profile?.declarationFrequency, 'Inconnue') }}</dd>
-                </div>
-                <div>
-                  <dt>Case a remplir</dt>
-                  <dd>Vente de marchandises</dd>
-                </div>
-                <div>
-                  <dt>Base de calcul</dt>
-                  <dd>Chiffre d'affaires brut encaisse</dd>
-                </div>
-              </dl>
-            </div>
-
-            <div class="rule-line">
-              <Info class="notice-icon" aria-hidden="true" />
-              <span>Ne deduis pas les achats, frais, commissions, livraison, charges ou autres couts.</span>
-            </div>
-
-            <div class="annual-note">
-              <Info class="notice-icon" aria-hidden="true" />
-              <div>
-                <strong>Declaration annuelle</strong>
-                <p>
-                  Oui, il y a aussi la declaration annuelle d'impot sur le revenu. Elle se fait cote impots,
-                  avec le formulaire 2042 C PRO. Elle ne remplace pas les declarations URSSAF mensuelles
-                  ou trimestrielles.
-                </p>
+            <section class="copy-panel" aria-labelledby="declaration-copy-title">
+              <div class="section-title">
+                <CheckCircle2 class="workspace-icon" aria-hidden="true" />
+                <h3 id="declaration-copy-title">Infos a recopier</h3>
               </div>
-            </div>
 
-            <div class="primary-actions">
-              <button type="button" class="icon-button primary" :disabled="summaryLoading" @click="copyRevenue">
-                <Copy class="button-icon" aria-hidden="true" />
-                <span>Copier le montant</span>
-              </button>
+              <div class="declaration-fields-grid">
+                <article
+                  v-for="field in declarationFields"
+                  :key="field.id"
+                  class="declaration-field"
+                  :class="{ 'is-missing': !field.copyValue && field.fixRoute }"
+                >
+                  <span>{{ field.label }}</span>
+                  <strong>{{ field.value }}</strong>
+                  <p v-if="field.detail">{{ field.detail }}</p>
+                  <button
+                    v-if="field.copyValue"
+                    type="button"
+                    class="copy-chip"
+                    :aria-label="`Copier ${field.label}`"
+                    @click="copyDeclarationField(field)"
+                  >
+                    <Copy class="copy-chip-icon" aria-hidden="true" />
+                    <span>Copier</span>
+                  </button>
+                  <RouterLink v-else-if="field.fixRoute" :to="field.fixRoute" class="fix-link">
+                    Completer
+                  </RouterLink>
+                </article>
+              </div>
+            </section>
 
-              <a
-                class="icon-button secondary"
-                href="https://www.autoentrepreneur.urssaf.fr/"
-                target="_blank"
-                rel="noreferrer"
-              >
-                <ExternalLink class="button-icon" aria-hidden="true" />
-                <span>Ouvrir l'URSSAF</span>
-              </a>
+            <section class="documents-panel" aria-labelledby="declaration-documents-title">
+              <div class="section-title">
+                <FileText class="workspace-icon" aria-hidden="true" />
+                <h3 id="declaration-documents-title">Justificatifs</h3>
+              </div>
 
-              <button
-                v-if="hasDocument('urssaf-summary')"
-                type="button"
-                class="icon-button ghost"
-                :disabled="generating === 'urssaf-summary'"
-                @click="generateDocument('urssaf-summary')"
-              >
-                <Download class="button-icon" aria-hidden="true" />
-                <span>{{ generating === 'urssaf-summary' ? 'Generation...' : 'Telecharger une fiche de saisie' }}</span>
-              </button>
-            </div>
+              <div class="quick-documents">
+                <button
+                  v-for="document in declarationDocumentActions"
+                  :key="document.id"
+                  type="button"
+                  class="document-action"
+                  :disabled="!document.available || generating === document.id"
+                  @click="generateDocument(document.id)"
+                >
+                  <span>
+                    <strong>{{ document.label }}</strong>
+                    <small>{{ document.detail }}</small>
+                  </span>
+                  <Download class="button-icon" aria-hidden="true" />
+                </button>
+              </div>
+            </section>
           </section>
 
           <section v-else-if="activeTab === 'documents'" class="tab-panel">
@@ -348,13 +359,18 @@ const quarterOptions = computed(() => [
 ])
 const periodSelectorHelp = computed(() => {
   if (isQuarterlyDeclaration.value) {
-    return 'Ton profil est en declaration trimestrielle : le montant couvre le trimestre choisi.'
+    return 'Le montant est calcule sur le trimestre selectionne.'
   }
   if (profile.value?.declarationFrequency === 'MONTHLY') {
-    return 'Ton profil est en declaration mensuelle : le montant couvre le mois choisi.'
+    return 'Le montant est calcule sur le mois selectionne.'
   }
-  return 'Periodicite a completer dans Mon compte. La page affiche un mois par defaut.'
+  return 'Periodicite a completer dans Mon compte. Le calcul utilise un mois par defaut.'
 })
+const declarationPageTitle = computed(() => {
+  const frequency = declarationFrequencyLabel(profile.value?.declarationFrequency, '')
+  return frequency ? `Declaration ${frequency.toLowerCase()}` : 'Declaration micro-entreprise'
+})
+const amountCopyValue = computed(() => formatAmountForCopy(summary.value?.periodRevenue))
 const sirenValue = computed(() => cleanText(profile.value?.siren) || deriveSiren(profile.value?.siret))
 const generalRows = computed(() => [
   row('SIRET', profile.value?.siret, true),
@@ -371,6 +387,67 @@ const generalRows = computed(() => [
   ),
   row('Versement liberatoire', triStateLabel(profile.value?.withholdingTaxOption), true),
   row('Franchise en base de TVA', triStateLabel(profile.value?.vatFranchise), true),
+])
+const declarationFields = computed(() => [
+  {
+    id: 'category',
+    label: 'Rubrique URSSAF',
+    value: 'Vente de marchandises',
+    detail: '',
+    copyValue: 'Vente de marchandises',
+  },
+  {
+    id: 'period',
+    label: 'Periode declaree',
+    value: periodLabel.value,
+    detail: '',
+    copyValue: periodLabel.value,
+  },
+  {
+    id: 'siret',
+    label: 'SIRET',
+    value: cleanText(profile.value?.siret) || 'A completer',
+    detail: cleanText(profile.value?.siret) ? '' : 'Manquant dans Mon compte.',
+    copyValue: cleanText(profile.value?.siret),
+    fixRoute: cleanText(profile.value?.siret) ? null : { name: 'account' },
+  },
+  {
+    id: 'periodicity',
+    label: 'Periodicite',
+    value: declarationFrequencyLabel(profile.value?.declarationFrequency, 'A completer'),
+    detail: isKnownFrequency(profile.value?.declarationFrequency) ? '' : 'Manquante dans Mon compte.',
+    copyValue: isKnownFrequency(profile.value?.declarationFrequency)
+      ? declarationFrequencyLabel(profile.value?.declarationFrequency)
+      : '',
+    fixRoute: isKnownFrequency(profile.value?.declarationFrequency) ? null : { name: 'account' },
+  },
+  {
+    id: 'base',
+    label: 'Base de calcul',
+    value: "Chiffre d'affaires brut encaisse",
+    detail: '',
+    copyValue: "Chiffre d'affaires brut encaisse",
+  },
+])
+const declarationDocumentActions = computed(() => [
+  {
+    id: 'urssaf-summary',
+    label: 'Fiche de saisie',
+    detail: 'PDF avec les valeurs de la periode',
+    available: hasDocument('urssaf-summary'),
+  },
+  {
+    id: 'receipts-register',
+    label: 'Livre des recettes',
+    detail: 'Recettes rattachees aux ventes',
+    available: hasDocument('receipts-register'),
+  },
+  {
+    id: 'purchases-register',
+    label: 'Registre des achats',
+    detail: 'Achats lies a l activite achat-revente',
+    available: hasDocument('purchases-register'),
+  },
 ])
 const documentsById = computed(() => {
   const map = new Map()
@@ -447,15 +524,20 @@ function handlePeriodChange() {
   void loadSummary()
 }
 
-async function copyRevenue() {
-  const value = formatAmountForCopy(summary.value?.periodRevenue)
-  await copyText(value, `Montant copie : ${value} EUR.`, `Montant a recopier : ${value} EUR.`)
-}
-
 async function copyGeneralRow(row) {
   const value = cleanText(row?.value)
   if (!value) return
   await copyText(value, `${row.label} copie.`, `${row.label} a recopier : ${value}`)
+}
+
+async function copyDeclarationField(field) {
+  const value = cleanText(field?.copyValue)
+  if (!value) return
+  await copyText(value, `${field.label} copie.`, `${field.label} a recopier : ${value}`)
+}
+
+async function copyDeclarationAmount() {
+  await copyText(amountCopyValue.value, 'Montant copie.', `Montant a recopier : ${amountCopyValue.value}`)
 }
 
 async function copyText(value, successMessage, fallbackMessage) {
@@ -616,8 +698,8 @@ function errorMessage(errorObject, fallback) {
 
 .eyebrow,
 .info-row span,
-.declaration-list dt,
-.amount-block span,
+.declaration-field span,
+.amount-card-header > span,
 .document-row p,
 .muted {
   color: #64748b;
@@ -801,19 +883,78 @@ h3 {
 }
 
 .urssaf-panel {
-  gap: 1.05rem;
+  gap: 0.9rem;
 }
 
 .urssaf-header {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 410px);
+  display: flex;
   gap: 1rem;
   align-items: start;
+  justify-content: space-between;
+}
+
+.urssaf-open-link {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.declaration-board {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.75fr);
+  gap: 0.8rem;
+  align-items: stretch;
+}
+
+.amount-card {
+  display: grid;
+  align-content: center;
+  gap: 0.8rem;
+  min-height: 210px;
+  border: 1px solid #93d7ce;
+  border-radius: 8px;
+  background: #eefaf7;
+  padding: clamp(1rem, 2vw, 1.25rem);
+}
+
+.amount-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.amount-card-header > span,
+.amount-card p {
+  font-size: 0.84rem;
+  font-weight: 900;
+}
+
+.amount-card > strong {
+  color: #0f766e;
+  font-size: clamp(2.65rem, 5vw, 4.35rem);
+  line-height: 0.95;
+  letter-spacing: 0;
+}
+
+.amount-card p {
+  color: #115e59;
+}
+
+.copy-chip--strong {
+  border-color: #0f766e;
+  background: #0f766e;
+  color: #ffffff;
+}
+
+.copy-chip--strong:hover {
+  border-color: #115e59;
+  background: #115e59;
 }
 
 .period-card {
   display: grid;
-  gap: 0.75rem;
+  align-content: start;
+  gap: 0.7rem;
   border: 1px solid #dce5f1;
   border-radius: 8px;
   background: #f8fafc;
@@ -886,156 +1027,94 @@ select:focus {
   line-height: 1.35;
 }
 
-.urssaf-summary {
+.copy-panel,
+.documents-panel {
   display: grid;
-  grid-template-columns: minmax(260px, 0.72fr) minmax(0, 1.28fr);
-  gap: 0.8rem;
-  align-items: stretch;
-}
-
-.amount-block {
-  display: grid;
-  align-content: center;
-  gap: 0.34rem;
-  min-height: 190px;
-  border: 1px solid #a7e3d7;
-  border-radius: 8px;
-  background: linear-gradient(180deg, #f9fffd 0%, #edf8f5 100%);
-  padding: clamp(1rem, 2vw, 1.2rem);
-}
-
-.amount-block span,
-.amount-block p {
-  font-size: 0.84rem;
-  font-weight: 900;
-}
-
-.amount-block strong {
-  color: #0f766e;
-  font-size: clamp(2.35rem, 4vw, 3.4rem);
-  line-height: 1;
-  letter-spacing: 0;
-}
-
-.amount-block p {
-  color: #115e59;
-}
-
-.declaration-list {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.6rem;
-}
-
-.declaration-list div {
-  display: grid;
-  align-content: start;
-  gap: 0.32rem;
-  min-height: 92px;
+  gap: 0.75rem;
   border: 1px solid #dce5f1;
   border-radius: 8px;
   background: #fbfdff;
+  padding: clamp(0.85rem, 2vw, 1rem);
+}
+
+.section-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: #0f172a;
+}
+
+.section-title h3 {
+  font-size: 0.9rem;
+  font-weight: 950;
+}
+
+.declaration-fields-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.declaration-field {
+  display: grid;
+  gap: 0.42rem;
+  min-width: 0;
+  min-height: 124px;
+  border: 1px solid #dce5f1;
+  border-radius: 8px;
+  background: #ffffff;
   padding: 0.8rem;
 }
 
-.declaration-list dt {
-  font-size: 0.75rem;
-  font-weight: 850;
+.declaration-field.is-missing {
+  border-color: #fed7aa;
+  background: #fffbeb;
 }
 
-.declaration-list dd {
+.declaration-field span {
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.declaration-field strong {
+  overflow-wrap: anywhere;
   color: #0f172a;
   font-size: 0.9rem;
-  font-weight: 850;
-  line-height: 1.3;
+  font-weight: 950;
+  line-height: 1.25;
 }
 
-.rule-line,
-.annual-note,
+.declaration-field p {
+  color: #64748b;
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1.32;
+}
+
+.declaration-field .copy-chip,
+.declaration-field .fix-link {
+  width: fit-content;
+  align-self: end;
+}
+
+.quick-documents {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
 .notice,
-.inline-alert,
-.primary-actions,
 .document-row {
   display: flex;
   align-items: center;
   gap: 0.75rem;
 }
 
-.rule-line {
-  align-items: flex-start;
-  border: 1px solid #c8eadf;
-  border-radius: 8px;
-  background: #f5fbf8;
-  color: #0f766e;
-  padding: 0.75rem 0.85rem;
-  font-size: 0.86rem;
-  font-weight: 850;
-}
-
-.annual-note {
-  align-items: flex-start;
-  border: 1px solid #dce5f1;
-  border-radius: 8px;
-  background: #fbfdff;
-  color: #334155;
-  padding: 0.85rem;
-}
-
-.annual-note strong {
-  display: block;
-  color: #0f172a;
-  font-size: 0.9rem;
-  font-weight: 900;
-}
-
-.annual-note p {
-  margin-top: 0.16rem;
-  color: #64748b;
-  font-size: 0.84rem;
-  font-weight: 650;
-  line-height: 1.4;
-}
-
-.alert-list {
-  display: grid;
-  gap: 0.6rem;
-}
-
-.inline-alert {
-  align-items: flex-start;
-  border-radius: 8px;
-  padding: 0.72rem 0.82rem;
-}
-
-.inline-alert strong,
-.inline-alert p {
-  font-size: 0.86rem;
-  line-height: 1.35;
-}
-
-.inline-alert p {
-  margin-top: 0.12rem;
-  font-weight: 650;
-}
-
-.inline-alert.warning,
-.notice.warning {
-  border: 1px solid #f6d982;
-  background: #fffaf0;
-  color: #92400e;
-}
-
-.inline-alert.danger,
 .notice.danger {
   border: 1px solid #fecdd3;
   background: #fff1f2;
   color: #be123c;
-}
-
-.inline-alert.info {
-  border: 1px solid #c8d9f4;
-  background: #f5f8ff;
-  color: #1e40af;
 }
 
 .notice {
@@ -1050,9 +1129,75 @@ select:focus {
   color: #047857;
 }
 
-.primary-actions {
-  flex-wrap: wrap;
-  padding-top: 0.1rem;
+.workspace-icon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  color: #0f766e;
+}
+
+.fix-link {
+  display: inline-flex;
+  min-height: 1.8rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #fff7ed;
+  color: #c2410c;
+  padding: 0 0.65rem;
+  font-size: 0.74rem;
+  font-weight: 950;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.document-action {
+  display: flex;
+  min-height: 4rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border: 1px solid #dce5f1;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #0f172a;
+  padding: 0.72rem;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    color 140ms ease;
+}
+
+.document-action:hover:not(:disabled) {
+  border-color: #0f766e;
+  background: #ecfdf5;
+  color: #0f766e;
+}
+
+.document-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+.document-action strong,
+.document-action small {
+  display: block;
+}
+
+.document-action strong {
+  font-size: 0.84rem;
+  font-weight: 950;
+}
+
+.document-action small {
+  margin-top: 0.12rem;
+  color: #64748b;
+  font-size: 0.74rem;
+  font-weight: 700;
+  line-height: 1.3;
 }
 
 .icon-button {
@@ -1163,9 +1308,18 @@ select:focus {
 }
 
 @media (max-width: 980px) {
-  .urssaf-header,
-  .urssaf-summary {
+  .urssaf-header {
+    flex-direction: column;
+  }
+
+  .declaration-board,
+  .declaration-fields-grid,
+  .quick-documents {
     grid-template-columns: 1fr;
+  }
+
+  .urssaf-open-link {
+    width: fit-content;
   }
 
   .icon-button--compact {
@@ -1176,7 +1330,8 @@ select:focus {
 
 @media (max-width: 700px) {
   .info-grid,
-  .declaration-list,
+  .declaration-fields-grid,
+  .quick-documents,
   .period-controls {
     grid-template-columns: 1fr;
   }
@@ -1196,6 +1351,16 @@ select:focus {
 
   .document-row {
     display: grid;
+  }
+
+  .amount-card-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .declaration-field .copy-chip,
+  .fix-link {
+    width: fit-content;
   }
 }
 </style>
