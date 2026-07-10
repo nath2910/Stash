@@ -763,6 +763,12 @@ import { useTheme } from '@/composables/useTheme'
 import { useAuthStore } from '@/store/authStore'
 import StatsServices from '@/services/StatsServices'
 import {
+  STATS_RANGE_STORAGE_KEY_PREFIX,
+  buildStoredStatsRange,
+  normalizeSimpleRange,
+  resolveStoredStatsRange,
+} from '@/utils/statsRangeStorage'
+import {
   buildItemCategoryAliases,
   isItemCategoryAlias,
   normalizeItemType,
@@ -1128,19 +1134,17 @@ const templateUserInitials = computed(() => {
 })
 
 /* ===== Range persist per profile ===== */
-const RANGE_KEY_PREFIX = 'snk_stats_range_v1'
+const RANGE_KEY_PREFIX = STATS_RANGE_STORAGE_KEY_PREFIX
 const rangeKey = (profileId: string) => `${RANGE_KEY_PREFIX}_${userId.value}_${profileId}`
 
 function normalizeProfileRange(raw: unknown): ProfileRange | null {
   if (!raw || typeof raw !== 'object') return null
-  const fromVal =
-    typeof (raw as { from?: unknown }).from === 'string'
-      ? String((raw as { from?: string }).from)
-      : ''
-  const toVal =
-    typeof (raw as { to?: unknown }).to === 'string' ? String((raw as { to?: string }).to) : ''
-  if (!fromVal || !toVal) return null
-  return fromVal <= toVal ? { from: fromVal, to: toVal } : { from: toVal, to: fromVal }
+  const resolved = resolveStoredStatsRange(raw, {
+    baseDate: new Date(),
+    fallbackPreset: 'custom',
+  })
+  const normalized = normalizeSimpleRange(resolved)
+  return normalized ? { from: normalized.from, to: normalized.to } : null
 }
 
 function loadRangeForProfile(profileId: string) {
@@ -1153,7 +1157,10 @@ function loadRangeForProfile(profileId: string) {
     const fromStorage = normalizeProfileRange(JSON.parse(raw))
     if (fromStorage) {
       layoutBundle.value.ranges = layoutBundle.value.ranges ?? {}
-      layoutBundle.value.ranges[profileId] = fromStorage
+      layoutBundle.value.ranges[profileId] = buildStoredStatsRange(fromStorage.from, fromStorage.to, {
+        baseDate: new Date(),
+        preset: 'custom',
+      })
     }
     return fromStorage
   } catch {
@@ -1167,16 +1174,17 @@ function saveRangeForProfile(
   t: string,
   options: { persistLocal?: boolean } = {},
 ) {
-  const normalized = normalizeProfileRange({ from: f, to: t })
+  const record = buildStoredStatsRange(f, t, { baseDate: new Date() })
+  const normalized = normalizeProfileRange(record)
   if (!normalized) return
   const persistLocal = options.persistLocal !== false
 
   layoutBundle.value.ranges = layoutBundle.value.ranges ?? {}
-  layoutBundle.value.ranges[profileId] = normalized
+  layoutBundle.value.ranges[profileId] = record
 
   if (!persistLocal) return
   try {
-    localStorage.setItem(rangeKey(profileId), JSON.stringify(normalized))
+    localStorage.setItem(rangeKey(profileId), JSON.stringify(record))
   } catch {
     // ignore
   }

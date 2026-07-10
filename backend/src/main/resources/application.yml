@@ -67,13 +67,16 @@ app:
   jwt:
     secret: ${JWT_SECRET:dev-secret-change-me-dev-secret-change-me}
     expiration-minutes: 60
+  backend:
+    public-base-url: ${APP_BACKEND_PUBLIC_BASE_URL:http://localhost:8080}
+  frontend:
+    base-url: ${APP_FRONTEND_BASE_URL:http://localhost:5173}
+    reset-password-url: ${APP_FRONTEND_RESET_PASSWORD_URL:${app.frontend.base-url}/reset-password}
+    verify-email-url: ${APP_FRONTEND_VERIFY_EMAIL_URL:${app.frontend.base-url}/verify-email}
   oauth2:
-    success-redirect: ${OAUTH2_SUCCESS_REDIRECT:http://localhost:5173/auth/callback}
+    success-redirect: ${OAUTH2_SUCCESS_REDIRECT:${app.frontend.base-url}/auth/callback}
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173}
-  frontend:
-    reset-password-url: ${APP_FRONTEND_RESET_PASSWORD_URL:http://localhost:5173/reset-password}
-    verify-email-url: ${APP_FRONTEND_VERIFY_EMAIL_URL:http://localhost:5173/verify-email}
   password-reset:
     expiration-minutes: ${APP_PASSWORD_RESET_EXP_MINUTES:60}
     mail-from: ${APP_MAIL_FROM:}
@@ -91,7 +94,8 @@ app:
   delivery:
     scan-fixed-delay-ms: ${APP_DELIVERY_SCAN_FIXED_DELAY_MS:300000}
     scan-batch-size: ${APP_DELIVERY_SCAN_BATCH_SIZE:25}
-    gmail-redirect-uri: ${APP_DELIVERY_GMAIL_REDIRECT_URI:http://localhost:8080/delivery/mail-accounts/gmail/callback}
+    gmail-max-results: ${APP_DELIVERY_GMAIL_MAX_RESULTS:${app.delivery.scan-batch-size}}
+    gmail-redirect-uri: ${APP_DELIVERY_GMAIL_REDIRECT_URI:${app.backend.public-base-url}/delivery/mail-accounts/gmail/callback}
     token-encryption-key: ${APP_TOKEN_ENCRYPTION_KEY:}
     tracking-provider: ${APP_DELIVERY_TRACKING_PROVIDER:DIRECT}
     tracking-refresh-fixed-delay-ms: ${APP_DELIVERY_TRACKING_REFRESH_FIXED_DELAY_MS:900000}
@@ -108,8 +112,8 @@ stripe:
   secret-key: ${STRIPE_SECRET_KEY:}
   price-id: ${STRIPE_PRICE_ID:}
   webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
-  success-url: ${STRIPE_SUCCESS_URL:http://localhost:5173/abo?success=1}
-  cancel-url: ${STRIPE_CANCEL_URL:http://localhost:5173/abo?canceled=1}
+  success-url: ${STRIPE_SUCCESS_URL:${app.frontend.base-url}/abo?success=1}
+  cancel-url: ${STRIPE_CANCEL_URL:${app.frontend.base-url}/abo?canceled=1}
 
 logging:
   level:
@@ -175,10 +179,14 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
 app:
+  backend:
+    public-base-url: ${APP_BACKEND_PUBLIC_BASE_URL:http://localhost:8080}
+  frontend:
+    base-url: ${APP_FRONTEND_BASE_URL:http://localhost:5173}
   jwt:
     secret: ${JWT_SECRET:dev-secret-change-me-dev-secret-change-me}
   oauth2:
-    success-redirect: ${OAUTH2_SUCCESS_REDIRECT:http://localhost:5173/auth/callback}
+    success-redirect: ${OAUTH2_SUCCESS_REDIRECT:${app.frontend.base-url}/auth/callback}
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:https://mystash.fr,https://www.mystash.fr,http://localhost:5173}
 
@@ -241,12 +249,16 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
 app:
+  backend:
+    public-base-url: ${APP_BACKEND_PUBLIC_BASE_URL:https://api.mystash.fr}
+  frontend:
+    base-url: ${APP_FRONTEND_BASE_URL:https://mystash.fr}
   jwt:
     secret: ${JWT_SECRET}
   oauth2:
-    success-redirect: ${OAUTH2_SUCCESS_REDIRECT}
+    success-redirect: ${OAUTH2_SUCCESS_REDIRECT:${app.frontend.base-url}/auth/callback}
   cors:
-    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS}
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:https://mystash.fr,https://www.mystash.fr}
 
 server:
   forward-headers-strategy: framework

@@ -11,6 +11,10 @@ public record MailScanResponse(
     int rejectedCount,
     int duplicateCount,
     String message,
-    List<TrackingCandidateResponse> candidatesToReview
+    List<TrackingCandidateResponse> candidatesToReview,
+    List<MailScanParcelResponse> importedParcels,
+    List<MailScanParcelResponse> duplicateParcels,
+    boolean success,
+    String error
 ) {
 }

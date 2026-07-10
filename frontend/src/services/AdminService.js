@@ -96,23 +96,19 @@ const AdminService = {
     return data
   },
 
-  async markInvoicePaid(invoiceId) {
-    const { data } = await api.patch(`${ADMIN_BASE}/invoices/${invoiceId}/paid`)
-    return data
-  },
-
-  async cancelInvoice(invoiceId, reason = '') {
-    const { data } = await api.patch(`${ADMIN_BASE}/invoices/${invoiceId}/cancel`, { reason })
-    return data
-  },
-
   async exportCsv(params = {}) {
     const response = await api.get(`${ADMIN_BASE}/export.csv`, {
       params,
       responseType: 'blob',
     })
+    await assertDownloadableBlob(response.data)
     const stamp = new Date().toISOString().slice(0, 10)
-    downloadBlob(response.data, `export-administratif-${stamp}.csv`)
+    const filename = filenameFromDisposition(
+      response.headers?.['content-disposition'],
+      `export-administratif-${stamp}.csv`,
+    )
+    downloadBlob(response.data, filename)
+    return filename
   },
 
   async administrativeProfile() {
@@ -142,6 +138,21 @@ const AdminService = {
     return normalizeList(data)
   },
 
+  async administrativeDocumentRecords() {
+    const { data } = await api.get(`${ADMINISTRATIVE_BASE}/document-records`)
+    return normalizeList(data)
+  },
+
+  async markAdministrativeDeclarationDone(payload = {}) {
+    const { data } = await api.post(`${ADMINISTRATIVE_BASE}/declarations/mark-done`, payload)
+    return data
+  },
+
+  async generateMissingAdministrativeInvoices(payload = {}) {
+    const { data } = await api.post(`${ADMINISTRATIVE_BASE}/invoices/generate-missing`, payload)
+    return data
+  },
+
   async generateAdministrativeDocument(documentId, payload = {}) {
     const response = await api.post(`${ADMINISTRATIVE_BASE}/documents/${documentId}`, payload, {
       responseType: 'blob',
@@ -157,6 +168,24 @@ const AdminService = {
     )
     downloadBlob(response.data, filename)
     return filename
+  },
+
+  async generateAdministrativeExport(exportType, payload = {}) {
+    if (exportType === 'accounting-export-csv') {
+      return this.exportCsv({
+        from: payload.periodStart,
+        to: payload.periodEnd,
+      })
+    }
+    return this.generateAdministrativeDocument(exportType, payload)
+  },
+
+  async generateDocument(documentId, payload = {}) {
+    return this.generateAdministrativeExport(documentId, payload)
+  },
+
+  async markDeclarationDone(payload = {}) {
+    return this.markAdministrativeDeclarationDone(payload)
   },
 }
 

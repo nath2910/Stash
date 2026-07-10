@@ -1,19 +1,11 @@
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useAuthStore } from '@/store/authStore'
-
-const STORAGE_KEY_PREFIX = 'snk_stats_range_v1'
-
-function ymd(d) {
-  const pad = (n) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-}
-
-function defaultRange() {
-  const now = new Date()
-  const oneMonthAgo = new Date(now)
-  oneMonthAgo.setMonth(now.getMonth() - 1)
-  return { from: ymd(oneMonthAgo), to: ymd(now) }
-}
+import {
+  STATS_RANGE_STORAGE_KEY_PREFIX,
+  getMonthToDateRange,
+  resolveStoredStatsRange,
+  buildStoredStatsRange,
+} from '@/utils/statsRangeStorage'
 
 function safeGet(key) {
   try {
@@ -31,70 +23,120 @@ function safeSet(key, value) {
   }
 }
 
-function normalizeRange(raw) {
-  if (!raw || typeof raw !== 'object') return null
-  const from = typeof raw.from === 'string' ? raw.from : ''
-  const to = typeof raw.to === 'string' ? raw.to : ''
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) return null
-  if (from <= to) return { from, to }
-  return { from: to, to: from }
-}
-
 export function useStatsRange() {
   const { user } = useAuthStore()
   const userId = computed(() => user.value?.id ?? 'guest')
   const from = ref('')
   const to = ref('')
 
-  function applyRange(nextFrom, nextTo) {
-    const normalized = normalizeRange({ from: nextFrom, to: nextTo })
-    if (!normalized) return false
+  let rolloverTimer = null
+
+  function storageKey() {
+    return `${STATS_RANGE_STORAGE_KEY_PREFIX}_${userId.value}`
+  }
+
+  function applyStoredRecord(record) {
+    if (!record) return false
     let changed = false
-    if (from.value !== normalized.from) {
-      from.value = normalized.from
+    if (from.value !== record.from) {
+      from.value = record.from
       changed = true
     }
-    if (to.value !== normalized.to) {
-      to.value = normalized.to
+    if (to.value !== record.to) {
+      to.value = record.to
       changed = true
     }
     return changed
   }
 
-  function loadForUser() {
-    const key = `${STORAGE_KEY_PREFIX}_${userId.value}`
-    const raw = safeGet(key)
+  function saveCurrentRange(baseDate = new Date()) {
+    if (!from.value || !to.value) return
+    const record = buildStoredStatsRange(from.value, to.value, { baseDate })
+    if (!record) return
+    safeSet(storageKey(), JSON.stringify(record))
+  }
+
+  function loadForUser(baseDate = new Date()) {
+    const raw = safeGet(storageKey())
     if (raw) {
       try {
-        const parsed = JSON.parse(raw)
-        const normalized = normalizeRange(parsed)
-        if (normalized) {
-          applyRange(normalized.from, normalized.to)
-          return
-        }
+        const resolved = resolveStoredStatsRange(JSON.parse(raw), { baseDate })
+        applyStoredRecord(resolved)
+        safeSet(storageKey(), JSON.stringify(resolved))
+        return
       } catch {
-        // ignore
+        // ignore malformed storage and reset below
       }
     }
-    const def = defaultRange()
-    applyRange(def.from, def.to)
+
+    const next = resolveStoredStatsRange(getMonthToDateRange(baseDate), { baseDate })
+    applyStoredRecord(next)
+    safeSet(storageKey(), JSON.stringify(next))
+  }
+
+  function msUntilNextRefresh(baseDate = new Date()) {
+    const next = new Date(baseDate)
+    next.setHours(24, 0, 5, 0)
+    return Math.max(30_000, next.getTime() - baseDate.getTime())
+  }
+
+  function clearRolloverTimer() {
+    if (!rolloverTimer) return
+    window.clearTimeout(rolloverTimer)
+    rolloverTimer = null
+  }
+
+  function scheduleRolloverCheck() {
+    clearRolloverTimer()
+    if (typeof window === 'undefined') return
+    rolloverTimer = window.setTimeout(() => {
+      const now = new Date()
+      loadForUser(now)
+      scheduleRolloverCheck()
+    }, msUntilNextRefresh())
+  }
+
+  function handleVisibilityChange() {
+    if (document.visibilityState !== 'visible') return
+    loadForUser(new Date())
+    scheduleRolloverCheck()
   }
 
   loadForUser()
 
   watch(userId, () => {
-    loadForUser()
+    loadForUser(new Date())
   })
 
   watch(
     [from, to],
     () => {
-      if (!from.value || !to.value) return
-      const key = `${STORAGE_KEY_PREFIX}_${userId.value}`
-      safeSet(key, JSON.stringify({ from: from.value, to: to.value }))
+      saveCurrentRange(new Date())
     },
     { deep: false },
   )
 
-  return { from, to, setRange: applyRange }
+  onMounted(() => {
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleVisibilityChange)
+    }
+    scheduleRolloverCheck()
+  })
+
+  onBeforeUnmount(() => {
+    clearRolloverTimer()
+    if (typeof document !== 'undefined') {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  })
+
+  function setRange(nextFrom, nextTo) {
+    const resolved = resolveStoredStatsRange({ from: nextFrom, to: nextTo, preset: 'custom' }, {
+      baseDate: new Date(),
+      fallbackPreset: 'custom',
+    })
+    return applyStoredRecord(resolved)
+  }
+
+  return { from, to, setRange }
 }

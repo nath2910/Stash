@@ -8,6 +8,7 @@
     </div>
 
     <ItemFormFields
+      ref="formRef"
       mode="create"
       surface="quick"
       :items="items"
@@ -15,6 +16,7 @@
       :reset-key="successKey"
       quantity-enabled
       :show-cancel="false"
+      auto-infer-from-name
       submit-label="Ajouter"
       @submit="$emit('submit', $event)"
       @error="$emit('error', $event)"
@@ -23,6 +25,7 @@
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import ItemFormFields from '@/components/gestion/ItemFormFields.vue'
 
 defineProps({
@@ -32,6 +35,14 @@ defineProps({
 })
 
 defineEmits(['submit', 'error'])
+
+const formRef = ref(null)
+
+defineExpose({
+  focusFirstField() {
+    formRef.value?.focusFirstField?.()
+  },
+})
 </script>
 
 <style scoped>

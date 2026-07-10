@@ -10,19 +10,17 @@
         v-for="toast in limitedToasts"
         :key="toast.id"
         class="notification-toast-card"
-        :class="severityClass(toast.severity)"
+        :class="[severityClass(toast.severity), domainClass(toast)]"
       >
         <span class="notification-toast-icon" aria-hidden="true">
-          <BellRing v-if="normalizeSeverity(toast.severity) === 'INFO'" class="h-4 w-4" />
-          <AlertTriangle
-            v-else-if="normalizeSeverity(toast.severity) === 'WARNING'"
-            class="h-4 w-4"
-          />
-          <OctagonAlert v-else class="h-4 w-4" />
+          <component :is="domainIcon(toast)" class="h-4 w-4" />
         </span>
 
         <div class="notification-toast-content">
-          <p>Notification</p>
+          <div class="notification-toast-meta">
+            <p>{{ domainMeta(toast).label }}</p>
+            <span>{{ typeLabel(toast) }}</span>
+          </div>
           <h4>{{ toast.title }}</h4>
           <span>{{ toast.message }}</span>
 
@@ -41,6 +39,8 @@
           </div>
         </div>
 
+        <div v-if="normalizeSeverity(toast.severity) === 'INFO'" class="notification-toast-progress" />
+
         <button
           type="button"
           class="notification-toast-close"
@@ -56,7 +56,13 @@
 
 <script setup>
 import { computed } from 'vue'
-import { AlertTriangle, BellRing, OctagonAlert, X } from 'lucide-vue-next'
+import { CreditCard, FileCheck2, PackageSearch, X } from 'lucide-vue-next'
+import {
+  getNotificationDomain,
+  getNotificationDomainMeta,
+  getNotificationTypeLabel,
+  normalizeNotificationSeverity,
+} from '@/utils/notificationUi'
 
 const props = defineProps({
   toasts: {
@@ -79,7 +85,7 @@ const stackThemeClass = computed(() =>
 )
 
 function normalizeSeverity(severity) {
-  return String(severity || 'INFO').toUpperCase()
+  return normalizeNotificationSeverity(severity)
 }
 
 function severityClass(severity) {
@@ -87,6 +93,25 @@ function severityClass(severity) {
   if (normalized === 'WARNING') return 'tone-warning'
   if (normalized === 'CRITICAL') return 'tone-critical'
   return 'tone-info'
+}
+
+function domainClass(notification) {
+  return `domain-${getNotificationDomain(notification)}`
+}
+
+function domainMeta(notification) {
+  return getNotificationDomainMeta(notification)
+}
+
+function typeLabel(notification) {
+  return getNotificationTypeLabel(notification)
+}
+
+function domainIcon(notification) {
+  const domain = getNotificationDomain(notification)
+  if (domain === 'subscription') return CreditCard
+  if (domain === 'administrative') return FileCheck2
+  return PackageSearch
 }
 </script>
 
@@ -136,18 +161,50 @@ function severityClass(severity) {
   box-shadow: var(--toast-shadow);
   padding: 0.82rem;
   backdrop-filter: blur(16px) saturate(135%);
+  position: relative;
+  overflow: hidden;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    border-color 180ms ease;
 }
 
 .notification-toast-card.tone-info {
-  --toast-tone: #14b8a6;
+  --toast-severity: #14b8a6;
 }
 
 .notification-toast-card.tone-warning {
-  --toast-tone: #f59e0b;
+  --toast-severity: #f59e0b;
 }
 
 .notification-toast-card.tone-critical {
-  --toast-tone: #ef4444;
+  --toast-severity: #ef4444;
+}
+
+.notification-toast-card.domain-resale {
+  --toast-tone: #0f766e;
+}
+
+.notification-toast-card.domain-subscription {
+  --toast-tone: #2563eb;
+}
+
+.notification-toast-card.domain-administrative {
+  --toast-tone: #7c3aed;
+}
+
+.notification-toast-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: linear-gradient(180deg, var(--toast-tone), color-mix(in srgb, var(--toast-severity) 50%, var(--toast-tone)));
+}
+
+.notification-toast-card:hover {
+  border-color: color-mix(in srgb, var(--toast-tone) 38%, white);
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.18);
+  transform: translateY(-1px);
 }
 
 .notification-toast-icon {
@@ -166,12 +223,27 @@ function severityClass(severity) {
   min-width: 0;
 }
 
+.notification-toast-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
 .notification-toast-content p {
   color: var(--toast-tone);
   font-size: 0.66rem;
   font-weight: 900;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+
+.notification-toast-meta span {
+  margin-top: 0;
+  color: color-mix(in srgb, var(--toast-text) 68%, transparent);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 .notification-toast-content h4 {
@@ -238,6 +310,15 @@ function severityClass(severity) {
   transform: translateY(-1px);
 }
 
+.notification-toast-progress {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--toast-tone), color-mix(in srgb, var(--toast-severity) 38%, white));
+  transform-origin: left center;
+  animation: toast-progress 5200ms linear forwards;
+}
+
 .notification-toast-enter-active,
 .notification-toast-leave-active {
   transition:
@@ -253,6 +334,15 @@ function severityClass(severity) {
 
 .notification-toast-move {
   transition: transform 220ms ease;
+}
+
+@keyframes toast-progress {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
 }
 
 @media (max-width: 420px) {
@@ -276,12 +366,16 @@ function severityClass(severity) {
   .notification-toast-leave-active,
   .notification-toast-move,
   .notification-toast-action,
-  .notification-toast-close {
+  .notification-toast-close,
+  .notification-toast-card,
+  .notification-toast-progress {
     transition: none;
+    animation: none;
   }
 
   .notification-toast-action:hover,
-  .notification-toast-close:hover {
+  .notification-toast-close:hover,
+  .notification-toast-card:hover {
     transform: none;
   }
 }

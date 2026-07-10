@@ -47,9 +47,15 @@
     </teleport>
 
     <section class="home-action-shell" aria-label="Actions rapides">
-      <QuickSearchBar :items="stockItems" :loading="stockLoading" @select="openItemModal" />
+      <QuickSearchBar
+        :items="stockItems"
+        :loading="stockLoading"
+        @select="openItemModal"
+        @add-requested="focusQuickAddForm"
+      />
 
       <QuickAddItemForm
+        ref="quickAddFormRef"
         :items="stockItems"
         :saving="quickAddSaving"
         :success-key="quickAddSuccessKey"
@@ -57,7 +63,12 @@
         @submit="handleQuickAdd"
       />
 
-      <HomeMonthlyKpis :summary="kpiSummary" :loading="kpiLoading" :error="kpiError" />
+      <HomeMonthlyKpis
+        :summary="kpiSummary"
+        :loading="kpiLoading"
+        :error="kpiError"
+        @add-requested="focusQuickAddForm"
+      />
     </section>
 
     <QuickItemModal
@@ -112,6 +123,7 @@ const ONBOARD_PENDING = 'snk_onboarding_pending'
 const ONBOARD_SEEN = 'snk_onboarding_seen'
 
 const showOnboarding = ref(false)
+const quickAddFormRef = ref(null)
 const stockItems = ref([])
 const stockLoading = ref(false)
 const stockLoaded = ref(false)
@@ -126,10 +138,12 @@ const modalSuccessKey = ref(0)
 const quickAddSaving = ref(false)
 const quickAddSuccessKey = ref(0)
 const quickAddToast = ref({ visible: false, message: '', type: 'success' })
-const annualRange = getCurrentYearRange()
+const clockTick = ref(Date.now())
+const annualRange = computed(() => getCurrentYearRange(new Date(clockTick.value)))
 let quickAddToastTimer = null
+let clockTimer = null
 
-const localSummary = computed(() => calculatePeriodStats(stockItems.value, annualRange))
+const localSummary = computed(() => calculatePeriodStats(stockItems.value, annualRange.value))
 
 const normalizedApiSummary = computed(() => {
   const data = apiSummary.value
@@ -188,7 +202,7 @@ async function chargerStatsAnnuelles() {
   statsLoading.value = true
   statsError.value = ''
   try {
-    const { data } = await StatsServices.summary(annualRange.from, annualRange.to)
+    const { data } = await StatsServices.summary(annualRange.value.from, annualRange.value.to)
     apiSummary.value = data || null
   } catch (error) {
     console.error('Erreur chargement KPI accueil', error)
@@ -201,6 +215,10 @@ async function chargerStatsAnnuelles() {
 onMounted(() => {
   chargerVentes()
   chargerStatsAnnuelles()
+  scheduleClockRefresh()
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+  }
   try {
     const pending = localStorage.getItem(ONBOARD_PENDING) === '1' || route.query.onboarding === '1'
     const seen = localStorage.getItem(ONBOARD_SEEN) === '1'
@@ -220,9 +238,15 @@ onBeforeUnmount(() => {
   if (quickAddToastTimer) {
     window.clearTimeout(quickAddToastTimer)
   }
+  if (clockTimer) {
+    window.clearTimeout(clockTimer)
+  }
+  if (typeof document !== 'undefined') {
+    document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }
 })
 
-function showQuickAddToast(message, type = 'success') {
+function showQuickAddToast(message, type = 'success', duration = type === 'error' ? 1600 : 1000) {
   if (quickAddToastTimer) {
     window.clearTimeout(quickAddToastTimer)
   }
@@ -230,7 +254,7 @@ function showQuickAddToast(message, type = 'success') {
   quickAddToastTimer = window.setTimeout(() => {
     quickAddToast.value = { visible: false, message: '', type }
     quickAddToastTimer = null
-  }, 2000)
+  }, duration)
 }
 
 function resolveQuickAddError(error) {
@@ -278,6 +302,7 @@ async function handleQuickUpdate({ id, payload }) {
     modalSuccessKey.value += 1
     notifyStockChanged()
     await chargerStatsAnnuelles()
+    showQuickAddToast('Modifications enregistrees !')
   } catch (error) {
     modalError.value = error?.response?.data?.message || 'Erreur lors de la modification.'
   } finally {
@@ -320,6 +345,37 @@ function goToStatsFromModal() {
 function goToGestionFromModal() {
   closeOnboarding()
   router.push('/gestion')
+}
+
+function focusQuickAddForm() {
+  quickAddFormRef.value?.focusFirstField?.()
+}
+
+function refreshClock() {
+  const previousYear = new Date(clockTick.value).getFullYear()
+  clockTick.value = Date.now()
+  const nextYear = new Date(clockTick.value).getFullYear()
+  if (nextYear !== previousYear) {
+    void chargerStatsAnnuelles()
+  }
+}
+
+function scheduleClockRefresh() {
+  if (typeof window === 'undefined') return
+  if (clockTimer) window.clearTimeout(clockTimer)
+  const now = new Date()
+  const next = new Date(now)
+  next.setHours(24, 0, 5, 0)
+  clockTimer = window.setTimeout(() => {
+    refreshClock()
+    scheduleClockRefresh()
+  }, Math.max(30_000, next.getTime() - now.getTime()))
+}
+
+function handleVisibilityChange() {
+  if (document.visibilityState !== 'visible') return
+  refreshClock()
+  scheduleClockRefresh()
 }
 </script>
 
@@ -399,8 +455,8 @@ function goToGestionFromModal() {
 .quick-add-toast-enter-active,
 .quick-add-toast-leave-active {
   transition:
-    opacity 180ms ease,
-    transform 180ms ease;
+    opacity 140ms ease,
+    transform 140ms ease;
 }
 
 .quick-add-toast-enter-from,

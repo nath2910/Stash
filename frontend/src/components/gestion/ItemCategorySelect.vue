@@ -6,7 +6,7 @@
   >
     <div class="field-heading">
       <div>
-        <label class="field-label">Categorie principale</label>
+        <label class="field-label">{{ label }}</label>
         <p class="field-helper">Famille globale de l'article</p>
       </div>
       <button type="button" class="manage-link" @click="openManager">
@@ -125,6 +125,10 @@
             </button>
           </form>
 
+          <div v-if="managerMessage" class="manager-feedback">
+            {{ managerMessage }}
+          </div>
+
           <div class="manager-list">
             <div
               v-for="option in itemTypeOptions"
@@ -137,57 +141,62 @@
               </span>
 
               <template v-if="editingType === option.value">
-                <input
-                  v-model.trim="editDraft"
-                  type="text"
-                  maxlength="40"
-                  class="manager-input"
-                  @keydown.enter.prevent="commitEdit"
-                  @keydown.esc.prevent="cancelEdit"
-                />
-                <button
-                  type="button"
-                  class="manager-icon is-confirm"
-                  aria-label="Valider"
-                  :disabled="!editDraft"
-                  @click="commitEdit"
-                >
-                  <Check class="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  class="manager-icon"
-                  aria-label="Annuler"
-                  @click="cancelEdit"
-                >
-                  <X class="h-4 w-4" />
-                </button>
+                <div class="manager-row__edit">
+                  <input
+                    v-model.trim="editDraft"
+                    type="text"
+                    maxlength="40"
+                    class="manager-input"
+                    @keydown.enter.prevent="commitEdit"
+                    @keydown.esc.prevent="cancelEdit"
+                  />
+                  <button
+                    type="button"
+                    class="manager-action is-confirm"
+                    :disabled="!editDraft"
+                    @click="commitEdit"
+                  >
+                    <Check class="h-4 w-4" />
+                    <span>Valider</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="manager-action"
+                    @click="cancelEdit"
+                  >
+                    <X class="h-4 w-4" />
+                    <span>Annuler</span>
+                  </button>
+                </div>
               </template>
 
               <template v-else>
                 <button type="button" class="manager-row__main" @click="selectType(option.value)">
                   <span class="manager-row__label">{{ option.label }}</span>
                   <span class="manager-row__meta">
-                    {{ option.custom ? 'Personnalisee' : `Base ${option.defaultLabel}` }}
+                    {{ categoryMeta(option) }}
                   </span>
                 </button>
-                <button
-                  type="button"
-                  class="manager-icon"
-                  aria-label="Renommer"
-                  @click="startEdit(option)"
-                >
-                  <Pencil class="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  class="manager-icon is-danger"
-                  aria-label="Supprimer"
-                  :disabled="!canDeleteCategory(option)"
-                  @click="deleteCategory(option)"
-                >
-                  <Trash2 class="h-4 w-4" />
-                </button>
+                <div class="manager-row__actions">
+                  <button
+                    type="button"
+                    class="manager-action"
+                    @click="startEdit(option)"
+                  >
+                    <Pencil class="h-4 w-4" />
+                    <span>Modifier</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="manager-action is-danger"
+                    :disabled="!canDeleteCategory(option)"
+                    :title="deleteCategoryTitle(option)"
+                    @click="deleteCategory(option)"
+                  >
+                    <Trash2 class="h-4 w-4" />
+                    <span>Supprimer</span>
+                  </button>
+                </div>
               </template>
             </div>
           </div>
@@ -224,9 +233,12 @@ import {
   resolveItemTypeOptions,
   writeStoredItemCategories,
 } from '@/RegleItem/itemCategoryStore'
+import { typeOf } from '@/utils/snkVente'
 
 const props = defineProps({
+  label: { type: String, default: 'Categorie principale' },
   modelValue: { type: String, default: 'SNEAKER' },
+  items: { type: Array, default: () => [] },
   userId: { type: [String, Number], default: 'guest' },
   labels: { type: Object, default: null },
   display: { type: String, default: 'grid' },
@@ -242,6 +254,7 @@ const storedLabels = ref(readStoredItemCategories(props.userId))
 const editingType = ref('')
 const editDraft = ref('')
 const newCategoryDraft = ref('')
+const managerMessage = ref('')
 
 const effectiveLabels = computed(() => props.labels || storedLabels.value)
 const optionLabels = computed(() => {
@@ -253,6 +266,15 @@ const optionLabels = computed(() => {
   return labels
 })
 const itemTypeOptions = computed(() => resolveItemTypeOptions(optionLabels.value))
+const itemTypeUseCounts = computed(() => {
+  const counts = new Map()
+  for (const item of Array.isArray(props.items) ? props.items : []) {
+    const itemType = normalizeItemType(typeOf(item || {}))
+    if (!itemType) continue
+    counts.set(itemType, (counts.get(itemType) || 0) + 1)
+  }
+  return counts
+})
 const selectedOption = computed(
   () =>
     itemTypeOptions.value.find((option) => modelValueIs(option.value)) ||
@@ -276,6 +298,7 @@ function persist(nextLabels) {
 }
 
 function selectType(type) {
+  managerMessage.value = ''
   emit('update:modelValue', normalizeItemType(type))
   menuOpen.value = false
 }
@@ -292,10 +315,12 @@ function openManager() {
 function closeManager() {
   managerOpen.value = false
   newCategoryDraft.value = ''
+  managerMessage.value = ''
   cancelEdit()
 }
 
 function startEdit(option) {
+  managerMessage.value = ''
   editingType.value = option.value
   editDraft.value = option.label
 }
@@ -311,6 +336,7 @@ function commitEdit() {
     cancelEdit()
     return
   }
+  managerMessage.value = ''
   persist(renameItemCategory(effectiveLabels.value, editingType.value, label))
   cancelEdit()
 }
@@ -318,6 +344,7 @@ function commitEdit() {
 function addCategory() {
   const result = addItemCategory(effectiveLabels.value, newCategoryDraft.value)
   if (!result.type) return
+  managerMessage.value = ''
   persist(result.labels)
   emit('update:modelValue', result.type)
   newCategoryDraft.value = ''
@@ -327,8 +354,37 @@ function canDeleteCategory(option) {
   return canRemoveItemCategory(option?.value) && itemTypeOptions.value.length > 1
 }
 
+function categoryUseCount(option) {
+  return itemTypeUseCounts.value.get(normalizeItemType(option?.value)) || 0
+}
+
+function categoryMeta(option) {
+  const count = categoryUseCount(option)
+  if (count) return `Utilisee par ${count} item${count > 1 ? 's' : ''}`
+  return option.custom ? 'Personnalisee' : `Base ${option.defaultLabel}`
+}
+
+function deleteCategoryTitle(option) {
+  if (!canDeleteCategory(option)) return 'Garde au moins une categorie'
+  const count = categoryUseCount(option)
+  if (count) return `Categorie utilisee par ${count} item${count > 1 ? 's' : ''}`
+  return `Supprimer ${option?.label || 'la categorie'}`
+}
+
 function deleteCategory(option) {
-  if (!canDeleteCategory(option)) return
+  if (!canDeleteCategory(option)) {
+    managerMessage.value = 'Garde au moins une categorie principale.'
+    return
+  }
+  const count = categoryUseCount(option)
+  if (count) {
+    managerMessage.value =
+      `Categorie utilisee par ${count} item${count > 1 ? 's' : ''}. ` +
+      'Modifie ou reassigne ces items avant de la supprimer.'
+    return
+  }
+  const label = option?.label || 'cette categorie'
+  if (typeof window !== 'undefined' && !window.confirm(`Supprimer "${label}" ?`)) return
   const nextLabels = removeItemCategory(effectiveLabels.value, option.value)
   persist(nextLabels)
   const nextOptions = resolveItemTypeOptions(nextLabels)
@@ -336,6 +392,7 @@ function deleteCategory(option) {
     emit('update:modelValue', nextOptions[0]?.value || '')
   }
   if (editingType.value === option.value) cancelEdit()
+  managerMessage.value = 'Categorie supprimee.'
 }
 
 function modelValueIs(type) {
@@ -680,8 +737,8 @@ onBeforeUnmount(() => {
 }
 
 .category-manager-panel {
-  display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
   width: 100%;
   max-height: min(calc(100dvh - 1.5rem), 42rem);
   max-width: 36rem;
@@ -748,6 +805,7 @@ onBeforeUnmount(() => {
 
 .manager-list {
   display: grid;
+  flex: 1 1 auto;
   gap: 0.625rem;
   min-height: 0;
   max-height: 100%;
@@ -790,6 +848,17 @@ onBeforeUnmount(() => {
   opacity: 0.46;
 }
 
+.manager-feedback {
+  margin: 0.75rem 1rem 0;
+  border: 1px solid rgba(14, 165, 233, 0.28);
+  border-radius: 0.85rem;
+  background: rgba(240, 253, 250, 0.9);
+  color: #0f766e;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
 .manager-row {
   display: flex;
   align-items: center;
@@ -811,6 +880,20 @@ onBeforeUnmount(() => {
   flex: 1;
   gap: 0.125rem;
   text-align: left;
+}
+
+.manager-row__actions,
+.manager-row__edit {
+  display: inline-flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.45rem;
+}
+
+.manager-row__edit {
+  flex: 1;
 }
 
 .manager-row__label {
@@ -845,42 +928,47 @@ onBeforeUnmount(() => {
   box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.18);
 }
 
-.manager-icon {
-  display: inline-grid;
-  height: 2.1rem;
-  width: 2.1rem;
+.manager-action {
+  display: inline-flex;
+  min-height: 2.1rem;
   flex: 0 0 auto;
-  place-items: center;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
   border: 1px solid rgba(75, 85, 99, 0.9);
   border-radius: 0.7rem;
+  padding: 0 0.65rem;
   color: rgb(209 213 219);
+  font-size: 0.76rem;
+  font-weight: 850;
+  white-space: nowrap;
   transition:
     background 140ms ease,
     border-color 140ms ease,
     color 140ms ease;
 }
 
-.manager-icon:hover:not(:disabled) {
+.manager-action:hover:not(:disabled) {
   border-color: rgba(168, 85, 247, 0.5);
   background: rgba(126, 34, 206, 0.18);
   color: rgb(243 232 255);
 }
 
-.manager-icon.is-confirm {
+.manager-action.is-confirm {
   color: rgb(167 243 208);
 }
 
-.manager-icon.is-danger {
+.manager-action.is-danger {
   color: rgb(254 202 202);
 }
 
-.manager-icon.is-danger:hover:not(:disabled) {
+.manager-action.is-danger:hover:not(:disabled) {
   border-color: rgba(248, 113, 113, 0.55);
   background: rgba(239, 68, 68, 0.12);
   color: rgb(254 226 226);
 }
 
-.manager-icon:disabled {
+.manager-action:disabled {
   cursor: not-allowed;
   opacity: 0.42;
 }
@@ -915,8 +1003,19 @@ onBeforeUnmount(() => {
     justify-content: center;
   }
 
-  .manager-add-form {
+  .manager-add-form,
+  .manager-row {
     grid-template-columns: 1fr;
+  }
+
+  .manager-row {
+    display: grid;
+  }
+
+  .manager-row__actions,
+  .manager-row__edit,
+  .manager-action {
+    width: 100%;
   }
 
   .category-manager-panel {
@@ -1005,33 +1104,33 @@ onBeforeUnmount(() => {
 }
 
 .manager-close,
-.manager-icon {
+.manager-action {
   border-color: rgba(125, 211, 252, 0.32);
   background: rgba(255, 255, 255, 0.78);
   color: #475569;
 }
 
 .manager-close:hover,
-.manager-icon:hover:not(:disabled) {
+.manager-action:hover:not(:disabled) {
   border-color: rgba(20, 184, 166, 0.48);
   background: #ecfdf5;
   color: #0f766e;
 }
 
-.manager-icon.is-danger {
+.manager-action.is-danger {
   border-color: rgba(220, 38, 38, 0.9);
   background: #ef4444;
   color: #ffffff;
   box-shadow: 0 10px 18px rgba(220, 38, 38, 0.16);
 }
 
-.manager-icon.is-danger:hover:not(:disabled) {
+.manager-action.is-danger:hover:not(:disabled) {
   border-color: #b91c1c;
   background: #dc2626;
   color: #ffffff;
 }
 
-.manager-icon.is-danger:disabled {
+.manager-action.is-danger:disabled {
   border-color: rgba(252, 165, 165, 0.9);
   background: #fecaca;
   color: #ffffff;

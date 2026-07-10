@@ -1,5 +1,6 @@
 package backend.service;
 
+import backend.dto.MailScanParcelResponse;
 import backend.dto.TrackingCandidateResponse;
 import backend.entity.MailAccount;
 import backend.entity.MailAccountStatus;
@@ -39,6 +40,8 @@ public class GmailMailScannerService {
 
   private static final Logger log = LoggerFactory.getLogger(GmailMailScannerService.class);
   private static final String GMAIL_MESSAGES_PATH = "/gmail/v1/users/me/messages";
+  private static final int GMAIL_PAGE_SIZE = 100;
+  private static final int GMAIL_PAGE_SCAN_LIMIT = 10;
   private static final String DEFAULT_QUERY =
       "newer_than:30d (suivi OR tracking OR colis OR livraison OR expedition OR expedie "
           + "OR \"numero de suivi\" OR \"tracking number\" OR shipment OR shipped OR delivery "
@@ -57,7 +60,7 @@ public class GmailMailScannerService {
   private final String googleClientSecret;
 
   public GmailMailScannerService(
-      @Value("${app.delivery.gmail-max-results:25}") int maxResults,
+      @Value("${app.delivery.gmail-max-results:${app.delivery.scan-batch-size:50}}") int maxResults,
       @Value("${spring.security.oauth2.client.registration.google.client-id:}") String googleClientId,
       @Value("${spring.security.oauth2.client.registration.google.client-secret:}") String googleClientSecret,
       MailAccountRepository mailAccountRepository,
@@ -107,7 +110,7 @@ public class GmailMailScannerService {
 
   private MailScanSummary runScan(MailAccount account) {
     String accessToken = ensureAccessToken(account);
-    List<String> messageIds = listRecentMessageIds(accessToken);
+    List<String> messageIds = listRecentMessageIds(account.getId(), accessToken);
     MailScanAccumulator scan = new MailScanAccumulator();
 
     for (String messageId : messageIds) {
@@ -151,8 +154,10 @@ public class GmailMailScannerService {
         );
         if (result.imported()) {
           scan.importedCount++;
+          addParcel(scan.importedParcels, result.parcel());
         } else {
           scan.duplicateCount++;
+          addParcel(scan.duplicateParcels, result.parcel());
         }
       }
 
@@ -210,29 +215,57 @@ public class GmailMailScannerService {
   }
 
   @SuppressWarnings("unchecked")
-  private List<String> listRecentMessageIds(String accessToken) {
-    Map<String, Object> response = restClient.get()
-        .uri(uriBuilder -> uriBuilder
-            .path(GMAIL_MESSAGES_PATH)
-            .queryParam("q", DEFAULT_QUERY)
-            .queryParam("maxResults", Math.max(1, Math.min(maxResults, 100)))
-            .build())
-        .headers(headers -> headers.setBearerAuth(accessToken))
-        .retrieve()
-        .body(new ParameterizedTypeReference<>() {});
-
-    Object messages = response == null ? null : response.get("messages");
-    if (!(messages instanceof List<?> list)) {
-      return List.of();
-    }
-
+  private List<String> listRecentMessageIds(Long mailAccountId, String accessToken) {
     List<String> ids = new ArrayList<>();
-    for (Object item : list) {
-      if (item instanceof Map<?, ?> map) {
-        Object id = map.get("id");
-        if (id != null) {
-          ids.add(String.valueOf(id));
+    int targetCount = Math.max(1, maxResults);
+    String pageToken = null;
+    int scannedPages = 0;
+
+    while (ids.size() < targetCount && scannedPages < GMAIL_PAGE_SCAN_LIMIT) {
+      Map<String, Object> response = restClient.get()
+          .uri(uriBuilder -> {
+            var builder = uriBuilder
+                .path(GMAIL_MESSAGES_PATH)
+                .queryParam("q", DEFAULT_QUERY)
+                .queryParam("maxResults", GMAIL_PAGE_SIZE);
+            if (pageToken != null && !pageToken.isBlank()) {
+              builder.queryParam("pageToken", pageToken);
+            }
+            return builder.build();
+          })
+          .headers(headers -> headers.setBearerAuth(accessToken))
+          .retrieve()
+          .body(new ParameterizedTypeReference<>() {});
+
+      Object messages = response == null ? null : response.get("messages");
+      if (!(messages instanceof List<?> list) || list.isEmpty()) {
+        break;
+      }
+
+      for (Object item : list) {
+        if (!(item instanceof Map<?, ?> map)) {
+          continue;
         }
+        Object id = map.get("id");
+        if (id == null) {
+          continue;
+        }
+        String providerMessageId = String.valueOf(id);
+        if (seenMailMessageRepository.existsByMailAccount_IdAndProviderMessageId(mailAccountId, providerMessageId)) {
+          continue;
+        }
+        if (!ids.contains(providerMessageId)) {
+          ids.add(providerMessageId);
+        }
+        if (ids.size() >= targetCount) {
+          break;
+        }
+      }
+
+      pageToken = stringValue(response == null ? null : response.get("nextPageToken"));
+      scannedPages++;
+      if (pageToken == null) {
+        break;
       }
     }
     return ids;
@@ -425,6 +458,17 @@ public class GmailMailScannerService {
     return remainder == 0 ? value : value + "=".repeat(4 - remainder);
   }
 
+  private void addParcel(List<MailScanParcelResponse> target, backend.entity.Parcel parcel) {
+    MailScanParcelResponse response = MailScanParcelResponse.fromEntity(parcel);
+    if (response == null || response.id() == null) {
+      return;
+    }
+    boolean alreadyPresent = target.stream().anyMatch(item -> response.id().equals(item.id()));
+    if (!alreadyPresent) {
+      target.add(response);
+    }
+  }
+
   public record MailScanSummary(
       int scannedMessages,
       int deliveryMessages,
@@ -432,10 +476,12 @@ public class GmailMailScannerService {
       int reviewCount,
       int rejectedCount,
       int duplicateCount,
-      List<TrackingCandidateResponse> candidatesToReview
+      List<TrackingCandidateResponse> candidatesToReview,
+      List<MailScanParcelResponse> importedParcels,
+      List<MailScanParcelResponse> duplicateParcels
   ) {
     static MailScanSummary empty() {
-      return new MailScanSummary(0, 0, 0, 0, 0, 0, List.of());
+      return new MailScanSummary(0, 0, 0, 0, 0, 0, List.of(), List.of(), List.of());
     }
   }
 
@@ -447,6 +493,8 @@ public class GmailMailScannerService {
     private int rejectedCount;
     private int duplicateCount;
     private final List<TrackingCandidateResponse> candidatesToReview = new ArrayList<>();
+    private final List<MailScanParcelResponse> importedParcels = new ArrayList<>();
+    private final List<MailScanParcelResponse> duplicateParcels = new ArrayList<>();
 
     private MailScanSummary toSummary() {
       return new MailScanSummary(
@@ -456,7 +504,9 @@ public class GmailMailScannerService {
           reviewCount,
           rejectedCount,
           duplicateCount,
-          List.copyOf(candidatesToReview)
+          List.copyOf(candidatesToReview),
+          List.copyOf(importedParcels),
+          List.copyOf(duplicateParcels)
       );
     }
   }

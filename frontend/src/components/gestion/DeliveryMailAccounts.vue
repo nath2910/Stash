@@ -1,16 +1,18 @@
 <template>
   <section
-    class="min-w-0 rounded-[22px] border border-slate-700/70 bg-slate-900/70 p-4 shadow-xl shadow-slate-950/20 backdrop-blur"
+    class="min-w-0 rounded-[24px] border border-slate-200 bg-[#fbfaf7] p-4 shadow-[0_12px_30px_rgba(15,23,42,0.055)]"
   >
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div>
-        <h2 class="text-base font-semibold text-white">Sources mail</h2>
-        <p class="mt-1 text-xs text-slate-400">{{ accounts.length }} compte(s)</p>
+        <h2 class="text-base font-semibold text-slate-900">Sources mail</h2>
+        <p class="mt-1 text-xs text-slate-500">
+          {{ accounts.length }} compte(s) Gmail lies, scan uniquement des emails livraison.
+        </p>
       </div>
       <button
         v-if="accounts.length"
         type="button"
-        class="inline-flex h-8 items-center justify-center gap-2 rounded-full border border-slate-700/80 bg-slate-950/35 px-3 text-xs font-semibold text-slate-200 transition hover:border-violet-400/60 hover:text-white disabled:cursor-wait disabled:opacity-50"
+        class="inline-flex h-8 items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-sky-300 hover:text-slate-900 disabled:cursor-wait disabled:opacity-50"
         :disabled="loading || scanningAll"
         @click="$emit('scan-all')"
       >
@@ -22,7 +24,7 @@
     <form class="mt-4 grid gap-2" @submit.prevent="connectWithEmail">
       <button
         type="button"
-        class="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-violet-400/50 bg-violet-500/10 px-4 text-sm font-semibold text-violet-100 transition hover:border-violet-300/70 hover:bg-violet-500/20 disabled:cursor-wait disabled:opacity-60"
+        class="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-teal-600/20 bg-teal-700 px-4 text-sm font-semibold text-white transition hover:bg-teal-600 disabled:cursor-wait disabled:opacity-60"
         :disabled="connecting"
         @click="connectWithEmail"
       >
@@ -34,7 +36,7 @@
 
       <button
         type="button"
-        class="justify-self-center text-xs font-medium text-slate-500 transition hover:text-slate-300"
+        class="justify-self-center text-xs font-medium text-slate-500 transition hover:text-slate-700"
         @click="showEmailHint = !showEmailHint"
       >
         {{ showEmailHint ? 'Masquer l adresse' : 'Preciser une adresse' }}
@@ -55,7 +57,7 @@
           type="email"
           inputmode="email"
           autocomplete="email"
-          class="h-10 min-w-0 flex-1 rounded-full border border-slate-700/80 bg-slate-950/45 px-4 text-sm text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-violet-400/70 focus:ring-2 focus:ring-violet-500/20"
+          class="h-10 min-w-0 flex-1 rounded-full border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
           placeholder="adresse@gmail.com"
         />
       </Transition>
@@ -63,21 +65,28 @@
 
     <div
       v-if="error"
-      class="mt-4 rounded-2xl border border-red-400/30 bg-red-500/10 px-3 py-2.5 text-sm text-red-100"
+      class="mt-4 rounded-2xl border border-red-300/40 bg-red-50 px-3 py-2.5 text-sm text-red-700"
     >
       {{ error }}
     </div>
 
     <div v-if="loading" class="mt-5 grid gap-3">
-      <div v-for="index in 2" :key="index" class="h-16 animate-pulse rounded-2xl bg-slate-800/55" />
+      <div
+        v-for="index in 2"
+        :key="index"
+        class="h-16 animate-pulse rounded-2xl bg-slate-200/70"
+      />
     </div>
 
     <div
       v-else-if="!accounts.length"
-      class="mt-5 rounded-2xl border border-dashed border-slate-700/80 p-5 text-center"
+      class="mt-5 rounded-2xl border border-dashed border-slate-300 bg-white/70 p-5 text-center"
     >
-      <Mail class="mx-auto h-7 w-7 text-slate-500" />
-      <p class="mt-3 text-sm font-medium text-slate-300">Aucun compte lie</p>
+      <Mail class="mx-auto h-7 w-7 text-slate-400" />
+      <p class="mt-3 text-sm font-medium text-slate-800">Aucun compte lie</p>
+      <p class="mt-2 text-xs leading-relaxed text-slate-500">
+        Tu peux connecter un ou plusieurs Gmail. Le scan ne garde que les vrais numeros de suivi detectes.
+      </p>
     </div>
 
     <div
@@ -87,12 +96,12 @@
       <article
         v-for="account in accounts"
         :key="account.id"
-        class="rounded-2xl border border-slate-700/70 bg-slate-950/35 p-3"
+        class="rounded-2xl border border-slate-200 bg-white p-3"
       >
         <div class="flex flex-col items-start gap-3 min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between">
           <div class="min-w-0">
             <div class="flex min-w-0 items-center gap-2">
-              <p class="truncate text-sm font-semibold text-white">{{ account.emailAddress }}</p>
+              <p class="truncate text-sm font-semibold text-slate-900">{{ account.emailAddress }}</p>
               <span
                 class="shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-semibold"
                 :class="statusClass(account.status)"
@@ -108,7 +117,7 @@
           <div class="flex shrink-0 items-center gap-2 self-end min-[420px]:self-auto">
             <button
               type="button"
-              class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-700/80 bg-slate-900/75 text-slate-200 transition hover:border-violet-400/60 hover:text-white disabled:cursor-wait disabled:opacity-50"
+              class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-700 transition hover:border-sky-300 hover:text-slate-900 disabled:cursor-wait disabled:opacity-50"
               :disabled="scanningAll || scanningId === account.id"
               title="Scanner maintenant"
               @click="$emit('scan-now', account.id)"
@@ -120,7 +129,7 @@
             </button>
             <button
               type="button"
-              class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-red-500/25 bg-red-500/10 text-red-200 transition hover:border-red-400/80 hover:bg-red-500/20"
+              class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-red-300/40 bg-red-50 text-red-700 transition hover:border-red-400 hover:bg-red-100"
               title="Supprimer"
               @click="$emit('delete-account', account.id)"
             >
@@ -191,12 +200,12 @@ const statusLabel = (status) => {
 const statusClass = (status) => {
   switch (status) {
     case 'ACTIVE':
-      return 'border-emerald-400/40 bg-emerald-500/10 text-emerald-200'
+      return 'border-emerald-300/50 bg-emerald-50 text-emerald-700'
     case 'ERROR':
     case 'REVOKED':
-      return 'border-red-400/40 bg-red-500/10 text-red-200'
+      return 'border-red-300/50 bg-red-50 text-red-700'
     default:
-      return 'border-slate-600 bg-slate-900 text-slate-300'
+      return 'border-slate-300 bg-slate-100 text-slate-700'
   }
 }
 
@@ -223,7 +232,7 @@ const formatDateTime = (value) => {
 <style scoped>
 .delivery-accounts-scroll {
   scrollbar-width: thin;
-  scrollbar-color: rgba(139, 92, 246, 0.55) rgba(15, 23, 42, 0.35);
+  scrollbar-color: rgba(148, 163, 184, 0.9) rgba(226, 232, 240, 0.9);
 }
 
 .delivery-accounts-scroll::-webkit-scrollbar {
@@ -231,13 +240,13 @@ const formatDateTime = (value) => {
 }
 
 .delivery-accounts-scroll::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.35);
+  background: rgba(226, 232, 240, 0.9);
   border-radius: 999px;
 }
 
 .delivery-accounts-scroll::-webkit-scrollbar-thumb {
-  border: 2px solid rgba(15, 23, 42, 0.35);
+  border: 2px solid rgba(226, 232, 240, 0.9);
   border-radius: 999px;
-  background: linear-gradient(180deg, rgba(167, 139, 250, 0.78), rgba(14, 165, 233, 0.62));
+  background: linear-gradient(180deg, rgba(15, 118, 110, 0.72), rgba(56, 189, 248, 0.56));
 }
 </style>

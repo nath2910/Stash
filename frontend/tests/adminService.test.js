@@ -67,3 +67,25 @@ test('generateAdministrativeDocument demande un PDF', async () => {
     headers: { Accept: 'application/pdf' },
   })
 })
+
+test('administrativeDocumentRecords charge les archives explicites', async () => {
+  await AdminService.administrativeDocumentRecords()
+  const call = getMock.mock.calls[0]
+  assert.equal(call.arguments[0], '/administrative/document-records')
+})
+
+test('markAdministrativeDeclarationDone archive une declaration', async () => {
+  const payload = { periodStart: '2026-01-01', periodEnd: '2026-01-31', amount: 300 }
+  await AdminService.markAdministrativeDeclarationDone(payload)
+  const call = postMock.mock.calls[0]
+  assert.equal(call.arguments[0], '/administrative/declarations/mark-done')
+  assert.deepEqual(call.arguments[1], payload)
+})
+
+test('generateMissingAdministrativeInvoices declenche le lot backend', async () => {
+  const payload = { periodStart: '2026-01-01', periodEnd: '2026-01-31', year: 2026 }
+  await AdminService.generateMissingAdministrativeInvoices(payload)
+  const call = postMock.mock.calls[0]
+  assert.equal(call.arguments[0], '/administrative/invoices/generate-missing')
+  assert.deepEqual(call.arguments[1], payload)
+})

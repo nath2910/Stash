@@ -16,6 +16,10 @@ public record AdministrativeSummaryResponse(
     long incompleteSaleCount,
     long missingSaleDateCount,
     long missingSaleAmountCount,
+    long missingPurchaseAmountCount,
+    long missingProofCount,
+    long periodMismatchCount,
+    long missingInvoiceCount,
     long periodPurchaseCount,
     BigDecimal periodPurchaseTotal,
     String revenueRule,
@@ -25,6 +29,8 @@ public record AdministrativeSummaryResponse(
     List<AdministrativePeriodBucketResponse> periodBreakdown,
     List<AdministrativeSaleLineResponse> sales,
     List<AdministrativeSaleLineResponse> purchases,
+    List<AdministrativeObligationResponse> obligations,
     List<AdministrativeAlertResponse> alerts,
+    List<AdministrativeQualityCheckResponse> qualityChecks,
     List<AdministrativeSourceResponse> sources
 ) {}

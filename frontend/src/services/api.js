@@ -1,12 +1,35 @@
 import axios from 'axios'
 
 const metaEnv = typeof import.meta !== 'undefined' ? import.meta.env : {}
+const LOCAL_BACKEND_ORIGIN = 'http://localhost:8080'
+
+function isLocalHostname(hostname = '') {
+  return (
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname === '[::1]' ||
+    hostname.endsWith('.localhost')
+  )
+}
+
+function inferApiBaseURL() {
+  if (typeof window === 'undefined' || !window.location) return ''
+
+  const { origin, protocol, hostname } = window.location
+  if (!hostname) return ''
+  if (isLocalHostname(hostname)) return LOCAL_BACKEND_ORIGIN
+  if (/^api[.-]/i.test(hostname)) return origin
+
+  const rootHost = hostname.replace(/^(www\.|app\.|frontend\.)/i, '')
+  return `${protocol}//api.${rootHost}`
+}
 const rawBaseURL =
   metaEnv?.VITE_API_URL ||
   metaEnv?.VITE_API_BASE_URL ||
   process.env.VITE_API_URL ||
   process.env.VITE_API_BASE_URL ||
-  'http://localhost:8080'
+  inferApiBaseURL() ||
+  LOCAL_BACKEND_ORIGIN
 const baseURL = rawBaseURL.replace(/\/+$/, '') // évite les doubles slash dans les appels
 
 const api = axios.create({

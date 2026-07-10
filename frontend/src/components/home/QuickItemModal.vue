@@ -28,6 +28,7 @@
               :item="item"
               :items="items"
               :saving="saving"
+              auto-focus-first-field
               details-default-open
               submit-label="Enregistrer"
               @cancel="$emit('close')"
@@ -84,8 +85,9 @@ watch(
     successText.value = 'Modifications enregistrees.'
     successTimer = window.setTimeout(() => {
       successText.value = ''
+      emit('close')
       successTimer = null
-    }, 1500)
+    }, 180)
   },
 )
 

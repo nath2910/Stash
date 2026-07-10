@@ -1,5 +1,11 @@
 import { ref } from 'vue'
+import AdminService from '@/services/AdminService'
 import NotificationService from '@/services/NotificationService'
+import {
+  ADMIN_NOTIFICATION_PREFIX,
+  buildAdministrativeReminderNotifications,
+  deriveAdministrativeSummaryParams,
+} from '@/utils/adminNotificationBuilder'
 import { useAuthStore } from './authStore'
 
 const DEFAULT_PAGE_SIZE = 20
@@ -20,6 +26,11 @@ const centerOpen = ref(false)
 const syncing = ref(false)
 const toastItems = ref([])
 
+const serverNotifications = ref([])
+const reminderNotifications = ref([])
+const serverUnreadCount = ref(0)
+const serverTotal = ref(0)
+
 let activeToken = ''
 let pollTimer = null
 let initPromise = null
@@ -36,6 +47,10 @@ function getLastSeenKey() {
   return `snk_notifications_last_seen_${getUserId()}`
 }
 
+function getLocalStateKey() {
+  return `snk_notifications_local_state_${getUserId()}`
+}
+
 function readLastSeenMs() {
   try {
     const raw = localStorage.getItem(getLastSeenKey())
@@ -50,6 +65,25 @@ function readLastSeenMs() {
 function writeLastSeenMs(value) {
   try {
     localStorage.setItem(getLastSeenKey(), String(value))
+  } catch {
+    // ignore storage failures
+  }
+}
+
+function readLocalStateMap() {
+  try {
+    const raw = localStorage.getItem(getLocalStateKey())
+    if (!raw) return {}
+    const parsed = JSON.parse(raw)
+    return parsed && typeof parsed === 'object' ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+function writeLocalStateMap(map) {
+  try {
+    localStorage.setItem(getLocalStateKey(), JSON.stringify(map))
   } catch {
     // ignore storage failures
   }
@@ -79,6 +113,10 @@ function clearAllToastTimers() {
 
 function isInfo(notification) {
   return String(notification?.severity || '').toUpperCase() === 'INFO'
+}
+
+function isSyntheticNotificationId(notificationId) {
+  return String(notificationId || '').startsWith(ADMIN_NOTIFICATION_PREFIX)
 }
 
 function dismissToast(notificationId) {
@@ -139,12 +177,94 @@ function dedupeById(items) {
   return deduped
 }
 
-function mergeItems(items, append) {
+function sortNotifications(items) {
+  return [...items].sort((a, b) => {
+    if (Boolean(a?.isRead) !== Boolean(b?.isRead)) return a?.isRead ? 1 : -1
+    return Date.parse(b?.createdAt || 0) - Date.parse(a?.createdAt || 0)
+  })
+}
+
+function getReminderNotification(notificationId) {
+  return reminderNotifications.value.find((item) => item.id === notificationId) || null
+}
+
+function syncCombinedState() {
+  const visibleReminders = reminderNotifications.value.filter((item) => !item.dismissedAt)
+  notifications.value = sortNotifications(
+    dedupeById([...visibleReminders, ...serverNotifications.value]),
+  )
+  total.value = serverTotal.value + visibleReminders.length
+  unreadCount.value =
+    serverUnreadCount.value + visibleReminders.filter((item) => !item.isRead).length
+}
+
+function applyReminderLocalState(items) {
+  const localState = readLocalStateMap()
+  return items.map((item) => {
+    const state = localState[item.id]
+    if (!state) return item
+    return {
+      ...item,
+      isRead: Boolean(state.isRead ?? item.isRead),
+      readAt: state.readAt || item.readAt || null,
+      dismissedAt: state.dismissedAt || item.dismissedAt || null,
+    }
+  })
+}
+
+function setReminderNotifications(items) {
+  reminderNotifications.value = sortNotifications(dedupeById(applyReminderLocalState(items)))
+  syncCombinedState()
+}
+
+function mergeServerNotifications(items, append) {
   if (!append) {
-    notifications.value = dedupeById(items)
-    return
+    serverNotifications.value = dedupeById(items)
+  } else {
+    serverNotifications.value = dedupeById([...serverNotifications.value, ...items])
   }
-  notifications.value = dedupeById([...notifications.value, ...items])
+  syncCombinedState()
+}
+
+function setReminderState(notificationId, patch) {
+  const localState = readLocalStateMap()
+  localState[notificationId] = {
+    ...(localState[notificationId] || {}),
+    ...patch,
+  }
+  writeLocalStateMap(localState)
+}
+
+function hideReminder(notificationId, { markRead = true } = {}) {
+  const now = new Date().toISOString()
+  reminderNotifications.value = reminderNotifications.value.map((item) =>
+    item.id === notificationId
+      ? {
+          ...item,
+          isRead: markRead ? true : item.isRead,
+          readAt: markRead ? now : item.readAt || null,
+          dismissedAt: now,
+        }
+      : item,
+  )
+  setReminderState(notificationId, {
+    isRead: markRead,
+    readAt: markRead ? now : null,
+    dismissedAt: now,
+  })
+  dismissToast(notificationId)
+  syncCombinedState()
+}
+
+async function fetchAdministrativeReminders() {
+  try {
+    const profile = await AdminService.administrativeProfile()
+    const params = deriveAdministrativeSummaryParams(profile, new Date())
+    const summary = await AdminService.administrativeSummary(params)
+    return buildAdministrativeReminderNotifications(profile, summary, { now: new Date() })
+  } catch {
+    return []
+  }
 }
 
 async function fetchNotifications({
@@ -161,24 +281,38 @@ async function fetchNotifications({
   error.value = ''
 
   try {
-    const { data } = await NotificationService.list({
-      page: safePage,
-      size: safeSize,
-      unreadFirst,
-    })
+    const [notificationResponse, administrativeReminders] = await Promise.all([
+      NotificationService.list({
+        page: safePage,
+        size: safeSize,
+        unreadFirst,
+      }),
+      safePage === 0 ? fetchAdministrativeReminders() : Promise.resolve(reminderNotifications.value),
+    ])
 
-    const items = Array.isArray(data?.items) ? data.items : []
-    if (captureToasts) captureToastsFrom(items)
+    const data = notificationResponse?.data || {}
+    const serverItems = Array.isArray(data?.items) ? data.items : []
+    mergeServerNotifications(serverItems, append)
 
-    mergeItems(items, append)
+    if (safePage === 0) {
+      setReminderNotifications(administrativeReminders)
+    }
 
     page.value = Number.isFinite(data?.page) ? data.page : safePage
     size.value = Number.isFinite(data?.size) ? data.size : safeSize
     hasNext.value = Boolean(data?.hasNext)
-    total.value = Number.isFinite(data?.total) ? data.total : notifications.value.length
-    unreadCount.value = Number.isFinite(data?.unreadCount)
+    serverTotal.value = Number.isFinite(data?.total) ? data.total : serverNotifications.value.length
+    serverUnreadCount.value = Number.isFinite(data?.unreadCount)
       ? data.unreadCount
-      : notifications.value.filter((item) => !item.isRead).length
+      : serverNotifications.value.filter((item) => !item.isRead).length
+    syncCombinedState()
+
+    if (captureToasts) {
+      captureToastsFrom([
+        ...serverItems,
+        ...(safePage === 0 ? administrativeReminders : reminderNotifications.value),
+      ])
+    }
 
     return notifications.value
   } catch (err) {
@@ -192,7 +326,10 @@ async function fetchNotifications({
 async function refreshUnreadCount() {
   try {
     const { data } = await NotificationService.unreadCount()
-    unreadCount.value = Number.isFinite(data?.unreadCount) ? data.unreadCount : unreadCount.value
+    serverUnreadCount.value = Number.isFinite(data?.unreadCount)
+      ? data.unreadCount
+      : serverUnreadCount.value
+    syncCombinedState()
   } catch {
     // keep current value
   }
@@ -221,72 +358,116 @@ async function loadMore() {
 }
 
 async function markAsRead(notificationId) {
-  const index = notifications.value.findIndex((item) => item.id === notificationId)
+  if (isSyntheticNotificationId(notificationId)) {
+    const previous = getReminderNotification(notificationId)
+    if (!previous) return null
+    hideReminder(notificationId, { markRead: true })
+    return previous
+  }
+
+  const index = serverNotifications.value.findIndex((item) => item.id === notificationId)
   if (index < 0) return null
 
-  const previous = { ...notifications.value[index] }
-  notifications.value = notifications.value.filter((item) => item.id !== notificationId)
+  const previous = { ...serverNotifications.value[index] }
+  serverNotifications.value = serverNotifications.value.filter((item) => item.id !== notificationId)
   dismissToast(notificationId)
   if (!previous.isRead) {
-    unreadCount.value = Math.max(0, unreadCount.value - 1)
+    serverUnreadCount.value = Math.max(0, serverUnreadCount.value - 1)
   }
+  serverTotal.value = Math.max(0, serverTotal.value - 1)
+  syncCombinedState()
 
   try {
     const { data } = await NotificationService.markRead(notificationId)
     return data || previous
   } catch (err) {
-    const restored = [...notifications.value]
+    const restored = [...serverNotifications.value]
     restored.splice(index, 0, previous)
-    notifications.value = restored
-    if (!previous.isRead) unreadCount.value += 1
+    serverNotifications.value = restored
+    if (!previous.isRead) serverUnreadCount.value += 1
+    serverTotal.value += 1
+    syncCombinedState()
     throw err
   }
 }
 
 async function markAllAsRead() {
-  const visibleIds = notifications.value.map((item) => item.id).filter(Boolean)
-  if (visibleIds.length === 0) return 0
+  const visibleServerIds = serverNotifications.value.map((item) => item.id).filter(Boolean)
+  const visibleReminderIds = reminderNotifications.value
+    .filter((item) => !item.dismissedAt)
+    .map((item) => item.id)
+    .filter(Boolean)
 
-  const previousNotifications = notifications.value
+  if (visibleServerIds.length === 0 && visibleReminderIds.length === 0) return 0
+
+  const previousServerNotifications = serverNotifications.value
+  const previousReminderNotifications = reminderNotifications.value
   const previousToasts = toastItems.value
-  const visibleIdSet = new Set(visibleIds)
-  const unreadIds = notifications.value.filter((item) => !item.isRead).map((item) => item.id)
-  notifications.value = []
+  const previousServerTotal = serverTotal.value
+  const previousServerUnread = serverUnreadCount.value
+  const previousLocalState = readLocalStateMap()
+
+  const visibleIdSet = new Set([...visibleServerIds, ...visibleReminderIds])
   toastItems.value = toastItems.value.filter((toast) => !visibleIdSet.has(toast.id))
-  visibleIds.forEach(clearToastTimer)
-  const before = unreadCount.value
-  unreadCount.value = 0
+  visibleIdSet.forEach(clearToastTimer)
+
+  for (const notificationId of visibleReminderIds) {
+    hideReminder(notificationId, { markRead: true })
+  }
+
+  serverNotifications.value = []
+  serverUnreadCount.value = 0
+  serverTotal.value = Math.max(0, serverTotal.value - visibleServerIds.length)
+  syncCombinedState()
 
   try {
-    const { data } = await NotificationService.markAllRead()
-    return Number.isFinite(data?.updated) ? data.updated : unreadIds.length
+    if (visibleServerIds.length > 0) {
+      const { data } = await NotificationService.markAllRead()
+      return Number.isFinite(data?.updated)
+        ? data.updated + visibleReminderIds.length
+        : visibleServerIds.length + visibleReminderIds.length
+    }
+    return visibleReminderIds.length
   } catch (err) {
-    notifications.value = previousNotifications
+    serverNotifications.value = previousServerNotifications
+    reminderNotifications.value = previousReminderNotifications
     toastItems.value = previousToasts
-    unreadCount.value = before
+    serverTotal.value = previousServerTotal
+    serverUnreadCount.value = previousServerUnread
+    writeLocalStateMap(previousLocalState)
+    syncCombinedState()
     throw err
   }
 }
 
 async function dismissNotification(notificationId) {
-  const index = notifications.value.findIndex((item) => item.id === notificationId)
+  if (isSyntheticNotificationId(notificationId)) {
+    hideReminder(notificationId, { markRead: true })
+    return
+  }
+
+  const index = serverNotifications.value.findIndex((item) => item.id === notificationId)
   if (index < 0) return
 
-  const previous = notifications.value[index]
-  notifications.value = notifications.value.filter((item) => item.id !== notificationId)
+  const previous = serverNotifications.value[index]
+  serverNotifications.value = serverNotifications.value.filter((item) => item.id !== notificationId)
   dismissToast(notificationId)
 
   if (!previous.isRead) {
-    unreadCount.value = Math.max(0, unreadCount.value - 1)
+    serverUnreadCount.value = Math.max(0, serverUnreadCount.value - 1)
   }
+  serverTotal.value = Math.max(0, serverTotal.value - 1)
+  syncCombinedState()
 
   try {
     await NotificationService.dismiss(notificationId)
   } catch (err) {
-    const restored = [...notifications.value]
+    const restored = [...serverNotifications.value]
     restored.splice(index, 0, previous)
-    notifications.value = restored
-    if (!previous.isRead) unreadCount.value += 1
+    serverNotifications.value = restored
+    if (!previous.isRead) serverUnreadCount.value += 1
+    serverTotal.value += 1
+    syncCombinedState()
     throw err
   }
 }
@@ -344,13 +525,17 @@ function resetState() {
   displayedToastIds.clear()
 
   notifications.value = []
+  serverNotifications.value = []
+  reminderNotifications.value = []
   unreadCount.value = 0
+  serverUnreadCount.value = 0
   loading.value = false
   error.value = ''
   page.value = 0
   size.value = DEFAULT_PAGE_SIZE
   hasNext.value = false
   total.value = 0
+  serverTotal.value = 0
   centerOpen.value = false
   syncing.value = false
   toastItems.value = []

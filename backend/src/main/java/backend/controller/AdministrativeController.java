@@ -2,8 +2,11 @@ package backend.controller;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
+import backend.dto.AdministrativeDeclarationRecordRequest;
 import backend.dto.AdministrativeDocumentDescriptorResponse;
+import backend.dto.AdministrativeDocumentRecordResponse;
 import backend.dto.AdministrativeDocumentRequest;
+import backend.dto.AdministrativeInvoiceBatchResponse;
 import backend.dto.AdministrativeProfileRequest;
 import backend.dto.AdministrativeProfileResponse;
 import backend.dto.AdministrativeSummaryResponse;
@@ -71,6 +74,19 @@ public class AdministrativeController {
     return administrativeService.documents(currentUser.getId());
   }
 
+  @GetMapping(path = "document-records", produces = APPLICATION_JSON_VALUE)
+  public List<AdministrativeDocumentRecordResponse> documentRecords(@AuthenticationPrincipal User currentUser) {
+    return administrativeService.documentRecords(currentUser.getId());
+  }
+
+  @PostMapping(path = "declarations/mark-done", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+  public AdministrativeDocumentRecordResponse markDeclarationDone(
+      @AuthenticationPrincipal User currentUser,
+      @RequestBody AdministrativeDeclarationRecordRequest request
+  ) {
+    return administrativeService.markDeclarationDone(currentUser.getId(), request);
+  }
+
   @PostMapping(path = "documents/urssaf-summary", consumes = APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_PDF_VALUE)
   public ResponseEntity<byte[]> urssafSummary(
       @AuthenticationPrincipal User currentUser,
@@ -101,6 +117,30 @@ public class AdministrativeController {
       @RequestBody(required = false) AdministrativeDocumentRequest request
   ) {
     return pdf(administrativeService.generateDocument(currentUser.getId(), request, "purchases-register"));
+  }
+
+  @PostMapping(path = "documents/second-hand-register", consumes = APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_PDF_VALUE)
+  public ResponseEntity<byte[]> secondHandRegister(
+      @AuthenticationPrincipal User currentUser,
+      @RequestBody(required = false) AdministrativeDocumentRequest request
+  ) {
+    return pdf(administrativeService.generateDocument(currentUser.getId(), request, "second-hand-register"));
+  }
+
+  @PostMapping(path = "documents/annual-folder", consumes = APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_PDF_VALUE)
+  public ResponseEntity<byte[]> annualFolder(
+      @AuthenticationPrincipal User currentUser,
+      @RequestBody(required = false) AdministrativeDocumentRequest request
+  ) {
+    return pdf(administrativeService.generateDocument(currentUser.getId(), request, "annual-folder"));
+  }
+
+  @PostMapping(path = "invoices/generate-missing", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+  public AdministrativeInvoiceBatchResponse generateMissingInvoices(
+      @AuthenticationPrincipal User currentUser,
+      @RequestBody(required = false) AdministrativeDocumentRequest request
+  ) {
+    return administrativeService.generateMissingInvoices(currentUser.getId(), request);
   }
 
   private ResponseEntity<byte[]> pdf(AdministrativeService.GeneratedAdministrativeDocument document) {

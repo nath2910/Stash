@@ -18,6 +18,7 @@
         class="item-field item-field--category"
         label="Categorie"
         :model-value="form.type"
+        :items="items"
         display="dropdown"
         placeholder="Choisir une categorie"
         :user-id="currentUserId"
@@ -29,6 +30,7 @@
       <label class="item-field item-field--name">
         <span>Nom de l'item</span>
         <input
+          ref="nameInputRef"
           v-model.trim="form.nomItem"
           type="text"
           autocomplete="off"
@@ -38,7 +40,7 @@
       </label>
 
       <ItemSubcategorySelect
-        v-model="form.categorie"
+        :model-value="form.categorie"
         class="item-field item-field--subcategory"
         label="Sous-categorie"
         placeholder="Marque, famille..."
@@ -46,24 +48,29 @@
         :type="form.type"
         :user-id="currentUserId"
         :discovered="discoveredSubcategories"
+        :items="items"
         :category-labels="categoryLabels"
+        @update:modelValue="setSubcategory"
       />
 
       <label class="item-field item-field--price">
         <span>Prix achat</span>
         <input
-          v-model.number="form.prixRetail"
-          type="number"
-          min="0"
-          step="0.01"
+          :value="priceInputs.prixRetail"
+          type="text"
+          inputmode="decimal"
           placeholder="110"
           required
+          @input="updatePriceField('prixRetail', $event)"
+          @blur="formatPriceField('prixRetail')"
         />
+        <small v-if="pricePreview('prixRetail')">{{ pricePreview('prixRetail') }}</small>
       </label>
 
       <div class="item-field item-field--date">
         <span>Date d'achat</span>
         <CompactDateInput v-model="form.dateAchat" light size="md" />
+        <small v-if="autofillHint">{{ autofillHint }}</small>
       </div>
 
       <div v-if="quantityEnabled && !showDetails" class="item-field item-field--quantity">
@@ -109,7 +116,15 @@
 
         <label class="item-field item-field--price">
           <span>Prix de vente</span>
-          <input v-model.number="form.prixResell" type="number" min="0" step="0.01" placeholder="180" />
+          <input
+            :value="priceInputs.prixResell"
+            type="text"
+            inputmode="decimal"
+            placeholder="180"
+            @input="updatePriceField('prixResell', $event)"
+            @blur="formatPriceField('prixResell')"
+          />
+          <small v-if="pricePreview('prixResell')">{{ pricePreview('prixResell') }}</small>
         </label>
 
         <label class="item-field item-field--notes">
@@ -188,7 +203,7 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { Minus, Plus, Save, SlidersHorizontal } from 'lucide-vue-next'
 import CompactDateInput from '@/components/ui/CompactDateInput.vue'
 import ItemCategorySelect from '@/components/gestion/ItemCategorySelect.vue'
@@ -196,12 +211,19 @@ import ItemSubcategorySelect from '@/components/gestion/ItemSubcategorySelect.vu
 import { useAuthStore } from '@/store/authStore'
 import { METADATA_FIELDS } from '@/RegleItem/CategorieItem'
 import {
+  buildItemCategoryAliases,
   itemTypeLabel,
   normalizeItemType,
   readStoredItemCategories,
   resolveItemTypeOptions,
 } from '@/RegleItem/itemCategoryStore'
-import { extractSubcategoriesByType } from '@/RegleItem/subcategoryStore'
+import {
+  extractSubcategoriesByType,
+  normalizeSubcategoryName,
+  readStoredSubcategories,
+} from '@/RegleItem/subcategoryStore'
+import { inferItemClassificationFromName } from '@/RegleItem/itemNameInference'
+import { formatEUR } from '@/utils/formatters'
 import { getField, typeOf } from '@/utils/snkVente'
 import { numberOrNull, toYmdLocal } from '@/utils/homeDashboard'
 
@@ -215,6 +237,8 @@ const props = defineProps({
   showCancel: { type: Boolean, default: true },
   showDetailsToggle: { type: Boolean, default: true },
   detailsDefaultOpen: { type: Boolean, default: false },
+  autoInferFromName: { type: Boolean, default: false },
+  autoFocusFirstField: { type: Boolean, default: false },
   submitLabel: { type: String, default: 'Enregistrer' },
   savingLabel: { type: String, default: 'Enregistrement...' },
   cancelLabel: { type: String, default: 'Annuler' },
@@ -227,14 +251,56 @@ const LAST_TYPE_PREFIX = 'snk_home_last_item_type_v1'
 const auth = useAuthStore()
 const currentUserId = computed(() => auth.user?.value?.id ?? auth.user?.id ?? 'guest')
 const categoryLabels = ref(readStoredItemCategories(currentUserId.value))
+const storedSubcategories = ref(
+  readStoredSubcategories(currentUserId.value, undefined, categoryLabels.value),
+)
 const showDetails = ref(props.detailsDefaultOpen)
+const manualTypeOverride = ref(false)
+const manualSubcategoryOverride = ref(false)
+const manualRetailOverride = ref(false)
+const manualResellOverride = ref(false)
+const nameInputRef = ref(null)
+const priceInputs = ref({
+  prixRetail: '',
+  prixResell: '',
+})
 
 const itemTypes = computed(() => resolveItemTypeOptions(categoryLabels.value))
 const discoveredSubcategories = computed(() =>
   extractSubcategoriesByType(props.items, categoryLabels.value),
 )
+const mainCategoryAliases = computed(() => buildItemCategoryAliases(categoryLabels.value))
 const metadataFields = computed(() => METADATA_FIELDS[form.value.type] || [])
 const currentTypeLabel = computed(() => itemTypeLabel(form.value.type, categoryLabels.value))
+
+const suggestedFromHistory = computed(() => {
+  if (props.mode !== 'create') return null
+
+  const normalizedName = normalizeNameForSuggestion(form.value.nomItem)
+  const candidates = [...(props.items || [])]
+    .filter((item) => normalizeItemType(typeOf(item)) === form.value.type)
+    .map((item) => ({
+      item,
+      score: suggestionScore(item, normalizedName, form.value.categorie),
+    }))
+    .filter((entry) => entry.score > 0)
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score
+      const aDate = String(getField(a.item, 'dateAchat', '') || getField(a.item, 'dateVente', '') || '')
+      const bDate = String(getField(b.item, 'dateAchat', '') || getField(b.item, 'dateVente', '') || '')
+      return bDate.localeCompare(aDate)
+    })
+
+  return candidates[0]?.item || null
+})
+
+const autofillHint = computed(() => {
+  const source = suggestedFromHistory.value
+  if (!source) return ''
+  const name = getField(source, 'nomItem', '').trim()
+  const sourceName = name || itemTypeLabel(typeOf(source), categoryLabels.value)
+  return `Prefill intelligent base sur ${sourceName}.`
+})
 function lastTypeStorageKey(userId = currentUserId.value) {
   return `${LAST_TYPE_PREFIX}_${String(userId || 'guest')}`
 }
@@ -265,6 +331,53 @@ function resolveDefaultType() {
 function defaultMetadata(type) {
   const fields = METADATA_FIELDS[type] || []
   return fields.some((field) => field.key === 'condition') ? { condition: 'Neuf' } : {}
+}
+
+function normalizeNameForSuggestion(value) {
+  return String(value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+}
+
+function suggestionScore(item, normalizedName, category) {
+  let score = 0
+  const itemName = normalizeNameForSuggestion(getField(item, 'nomItem', ''))
+  const itemCategory = normalizeSubcategoryName(getField(item, 'categorie', ''))
+
+  if (category && itemCategory === normalizeSubcategoryName(category)) score += 5
+  if (normalizedName && itemName === normalizedName) score += 6
+  if (normalizedName && itemName.includes(normalizedName)) score += 4
+  if (normalizedName) {
+    const firstToken = normalizedName.split(' ').filter(Boolean)[0]
+    if (firstToken && itemName.includes(firstToken)) score += 2
+  }
+
+  const retail = numberOrNull(getField(item, 'prixRetail', null))
+  const resell = numberOrNull(getField(item, 'prixResell', null))
+  if (retail !== null) score += 1
+  if (resell !== null) score += 1
+  return score
+}
+
+function formatPriceValue(value) {
+  const parsed = numberOrNull(value)
+  return parsed === null ? '' : parsed.toFixed(2).replace('.', ',')
+}
+
+function parsePriceValue(raw) {
+  const normalized = String(raw || '')
+    .replace(/\s/g, '')
+    .replace(/[€]/g, '')
+    .replace(',', '.')
+  return numberOrNull(normalized)
+}
+
+function syncPriceInputsFromForm() {
+  priceInputs.value.prixRetail = formatPriceValue(form.value.prixRetail)
+  priceInputs.value.prixResell = formatPriceValue(form.value.prixResell)
 }
 
 function emptyForm(prefill = {}) {
@@ -318,6 +431,50 @@ function hasDetailedValues(value) {
 function resetForm() {
   form.value = props.mode === 'edit' ? formFromItem(props.item) : emptyForm()
   showDetails.value = props.detailsDefaultOpen || (props.mode === 'edit' && hasDetailedValues(form.value))
+  manualTypeOverride.value = false
+  manualSubcategoryOverride.value = false
+  manualRetailOverride.value = false
+  manualResellOverride.value = false
+  syncPriceInputsFromForm()
+  applyNameInference()
+  applySmartAutofill()
+  queueAutoFocus()
+}
+
+function queueAutoFocus() {
+  if (!props.autoFocusFirstField) return
+  focusFirstField()
+}
+
+function focusFirstField() {
+  nextTick(() => {
+    nameInputRef.value?.focus?.()
+    nameInputRef.value?.select?.()
+  })
+}
+
+function applySuggestedPrice(key, value) {
+  if (numberOrNull(value) === null) return
+  form.value[key] = Number(value)
+  priceInputs.value[key] = formatPriceValue(value)
+}
+
+function applySmartAutofill() {
+  if (props.mode !== 'create') return
+  const source = suggestedFromHistory.value
+  if (!source) return
+
+  if (!manualRetailOverride.value && numberOrNull(form.value.prixRetail) === null) {
+    applySuggestedPrice('prixRetail', getField(source, 'prixRetail', null))
+  }
+
+  if (!manualResellOverride.value && numberOrNull(form.value.prixResell) === null) {
+    applySuggestedPrice('prixResell', getField(source, 'prixResell', null))
+  }
+
+  if (!manualSubcategoryOverride.value && !form.value.categorie) {
+    form.value.categorie = normalizeSubcategoryName(getField(source, 'categorie', ''))
+  }
 }
 
 watch(
@@ -340,6 +497,7 @@ watch(
   () => currentUserId.value,
   (userId) => {
     categoryLabels.value = readStoredItemCategories(userId)
+    storedSubcategories.value = readStoredSubcategories(userId, undefined, categoryLabels.value)
     if (props.mode !== 'edit') resetForm()
   },
 )
@@ -349,6 +507,7 @@ watch(
   (value) => {
     if (value && (form.value.prixResell === null || form.value.prixResell === '')) {
       form.value.prixResell = 0
+      priceInputs.value.prixResell = formatPriceValue(0)
     }
   },
 )
@@ -361,28 +520,98 @@ watch(
   { deep: true, immediate: true },
 )
 
-function setType(type) {
+function applyType(type) {
   const nextType = normalizeItemType(type)
-  if (form.value.type === nextType) return
+  if (form.value.type === nextType) return false
   form.value.type = nextType
   form.value.categorie = ''
   form.value.metadata = defaultMetadata(nextType)
+  return true
+}
+
+function setType(type) {
+  manualTypeOverride.value = true
+  manualSubcategoryOverride.value = false
+  applyType(type)
+  applySmartAutofill()
+}
+
+function setSubcategory(value) {
+  manualSubcategoryOverride.value = true
+  form.value.categorie = normalizeSubcategoryName(value)
+  applySmartAutofill()
+}
+
+function applyNameInference() {
+  if (!props.autoInferFromName || props.mode === 'edit') return
+  const prediction = inferItemClassificationFromName(form.value.nomItem, {
+    categoryLabels: categoryLabels.value,
+    storedSubcategories: storedSubcategories.value,
+    discoveredSubcategories: discoveredSubcategories.value,
+    currentType: form.value.type,
+    currentSubcategory: form.value.categorie,
+    mainCategoryAliases: mainCategoryAliases.value,
+  })
+
+  if (!manualTypeOverride.value && prediction.type) {
+    applyType(prediction.type)
+  }
+
+  if (!manualSubcategoryOverride.value && prediction.subcategory) {
+    form.value.categorie = prediction.subcategory
+  }
 }
 
 function setCategoryLabels(labels) {
   categoryLabels.value = labels || readStoredItemCategories(currentUserId.value)
+  storedSubcategories.value = readStoredSubcategories(
+    currentUserId.value,
+    undefined,
+    categoryLabels.value,
+  )
+  applyNameInference()
+  applySmartAutofill()
 }
 
 function onCategoryLabelsChange(event) {
   const detail = event?.detail || {}
   if (String(detail.userId || 'guest') !== String(currentUserId.value || 'guest')) return
   categoryLabels.value = readStoredItemCategories(currentUserId.value)
+  storedSubcategories.value = readStoredSubcategories(
+    currentUserId.value,
+    undefined,
+    categoryLabels.value,
+  )
+  applyNameInference()
+  applySmartAutofill()
 }
 
 function onSubcategoriesChange(event) {
   const detail = event?.detail || {}
   if (String(detail.userId || 'guest') !== String(currentUserId.value || 'guest')) return
+  storedSubcategories.value = readStoredSubcategories(
+    currentUserId.value,
+    undefined,
+    categoryLabels.value,
+  )
+  applyNameInference()
+  applySmartAutofill()
 }
+
+watch(
+  () => form.value.nomItem,
+  () => {
+    applyNameInference()
+    applySmartAutofill()
+  },
+)
+
+watch(
+  () => [form.value.type, form.value.categorie],
+  () => {
+    applySmartAutofill()
+  },
+)
 
 if (typeof window !== 'undefined') {
   window.addEventListener('snk:item-categories-change', onCategoryLabelsChange)
@@ -395,6 +624,29 @@ onBeforeUnmount(() => {
     window.removeEventListener('snk:item-subcategories-change', onSubcategoriesChange)
   }
 })
+
+function updatePriceField(key, event) {
+  const raw = typeof event === 'string' ? event : event?.target?.value
+  priceInputs.value[key] = String(raw ?? '')
+
+  if (key === 'prixRetail') manualRetailOverride.value = true
+  if (key === 'prixResell') manualResellOverride.value = true
+
+  const parsed = parsePriceValue(priceInputs.value[key])
+  form.value[key] = parsed
+}
+
+function formatPriceField(key) {
+  const parsed = parsePriceValue(priceInputs.value[key])
+  form.value[key] = parsed
+  priceInputs.value[key] = formatPriceValue(parsed)
+}
+
+function pricePreview(key) {
+  const parsed = numberOrNull(form.value[key])
+  if (parsed === null) return ''
+  return formatEUR(parsed)
+}
 
 function cleanedMetadata() {
   const out = {}
@@ -485,6 +737,10 @@ function submit() {
   }
   emit('submit', { quantity: props.quantityEnabled ? Number(form.value.quantity) : 1, payload })
 }
+
+defineExpose({
+  focusFirstField,
+})
 </script>
 
 <style scoped>
@@ -576,6 +832,13 @@ function submit() {
   color: #334155;
   font-size: 0.76rem;
   font-weight: 850;
+}
+
+.item-field small {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 650;
+  line-height: 1.35;
 }
 
 .item-field--section span {

@@ -1,21 +1,23 @@
 <template>
   <div class="gestion-page-light text-slate-900">
     <div class="relative w-full app-page-stack gestion-page-stack">
-      <header class="gestion-hero-panel">
+      <header
+        class="gestion-hero-panel"
+        :class="{
+          'is-admin-context': activeGestionTab === 'admin',
+          'is-delivery-context': activeGestionTab === 'delivery',
+        }"
+      >
         <div class="flex flex-wrap items-end justify-between gap-4">
           <div class="space-y-2">
-            <p class="gestion-eyebrow">Inventaire centralise</p>
-            <h1 class="gestion-title">Gestion</h1>
+            <p class="gestion-eyebrow">{{ gestionHero.eyebrow }}</p>
+            <h1 class="gestion-title">{{ gestionHero.title }}</h1>
             <p class="gestion-subtitle">
-              Ajoute, modifie, filtre et suis tes items dans un espace coherent avec l'accueil.
+              {{ gestionHero.subtitle }}
             </p>
           </div>
           <div class="gestion-hero-pills">
-            <span>{{ totalPaires }} items</span>
-            <span>{{ nbEnStock }} en stock</span>
-            <span>
-              Actions rapides
-            </span>
+            <span v-for="pill in gestionHero.pills" :key="pill">{{ pill }}</span>
           </div>
         </div>
       </header>
@@ -55,7 +57,7 @@
             <ClipboardList class="h-4 w-4" aria-hidden="true" />
             <span>
               <strong>Administratif</strong>
-              <small>Documents et registres</small>
+              <small>Declaration et docs</small>
             </span>
           </button>
         </nav>
@@ -951,7 +953,7 @@ watch(searchTerm, (value) => {
   searchDebounceTimer = window.setTimeout(() => {
     debouncedSearchTerm.value = nextValue
     searchDebounceTimer = null
-  }, 140)
+  }, 80)
 })
 
 onMounted(() => {
@@ -994,6 +996,32 @@ const inventorySummary = computed(() => {
 const totalPaires = computed(() => inventorySummary.value.totalPaires)
 const nbEnStock = computed(() => inventorySummary.value.nbEnStock)
 const valeurStock = computed(() => inventorySummary.value.valeurStock)
+const gestionHero = computed(() => {
+  if (activeGestionTab.value === 'admin') {
+    return {
+      eyebrow: 'Dossier legal',
+      title: 'Declaration URSSAF et documents',
+      subtitle: 'Un ecran de travail pour copier le CA a declarer, corriger les blocages et sortir les registres.',
+      pills: ['Montant pret', 'Champs URSSAF', 'PDF / CSV', 'Archive'],
+    }
+  }
+
+  if (activeGestionTab.value === 'delivery') {
+    return {
+      eyebrow: 'Suivi operationnel',
+      title: 'Suivi livraison',
+      subtitle: 'Centralise les colis, les mails de transporteurs et les actions a faire sur les livraisons.',
+      pills: ['Colis', 'Mails', 'Suivi'],
+    }
+  }
+
+  return {
+    eyebrow: 'Inventaire centralise',
+    title: 'Gestion',
+    subtitle: "Ajoute, modifie, filtre et suis tes items dans un espace coherent avec l'accueil.",
+    pills: [`${totalPaires.value} items`, `${nbEnStock.value} en stock`, 'Actions rapides'],
+  }
+})
 
 // Recherche + filtres
 const filteredVentes = computed(() => buildFilteredVentes())
@@ -1881,6 +1909,48 @@ watch(
 
 .gestion-hero-panel {
   padding: clamp(1.05rem, 2.4vw, 1.55rem);
+}
+
+.gestion-hero-panel.is-admin-context {
+  border-radius: 14px;
+  border-color: rgba(15, 118, 110, 0.26);
+  background:
+    linear-gradient(135deg, rgba(15, 118, 110, 0.06), transparent 38%),
+    #ffffff;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.055);
+  padding: clamp(0.9rem, 1.7vw, 1.2rem);
+}
+
+.gestion-hero-panel.is-admin-context::before {
+  background: linear-gradient(90deg, #0f766e, #2563eb, #64748b);
+}
+
+.gestion-hero-panel.is-admin-context .gestion-eyebrow {
+  color: #0f766e;
+}
+
+.gestion-hero-panel.is-admin-context .gestion-title {
+  max-width: 62rem;
+  font-size: clamp(1.65rem, 2.8vw, 2.35rem);
+  line-height: 1.08;
+}
+
+.gestion-hero-panel.is-admin-context .gestion-subtitle {
+  max-width: 66rem;
+  font-size: clamp(0.88rem, 1.1vw, 0.98rem);
+  line-height: 1.42;
+}
+
+.gestion-hero-panel.is-admin-context .gestion-hero-pills span {
+  min-height: 1.85rem;
+  border-color: rgba(15, 118, 110, 0.2);
+  background: rgba(236, 253, 245, 0.86);
+  color: #115e59;
+  font-size: 0.74rem;
+}
+
+.gestion-hero-panel.is-delivery-context {
+  border-color: rgba(14, 116, 144, 0.24);
 }
 
 .gestion-hero-panel::before,

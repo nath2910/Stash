@@ -191,7 +191,7 @@ async function save({ id, payload }) {
       close()
       success.value = false
       successTimer = null
-    }, 320)
+    }, 160)
   } catch (err) {
     error.value = err.response?.data?.message || 'Erreur lors de la modification'
     console.error(err)
@@ -457,14 +457,14 @@ function formatSize(bytes) {
 
 .modal-smooth-enter-active,
 .modal-smooth-leave-active {
-  transition: opacity 110ms ease;
+  transition: opacity 90ms ease;
 }
 
 .modal-smooth-enter-active .modal-card,
 .modal-smooth-leave-active .modal-card {
   transition:
-    transform 140ms cubic-bezier(0.2, 0.9, 0.2, 1),
-    opacity 110ms ease;
+    transform 110ms cubic-bezier(0.2, 0.9, 0.2, 1),
+    opacity 90ms ease;
 }
 
 .modal-smooth-enter-from,

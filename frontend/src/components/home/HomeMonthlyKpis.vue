@@ -30,6 +30,17 @@
         :loading="loading"
       />
     </div>
+
+    <div v-if="showEmptyState" class="home-empty-state">
+      <span class="home-empty-state__icon" aria-hidden="true">+</span>
+      <div class="home-empty-state__copy">
+        <strong>Aucune vente enregistree pour l'instant.</strong>
+        <span>Ajoute un premier item pour lancer les KPI de l'accueil.</span>
+      </div>
+      <button type="button" class="home-empty-state__action" @click="$emit('add-requested')">
+        Ajouter une vente
+      </button>
+    </div>
   </section>
 </template>
 
@@ -44,7 +55,16 @@ const props = defineProps({
   error: { type: String, default: '' },
 })
 
+defineEmits(['add-requested'])
+
 const summaryValue = (key) => Number(props.summary?.[key] ?? 0)
+const showEmptyState = computed(
+  () =>
+    !props.loading &&
+    !props.error &&
+    summaryValue('ca') <= 0 &&
+    summaryValue('itemsVendues') <= 0,
+)
 
 const estimatedSubtitle = computed(() => {
   const estimated = Number(props.summary?.estimatedStockValue ?? 0)
@@ -112,9 +132,71 @@ h2 {
   gap: 0.9rem;
 }
 
+.home-empty-state {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  border: 1px dashed rgba(14, 165, 233, 0.28);
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(236, 254, 255, 0.78), rgba(239, 246, 255, 0.76));
+  padding: 0.95rem 1rem;
+}
+
+.home-empty-state__icon {
+  display: inline-grid;
+  width: 2.4rem;
+  height: 2.4rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #0ea5e9, #14b8a6);
+  color: white;
+  font-size: 1.15rem;
+  font-weight: 900;
+}
+
+.home-empty-state__copy {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.home-empty-state__copy strong {
+  color: #0f172a;
+  font-size: 0.92rem;
+  font-weight: 850;
+}
+
+.home-empty-state__copy span {
+  color: #475569;
+  font-size: 0.8rem;
+}
+
+.home-empty-state__action {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.5rem;
+  border-radius: 999px;
+  background: #0f172a;
+  color: white;
+  font-size: 0.78rem;
+  font-weight: 850;
+  padding: 0.55rem 0.9rem;
+}
+
 @media (max-width: 980px) {
   .kpi-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .home-empty-state {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .home-empty-state__action {
+    margin-left: 0;
   }
 }
 

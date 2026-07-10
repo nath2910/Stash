@@ -24,6 +24,8 @@ public class AdministrativePdfService {
       case "fiscal-summary" -> fiscalSummary(summary);
       case "receipts-register" -> receiptsRegister(summary);
       case "purchases-register" -> purchasesRegister(summary);
+      case "second-hand-register" -> secondHandRegister(summary);
+      case "annual-folder" -> annualFolder(summary);
       default -> throw new IllegalArgumentException("Document administratif inconnu");
     };
     return buildPdf(lines);
@@ -49,6 +51,8 @@ public class AdministrativePdfService {
     lines.add("Categorie: Vente de marchandises / Micro-BIC");
     lines.add("Montant du chiffre d'affaires encaisse: " + money(summary.periodRevenue()));
     lines.add("Nombre de ventes retenues par l'application: " + summary.periodSaleCount());
+    lines.add("Ventes exclues ou a corriger: " + summary.incompleteSaleCount());
+    lines.add("Factures manquantes detectees: " + summary.missingInvoiceCount());
     lines.add("");
     lines.add("REGLE DE CALCUL");
     lines.add(summary.revenueRule());
@@ -70,8 +74,10 @@ public class AdministrativePdfService {
     lines.add("Annee: " + summary.year());
     lines.add("CA annuel brut encaisse connu dans l'application: " + money(summary.annualRevenue()));
     lines.add("Nombre de ventes annuelles retenues: " + summary.annualSaleCount());
+    lines.add("Factures manquantes sur la periode preparee: " + summary.missingInvoiceCount());
     lines.add("Usage prevu: aide preparatoire pour la declaration annuelle, dont 2042-C-PRO si applicable.");
     lines.add("Regle: " + summary.revenueRule());
+    addQualityChecks(lines, summary);
     addSales(lines, summary.sales(), "Ventes de la periode affichee");
     addSources(lines, summary.sources());
     return lines;
@@ -86,10 +92,53 @@ public class AdministrativePdfService {
     return lines;
   }
 
+  private List<String> secondHandRegister(AdministrativeSummaryResponse summary) {
+    List<String> lines = header("Registre des objets d'occasion", summary);
+    lines.add("Registre preparatoire a verifier selon l'activite exacte.");
+    lines.add("Nombre d'objets retenus sur la periode: " + summary.periodSaleCount());
+    addSales(lines, summary.sales(), "Objets vendus ou cedes");
+    addSources(lines, summary.sources());
+    return lines;
+  }
+
+  private List<String> annualFolder(AdministrativeSummaryResponse summary) {
+    List<String> lines = header("Dossier annuel complet", summary);
+    lines.add("Annee: " + summary.year());
+    lines.add("CA annuel connu: " + money(summary.annualRevenue()));
+    lines.add("Ventes annuelles retenues: " + summary.annualSaleCount());
+    lines.add("CA de la periode du dossier: " + money(summary.periodRevenue()));
+    lines.add("Achats de la periode du dossier: " + money(summary.periodPurchaseTotal()));
+    lines.add("Factures manquantes detectees: " + summary.missingInvoiceCount());
+    lines.add("Ventes sans date d'encaissement: " + summary.missingSaleDateCount());
+    lines.add("Ventes sans prix de vente: " + summary.missingSaleAmountCount());
+    lines.add("Ventes avec prix d'achat manquant: " + summary.missingPurchaseAmountCount());
+    lines.add("Ventes sans justificatif detectable: " + summary.missingProofCount());
+    lines.add("Incoherences de dates: " + summary.periodMismatchCount());
+    lines.add("");
+    lines.add("Documents a conserver ou generer depuis MyStash");
+    lines.add("- Fiche preparatoire URSSAF si profil micro-entreprise");
+    lines.add("- Livre des recettes");
+    lines.add("- Registre des achats");
+    lines.add("- Registre des objets d'occasion si applicable");
+    lines.add("- Factures generees et historique administratif");
+    lines.add("- Export comptable CSV");
+    addQualityChecks(lines, summary);
+    addSales(lines, summary.sales(), "Ventes");
+    addPurchases(lines, summary);
+    addSources(lines, summary.sources());
+    return lines;
+  }
+
   private List<String> purchasesRegister(AdministrativeSummaryResponse summary) {
     List<String> lines = header("Registre des achats", summary);
     lines.add("Total achats connus sur la periode: " + money(summary.periodPurchaseTotal()));
     lines.add("Nombre d'achats: " + summary.periodPurchaseCount());
+    addPurchases(lines, summary);
+    addSources(lines, summary.sources());
+    return lines;
+  }
+
+  private void addPurchases(List<String> lines, AdministrativeSummaryResponse summary) {
     lines.add("");
     lines.add("Achats");
     if (summary.purchases().isEmpty()) {
@@ -103,8 +152,18 @@ public class AdministrativePdfService {
         );
       }
     }
-    addSources(lines, summary.sources());
-    return lines;
+  }
+
+  private void addQualityChecks(List<String> lines, AdministrativeSummaryResponse summary) {
+    lines.add("");
+    lines.add("Controles MyStash");
+    if (summary.qualityChecks().isEmpty()) {
+      lines.add("Aucune anomalie actionnable detectee sur la periode.");
+      return;
+    }
+    summary.qualityChecks().forEach(check ->
+        lines.add(check.title() + " | " + check.status() + " | " + check.message())
+    );
   }
 
   private List<String> header(String title, AdministrativeSummaryResponse summary) {

@@ -88,7 +88,7 @@ function handleClose() {
   if (closeTimer.value) window.clearTimeout(closeTimer.value)
   closeTimer.value = window.setTimeout(() => {
     emit('close')
-  }, 120)
+  }, 100)
 }
 
 function handleValidationError(message) {
@@ -111,7 +111,7 @@ async function createSales({ payload, quantity }) {
     emit('added')
     window.setTimeout(() => {
       handleClose()
-    }, 220)
+    }, 140)
   } catch (err) {
     error.value = err?.response?.data?.message || "Erreur lors de la creation de l'item"
     console.error('Erreur:', err)
@@ -217,14 +217,14 @@ onBeforeUnmount(() => {
 
 .modal-smooth-enter-active,
 .modal-smooth-leave-active {
-  transition: opacity 110ms ease;
+  transition: opacity 90ms ease;
 }
 
 .modal-smooth-enter-active .modal-card,
 .modal-smooth-leave-active .modal-card {
   transition:
-    transform 140ms cubic-bezier(0.2, 0.9, 0.2, 1),
-    opacity 110ms ease;
+    transform 110ms cubic-bezier(0.2, 0.9, 0.2, 1),
+    opacity 90ms ease;
 }
 
 .modal-smooth-enter-from,

@@ -1,8 +1,15 @@
 <template>
   <div class="results-dropdown" role="listbox">
-    <div v-if="loading" class="dropdown-state">Chargement des items...</div>
+    <div v-if="loading" class="dropdown-loading" aria-hidden="true">
+      <span v-for="index in 3" :key="`search-skeleton-${index}`" class="dropdown-loading__row"></span>
+    </div>
     <div v-else-if="empty" class="dropdown-state dropdown-state--empty">
-      Aucun item ne correspond a cette recherche.
+      <span class="dropdown-empty-icon" aria-hidden="true">?</span>
+      <strong>Aucun item ne correspond a cette recherche.</strong>
+      <span>Ajoute un article ou essaye une categorie voisine.</span>
+      <button type="button" class="dropdown-empty-action" @mousedown.prevent="$emit('add-requested')">
+        Ajouter un item
+      </button>
     </div>
     <button
       v-else
@@ -53,7 +60,7 @@ const props = defineProps({
   categoryLabels: { type: Object, default: () => ({}) },
 })
 
-defineEmits(['select', 'hover'])
+defineEmits(['select', 'hover', 'add-requested'])
 
 const itemName = (item) => getField(item, 'nomItem', 'Item sans nom')
 const category = (item) => itemTypeLabel(typeOf(item), props.categoryLabels)
@@ -95,8 +102,52 @@ const price = (item) => {
   font-weight: 700;
 }
 
+.dropdown-loading {
+  display: grid;
+  gap: 0.7rem;
+  padding: 0.9rem 1rem 1rem;
+}
+
+.dropdown-loading__row {
+  display: block;
+  height: 68px;
+  border-radius: 16px;
+  background: linear-gradient(90deg, #e2e8f0, #f8fafc, #e2e8f0);
+  background-size: 200% 100%;
+  animation: dropdown-skeleton 1.1s linear infinite;
+}
+
 .dropdown-state--empty {
+  display: grid;
+  gap: 0.45rem;
+  justify-items: start;
   color: #475569;
+}
+
+.dropdown-empty-icon {
+  display: inline-grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #fef3c7, #dbeafe);
+  color: #0369a1;
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.dropdown-empty-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.35rem;
+  border: 1px solid rgba(14, 165, 233, 0.22);
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ecfeff, #eff6ff);
+  color: #0369a1;
+  font-size: 0.8rem;
+  font-weight: 800;
+  padding: 0.45rem 0.8rem;
 }
 
 .result-row {
@@ -214,6 +265,15 @@ const price = (item) => {
   }
 }
 
+@keyframes dropdown-skeleton {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
 @media (max-width: 560px) {
   .result-row {
     grid-template-columns: auto minmax(0, 1fr);
@@ -233,6 +293,10 @@ const price = (item) => {
 
 @media (prefers-reduced-motion: reduce) {
   .results-dropdown {
+    animation: none;
+  }
+
+  .dropdown-loading__row {
     animation: none;
   }
 }

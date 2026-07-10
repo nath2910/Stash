@@ -2,6 +2,7 @@ package backend.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 
@@ -89,6 +90,42 @@ public class User {
 
   @Column(name = "administrative_verification_status", length = 80)
   private String administrativeVerificationStatus;
+
+  @Column(name = "administrative_legal_status", length = 40)
+  private String administrativeLegalStatus;
+
+  @Column(name = "administrative_activities", length = 500)
+  private String administrativeActivities;
+
+  @Column(name = "administrative_vat_regime", length = 40)
+  private String administrativeVatRegime;
+
+  @Column(name = "administrative_declarations", length = 500)
+  private String administrativeDeclarations;
+
+  @Column(name = "business_name", length = 240)
+  private String businessName;
+
+  @Column(name = "owner_name", length = 240)
+  private String ownerName;
+
+  @Column(name = "legal_form", length = 80)
+  private String legalForm;
+
+  @Column(name = "fiscal_year_end_month")
+  private Integer fiscalYearEndMonth;
+
+  @Column(name = "fiscal_year_end_day")
+  private Integer fiscalYearEndDay;
+
+  @Column(name = "declaration_periodicity", length = 40)
+  private String declarationPeriodicity;
+
+  @Column(name = "urssaf_category", length = 120)
+  private String urssafCategory;
+
+  @Column(name = "default_vat_rate", precision = 5, scale = 2)
+  private BigDecimal defaultVatRate;
 
   @Column(name = "admin_uses_online_platforms", nullable = false)
   private boolean adminUsesOnlinePlatforms = false;
@@ -221,6 +258,54 @@ public class User {
   public void setAdministrativeVerificationStatus(String administrativeVerificationStatus) {
     this.administrativeVerificationStatus = administrativeVerificationStatus;
   }
+
+  public String getAdministrativeLegalStatus() { return administrativeLegalStatus; }
+  public void setAdministrativeLegalStatus(String administrativeLegalStatus) {
+    this.administrativeLegalStatus = administrativeLegalStatus;
+  }
+
+  public String getAdministrativeActivities() { return administrativeActivities; }
+  public void setAdministrativeActivities(String administrativeActivities) {
+    this.administrativeActivities = administrativeActivities;
+  }
+
+  public String getAdministrativeVatRegime() { return administrativeVatRegime; }
+  public void setAdministrativeVatRegime(String administrativeVatRegime) {
+    this.administrativeVatRegime = administrativeVatRegime;
+  }
+
+  public String getAdministrativeDeclarations() { return administrativeDeclarations; }
+  public void setAdministrativeDeclarations(String administrativeDeclarations) {
+    this.administrativeDeclarations = administrativeDeclarations;
+  }
+
+  public String getBusinessName() { return businessName; }
+  public void setBusinessName(String businessName) { this.businessName = businessName; }
+
+  public String getOwnerName() { return ownerName; }
+  public void setOwnerName(String ownerName) { this.ownerName = ownerName; }
+
+  public String getLegalForm() { return legalForm; }
+  public void setLegalForm(String legalForm) { this.legalForm = legalForm; }
+
+  public Integer getFiscalYearEndMonth() { return fiscalYearEndMonth; }
+  public void setFiscalYearEndMonth(Integer fiscalYearEndMonth) {
+    this.fiscalYearEndMonth = fiscalYearEndMonth;
+  }
+
+  public Integer getFiscalYearEndDay() { return fiscalYearEndDay; }
+  public void setFiscalYearEndDay(Integer fiscalYearEndDay) { this.fiscalYearEndDay = fiscalYearEndDay; }
+
+  public String getDeclarationPeriodicity() { return declarationPeriodicity; }
+  public void setDeclarationPeriodicity(String declarationPeriodicity) {
+    this.declarationPeriodicity = declarationPeriodicity;
+  }
+
+  public String getUrssafCategory() { return urssafCategory; }
+  public void setUrssafCategory(String urssafCategory) { this.urssafCategory = urssafCategory; }
+
+  public BigDecimal getDefaultVatRate() { return defaultVatRate; }
+  public void setDefaultVatRate(BigDecimal defaultVatRate) { this.defaultVatRate = defaultVatRate; }
 
   public boolean isAdminUsesOnlinePlatforms() { return adminUsesOnlinePlatforms; }
   public void setAdminUsesOnlinePlatforms(boolean adminUsesOnlinePlatforms) {

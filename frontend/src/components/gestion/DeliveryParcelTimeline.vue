@@ -1,11 +1,11 @@
 <template>
   <aside
-    class="min-w-0 rounded-[22px] border border-slate-700/70 bg-slate-900/70 p-4 shadow-xl shadow-slate-950/20 backdrop-blur sm:p-5"
+    class="min-w-0 rounded-[24px] border border-slate-200 bg-[#fbfaf7] p-4 shadow-[0_12px_30px_rgba(15,23,42,0.055)] sm:p-5"
   >
     <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div class="min-w-0">
-        <h3 class="text-base font-semibold text-white">Detail livraison</h3>
-        <p class="mt-1 truncate text-xs text-slate-400">
+        <h3 class="text-base font-semibold text-slate-900">Detail livraison</h3>
+        <p class="mt-1 truncate text-xs text-slate-500">
           {{ parcel ? parcel.trackingNumber : 'Aucun colis' }}
         </p>
       </div>
@@ -15,14 +15,14 @@
           :href="parcel.trackingUrl"
           target="_blank"
           rel="noreferrer"
-          class="inline-flex h-9 items-center justify-center gap-2 rounded-full border border-violet-400/50 bg-violet-500/10 px-3 text-xs font-semibold text-violet-100 transition hover:border-violet-300/70 hover:bg-violet-500/20"
+          class="inline-flex h-9 items-center justify-center gap-2 rounded-full border border-teal-600/20 bg-teal-700 px-3 text-xs font-semibold text-white transition hover:bg-teal-600"
         >
           <ExternalLink class="h-3.5 w-3.5" />
           <span>Transporteur</span>
         </a>
         <button
           type="button"
-          class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-700/80 bg-slate-900/75 text-slate-200 transition hover:border-violet-400/60 hover:text-white disabled:cursor-wait disabled:opacity-60"
+          class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 transition hover:border-sky-300 hover:text-slate-900 disabled:cursor-wait disabled:opacity-60"
           title="Mettre a jour le suivi"
           :disabled="refreshing || deleting"
           @click="$emit('refresh', parcel.id)"
@@ -31,7 +31,7 @@
         </button>
         <button
           type="button"
-          class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-red-500/30 bg-red-500/10 text-red-200 transition hover:border-red-400/80 hover:bg-red-500/20 disabled:cursor-wait disabled:opacity-60"
+          class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-red-300/40 bg-red-50 text-red-700 transition hover:border-red-400 hover:bg-red-100 disabled:cursor-wait disabled:opacity-60"
           title="Supprimer ce suivi"
           :disabled="refreshing || deleting"
           @click="$emit('delete', parcel.id)"
@@ -42,9 +42,9 @@
       </div>
     </div>
 
-    <div v-if="parcel" class="mt-4 rounded-2xl border border-slate-700/70 bg-slate-950/35 p-3">
+    <div v-if="parcel" class="mt-4 rounded-2xl border border-slate-200 bg-white p-3">
       <div class="flex flex-wrap items-center justify-between gap-2">
-        <span class="text-xs text-slate-400">Statut</span>
+        <span class="text-xs text-slate-500">Statut</span>
         <span
           class="inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold"
           :class="statusMeta(parcel.status).class"
@@ -52,25 +52,92 @@
           {{ statusMeta(parcel.status).label }}
         </span>
       </div>
-      <p v-if="parcel.statusLabel" class="mt-2 text-sm font-medium text-slate-100">
+      <p v-if="parcel.statusLabel" class="mt-2 text-sm font-medium text-slate-800">
         {{ parcel.statusLabel }}
       </p>
+    </div>
+
+    <div
+      v-if="parcel && refreshing"
+      class="mt-3 rounded-2xl border border-sky-200 bg-sky-50 px-3 py-3"
+    >
+      <div class="flex items-center justify-between gap-3">
+        <p class="text-sm font-medium text-sky-900">Rafraichissement du suivi...</p>
+        <span class="text-xs text-sky-700">Interrogation transporteur</span>
+      </div>
+      <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-sky-100">
+        <div class="delivery-inline-loader h-full rounded-full bg-sky-500" />
+      </div>
+    </div>
+
+    <div
+      v-if="parcel && trackingHealth"
+      class="mt-3 rounded-2xl border px-3 py-3"
+      :class="
+        trackingHealth.tone === 'warning'
+          ? 'border-amber-300/50 bg-amber-50'
+          : 'border-sky-200/70 bg-sky-50/70'
+      "
+    >
+      <p
+        class="text-sm font-semibold"
+        :class="trackingHealth.tone === 'warning' ? 'text-amber-900' : 'text-sky-900'"
+      >
+        {{ trackingHealth.title }}
+      </p>
+      <p
+        class="mt-1 text-xs leading-relaxed"
+        :class="trackingHealth.tone === 'warning' ? 'text-amber-800' : 'text-sky-800'"
+      >
+        {{ trackingHealth.message }}
+      </p>
+    </div>
+
+    <div v-if="parcel" class="mt-3 rounded-2xl border border-slate-200 bg-white p-3">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Avancement</p>
+        <span class="text-xs text-slate-500">{{ progressHeadline }}</span>
+      </div>
+
+      <div class="mt-3 h-2 overflow-hidden rounded-full bg-slate-200">
+        <div
+          class="h-full rounded-full bg-teal-600 transition-all duration-300"
+          :style="{ width: `${progressPercent}%` }"
+        />
+      </div>
+
+      <div class="mt-3 flex flex-wrap gap-2">
+        <span
+          v-for="step in progressSteps"
+          :key="step.key"
+          class="rounded-full border px-2.5 py-1 text-[11px] font-semibold"
+          :class="
+            step.state === 'done'
+              ? 'border-emerald-300/60 bg-emerald-50 text-emerald-700'
+              : step.state === 'current'
+                ? 'border-sky-300/60 bg-sky-50 text-sky-700'
+                : 'border-slate-200 bg-slate-50 text-slate-500'
+          "
+        >
+          {{ step.label }}
+        </span>
+      </div>
     </div>
 
     <div v-if="parcel && detailItems.length" class="mt-3 grid gap-2 sm:grid-cols-2 2xl:grid-cols-1">
       <div
         v-for="item in detailItems"
         :key="item.label"
-        class="rounded-2xl border border-slate-700/60 bg-slate-950/30 p-3"
+        class="rounded-2xl border border-slate-200 bg-white p-3"
       >
         <p class="text-xs text-slate-500">{{ item.label }}</p>
-        <p class="mt-1 break-words text-sm font-semibold text-slate-100">{{ item.value }}</p>
+        <p class="mt-1 break-words text-sm font-semibold text-slate-800">{{ item.value }}</p>
       </div>
     </div>
 
     <div
       v-if="!parcel"
-      class="mt-8 rounded-2xl border border-dashed border-slate-700/80 p-6 text-center text-sm text-slate-400"
+      class="mt-8 rounded-2xl border border-dashed border-slate-300 bg-white/70 p-6 text-center text-sm text-slate-500"
     >
       Aucun colis selectionne.
     </div>
@@ -86,17 +153,17 @@
           class="relative pl-6"
         >
           <span
-            class="absolute left-0 top-1.5 h-2.5 w-2.5 rounded-full border border-violet-300 bg-violet-500 shadow shadow-violet-950/40"
+            class="absolute left-0 top-1.5 h-2.5 w-2.5 rounded-full border border-teal-200 bg-teal-500 shadow shadow-teal-200/60"
           />
-          <span class="absolute bottom-[-1rem] left-[4px] top-5 w-px bg-slate-800 last:hidden" />
-          <div class="rounded-2xl border border-slate-700/70 bg-slate-950/35 p-3">
+          <span class="absolute bottom-[-1rem] left-[4px] top-5 w-px bg-slate-200 last:hidden" />
+          <div class="rounded-2xl border border-slate-200 bg-white p-3">
             <div class="flex flex-wrap items-center justify-between gap-2">
-              <p class="text-sm font-semibold text-slate-100">
+              <p class="text-sm font-semibold text-slate-800">
                 {{ event.description || statusMeta(event.status).label }}
               </p>
               <span class="text-xs text-slate-500">{{ formatDateTime(event.eventTime) }}</span>
             </div>
-            <p v-if="event.location" class="mt-1 text-xs text-slate-400">{{ event.location }}</p>
+            <p v-if="event.location" class="mt-1 text-xs text-slate-500">{{ event.location }}</p>
             <p
               v-if="event.substatus"
               class="mt-2 text-[11px] uppercase tracking-[0.16em] text-slate-500"
@@ -110,7 +177,7 @@
 
     <div
       v-else
-      class="mt-5 rounded-2xl border border-dashed border-slate-700/80 p-5 text-center text-sm text-slate-400"
+      class="mt-5 rounded-2xl border border-dashed border-slate-300 bg-white/70 p-5 text-center text-sm text-slate-500"
     >
       Aucun evenement local.
     </div>
@@ -120,6 +187,12 @@
 <script setup>
 import { computed } from 'vue'
 import { ExternalLink, RefreshCw, Trash2 } from 'lucide-vue-next'
+import {
+  carrierLabel,
+  formatDeliveryDateTime,
+  getDeliveryTrackingHealth,
+  getDeliveryStatusMeta,
+} from '@/utils/deliveryPresentation.js'
 
 const props = defineProps({
   parcel: {
@@ -139,6 +212,62 @@ const props = defineProps({
 defineEmits(['refresh', 'delete'])
 
 const events = computed(() => (Array.isArray(props.parcel?.events) ? props.parcel.events : []))
+const trackingHealth = computed(() => getDeliveryTrackingHealth(props.parcel))
+
+const progressOrder = ['PENDING', 'REGISTERED', 'IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED']
+
+const currentProgressIndex = computed(() => {
+  const status = props.parcel?.status
+  if (status === 'EXCEPTION') {
+    return 2
+  }
+  const index = progressOrder.indexOf(status)
+  return index >= 0 ? index : 0
+})
+
+const progressSteps = computed(() => [
+  {
+    key: 'detected',
+    label: 'Detection',
+  },
+  {
+    key: 'registered',
+    label: 'Prise en charge',
+  },
+  {
+    key: 'transit',
+    label: props.parcel?.status === 'EXCEPTION' ? 'Blocage' : 'Transit',
+  },
+  {
+    key: 'delivery',
+    label: 'Livraison',
+  },
+  {
+    key: 'delivered',
+    label: 'Reception',
+  },
+].map((step, index) => ({
+  ...step,
+  state:
+    index < currentProgressIndex.value
+      ? 'done'
+      : index === currentProgressIndex.value
+        ? 'current'
+        : 'upcoming',
+})))
+
+const progressPercent = computed(() => {
+  if (!props.parcel) return 0
+  return Math.max(20, ((currentProgressIndex.value + 1) / progressSteps.value.length) * 100)
+})
+
+const progressHeadline = computed(() => {
+  if (!props.parcel) return ''
+  if (props.parcel.status === 'EXCEPTION') {
+    return 'Incident detecte sur le parcours'
+  }
+  return getDeliveryStatusMeta(props.parcel.status).label
+})
 
 const detailItems = computed(() => {
   const parcel = props.parcel
@@ -185,46 +314,17 @@ const detailItems = computed(() => {
 })
 
 const statusMeta = (status) => {
-  switch (status) {
-    case 'DELIVERED':
-      return { label: 'Livre', class: 'border-emerald-400/50 bg-emerald-500/10 text-emerald-200' }
-    case 'OUT_FOR_DELIVERY':
-      return { label: 'En livraison', class: 'border-sky-400/50 bg-sky-500/10 text-sky-200' }
-    case 'IN_TRANSIT':
-      return { label: 'En transit', class: 'border-violet-400/50 bg-violet-500/10 text-violet-100' }
-    case 'EXCEPTION':
-      return { label: 'Incident', class: 'border-red-400/50 bg-red-500/10 text-red-200' }
-    case 'REGISTERED':
-    case 'PENDING':
-      return { label: 'En attente', class: 'border-amber-400/50 bg-amber-500/10 text-amber-100' }
-    default:
-      return { label: 'Inconnu', class: 'border-slate-600 bg-slate-900 text-slate-300' }
-  }
+  const meta = getDeliveryStatusMeta(status)
+  return { label: meta.label, class: meta.lightBadgeClass }
 }
 
-const carrierLabel = (carrier) => {
-  if (!carrier || carrier === 'unknown') return 'Transporteur'
-  return String(carrier)
-    .split('-')
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ')
-}
-
-const formatDateTime = (value) => {
-  if (!value) return 'Date inconnue'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return 'Date inconnue'
-  return new Intl.DateTimeFormat('fr-FR', {
-    dateStyle: 'short',
-    timeStyle: 'short',
-  }).format(date)
-}
+const formatDateTime = formatDeliveryDateTime
 </script>
 
 <style scoped>
 .delivery-timeline-scroll {
   scrollbar-width: thin;
-  scrollbar-color: rgba(139, 92, 246, 0.55) rgba(15, 23, 42, 0.35);
+  scrollbar-color: rgba(148, 163, 184, 0.9) rgba(226, 232, 240, 0.9);
 }
 
 .delivery-timeline-scroll::-webkit-scrollbar {
@@ -232,13 +332,32 @@ const formatDateTime = (value) => {
 }
 
 .delivery-timeline-scroll::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.35);
+  background: rgba(226, 232, 240, 0.9);
   border-radius: 999px;
 }
 
 .delivery-timeline-scroll::-webkit-scrollbar-thumb {
-  border: 2px solid rgba(15, 23, 42, 0.35);
+  border: 2px solid rgba(226, 232, 240, 0.9);
   border-radius: 999px;
-  background: linear-gradient(180deg, rgba(167, 139, 250, 0.78), rgba(14, 165, 233, 0.62));
+  background: linear-gradient(180deg, rgba(15, 118, 110, 0.72), rgba(56, 189, 248, 0.56));
+}
+
+.delivery-inline-loader {
+  width: 38%;
+  animation: delivery-inline-progress 1.25s ease-in-out infinite;
+}
+
+@keyframes delivery-inline-progress {
+  0% {
+    transform: translateX(-110%);
+  }
+
+  50% {
+    transform: translateX(95%);
+  }
+
+  100% {
+    transform: translateX(240%);
+  }
 }
 </style>

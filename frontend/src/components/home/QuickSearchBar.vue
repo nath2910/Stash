@@ -5,7 +5,10 @@
         <p class="search-eyebrow">Inventaire</p>
         <h1>Accueil</h1>
       </div>
-      <span class="search-count">{{ stockLabel }}</span>
+      <div class="search-heading-meta">
+        <span class="search-shortcut">/ ou R</span>
+        <span class="search-count">{{ stockLabel }}</span>
+      </div>
     </div>
 
     <div
@@ -45,6 +48,7 @@
         :empty="showEmpty"
         :option-id="optionId"
         :category-labels="categoryLabels"
+        @add-requested="$emit('add-requested')"
         @hover="activeIndex = $event"
         @select="selectItem"
       />
@@ -67,7 +71,7 @@ const props = defineProps({
   loading: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['select'])
+const emit = defineEmits(['select', 'add-requested'])
 
 const auth = useAuthStore()
 const currentUserId = computed(() => auth.user?.value?.id ?? auth.user?.id ?? 'guest')
@@ -87,7 +91,7 @@ watch(
     debounceTimer = window.setTimeout(() => {
       debouncedQuery.value = normalizeSearchText(value)
       activeIndex.value = -1
-    }, 110)
+    }, 70)
   },
   { immediate: true },
 )
@@ -129,6 +133,13 @@ function open() {
   focused.value = true
 }
 
+function focusSearch() {
+  window.clearTimeout(closeTimer)
+  focused.value = true
+  inputEl.value?.focus()
+  inputEl.value?.select?.()
+}
+
 function close() {
   window.clearTimeout(closeTimer)
   focused.value = false
@@ -141,7 +152,7 @@ function scheduleClose() {
   closeTimer = window.setTimeout(() => {
     focused.value = false
     activeIndex.value = -1
-  }, 120)
+  }, 80)
 }
 
 function reset() {
@@ -175,6 +186,10 @@ function selectItem(item) {
   activeIndex.value = -1
 }
 
+function onGlobalSearchFocus() {
+  focusSearch()
+}
+
 watch(
   () => currentUserId.value,
   (userId) => {
@@ -190,6 +205,7 @@ function onCategoryLabelsChange(event) {
 
 if (typeof window !== 'undefined') {
   window.addEventListener('snk:item-categories-change', onCategoryLabelsChange)
+  window.addEventListener('snk:focus-global-search', onGlobalSearchFocus)
 }
 
 onBeforeUnmount(() => {
@@ -197,7 +213,12 @@ onBeforeUnmount(() => {
   window.clearTimeout(closeTimer)
   if (typeof window !== 'undefined') {
     window.removeEventListener('snk:item-categories-change', onCategoryLabelsChange)
+    window.removeEventListener('snk:focus-global-search', onGlobalSearchFocus)
   }
+})
+
+defineExpose({
+  focusSearch,
 })
 </script>
 
@@ -229,6 +250,14 @@ onBeforeUnmount(() => {
   gap: 1rem;
 }
 
+.search-heading-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .search-eyebrow {
   color: #0369a1;
   font-size: 0.74rem;
@@ -250,6 +279,17 @@ h1 {
   color: #075985;
   padding: 0.35rem 0.7rem;
   font-size: 0.78rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.search-shortcut {
+  border: 1px dashed rgba(14, 165, 233, 0.28);
+  border-radius: 999px;
+  background: rgba(248, 250, 252, 0.9);
+  color: #475569;
+  padding: 0.32rem 0.55rem;
+  font-size: 0.72rem;
   font-weight: 800;
   white-space: nowrap;
 }
@@ -329,6 +369,10 @@ h1 {
   .search-heading {
     display: grid;
     align-items: start;
+  }
+
+  .search-heading-meta {
+    justify-content: start;
   }
 
   .search-count {

@@ -13,8 +13,8 @@
         class="rounded-2xl border px-4 py-3 text-sm"
         :class="
           callbackNotice.kind === 'success'
-            ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-100'
-            : 'border-red-400/30 bg-red-500/10 text-red-100'
+            ? 'border-emerald-300/40 bg-emerald-50 text-emerald-800'
+            : 'border-red-300/40 bg-red-50 text-red-700'
         "
       >
         {{ callbackNotice.message }}
@@ -34,217 +34,354 @@
         class="rounded-2xl border px-4 py-3 text-sm"
         :class="
           scanNotice.kind === 'success'
-            ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-100'
+            ? 'border-emerald-300/40 bg-emerald-50 text-emerald-800'
             : scanNotice.kind === 'warning'
-              ? 'border-amber-300/30 bg-amber-400/10 text-amber-100'
-              : 'border-slate-600/70 bg-slate-900/70 text-slate-200'
+              ? 'border-amber-300/40 bg-amber-50 text-amber-800'
+              : 'border-slate-200 bg-white text-slate-700'
         "
       >
         {{ scanNotice.message }}
       </div>
     </Transition>
 
-    <div class="grid min-w-0 gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
-      <div class="min-w-0 space-y-4 xl:sticky xl:top-4 xl:self-start">
-        <DeliveryMailAccounts
-          :accounts="mailAccounts"
-          :loading="accountsLoading"
-          :error="accountsError"
-          :connecting="connectingGmail"
-          :scanning-id="scanningAccountId"
-          :scanning-all="scanningAll"
-          @connect-gmail="connectGmail"
-          @scan-now="scanNow"
-          @scan-all="scanAllNow"
-          @delete-account="deleteAccount"
-        />
+    <div class="min-w-0 space-y-4">
+      <Transition
+        enter-active-class="transition duration-200 ease-out"
+        enter-from-class="opacity-0"
+        enter-to-class="opacity-100"
+        leave-active-class="transition duration-150 ease-in"
+        leave-from-class="opacity-100"
+        leave-to-class="opacity-0"
+      >
+        <div
+          v-if="manualModalOpen"
+          class="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm"
+          @click.self="closeManualModal"
+        >
+          <div
+            class="w-full max-w-xl rounded-[28px] border border-slate-200 bg-[#fbfaf7] p-5 shadow-[0_24px_70px_rgba(15,23,42,0.20)] sm:p-6"
+          >
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <p class="text-lg font-semibold text-slate-900">Ajouter un suivi</p>
+                <p class="mt-1 text-sm text-slate-500">
+                  Colle un ou plusieurs numeros puis laisse l'app les integrer au tableau.
+                </p>
+              </div>
+              <button
+                type="button"
+                class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-sky-300 hover:text-slate-900"
+                aria-label="Fermer la fenetre d'ajout manuel"
+                @click="closeManualModal"
+              >
+                <X class="h-4 w-4" />
+              </button>
+            </div>
 
-        <div class="space-y-2">
-          <button
-            type="button"
-            class="flex w-full items-center justify-between gap-3 rounded-2xl border border-slate-700/70 bg-slate-900/55 px-4 py-3 text-left text-sm font-semibold text-slate-200 transition hover:bg-slate-800/65 hover:text-white"
-            @click="showManualForm = !showManualForm"
-          >
-            <span class="inline-flex items-center gap-2">
-              <Plus class="h-4 w-4 text-slate-500" />
-              Ajouter un numero manuellement
-            </span>
-            <ChevronDown
-              class="h-4 w-4 text-slate-500 transition"
-              :class="{ 'rotate-180': showManualForm }"
-            />
-          </button>
-          <Transition
-            enter-active-class="transition duration-150 ease-out"
-            enter-from-class="opacity-0 -translate-y-1"
-            enter-to-class="opacity-100 translate-y-0"
-            leave-active-class="transition duration-100 ease-in"
-            leave-from-class="opacity-100 translate-y-0"
-            leave-to-class="opacity-0 -translate-y-1"
-          >
-            <div v-if="showManualForm" class="mt-3">
+            <div class="mt-5 rounded-[24px] border border-slate-200 bg-white p-4 sm:p-5">
               <DeliveryManualParcelForm
+                ref="manualFormRef"
+                embedded
                 :loading="creatingManualParcel"
                 :error="manualParcelError"
+                :success-token="manualSuccessToken"
                 @create-parcel="createManualParcel"
               />
             </div>
-          </Transition>
+          </div>
         </div>
-      </div>
+      </Transition>
 
-      <div class="min-w-0 space-y-4">
+      <Transition
+        enter-active-class="transition duration-200 ease-out"
+        enter-from-class="opacity-0 -translate-y-1"
+        enter-to-class="opacity-100 translate-y-0"
+        leave-active-class="transition duration-150 ease-in"
+        leave-from-class="opacity-100 translate-y-0"
+        leave-to-class="opacity-0 -translate-y-1"
+      >
         <section
-          class="rounded-[24px] border border-slate-700/70 bg-slate-900/70 p-4 shadow-xl shadow-slate-950/20 backdrop-blur sm:p-5"
+          v-if="activityState"
+          class="rounded-[24px] border border-sky-200 bg-sky-50 px-4 py-4 shadow-[0_10px_24px_rgba(56,189,248,0.10)]"
         >
-          <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p class="text-[11px] uppercase tracking-[0.22em] text-violet-300/80">
-                Suivi livraison
-              </p>
-              <h2 class="mt-1 text-xl font-semibold text-white sm:text-2xl">Colis centralises</h2>
-              <p class="mt-1 text-sm text-slate-400">
-                {{ automationLabel }}
-              </p>
+              <p class="text-sm font-semibold text-sky-950">{{ activityState.title }}</p>
+              <p class="mt-1 text-xs text-sky-800">{{ activityState.detail }}</p>
             </div>
-            <div class="flex flex-wrap items-center gap-2">
-              <span
-                class="hidden rounded-full border px-3 py-1 text-xs font-medium sm:inline-flex"
-                :class="
-                  hasMailAccounts
-                    ? 'border-emerald-300/25 bg-emerald-400/10 text-emerald-100'
-                    : 'border-amber-300/25 bg-amber-400/10 text-amber-100'
-                "
-              >
-                {{ hasMailAccounts ? 'Scan auto actif' : 'Gmail a connecter' }}
-              </span>
-              <button
-                v-if="hasMailAccounts"
-                type="button"
-                class="inline-flex h-9 items-center justify-center gap-2 rounded-full border border-violet-400/50 bg-violet-500/10 px-3 text-xs font-semibold text-violet-100 transition hover:border-violet-300/70 hover:bg-violet-500/20 disabled:cursor-wait disabled:opacity-60"
-                :disabled="scanningAll || accountsLoading || parcelsLoading"
-                title="Analyse les mails Gmail et importe les nouveaux numeros de suivi"
-                @click="scanAllNow"
-              >
-                <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': scanningAll }" />
-                <span>{{ scanningAll ? 'Scan...' : 'Scanner mails' }}</span>
-              </button>
-              <button
-                type="button"
-                class="inline-flex h-9 items-center justify-center gap-2 rounded-full border border-slate-700/80 bg-slate-800/70 px-3 text-xs font-semibold text-slate-200 transition hover:border-slate-500 hover:bg-slate-800 disabled:cursor-wait disabled:opacity-60"
-                :disabled="scanningAll || accountsLoading || parcelsLoading"
-                title="Recharge la liste sans scanner les mails"
-                @click="refreshAll"
-              >
-                <RefreshCw
-                  class="h-4 w-4"
-                  :class="{ 'animate-spin': !scanningAll && (accountsLoading || parcelsLoading) }"
-                />
-                <span>Rafraichir liste</span>
-              </button>
-            </div>
+            <span class="inline-flex items-center rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-sky-800">
+              {{ activityState.badge }}
+            </span>
           </div>
-
-          <div class="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
-            <div
-              v-for="metric in metrics"
-              :key="metric.label"
-              class="rounded-2xl border border-slate-700/70 bg-slate-950/35 p-3"
-            >
-              <div class="flex items-center justify-between gap-3">
-                <p class="text-xs text-slate-400">{{ metric.label }}</p>
-                <component :is="metric.icon" class="h-4 w-4" :class="metric.iconClass" />
-              </div>
-              <p class="mt-1 text-xl font-semibold" :class="metric.valueClass">
-                {{ metric.value }}
-              </p>
-            </div>
-          </div>
-
-          <div class="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center">
-            <label class="relative min-w-0 flex-1">
-              <Search
-                class="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
-              />
-              <input
-                v-model="searchTerm"
-                type="search"
-                class="h-10 w-full rounded-full border border-slate-700/80 bg-slate-950/45 pl-10 pr-4 text-sm text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-violet-400/70 focus:ring-2 focus:ring-violet-500/20"
-                placeholder="Tracking, transporteur, statut"
-              />
-            </label>
-            <div class="flex w-full flex-wrap gap-2 lg:w-auto">
-              <button
-                v-for="quick in quickFilters"
-                :key="quick.value"
-                type="button"
-                class="flex-1 rounded-full border px-3 py-1.5 text-xs font-semibold transition sm:flex-none"
-                :class="
-                  activeStatusFilter === quick.value
-                    ? 'border-slate-100 bg-slate-100 text-slate-950'
-                    : 'border-slate-700/80 bg-slate-950/35 text-slate-300 hover:border-slate-500 hover:text-white'
-                "
-                @click="activeStatusFilter = quick.value"
-              >
-                {{ quick.label }}
-              </button>
-            </div>
+          <div class="mt-3 h-1.5 overflow-hidden rounded-full bg-sky-100">
+            <div class="delivery-panel-loader h-full rounded-full bg-sky-500" />
           </div>
         </section>
+      </Transition>
 
-        <DeliveryCandidateReviewList
-          :candidates="trackingCandidates"
-          :loading="candidatesLoading"
-          :error="candidatesError"
-          :confirming-id="confirmingCandidateId"
-          :ignoring-id="ignoringCandidateId"
-          @confirm="confirmCandidate"
-          @ignore="ignoreCandidate"
-        />
+      <section
+        class="rounded-[24px] border border-slate-200 bg-[#fbfaf7] p-4 shadow-[0_12px_30px_rgba(15,23,42,0.055)] sm:p-5"
+      >
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <h2 class="text-xl font-semibold text-slate-900 sm:text-2xl">Suivi livraison</h2>
+            <p class="mt-1 text-sm text-slate-600">
+              {{ automationLabel }}
+            </p>
+            <p class="mt-2 text-xs text-slate-500">
+              {{ lastSyncLabel }}
+            </p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button
+              v-if="hasMailAccounts"
+              type="button"
+              class="inline-flex h-9 items-center justify-center gap-2 rounded-full border border-teal-600/20 bg-teal-700 px-3 text-xs font-semibold text-white transition hover:bg-teal-600 disabled:cursor-wait disabled:opacity-60"
+              :disabled="scanningAll || accountsLoading || parcelsLoading"
+              title="Analyse les mails Gmail et importe les nouveaux numeros de suivi"
+              @click="scanAllNow"
+            >
+              <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': scanningAll }" />
+              <span>{{ scanningAll ? 'Scan...' : 'Scanner mails' }}</span>
+            </button>
+            <button
+              type="button"
+              class="inline-flex h-9 items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-sky-300 hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60"
+              :disabled="scanningAll || accountsLoading || parcelsLoading"
+              title="Recharge la liste sans scanner les mails"
+              @click="refreshAll"
+            >
+              <RefreshCw
+                class="h-4 w-4"
+                :class="{ 'animate-spin': !scanningAll && (accountsLoading || parcelsLoading) }"
+              />
+              <span>Rafraichir liste</span>
+            </button>
+          </div>
+        </div>
 
-        <div class="grid gap-4 2xl:grid-cols-[minmax(0,1.05fr)_minmax(340px,0.95fr)]">
+        <div class="mt-4 flex flex-wrap gap-2">
+          <span
+            v-for="metric in metrics"
+            :key="metric.label"
+            class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600"
+          >
+            <component :is="metric.icon" class="h-3.5 w-3.5" :class="metric.iconClass" />
+            <span>{{ metric.label }}</span>
+            <span class="font-semibold text-slate-900">{{ metric.value }}</span>
+          </span>
+        </div>
+
+        <div class="mt-4 grid gap-2 lg:grid-cols-3">
+          <button
+            type="button"
+            class="flex items-center justify-between rounded-[20px] border border-slate-200 bg-white px-4 py-3 text-left transition hover:border-sky-300 hover:bg-slate-50"
+            @click="openManualModal"
+          >
+            <div>
+              <p class="text-sm font-semibold text-slate-900">Ajouter un suivi</p>
+              <p class="mt-1 text-xs text-slate-500">Ajout manuel rapide</p>
+            </div>
+            <PencilLine class="h-4 w-4 text-slate-400" />
+          </button>
+          <button
+            type="button"
+            class="flex items-center justify-between rounded-[20px] border border-teal-600/20 bg-teal-50 px-4 py-3 text-left transition hover:border-teal-500/30 hover:bg-teal-100/70"
+            @click="handlePrimaryAction"
+          >
+            <div>
+              <p class="text-sm font-semibold text-teal-900">{{ primaryActionLabel }}</p>
+              <p class="mt-1 text-xs text-teal-700">
+                {{ hasMailAccounts ? 'Import auto depuis Gmail' : 'Lier un compte pour scanner' }}
+              </p>
+            </div>
+            <MailPlus class="h-4 w-4 text-teal-700" />
+          </button>
+          <button
+            type="button"
+            class="flex items-center justify-between rounded-[20px] border border-slate-200 bg-white px-4 py-3 text-left transition hover:border-sky-300 hover:bg-slate-50"
+            @click="selectionMode ? clearParcelSelection() : startParcelSelection()"
+          >
+            <div>
+              <p class="text-sm font-semibold text-slate-900">Selection multiple</p>
+              <p class="mt-1 text-xs text-slate-500">
+                {{ selectionMode ? `${selectedParcelIds.length} colis coches` : 'Supprimer en lot' }}
+              </p>
+            </div>
+            <Layers3 class="h-4 w-4 text-slate-400" />
+          </button>
+        </div>
+
+        <div class="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center">
+          <label class="relative min-w-0 flex-1">
+            <Search
+              class="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
+            />
+            <input
+              ref="searchInput"
+              v-model="searchTerm"
+              type="search"
+              class="h-10 w-full rounded-full border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+              placeholder="Tracking, transporteur, statut (/)"
+            />
+          </label>
+          <div class="flex w-full flex-wrap gap-2 lg:w-auto">
+            <button
+              v-for="quick in quickFilters"
+              :key="quick.value"
+              type="button"
+              class="flex-1 rounded-full border px-3 py-1.5 text-xs font-semibold transition sm:flex-none"
+              :class="
+                activeStatusFilter === quick.value
+                  ? 'border-teal-600/20 bg-teal-700 text-white'
+                  : 'border-slate-200 bg-white text-slate-600 hover:border-sky-300 hover:text-slate-900'
+              "
+              @click="activeStatusFilter = quick.value"
+            >
+              {{ quick.label }}
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <div class="grid gap-4 2xl:grid-cols-[minmax(0,1.15fr)_360px]">
+        <div class="min-w-0 space-y-4">
           <DeliveryParcelList
             :parcels="filteredParcels"
             :loading="parcelsLoading"
             :error="parcelsError"
             :selected-id="selectedParcelId"
+            :selected-ids="selectedParcelIds"
+            :selection-mode="selectionMode"
+            :deleting-selection="bulkDeletingParcels"
             :total-count="parcels.length"
             @select="selectParcel"
+            @start-selection="startParcelSelection"
+            @toggle-selection="toggleParcelSelection"
+            @toggle-all-visible="toggleAllVisibleParcels"
+            @clear-selection="clearParcelSelection"
+            @delete-selected="deleteSelectedParcels"
           />
+
+          <DeliveryCandidateReviewList
+            :candidates="trackingCandidates"
+            :loading="candidatesLoading"
+            :error="candidatesError"
+            :confirming-id="confirmingCandidateId"
+            :ignoring-id="ignoringCandidateId"
+            @confirm="confirmCandidate"
+            @ignore="ignoreCandidate"
+          />
+        </div>
+
+        <div class="min-w-0 space-y-4">
           <DeliveryParcelTimeline
             :parcel="selectedParcel"
             :refreshing="refreshingParcelId === selectedParcel?.id"
-            :deleting="deletingParcelId === selectedParcel?.id"
+            :deleting="deletingParcelIds.includes(selectedParcel?.id)"
             @refresh="refreshParcel"
             @delete="deleteParcel"
+          />
+
+          <div ref="mailAccountsSectionRef">
+            <DeliveryMailAccounts
+              :accounts="mailAccounts"
+              :loading="accountsLoading"
+              :error="accountsError"
+              :connecting="connectingGmail"
+              :scanning-id="scanningAccountId"
+              :scanning-all="scanningAll"
+              @connect-gmail="connectGmail"
+              @scan-now="scanNow"
+              @scan-all="scanAllNow"
+              @delete-account="deleteAccount"
+            />
+          </div>
+
+          <DeliveryScanReport
+            :report="latestScanReport"
+            :loading="scanningAll || scanningAccountId !== null"
           />
         </div>
       </div>
     </div>
+
+    <Transition
+      enter-active-class="transition duration-200 ease-out"
+      enter-from-class="translate-y-3 opacity-0"
+      enter-to-class="translate-y-0 opacity-100"
+      leave-active-class="transition duration-150 ease-in"
+      leave-from-class="translate-y-0 opacity-100"
+      leave-to-class="translate-y-3 opacity-0"
+    >
+      <div
+        v-if="selectionMode"
+        class="sticky bottom-4 z-20 rounded-[22px] border border-slate-200 bg-white/95 p-3 shadow-[0_14px_34px_rgba(15,23,42,0.12)] backdrop-blur"
+      >
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p class="text-sm font-semibold text-slate-900">
+              {{ selectedParcelIds.length }} colis selectionne(s)
+            </p>
+            <p class="mt-1 text-xs text-slate-500">
+              Raccourcis: `/` recherche, `N` ajout manuel, `M` mode multi-selection.
+            </p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              class="inline-flex h-9 items-center justify-center rounded-full border border-slate-200 bg-slate-50 px-3 text-xs font-semibold text-slate-700 transition hover:border-sky-300 hover:bg-white"
+              @click="toggleAllVisibleParcels"
+            >
+              {{ filteredParcels.length && filteredParcels.every((parcel) => selectedParcelIds.includes(parcel.id)) ? 'Tout deselectionner' : 'Tout selectionner' }}
+            </button>
+            <button
+              type="button"
+              class="inline-flex h-9 items-center justify-center rounded-full border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-sky-300 hover:bg-slate-50"
+              @click="clearParcelSelection"
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              class="inline-flex h-9 items-center justify-center rounded-full border border-red-300/40 bg-red-50 px-3 text-xs font-semibold text-red-700 transition hover:border-red-400 hover:bg-red-100 disabled:cursor-wait disabled:opacity-60"
+              :disabled="!selectedParcelIds.length || bulkDeletingParcels"
+              @click="deleteSelectedParcels"
+            >
+              {{ bulkDeletingParcels ? 'Suppression...' : `Supprimer (${selectedParcelIds.length})` }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
   </section>
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import {
   AlertTriangle,
-  ChevronDown,
   CheckCircle2,
   Clock3,
+  Layers3,
+  MailPlus,
+  PencilLine,
   PackageCheck,
   PackageSearch,
-  Plus,
   RefreshCw,
   Search,
   Truck,
+  X,
 } from 'lucide-vue-next'
 import DeliveryTrackingService from '@/services/DeliveryTrackingService.js'
 import DeliveryMailAccounts from '@/components/gestion/DeliveryMailAccounts.vue'
 import DeliveryManualParcelForm from '@/components/gestion/DeliveryManualParcelForm.vue'
 import DeliveryCandidateReviewList from '@/components/gestion/DeliveryCandidateReviewList.vue'
+import DeliveryScanReport from '@/components/gestion/DeliveryScanReport.vue'
 import DeliveryParcelList from '@/components/gestion/DeliveryParcelList.vue'
 import DeliveryParcelTimeline from '@/components/gestion/DeliveryParcelTimeline.vue'
+import { isActiveParcelStatus } from '@/utils/deliveryPresentation.js'
 
 const route = useRoute()
 const mailAccounts = ref([])
@@ -263,22 +400,23 @@ const scanningAccountId = ref(null)
 const scanningAll = ref(false)
 const refreshingParcelId = ref(null)
 const deletingParcelId = ref(null)
+const deletingParcelIds = ref([])
+const bulkDeletingParcels = ref(false)
 const confirmingCandidateId = ref(null)
 const ignoringCandidateId = ref(null)
 const selectedParcelId = ref(null)
+const selectedParcelIds = ref([])
 const activeStatusFilter = ref('all')
 const searchTerm = ref('')
-const showManualForm = ref(false)
 const autoScanAfterCallbackStarted = ref(false)
 const scanNotice = ref(null)
-
-const activeStatuses = new Set([
-  'PENDING',
-  'REGISTERED',
-  'IN_TRANSIT',
-  'OUT_FOR_DELIVERY',
-  'UNKNOWN',
-])
+const latestScanReport = ref(null)
+const manualSuccessToken = ref(0)
+const manualModalOpen = ref(false)
+const searchInput = ref(null)
+const manualFormRef = ref(null)
+const mailAccountsSectionRef = ref(null)
+const lastSuccessfulSyncAt = ref(null)
 
 const filteredParcels = computed(() => {
   const term = searchTerm.value.trim().toLowerCase()
@@ -299,7 +437,13 @@ const filteredParcels = computed(() => {
       .some((value) => String(value).toLowerCase().includes(term))
   })
 
-  return [...filtered].sort((a, b) => sortableDate(b) - sortableDate(a))
+  return [...filtered].sort((a, b) => {
+    const priorityDiff = parcelPriority(a) - parcelPriority(b)
+    if (priorityDiff !== 0) {
+      return priorityDiff
+    }
+    return sortableDate(b) - sortableDate(a)
+  })
 })
 
 const selectedParcel = computed(
@@ -308,6 +452,54 @@ const selectedParcel = computed(
     filteredParcels.value[0] ||
     null,
 )
+const selectionMode = computed(() => selectedParcelIds.value.length > 0 || bulkDeletingParcels.value)
+const primaryActionLabel = computed(() =>
+  hasMailAccounts.value ? 'Scanner mes mails' : 'Connecter Gmail',
+)
+const activityState = computed(() => {
+  if (scanningAll.value) {
+    return {
+      title: 'Scan Gmail en cours',
+      detail: 'Lecture des boites mail, detection des vrais numeros de suivi et mise a jour de la liste.',
+      badge: 'Scan global',
+    }
+  }
+  if (scanningAccountId.value !== null) {
+    return {
+      title: 'Scan du compte Gmail en cours',
+      detail: 'Analyse d une source mail et verification des suivis detectes.',
+      badge: 'Scan source',
+    }
+  }
+  if (refreshingParcelId.value !== null) {
+    return {
+      title: 'Rafraichissement du colis en cours',
+      detail: 'Interrogation du transporteur pour recuperer le dernier avancement.',
+      badge: 'Colis',
+    }
+  }
+  if (accountsLoading.value || parcelsLoading.value || candidatesLoading.value) {
+    return {
+      title: 'Synchronisation de l onglet livraison',
+      detail: 'Mise a jour des colis, comptes Gmail et candidats a verifier.',
+      badge: 'Refresh',
+    }
+  }
+  if (creatingManualParcel.value) {
+    return {
+      title: 'Ajout du suivi en cours',
+      detail: 'Enregistrement du numero puis tentative de detection transporteur.',
+      badge: 'Ajout',
+    }
+  }
+  return null
+})
+const lastSyncLabel = computed(() => {
+  if (!lastSuccessfulSyncAt.value) {
+    return 'Aucune synchronisation recente visible.'
+  }
+  return `Derniere synchronisation: ${formatShortDateTime(lastSuccessfulSyncAt.value)}`
+})
 
 const activeMailAccounts = computed(() =>
   mailAccounts.value.filter((account) => account.status === 'ACTIVE'),
@@ -315,16 +507,16 @@ const activeMailAccounts = computed(() =>
 const hasMailAccounts = computed(() => mailAccounts.value.length > 0)
 const automationLabel = computed(() => {
   if (!hasMailAccounts.value) {
-    return 'Connecte Gmail une fois, puis les nouveaux suivis remontent automatiquement.'
+    return 'Connecte un ou plusieurs Gmail, puis scanne uniquement les nouveaux emails de livraison.'
   }
   if (scanningAll.value) {
-    return 'Scan des mails transporteurs en cours.'
+    return 'Scan des boites Gmail en cours. Seuls les vrais numeros de suivi sont gardes.'
   }
-  return `${activeMailAccounts.value.length || mailAccounts.value.length} source(s) surveillee(s).`
+  return `${activeMailAccounts.value.length || mailAccounts.value.length} source(s) surveillee(s), suivi gratuit via Gmail + transporteurs compatibles.`
 })
 
 const activeParcelCount = computed(
-  () => parcels.value.filter((parcel) => activeStatuses.has(parcel.status)).length,
+  () => parcels.value.filter((parcel) => isActiveParcelStatus(parcel.status)).length,
 )
 const deliveredParcelCount = computed(
   () => parcels.value.filter((parcel) => parcel.status === 'DELIVERED').length,
@@ -454,6 +646,33 @@ const loadTrackingCandidates = async () => {
 
 const refreshAll = async () => {
   await Promise.all([loadMailAccounts(), loadParcels(), loadTrackingCandidates()])
+  lastSuccessfulSyncAt.value = new Date().toISOString()
+}
+
+const openManualModal = async () => {
+  manualModalOpen.value = true
+  await nextTick()
+  window.setTimeout(() => {
+    manualFormRef.value?.focusFirstField?.()
+  }, 120)
+}
+
+const closeManualModal = () => {
+  if (creatingManualParcel.value) return
+  manualModalOpen.value = false
+  manualParcelError.value = ''
+}
+
+const scrollToMailAccounts = () => {
+  mailAccountsSectionRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+const handlePrimaryAction = async () => {
+  if (hasMailAccounts.value) {
+    await scanAllNow()
+    return
+  }
+  scrollToMailAccounts()
 }
 
 const connectGmail = async (emailAddress = '') => {
@@ -481,11 +700,27 @@ const scanAccount = async (accountId, refresh = true, showNotice = true) => {
   accountsError.value = ''
   try {
     const { data } = await DeliveryTrackingService.scanNow(accountId)
+    latestScanReport.value = normalizeScanBatchReport({
+      scannedAccounts: data?.success ? 1 : 0,
+      scannedMessages: Number(data?.scannedMessages || 0),
+      deliveryMessages: Number(data?.deliveryMessages || 0),
+      importedCount: Number(data?.importedCount || 0),
+      reviewCount: Number(data?.reviewCount || 0),
+      rejectedCount: Number(data?.rejectedCount || 0),
+      duplicateCount: Number(data?.duplicateCount || 0),
+      message: data?.message || '',
+      accountReports: data ? [data] : [],
+      importedParcels: Array.isArray(data?.importedParcels) ? data.importedParcels : [],
+      duplicateParcels: Array.isArray(data?.duplicateParcels) ? data.duplicateParcels : [],
+      candidatesToReview: Array.isArray(data?.candidatesToReview) ? data.candidatesToReview : [],
+    })
     if (showNotice) {
       scanNotice.value = scanNoticeFromSummary(data)
     }
     if (refresh) {
       await refreshAll()
+    } else {
+      lastSuccessfulSyncAt.value = new Date().toISOString()
     }
     return data
   } catch (error) {
@@ -497,21 +732,17 @@ const scanAccount = async (accountId, refresh = true, showNotice = true) => {
 }
 
 const scanAllNow = async () => {
-  const accountsToScan = activeMailAccounts.value.length
-    ? activeMailAccounts.value
-    : mailAccounts.value
-  if (!accountsToScan.length) return
+  if (!mailAccounts.value.length) return
 
   scanningAll.value = true
   accountsError.value = ''
   try {
-    const totals = emptyScanSummary()
-    for (const account of accountsToScan) {
-      const summary = await scanAccount(account.id, false, false)
-      addScanSummary(totals, summary)
-    }
-    scanNotice.value = scanNoticeFromSummary(totals)
+    const { data } = await DeliveryTrackingService.scanAll()
+    latestScanReport.value = normalizeScanBatchReport(data)
+    scanNotice.value = scanNoticeFromSummary(data)
     await refreshAll()
+  } catch (error) {
+    accountsError.value = error?.response?.data?.message || 'Scan Gmail impossible'
   } finally {
     scanningAll.value = false
   }
@@ -537,10 +768,46 @@ const createManualParcel = async (payload) => {
   creatingManualParcel.value = true
   manualParcelError.value = ''
   try {
-    const { data } = await DeliveryTrackingService.createParcel(payload)
+    const numbers = parseManualTrackingEntries(payload?.trackingInput)
+    if (!numbers.length) {
+      manualParcelError.value = 'Ajoute au moins un numero de suivi valide.'
+      return
+    }
+
+    const createdParcels = []
+    const failedNumbers = []
+    for (const trackingNumber of numbers) {
+      try {
+        const { data } = await DeliveryTrackingService.createParcel({
+          trackingNumber,
+          carrierSlug: payload?.carrierSlug || null,
+        })
+        if (data?.id) {
+          createdParcels.push(data)
+        }
+      } catch {
+        failedNumbers.push(trackingNumber)
+      }
+    }
+
+    if (!createdParcels.length) {
+      manualParcelError.value = "Aucun suivi n'a pu etre ajoute."
+      return
+    }
+
     await loadParcels()
-    if (data?.id) {
-      selectedParcelId.value = data.id
+    lastSuccessfulSyncAt.value = new Date().toISOString()
+    const latestParcel = createdParcels[createdParcels.length - 1]
+    if (latestParcel?.id) {
+      selectedParcelId.value = latestParcel.id
+    }
+    manualSuccessToken.value += 1
+    manualModalOpen.value = false
+    scanNotice.value = {
+      kind: failedNumbers.length ? 'warning' : 'success',
+      message: failedNumbers.length
+        ? `${createdParcels.length} suivi(s) ajoute(s), ${failedNumbers.length} refuse(s).`
+        : `${createdParcels.length} suivi(s) ajoute(s) au tableau de livraison.`,
     }
   } catch (error) {
     manualParcelError.value = error?.response?.data?.message || 'Ajout du colis impossible'
@@ -558,8 +825,10 @@ const refreshParcel = async (parcelId) => {
     if (data?.id) {
       parcels.value = parcels.value.map((parcel) => (parcel.id === data.id ? data : parcel))
       selectedParcelId.value = data.id
+      lastSuccessfulSyncAt.value = new Date().toISOString()
     } else {
       await loadParcels()
+      lastSuccessfulSyncAt.value = new Date().toISOString()
     }
   } catch (error) {
     parcelsError.value = error?.response?.data?.message || 'Mise a jour du suivi impossible'
@@ -584,7 +853,8 @@ const confirmCandidate = async (candidateId) => {
         : [data, ...parcels.value]
       selectedParcelId.value = data.id
     } else {
-      await loadParcels()
+    await loadParcels()
+    lastSuccessfulSyncAt.value = new Date().toISOString()
     }
     scanNotice.value = { kind: 'success', message: 'Candidat valide et ajoute au suivi.' }
   } catch (error) {
@@ -617,10 +887,12 @@ const deleteParcel = async (parcelId) => {
   if (!confirmed) return
 
   deletingParcelId.value = parcelId
+  deletingParcelIds.value = [parcelId]
   parcelsError.value = ''
   try {
     await DeliveryTrackingService.deleteParcel(parcelId)
     parcels.value = parcels.value.filter((parcel) => parcel.id !== parcelId)
+    selectedParcelIds.value = selectedParcelIds.value.filter((id) => id !== parcelId)
     if (selectedParcelId.value === parcelId) {
       selectedParcelId.value = filteredParcels.value[0]?.id || null
     }
@@ -628,6 +900,7 @@ const deleteParcel = async (parcelId) => {
     parcelsError.value = error?.response?.data?.message || 'Suppression du suivi impossible'
   } finally {
     deletingParcelId.value = null
+    deletingParcelIds.value = []
   }
 }
 
@@ -645,10 +918,101 @@ const selectParcel = (parcelId) => {
   selectedParcelId.value = parcelId
 }
 
+const startParcelSelection = () => {
+  if (!selectedParcel.value?.id) return
+  selectedParcelIds.value = [selectedParcel.value.id]
+}
+
+const toggleParcelSelection = (parcelId) => {
+  if (!parcelId) return
+  if (selectedParcelIds.value.includes(parcelId)) {
+    selectedParcelIds.value = selectedParcelIds.value.filter((id) => id !== parcelId)
+    return
+  }
+  selectedParcelIds.value = [...selectedParcelIds.value, parcelId]
+}
+
+const toggleAllVisibleParcels = () => {
+  const visibleIds = filteredParcels.value.map((parcel) => parcel.id).filter(Boolean)
+  if (!visibleIds.length) return
+
+  const allSelected = visibleIds.every((id) => selectedParcelIds.value.includes(id))
+  selectedParcelIds.value = allSelected
+    ? selectedParcelIds.value.filter((id) => !visibleIds.includes(id))
+    : Array.from(new Set([...selectedParcelIds.value, ...visibleIds]))
+}
+
+const clearParcelSelection = () => {
+  selectedParcelIds.value = []
+}
+
+const deleteSelectedParcels = async () => {
+  const ids = [...selectedParcelIds.value]
+  if (!ids.length) return
+
+  const confirmed = window.confirm(`Supprimer ${ids.length} suivi(s) de livraison ?`)
+  if (!confirmed) return
+
+  bulkDeletingParcels.value = true
+  deletingParcelIds.value = ids
+  parcelsError.value = ''
+
+  const failedIds = []
+  for (const parcelId of ids) {
+    try {
+      await DeliveryTrackingService.deleteParcel(parcelId)
+      parcels.value = parcels.value.filter((parcel) => parcel.id !== parcelId)
+    } catch {
+      failedIds.push(parcelId)
+    }
+  }
+
+  selectedParcelIds.value = failedIds
+  deletingParcelIds.value = []
+  bulkDeletingParcels.value = false
+
+  if (selectedParcelId.value && !parcels.value.some((parcel) => parcel.id === selectedParcelId.value)) {
+    selectedParcelId.value = filteredParcels.value[0]?.id || null
+  }
+
+  if (failedIds.length) {
+    parcelsError.value = `${failedIds.length} suppression(s) ont echoue.`
+    scanNotice.value = {
+      kind: 'warning',
+      message: `${ids.length - failedIds.length} suivi(s) supprime(s), ${failedIds.length} en erreur.`,
+    }
+    return
+  }
+
+  scanNotice.value = {
+    kind: 'success',
+    message: `${ids.length} suivi(s) supprime(s) de la liste.`,
+  }
+}
+
 const matchesStatusFilter = (parcel, filter) => {
   if (filter === 'all') return true
-  if (filter === 'active') return activeStatuses.has(parcel.status)
+  if (filter === 'active') return isActiveParcelStatus(parcel.status)
   return parcel.status === filter
+}
+
+const parcelPriority = (parcel) => {
+  switch (parcel?.status) {
+    case 'EXCEPTION':
+      return 0
+    case 'OUT_FOR_DELIVERY':
+      return 1
+    case 'IN_TRANSIT':
+      return 2
+    case 'REGISTERED':
+    case 'PENDING':
+    case 'UNKNOWN':
+      return 3
+    case 'DELIVERED':
+      return 4
+    default:
+      return 5
+  }
 }
 
 const sortableDate = (parcel) => {
@@ -657,22 +1021,41 @@ const sortableDate = (parcel) => {
   return date && !Number.isNaN(date.getTime()) ? date.getTime() : 0
 }
 
-const emptyScanSummary = () => ({
-  scannedMessages: 0,
-  deliveryMessages: 0,
-  importedCount: 0,
-  reviewCount: 0,
-  rejectedCount: 0,
-  duplicateCount: 0,
+const normalizeScanBatchReport = (report = {}) => ({
+  scannedAccounts: Number(report?.scannedAccounts || 0),
+  scannedMessages: Number(report?.scannedMessages || 0),
+  deliveryMessages: Number(report?.deliveryMessages || 0),
+  importedCount: Number(report?.importedCount || 0),
+  reviewCount: Number(report?.reviewCount || 0),
+  rejectedCount: Number(report?.rejectedCount || 0),
+  duplicateCount: Number(report?.duplicateCount || 0),
+  message: String(report?.message || '').trim(),
+  accountReports: Array.isArray(report?.accountReports) ? report.accountReports : [],
+  importedParcels: Array.isArray(report?.importedParcels) ? report.importedParcels : [],
+  duplicateParcels: Array.isArray(report?.duplicateParcels) ? report.duplicateParcels : [],
+  candidatesToReview: Array.isArray(report?.candidatesToReview) ? report.candidatesToReview : [],
 })
 
-const addScanSummary = (target, source = {}) => {
-  target.scannedMessages += Number(source.scannedMessages || 0)
-  target.deliveryMessages += Number(source.deliveryMessages || 0)
-  target.importedCount += Number(source.importedCount || 0)
-  target.reviewCount += Number(source.reviewCount || 0)
-  target.rejectedCount += Number(source.rejectedCount || 0)
-  target.duplicateCount += Number(source.duplicateCount || 0)
+const parseManualTrackingEntries = (rawValue) => {
+  const source = String(rawValue || '')
+  return Array.from(
+    new Set(
+      source
+        .split(/[\n,;]+/)
+        .map((value) => String(value || '').trim())
+        .filter(Boolean),
+    ),
+  )
+}
+
+const formatShortDateTime = (value) => {
+  if (!value) return 'inconnue'
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) return 'inconnue'
+  return new Intl.DateTimeFormat('fr-FR', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  }).format(date)
 }
 
 const scanNoticeFromSummary = (summary = {}) => {
@@ -703,6 +1086,48 @@ const scanNoticeFromSummary = (summary = {}) => {
   }
 }
 
+const shouldIgnoreShortcut = (target) => {
+  if (!(target instanceof HTMLElement)) return false
+  const tag = target.tagName?.toLowerCase()
+  return (
+    tag === 'input' ||
+    tag === 'textarea' ||
+    tag === 'select' ||
+    target.isContentEditable
+  )
+}
+
+const handleGlobalShortcut = (event) => {
+  if (manualModalOpen.value && event.key === 'Escape') {
+    event.preventDefault()
+    closeManualModal()
+    return
+  }
+
+  if (shouldIgnoreShortcut(event.target)) return
+
+  if (event.key === '/') {
+    event.preventDefault()
+    searchInput.value?.focus()
+    return
+  }
+
+  if (event.key.toLowerCase() === 'n') {
+    event.preventDefault()
+    openManualModal()
+    return
+  }
+
+  if (event.key.toLowerCase() === 'm') {
+    event.preventDefault()
+    if (selectionMode.value) {
+      clearParcelSelection()
+    } else {
+      startParcelSelection()
+    }
+  }
+}
+
 watch(
   filteredParcels,
   (next) => {
@@ -717,95 +1142,44 @@ watch(
   { immediate: true },
 )
 
+watch(
+  parcels,
+  (next) => {
+    const validIds = new Set(next.map((parcel) => parcel.id))
+    selectedParcelIds.value = selectedParcelIds.value.filter((id) => validIds.has(id))
+  },
+  { deep: true },
+)
+
 const bootstrapDelivery = async () => {
   await refreshAll()
   await scanNewestAccountAfterCallback()
+  window.addEventListener('keydown', handleGlobalShortcut)
 }
 
 onMounted(bootstrapDelivery)
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleGlobalShortcut)
+})
 </script>
 
 <style scoped>
-.delivery-tracking-panel {
-  color: #0f172a;
+.delivery-panel-loader {
+  width: 34%;
+  animation: delivery-panel-progress 1.2s ease-in-out infinite;
 }
 
-.delivery-tracking-panel :deep(section),
-.delivery-tracking-panel :deep(aside) {
-  border-color: rgba(125, 211, 252, 0.34) !important;
-  background:
-    linear-gradient(135deg, rgba(14, 165, 233, 0.06), transparent 42%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(248, 250, 252, 0.92)) !important;
-  box-shadow: 0 22px 55px rgba(15, 23, 42, 0.08), 0 12px 34px rgba(14, 165, 233, 0.06) !important;
-}
+@keyframes delivery-panel-progress {
+  0% {
+    transform: translateX(-110%);
+  }
 
-.delivery-tracking-panel :deep([class*='border-slate-']) {
-  border-color: rgba(125, 211, 252, 0.3) !important;
-}
+  50% {
+    transform: translateX(105%);
+  }
 
-.delivery-tracking-panel :deep([class*='bg-slate-']) {
-  background-color: rgba(255, 255, 255, 0.76) !important;
-}
-
-.delivery-tracking-panel :deep(.text-white),
-.delivery-tracking-panel :deep(.text-slate-100),
-.delivery-tracking-panel :deep(.text-slate-200),
-.delivery-tracking-panel :deep(.text-slate-300) {
-  color: #0f172a !important;
-}
-
-.delivery-tracking-panel :deep(.text-slate-400),
-.delivery-tracking-panel :deep(.text-slate-500),
-.delivery-tracking-panel :deep(.text-slate-600) {
-  color: #64748b !important;
-}
-
-.delivery-tracking-panel :deep(.text-violet-100),
-.delivery-tracking-panel :deep(.text-violet-200),
-.delivery-tracking-panel :deep(.text-violet-300) {
-  color: #0f766e !important;
-}
-
-.delivery-tracking-panel :deep(.border-violet-400\/50),
-.delivery-tracking-panel :deep(.border-violet-300\/70) {
-  border-color: rgba(20, 184, 166, 0.44) !important;
-}
-
-.delivery-tracking-panel :deep(.bg-violet-500\/10) {
-  background: rgba(204, 251, 241, 0.72) !important;
-}
-
-.delivery-tracking-panel :deep(input) {
-  border-color: rgba(125, 211, 252, 0.42) !important;
-  background: rgba(255, 255, 255, 0.92) !important;
-  color: #0f172a !important;
-}
-
-.delivery-tracking-panel :deep(input::placeholder) {
-  color: #94a3b8 !important;
-}
-
-.delivery-tracking-panel :deep(button),
-.delivery-tracking-panel :deep(a) {
-  border-radius: 999px;
-}
-
-.delivery-tracking-panel :deep(button:hover),
-.delivery-tracking-panel :deep(a:hover) {
-  border-color: rgba(20, 184, 166, 0.5) !important;
-  background-color: rgba(236, 253, 245, 0.9) !important;
-  color: #0f766e !important;
-}
-
-.delivery-tracking-panel :deep(.delivery-list-scroll),
-.delivery-tracking-panel :deep(.delivery-timeline-scroll),
-.delivery-tracking-panel :deep(.delivery-accounts-scroll) {
-  scrollbar-color: rgba(14, 116, 144, 0.42) rgba(248, 250, 252, 0.82) !important;
-}
-
-.delivery-tracking-panel :deep(.delivery-list-scroll::-webkit-scrollbar-track),
-.delivery-tracking-panel :deep(.delivery-timeline-scroll::-webkit-scrollbar-track),
-.delivery-tracking-panel :deep(.delivery-accounts-scroll::-webkit-scrollbar-track) {
-  background: rgba(248, 250, 252, 0.82) !important;
+  100% {
+    transform: translateX(250%);
+  }
 }
 </style>

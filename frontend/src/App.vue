@@ -19,9 +19,18 @@ import LayoutPages from '@/layout/layoutPages.vue'
 
 const route = useRoute()
 
+const stringifyParams = (params) => {
+  try {
+    return JSON.stringify(params || {})
+  } catch {
+    return ''
+  }
+}
+
 const routeKey = (r) => {
-  if (r?.name === 'auth') return 'auth'
-  return r?.fullPath || route.fullPath
+  if (!r) return route.fullPath
+  if (r.meta?.remountOnQuery) return r.fullPath || route.fullPath
+  return `${String(r.name || r.path || route.name || route.path)}::${stringifyParams(r.params)}`
 }
 </script>
 <style>

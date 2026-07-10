@@ -60,15 +60,15 @@
                 type="button"
                 class="account-profile-change"
                 :disabled="legalProfileLoading"
-                @click="openLegalProfileEdit"
+                @click="goAdminProfile"
               >
                 <RefreshCw
                   v-if="legalProfileLoading"
                   class="h-4 w-4 animate-spin"
                   aria-hidden="true"
                 />
-                <ChevronDown v-else class="h-4 w-4" aria-hidden="true" />
-                <span>{{ legalProfileCompleted ? 'Modifier' : 'Compléter' }}</span>
+                <UserRoundCheck v-else class="h-4 w-4" aria-hidden="true" />
+                <span>{{ legalProfileCompleted ? 'Gerer dans admin' : 'Completer dans admin' }}</span>
               </button>
             </div>
 
@@ -94,25 +94,6 @@
 
             <div v-if="legalProfileError" class="account-profile-message is-error">
               {{ legalProfileError }}
-            </div>
-            <div v-if="legalProfileSuccess" class="account-profile-message is-success">
-              {{ legalProfileSuccess }}
-            </div>
-
-            <div v-if="legalProfileConfirmOpen" class="account-profile-confirm">
-              <p>
-                Changer de profil administratif peut nécessiter de ressaisir certaines informations
-                obligatoires. Tu devras valider à nouveau tes informations avant d'accéder à la
-                partie administrative.
-              </p>
-              <div class="account-profile-confirm-actions">
-                <button type="button" class="account-profile-secondary" @click="cancelLegalProfileEdit">
-                  Annuler
-                </button>
-                <button type="button" class="account-profile-primary" @click="confirmLegalProfileEdit">
-                  Continuer
-                </button>
-              </div>
             </div>
           </div>
 
@@ -223,21 +204,13 @@
       </div>
     </div>
 
-    <LegalProfileModal
-      v-model="legalProfileModalOpen"
-      :initial-profile="legalProfile"
-      :mandatory="false"
-      @saved="handleLegalProfileSaved"
-      @cancel="cancelLegalProfileEdit"
-    />
   </div>
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ChevronDown, RefreshCw, UserRoundCheck } from 'lucide-vue-next'
-import LegalProfileModal from '@/components/legal/LegalProfileModal.vue'
+import { RefreshCw, UserRoundCheck } from 'lucide-vue-next'
 import { useAuthStore } from '@/store/authStore'
 import { useBillingStore } from '@/store/billingStore'
 import {
@@ -275,11 +248,7 @@ const deleting = ref(false)
 const deleteError = ref('')
 const legalProfile = ref(normalizeLegalProfile(currentUser.value || {}))
 const legalProfileLoading = ref(false)
-const legalProfileModalOpen = ref(false)
-const legalProfileConfirmOpen = ref(false)
 const legalProfileError = ref('')
-const legalProfileSuccess = ref('')
-let legalProfileMessageTimer = null
 
 const canDelete = computed(
   () => deleteConfirmChecked.value && deleteConfirmText.value.trim() === 'SUPPRIMER',
@@ -298,20 +267,9 @@ onMounted(() => {
   void loadLegalProfile()
 })
 
-onBeforeUnmount(() => {
-  clearTimeout(legalProfileMessageTimer)
-})
-
 const resetMessages = () => {
   error.value = ''
   success.value = ''
-}
-
-const clearLegalProfileMessageLater = () => {
-  clearTimeout(legalProfileMessageTimer)
-  legalProfileMessageTimer = setTimeout(() => {
-    legalProfileSuccess.value = ''
-  }, 2600)
 }
 
 const applyLegalProfile = (profile) => {
@@ -337,42 +295,6 @@ const loadLegalProfile = async () => {
     legalProfileError.value = 'Profil administratif chargé depuis le compte local.'
   } finally {
     legalProfileLoading.value = false
-  }
-}
-
-const openLegalProfileEdit = () => {
-  legalProfileError.value = ''
-  legalProfileSuccess.value = ''
-  if (legalProfileCompleted.value) {
-    legalProfileConfirmOpen.value = true
-    return
-  }
-  legalProfileModalOpen.value = true
-}
-
-const confirmLegalProfileEdit = () => {
-  legalProfileConfirmOpen.value = false
-  legalProfileModalOpen.value = true
-}
-
-const cancelLegalProfileEdit = () => {
-  legalProfileConfirmOpen.value = false
-  legalProfileModalOpen.value = false
-}
-
-const handleLegalProfileSaved = async (savedProfile) => {
-  applyLegalProfile(savedProfile)
-  legalProfileConfirmOpen.value = false
-  legalProfileModalOpen.value = false
-  legalProfileSuccess.value = 'Profil administratif mis à jour.'
-
-  try {
-    auth.setUser(await AuthService.me())
-    legalProfile.value = normalizeLegalProfile(auth.user.value || {})
-  } catch {
-    applyLegalProfile(savedProfile)
-  } finally {
-    clearLegalProfileMessageLater()
   }
 }
 
@@ -437,6 +359,10 @@ const goBack = () => {
 
 const goAbo = () => {
   router.push({ name: 'abo-view' })
+}
+
+const goAdminProfile = () => {
+  router.push({ name: 'admin', query: { adminSection: 'profile' } })
 }
 </script>
 
@@ -599,56 +525,6 @@ const goAbo = () => {
   color: rgb(254 202 202);
 }
 
-.account-profile-message.is-success {
-  border: 1px solid rgba(52, 211, 153, 0.32);
-  background: rgba(6, 78, 59, 0.2);
-  color: rgb(167 243 208);
-}
-
-.account-profile-confirm {
-  display: grid;
-  gap: 0.85rem;
-  border: 1px solid rgba(251, 191, 36, 0.3);
-  border-radius: 12px;
-  background: rgba(120, 53, 15, 0.18);
-  padding: 0.9rem;
-}
-
-.account-profile-confirm p {
-  margin: 0;
-  color: rgb(253 230 138);
-  font-size: 0.86rem;
-  line-height: 1.5;
-  font-weight: 700;
-}
-
-.account-profile-confirm-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 0.55rem;
-}
-
-.account-profile-primary,
-.account-profile-secondary {
-  min-height: 38px;
-  border: 0;
-  border-radius: 12px;
-  padding: 0 0.9rem;
-  font-size: 0.82rem;
-  font-weight: 850;
-}
-
-.account-profile-primary {
-  background: rgb(16 185 129);
-  color: rgb(2 6 23);
-}
-
-.account-profile-secondary {
-  background: rgba(30, 41, 59, 0.9);
-  color: rgb(226 232 240);
-}
-
 @media (max-width: 640px) {
   .account-profile-head {
     align-items: stretch;
@@ -659,10 +535,5 @@ const goAbo = () => {
     width: 100%;
   }
 
-  .account-profile-confirm-actions,
-  .account-profile-primary,
-  .account-profile-secondary {
-    width: 100%;
-  }
 }
 </style>

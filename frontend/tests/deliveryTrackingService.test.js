@@ -27,14 +27,17 @@ test('DeliveryTrackingService utilise les endpoints mail accounts', async () => 
   await DeliveryTrackingService.scanNow(42)
   assert.equal(postMock.mock.calls[2].arguments[0], '/delivery/mail-accounts/42/scan-now')
 
+  await DeliveryTrackingService.scanAll()
+  assert.equal(postMock.mock.calls[3].arguments[0], '/delivery/mail-accounts/scan-all')
+
   await DeliveryTrackingService.listTrackingCandidates()
   assert.equal(getMock.mock.calls[1].arguments[0], '/delivery/tracking-candidates')
 
   await DeliveryTrackingService.confirmTrackingCandidate(9)
-  assert.equal(postMock.mock.calls[3].arguments[0], '/delivery/tracking-candidates/9/confirm')
+  assert.equal(postMock.mock.calls[4].arguments[0], '/delivery/tracking-candidates/9/confirm')
 
   await DeliveryTrackingService.ignoreTrackingCandidate(9)
-  assert.equal(postMock.mock.calls[4].arguments[0], '/delivery/tracking-candidates/9/ignore')
+  assert.equal(postMock.mock.calls[5].arguments[0], '/delivery/tracking-candidates/9/ignore')
 
   await DeliveryTrackingService.deleteMailAccount(42)
   assert.equal(deleteMock.mock.calls[0].arguments[0], '/delivery/mail-accounts/42')

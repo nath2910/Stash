@@ -57,10 +57,11 @@
             :class="[
               notification.isRead ? 'is-read' : 'is-unread',
               severityClass(notification.severity),
+              domainClass(notification),
             ]"
           >
             <span class="notification-item-icon" aria-hidden="true">
-              <component :is="severityIcon(notification.severity)" class="h-4 w-4" />
+              <component :is="domainIcon(notification)" class="h-4 w-4" />
             </span>
 
             <div class="notification-item-content">
@@ -70,7 +71,9 @@
                 @click="$emit('open-notification', notification)"
               >
                 <span class="notification-item-meta">
-                  {{ severityLabel(notification.severity) }} - {{ typeLabel(notification.type) }}
+                  <span class="notification-domain-pill">{{ domainMeta(notification).label }}</span>
+                  <span>{{ typeLabel(notification) }}</span>
+                  <span>{{ severityLabel(notification.severity) }}</span>
                 </span>
                 <strong>{{ notification.title }}</strong>
                 <span>{{ notification.message }}</span>
@@ -107,7 +110,7 @@
                 </button>
 
                 <time class="notification-item-date" :datetime="notification.createdAt">
-                  {{ formatDate(notification.createdAt) }}
+                  {{ formatNotificationDate(notification.createdAt) }}
                 </time>
               </div>
             </div>
@@ -131,7 +134,15 @@
 
 <script setup>
 import { computed } from 'vue'
-import { AlertTriangle, Archive, BellRing, Check, ExternalLink, Inbox, OctagonAlert, X } from 'lucide-vue-next'
+import { Archive, Check, CreditCard, ExternalLink, FileCheck2, Inbox, PackageSearch, X } from 'lucide-vue-next'
+import {
+  formatNotificationDate,
+  getNotificationDomain,
+  getNotificationDomainMeta,
+  getNotificationSeverityLabel,
+  getNotificationTypeLabel,
+  normalizeNotificationSeverity,
+} from '@/utils/notificationUi'
 
 const props = defineProps({
   open: {
@@ -169,7 +180,7 @@ const panelThemeClass = computed(() =>
 )
 
 function normalizeSeverity(severity) {
-  return String(severity || 'INFO').toUpperCase()
+  return normalizeNotificationSeverity(severity)
 }
 
 function severityClass(severity) {
@@ -179,37 +190,27 @@ function severityClass(severity) {
   return 'tone-info'
 }
 
-function severityIcon(severity) {
-  const normalized = normalizeSeverity(severity)
-  if (normalized === 'WARNING') return AlertTriangle
-  if (normalized === 'CRITICAL') return OctagonAlert
-  return BellRing
+function domainClass(notification) {
+  return `domain-${getNotificationDomain(notification)}`
+}
+
+function domainIcon(notification) {
+  const domain = getNotificationDomain(notification)
+  if (domain === 'subscription') return CreditCard
+  if (domain === 'administrative') return FileCheck2
+  return PackageSearch
+}
+
+function domainMeta(notification) {
+  return getNotificationDomainMeta(notification)
 }
 
 function severityLabel(severity) {
-  const normalized = normalizeSeverity(severity)
-  if (normalized === 'WARNING') return 'Attention'
-  if (normalized === 'CRITICAL') return 'Critique'
-  return 'Info'
+  return getNotificationSeverityLabel(severity)
 }
 
-function typeLabel(type) {
-  const normalized = String(type || '').toUpperCase()
-  if (normalized === 'SUBSCRIPTION_EXPIRING') return 'Abonnement'
-  if (normalized === 'STOCK_AGING') return 'Inventaire'
-  return 'Stash'
-}
-
-function formatDate(value) {
-  if (!value) return ''
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return ''
-  return date.toLocaleString('fr-FR', {
-    day: '2-digit',
-    month: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+function typeLabel(notification) {
+  return getNotificationTypeLabel(notification)
 }
 </script>
 
@@ -429,10 +430,21 @@ function formatDate(value) {
   border-radius: 1rem;
   background: var(--notification-card);
   padding: 0.78rem;
+  position: relative;
+  overflow: hidden;
   transition:
     border-color 150ms ease,
     background-color 150ms ease,
     transform 150ms ease;
+}
+
+.notification-item::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  opacity: 0;
+  transition: opacity 160ms ease;
 }
 
 .notification-item:hover {
@@ -441,20 +453,48 @@ function formatDate(value) {
   transform: translateY(-1px);
 }
 
-.notification-item.is-unread {
-  box-shadow: inset 3px 0 0 var(--notification-tone);
+.notification-item.is-unread::before {
+  opacity: 1;
+}
+
+.notification-item.is-read {
+  opacity: 0.78;
 }
 
 .notification-item.tone-info {
-  --notification-tone: #14b8a6;
+  --notification-severity: #14b8a6;
 }
 
 .notification-item.tone-warning {
-  --notification-tone: #f59e0b;
+  --notification-severity: #f59e0b;
 }
 
 .notification-item.tone-critical {
-  --notification-tone: #ef4444;
+  --notification-severity: #ef4444;
+}
+
+.notification-item.domain-resale {
+  --notification-tone: #0f766e;
+}
+
+.notification-item.domain-resale::before {
+  background: linear-gradient(180deg, #14b8a6, #0f766e);
+}
+
+.notification-item.domain-subscription {
+  --notification-tone: #2563eb;
+}
+
+.notification-item.domain-subscription::before {
+  background: linear-gradient(180deg, #60a5fa, #2563eb);
+}
+
+.notification-item.domain-administrative {
+  --notification-tone: #7c3aed;
+}
+
+.notification-item.domain-administrative::before {
+  background: linear-gradient(180deg, #a78bfa, #7c3aed);
 }
 
 .notification-item-icon {
@@ -497,10 +537,28 @@ function formatDate(value) {
 }
 
 .notification-item-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  color: var(--notification-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.notification-domain-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.4rem;
+  border: 1px solid color-mix(in srgb, var(--notification-tone) 32%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--notification-tone) 12%, transparent);
   color: var(--notification-tone);
-  font-size: 0.66rem;
+  padding: 0.05rem 0.48rem;
+  font-size: 0.64rem;
   font-weight: 900;
-  letter-spacing: 0.09em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -568,7 +626,8 @@ function formatDate(value) {
   .notification-center-fade-leave-active,
   .notification-action,
   .notification-icon-button,
-  .notification-item {
+  .notification-item,
+  .notification-item::before {
     transition: none;
   }
 

@@ -262,7 +262,8 @@
         "
       >
         <span class="font-jetbrains-mono">&copy; {{ new Date().getFullYear() }} - Stash</span>
-        <a href="#" class="hover:underline">A propos</a>
+        <RouterLink to="/a-propos" class="hover:underline">A propos</RouterLink>
+        <RouterLink to="/confidentialite" class="hover:underline">Confidentialite</RouterLink>
         <a href="mailto:nathantalvasson@gmail.com" class="hover:underline">contact</a>
       </div>
     </footer>
@@ -345,7 +346,9 @@ const { theme } = useTheme()
 const isStats = computed(() => route.path === '/stats')
 const isStatsLight = computed(() => isStats.value && theme.value === 'light')
 const isGestionRoute = computed(() => route.path === '/gestion')
-const isLightAppShell = computed(() => route.path === '/' || route.path === '/gestion')
+const isLightAppShell = computed(() =>
+  ['/', '/gestion', '/a-propos', '/confidentialite'].includes(route.path),
+)
 const isFullBleedRoute = computed(() => route.meta.fullBleed === true)
 const layoutVars = computed(() => {
   const edgeGap = isFullBleedRoute.value ? 'clamp(10px, 2vw, 32px)' : 'clamp(14px, 2vw, 40px)'
@@ -414,6 +417,7 @@ const mobileMenuOpen = ref(false)
 
 const auth = useAuthStore()
 const notification = useNotificationStore()
+let notificationInitTimer = null
 const idleTimeoutMs = 10 * 60 * 1000
 const lastActivity = ref(Date.now())
 let idleTimer = null
@@ -632,10 +636,49 @@ const onWindowClick = (e) => {
 }
 
 const onKeyDown = (e) => {
+  const target = e.target
+  const isTypingTarget =
+    target instanceof HTMLElement &&
+    (target.closest('input, textarea, select, [contenteditable="true"]') ||
+      target.getAttribute('role') === 'textbox')
+
+  if (!isTypingTarget && (e.key === '/' || e.key.toLowerCase() === 'r')) {
+    e.preventDefault()
+    focusGlobalSearch()
+    return
+  }
+
   if (e.key === 'Escape') {
     closeMenus()
     notification.closeCenter()
   }
+}
+
+const focusGlobalSearch = async () => {
+  if (route.name !== 'home') {
+    await router.push({ name: 'home' }).catch(() => {})
+    await nextTick()
+  }
+
+  window.dispatchEvent(new CustomEvent('snk:focus-global-search'))
+}
+
+const clearNotificationInitTimer = () => {
+  if (notificationInitTimer) {
+    window.clearTimeout(notificationInitTimer)
+    notificationInitTimer = null
+  }
+}
+
+const scheduleNotificationInit = () => {
+  if (typeof window === 'undefined' || !showNotificationSystem.value) return
+  clearNotificationInitTimer()
+  notificationInitTimer = window.setTimeout(() => {
+    notification.init().catch((e) => {
+      console.warn('notification init failed', e)
+    })
+    notificationInitTimer = null
+  }, 180)
 }
 
 onMounted(() => {
@@ -643,11 +686,6 @@ onMounted(() => {
   window.addEventListener('keydown', onKeyDown)
   attachScroll()
   startIdleWatch()
-  if (showNotificationSystem.value) {
-    notification.init().catch((e) => {
-      console.warn('notification init failed', e)
-    })
-  }
 })
 
 onBeforeUnmount(() => {
@@ -658,6 +696,7 @@ onBeforeUnmount(() => {
   document.body.classList.remove('layout-light-document-scroll')
   detachScroll()
   stopIdleWatch()
+  clearNotificationInitTimer()
   notification.teardown({ clearState: true })
 })
 
@@ -711,6 +750,7 @@ watch(
 watch(
   () => [auth.token?.value, isAuthRoute.value],
   ([token, authRoute]) => {
+    clearNotificationInitTimer()
     if (!token) {
       notification.teardown({ clearState: true })
       return
@@ -721,9 +761,7 @@ watch(
       return
     }
 
-    notification.init().catch((e) => {
-      console.warn('notification init failed', e)
-    })
+    scheduleNotificationInit()
   },
   { immediate: true },
 )

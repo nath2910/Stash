@@ -101,33 +101,39 @@
               </button>
             </form>
 
+            <div v-if="managerMessage" class="subcategory-feedback">
+              {{ managerMessage }}
+            </div>
+
             <div v-if="managerItems.length" class="subcategory-manager-list">
               <div v-for="item in managerItems" :key="item" class="subcategory-row">
                 <template v-if="renameFrom === item">
-                  <input
-                    v-model.trim="renameDraft"
-                    type="text"
-                    maxlength="60"
-                    class="subcategory-row-input"
-                    @keydown.enter.prevent="commitRename"
-                    @keydown.esc.prevent="cancelRename"
-                  />
-                  <button
-                    type="button"
-                    class="icon-action is-confirm"
-                    aria-label="Valider"
-                    @click="commitRename"
-                  >
-                    <Check class="h-4 w-4" />
-                  </button>
-                  <button
-                    type="button"
-                    class="icon-action"
-                    aria-label="Annuler"
-                    @click="cancelRename"
-                  >
-                    <X class="h-4 w-4" />
-                  </button>
+                  <div class="subcategory-row-edit">
+                    <input
+                      v-model.trim="renameDraft"
+                      type="text"
+                      maxlength="60"
+                      class="subcategory-row-input"
+                      @keydown.enter.prevent="commitRename"
+                      @keydown.esc.prevent="cancelRename"
+                    />
+                    <button
+                      type="button"
+                      class="subcategory-action is-confirm"
+                      @click="commitRename"
+                    >
+                      <Check class="h-4 w-4" />
+                      <span>Valider</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="subcategory-action"
+                      @click="cancelRename"
+                    >
+                      <X class="h-4 w-4" />
+                      <span>Annuler</span>
+                    </button>
+                  </div>
                 </template>
                 <template v-else>
                   <button
@@ -135,24 +141,30 @@
                     class="subcategory-row-main"
                     @click="selectValue(item)"
                   >
-                    {{ item }}
+                    <span>{{ item }}</span>
+                    <small v-if="subcategoryUseCount(item)">
+                      {{ subcategoryMeta(item) }}
+                    </small>
                   </button>
-                  <button
-                    type="button"
-                    class="icon-action"
-                    aria-label="Renommer"
-                    @click="startRename(item)"
-                  >
-                    <Pencil class="h-4 w-4" />
-                  </button>
-                  <button
-                    type="button"
-                    class="icon-action is-danger"
-                    aria-label="Supprimer"
-                    @click="removeItem(item)"
-                  >
-                    <Trash2 class="h-4 w-4" />
-                  </button>
+                  <div class="subcategory-row-actions">
+                    <button
+                      type="button"
+                      class="subcategory-action"
+                      @click="startRename(item)"
+                    >
+                      <Pencil class="h-4 w-4" />
+                      <span>Modifier</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="subcategory-action is-danger"
+                      :title="removeTitle(item)"
+                      @click="removeItem(item)"
+                    >
+                      <Trash2 class="h-4 w-4" />
+                      <span>Supprimer</span>
+                    </button>
+                  </div>
                 </template>
               </div>
             </div>
@@ -184,12 +196,14 @@ import {
   resolveSubcategoryOptions,
   writeStoredSubcategories,
 } from '@/RegleItem/subcategoryStore'
+import { getField, typeOf } from '@/utils/snkVente'
 
 const props = defineProps({
   modelValue: { type: String, default: '' },
   type: { type: String, default: 'SNEAKER' },
   userId: { type: [String, Number], default: 'guest' },
   discovered: { type: Object, default: () => ({}) },
+  items: { type: Array, default: () => [] },
   categoryLabels: { type: Object, default: null },
 })
 
@@ -201,6 +215,7 @@ const managerOpen = ref(false)
 const draftName = ref('')
 const renameFrom = ref('')
 const renameDraft = ref('')
+const managerMessage = ref('')
 const storedMap = ref(
   readStoredSubcategories(props.userId, undefined, props.categoryLabels || undefined),
 )
@@ -228,6 +243,19 @@ const managerItems = computed(() =>
       !mainCategoryAliases.value.has(normalizeSubcategoryName(item).toLocaleLowerCase('fr')),
   ),
 )
+const subcategoryUseCounts = computed(() => {
+  const counts = new Map()
+  for (const item of Array.isArray(props.items) ? props.items : []) {
+    if (normalizeItemType(typeOf(item || {})) !== currentType.value) {
+      continue
+    }
+    const name = normalizeSubcategoryName(getField(item, 'categorie', ''))
+    if (!name) continue
+    const key = name.toLocaleLowerCase('fr')
+    counts.set(key, (counts.get(key) || 0) + 1)
+  }
+  return counts
+})
 const selectedLabel = computed(() =>
   mainCategoryAliases.value.has(normalizeSubcategoryName(props.modelValue).toLocaleLowerCase('fr'))
     ? 'Choisir une sous-categorie'
@@ -273,6 +301,7 @@ function persist(nextMap) {
 }
 
 function selectValue(value) {
+  managerMessage.value = ''
   emit('update:modelValue', normalizeSubcategoryName(value))
   menuOpen.value = false
 }
@@ -285,6 +314,7 @@ function openManager() {
 function closeManager() {
   managerOpen.value = false
   draftName.value = ''
+  managerMessage.value = ''
   cancelRename()
 }
 
@@ -292,6 +322,7 @@ function addDraft() {
   const cleaned = normalizeSubcategoryName(draftName.value)
   if (!cleaned) return
   if (mainCategoryAliases.value.has(cleaned.toLocaleLowerCase('fr'))) return
+  managerMessage.value = ''
   persist(
     addSubcategory(storedMap.value, currentType.value, cleaned, props.categoryLabels || undefined),
   )
@@ -299,7 +330,31 @@ function addDraft() {
   draftName.value = ''
 }
 
+function subcategoryUseCount(item) {
+  const key = normalizeSubcategoryName(item).toLocaleLowerCase('fr')
+  return subcategoryUseCounts.value.get(key) || 0
+}
+
+function subcategoryMeta(item) {
+  const count = subcategoryUseCount(item)
+  return `Utilisee par ${count} item${count > 1 ? 's' : ''}`
+}
+
+function removeTitle(item) {
+  const count = subcategoryUseCount(item)
+  if (count) return `Sous-categorie utilisee par ${count} item${count > 1 ? 's' : ''}`
+  return `Supprimer ${item}`
+}
+
 function removeItem(item) {
+  const count = subcategoryUseCount(item)
+  if (count) {
+    managerMessage.value =
+      `Sous-categorie utilisee par ${count} item${count > 1 ? 's' : ''}. ` +
+      'Modifie ou reassigne ces items avant de la supprimer.'
+    return
+  }
+  if (typeof window !== 'undefined' && !window.confirm(`Supprimer "${item}" ?`)) return
   persist(
     removeSubcategory(storedMap.value, currentType.value, item, props.categoryLabels || undefined),
   )
@@ -309,9 +364,11 @@ function removeItem(item) {
   ) {
     emit('update:modelValue', '')
   }
+  managerMessage.value = 'Sous-categorie supprimee.'
 }
 
 function startRename(item) {
+  managerMessage.value = ''
   renameFrom.value = item
   renameDraft.value = item
 }
@@ -328,6 +385,7 @@ function commitRename() {
     cancelRename()
     return
   }
+  managerMessage.value = ''
   persist(
     renameSubcategory(
       storedMap.value,
@@ -640,10 +698,11 @@ onBeforeUnmount(() => {
 }
 
 .subcategory-manager-body {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
   gap: 0.9rem;
   min-height: 0;
+  overflow: hidden;
   padding: 1rem 1.25rem 1.25rem;
 }
 
@@ -703,8 +762,19 @@ onBeforeUnmount(() => {
   opacity: 0.48;
 }
 
+.subcategory-feedback {
+  border: 1px solid rgba(14, 165, 233, 0.28);
+  border-radius: 14px;
+  background: rgba(240, 253, 250, 0.9);
+  color: #0f766e;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
 .subcategory-manager-list {
   display: grid;
+  flex: 1 1 auto;
   gap: 0.6rem;
   min-height: 0;
   max-height: 100%;
@@ -726,6 +796,8 @@ onBeforeUnmount(() => {
 }
 
 .subcategory-row-main {
+  display: grid;
+  gap: 0.12rem;
   min-width: 0;
   flex: 1;
   overflow: hidden;
@@ -737,38 +809,71 @@ onBeforeUnmount(() => {
   font-weight: 850;
 }
 
-.icon-action {
-  display: inline-grid;
-  width: 2.15rem;
-  height: 2.15rem;
+.subcategory-row-main span,
+.subcategory-row-main small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subcategory-row-main small {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 750;
+}
+
+.subcategory-row-actions,
+.subcategory-row-edit {
+  display: inline-flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.45rem;
+}
+
+.subcategory-row-edit {
+  flex: 1;
+}
+
+.subcategory-action {
+  display: inline-flex;
+  min-height: 2.15rem;
   flex: 0 0 auto;
-  place-items: center;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
   border: 1px solid rgba(125, 211, 252, 0.34);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.88);
   color: #475569;
+  padding: 0 0.65rem;
+  font-size: 0.76rem;
+  font-weight: 850;
+  white-space: nowrap;
   transition:
     border-color 140ms ease,
     background 140ms ease,
     color 140ms ease;
 }
 
-.icon-action:hover:not(:disabled),
-.icon-action.is-confirm:hover:not(:disabled) {
+.subcategory-action:hover:not(:disabled),
+.subcategory-action.is-confirm:hover:not(:disabled) {
   border-color: rgba(20, 184, 166, 0.5);
   background: #ecfdf5;
   color: #0f766e;
 }
 
-.icon-action.is-confirm {
+.subcategory-action.is-confirm {
   color: #047857;
 }
 
-.icon-action.is-danger {
+.subcategory-action.is-danger {
   color: #b91c1c;
 }
 
-.icon-action.is-danger:hover:not(:disabled) {
+.subcategory-action.is-danger:hover:not(:disabled) {
   border-color: rgba(248, 113, 113, 0.42);
   background: #fef2f2;
   color: #b91c1c;
@@ -804,6 +909,16 @@ onBeforeUnmount(() => {
 
   .subcategory-field-header {
     display: grid;
+  }
+
+  .subcategory-row {
+    display: grid;
+  }
+
+  .subcategory-row-actions,
+  .subcategory-row-edit,
+  .subcategory-action {
+    width: 100%;
   }
 
   .subcategory-manager-panel {

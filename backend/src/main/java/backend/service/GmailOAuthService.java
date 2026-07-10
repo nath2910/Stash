@@ -14,13 +14,16 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -44,9 +47,11 @@ public class GmailOAuthService {
   private final String googleClientSecret;
   private final String gmailRedirectUri;
   private final String jwtSecret;
+  private final String frontendBaseUrl;
   private final String oauthSuccessRedirect;
   private final RestClient restClient;
   private final ObjectMapper objectMapper;
+  private final Environment environment;
   private final UserRepository userRepository;
   private final MailAccountRepository mailAccountRepository;
   private final TokenEncryptionService tokenEncryptionService;
@@ -56,8 +61,10 @@ public class GmailOAuthService {
       @Value("${spring.security.oauth2.client.registration.google.client-secret:}") String googleClientSecret,
       @Value("${app.delivery.gmail-redirect-uri:http://localhost:8080/delivery/mail-accounts/gmail/callback}") String gmailRedirectUri,
       @Value("${app.jwt.secret:dev-secret-change-me-dev-secret-change-me}") String jwtSecret,
+      @Value("${app.frontend.base-url:http://localhost:5173}") String frontendBaseUrl,
       @Value("${app.oauth2.success-redirect:http://localhost:5173/auth/callback}") String oauthSuccessRedirect,
       ObjectMapper objectMapper,
+      Environment environment,
       UserRepository userRepository,
       MailAccountRepository mailAccountRepository,
       TokenEncryptionService tokenEncryptionService
@@ -66,12 +73,37 @@ public class GmailOAuthService {
     this.googleClientSecret = googleClientSecret;
     this.gmailRedirectUri = gmailRedirectUri;
     this.jwtSecret = jwtSecret;
+    this.frontendBaseUrl = frontendBaseUrl;
     this.oauthSuccessRedirect = oauthSuccessRedirect;
     this.restClient = RestClient.builder().build();
     this.objectMapper = objectMapper;
+    this.environment = environment;
     this.userRepository = userRepository;
     this.mailAccountRepository = mailAccountRepository;
     this.tokenEncryptionService = tokenEncryptionService;
+  }
+
+  @PostConstruct
+  void validateProductionConfig() {
+    boolean prod = Arrays.asList(environment.getActiveProfiles()).contains("prod");
+    if (!prod) {
+      return;
+    }
+
+    boolean hasGoogleClientId = googleClientId != null && !googleClientId.isBlank();
+    boolean hasGoogleClientSecret = googleClientSecret != null && !googleClientSecret.isBlank();
+    boolean gmailOauthConfigured = hasGoogleClientId || hasGoogleClientSecret;
+
+    if (gmailOauthConfigured && (!hasGoogleClientId || !hasGoogleClientSecret)) {
+      throw new IllegalStateException("GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must both be set in prod");
+    }
+    if (!gmailOauthConfigured) {
+      return;
+    }
+
+    requirePublicHttpsUrl(gmailRedirectUri, "APP_DELIVERY_GMAIL_REDIRECT_URI");
+    requirePublicHttpsUrl(frontendBaseUrl, "APP_FRONTEND_BASE_URL");
+    requirePublicHttpsUrl(oauthSuccessRedirect, "OAUTH2_SUCCESS_REDIRECT");
   }
 
   public TrackingConnectResponse buildConnectResponse(User user, String emailHint) {
@@ -263,15 +295,82 @@ public class GmailOAuthService {
   }
 
   private String frontendOrigin() {
+    String configuredOrigin = absoluteOrigin(frontendBaseUrl);
+    if (configuredOrigin != null) {
+      return configuredOrigin;
+    }
+
+    String successRedirectOrigin = absoluteOrigin(oauthSuccessRedirect);
+    if (successRedirectOrigin != null) {
+      return successRedirectOrigin;
+    }
+
+    String derivedFromApi = deriveFrontendOriginFromApi(gmailRedirectUri);
+    if (derivedFromApi != null) {
+      return derivedFromApi;
+    }
+
+    return "http://localhost:5173";
+  }
+
+  private String absoluteOrigin(String rawValue) {
     try {
-      URI uri = URI.create(oauthSuccessRedirect);
+      URI uri = URI.create(rawValue);
       if (uri.getScheme() != null && uri.getAuthority() != null) {
         return uri.getScheme() + "://" + uri.getAuthority();
       }
     } catch (Exception ignored) {
       // fallback below
     }
-    return "http://localhost:5173";
+    return null;
+  }
+
+  private void requirePublicHttpsUrl(String rawValue, String propertyName) {
+    URI uri;
+    try {
+      uri = URI.create(rawValue);
+    } catch (Exception ex) {
+      throw new IllegalStateException(propertyName + " must be a valid absolute URL in prod", ex);
+    }
+
+    String scheme = uri.getScheme();
+    String host = uri.getHost();
+    if (scheme == null || host == null) {
+      throw new IllegalStateException(propertyName + " must be a valid absolute URL in prod");
+    }
+    if (!"https".equalsIgnoreCase(scheme)) {
+      throw new IllegalStateException(propertyName + " must use https in prod");
+    }
+    if (host.equalsIgnoreCase("localhost") || host.equals("127.0.0.1")) {
+      throw new IllegalStateException(propertyName + " cannot point to localhost in prod");
+    }
+  }
+
+  private String deriveFrontendOriginFromApi(String apiUrl) {
+    try {
+      URI uri = URI.create(apiUrl);
+      if (uri.getScheme() == null || uri.getHost() == null) {
+        return null;
+      }
+
+      String host = uri.getHost();
+      if (host.equalsIgnoreCase("localhost") || host.equals("127.0.0.1")) {
+        return "http://localhost:5173";
+      }
+
+      String frontendHost = host;
+      if (host.startsWith("api.")) {
+        frontendHost = host.substring(4);
+      } else if (host.startsWith("api-")) {
+        frontendHost = host.substring(4);
+      }
+
+      int port = uri.getPort();
+      String authority = port > 0 && port != 80 && port != 443 ? frontendHost + ":" + port : frontendHost;
+      return uri.getScheme() + "://" + authority;
+    } catch (Exception ignored) {
+      return null;
+    }
   }
 
   private String base64Url(byte[] bytes) {

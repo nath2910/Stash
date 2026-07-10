@@ -22,6 +22,8 @@ GOOGLE_CLIENT_ID=ton_client_id_google
 GOOGLE_CLIENT_SECRET=ton_client_secret_google
 
 APP_TOKEN_ENCRYPTION_KEY=la_cle_base64_generee
+APP_FRONTEND_BASE_URL=http://localhost:5173
+APP_BACKEND_PUBLIC_BASE_URL=http://localhost:8080
 APP_DELIVERY_GMAIL_REDIRECT_URI=http://localhost:8080/delivery/mail-accounts/gmail/callback
 APP_DELIVERY_SCAN_FIXED_DELAY_MS=300000
 APP_DELIVERY_SCAN_BATCH_SIZE=25
@@ -40,6 +42,7 @@ AFTERSHIP_WEBHOOK_SECRET=un_secret_long_aleatoire
 
 Notes :
 - `APP_TOKEN_ENCRYPTION_KEY` est obligatoire en production.
+- `APP_FRONTEND_BASE_URL` et `APP_BACKEND_PUBLIC_BASE_URL` servent de base aux redirects OAuth Gmail, liens emails et retours frontend.
 - `APP_DELIVERY_TRACKING_PROVIDER=DIRECT` active le suivi direct France en priorite.
 - En dev, `AFTERSHIP_API_KEY` peut rester vide : les colis seront detectes et stockes localement, mais pas inscrits chez AfterShip.
 - Ne mets jamais de mot de passe Gmail dans la config. Le code utilise OAuth 2.0 + `gmail.readonly`.
@@ -82,6 +85,27 @@ https://api.ton-domaine.fr/delivery/mail-accounts/gmail/callback
 ```
 
 Puis mets la meme valeur dans `APP_DELIVERY_GMAIL_REDIRECT_URI`.
+
+## 2.b Configuration minimale production
+
+Pour que le module livraison marche en prod sans retomber sur `localhost`, pose au minimum :
+
+```env
+SPRING_PROFILES_ACTIVE=prod
+
+APP_FRONTEND_BASE_URL=https://mystash.fr
+APP_BACKEND_PUBLIC_BASE_URL=https://api.mystash.fr
+APP_CORS_ALLOWED_ORIGINS=https://mystash.fr,https://www.mystash.fr
+
+OAUTH2_SUCCESS_REDIRECT=https://mystash.fr/auth/callback
+APP_DELIVERY_GMAIL_REDIRECT_URI=https://api.mystash.fr/delivery/mail-accounts/gmail/callback
+
+GOOGLE_CLIENT_ID=ton_client_id_google
+GOOGLE_CLIENT_SECRET=ton_client_secret_google
+APP_TOKEN_ENCRYPTION_KEY=ta_cle_base64
+```
+
+Si `OAUTH2_SUCCESS_REDIRECT` ou `APP_DELIVERY_GMAIL_REDIRECT_URI` sont omis, le backend derive maintenant ces URLs a partir des bases publique frontend/backend. L'objectif est d'eviter les redirects localhost en production.
 
 ## 3. Lancer en local
 

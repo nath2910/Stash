@@ -11,8 +11,10 @@ const AboViewPage = () => import('@/pages/aboViewPage.vue')
 const AuthPage = () => import('@/pages/AuthPage.vue')
 const DiscoverPage = () => import('@/pages/DiscoverPage.vue')
 const AccountPage = () => import('@/pages/accountPage.vue')
+const AboutPage = () => import('@/pages/aboutPage.vue')
 const AuthCallbackPage = () => import('@/pages/authCallbackPage.vue')
 const ForgotPasswordPage = () => import('@/pages/ForgotPasswordPage.vue')
+const PrivacyPage = () => import('@/pages/privacyPage.vue')
 const ResetPasswordPage = () => import('@/pages/ResetPasswordPage.vue')
 const VerifyEmailPage = () => import('@/pages/VerifyEmailPage.vue')
 
@@ -37,13 +39,17 @@ function isTokenExpired(token) {
 }
 
 let protectedChunksWarmed = false
+const protectedChunkLoaders = [GestionPage, StatsPage, AccountPage]
 
 function canWarmRouteChunks() {
   if (typeof navigator === 'undefined') return true
   const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection
-  if (!connection) return true
-  if (connection.saveData) return false
-  return !['slow-2g', '2g'].includes(connection.effectiveType)
+  if (connection?.saveData) return false
+  if (['slow-2g', '2g'].includes(connection?.effectiveType)) return false
+  const memory = Number(navigator.deviceMemory || 0)
+  if (memory && memory <= 2) return false
+  if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return false
+  return true
 }
 
 function runWhenIdle(callback) {
@@ -58,9 +64,19 @@ function runWhenIdle(callback) {
 function warmProtectedRouteChunks() {
   if (protectedChunksWarmed || !canWarmRouteChunks()) return
   protectedChunksWarmed = true
-  runWhenIdle(() => {
-    Promise.allSettled([GestionPage(), StatsPage(), AccountPage()]).catch(() => {})
-  })
+  const warmNextChunk = (index = 0) => {
+    const loader = protectedChunkLoaders[index]
+    if (!loader) return
+    runWhenIdle(async () => {
+      try {
+        await loader()
+      } catch {
+        // Ignore prefetch failures and keep the route interactive.
+      }
+      warmNextChunk(index + 1)
+    })
+  }
+  warmNextChunk()
 }
 
 const router = createRouter({
@@ -86,6 +102,18 @@ const router = createRouter({
       name: 'discover',
       component: DiscoverPage,
       meta: { fullBleed: true, allowScroll: true },
+    },
+    {
+      path: '/a-propos',
+      name: 'about',
+      component: AboutPage,
+      meta: { allowScroll: true, wideContent: true },
+    },
+    {
+      path: '/confidentialite',
+      name: 'privacy',
+      component: PrivacyPage,
+      meta: { allowScroll: true, wideContent: true },
     },
     {
       path: '/admin',
@@ -193,8 +221,10 @@ const router = createRouter({
 const publicRoutes = new Set([
   'auth',
   'discover',
+  'about',
   'authCallback',
   'forgot-password',
+  'privacy',
   'reset-password',
   'verify-email',
   'verify-email-short',

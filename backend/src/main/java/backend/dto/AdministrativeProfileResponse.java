@@ -2,23 +2,36 @@ package backend.dto;
 
 import backend.entity.DeclarationFrequency;
 import backend.entity.LegalProfileType;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 
 public record AdministrativeProfileResponse(
     LegalProfileType profileType,
+    String legalStatus,
+    List<String> activities,
+    String vatRegime,
+    List<String> declarations,
     String siret,
     String siren,
+    String businessName,
+    String ownerName,
     String displayName,
     String tradeName,
     String address,
+    String legalForm,
     String mainActivity,
     String fiscalRegime,
     DeclarationFrequency declarationFrequency,
+    String declarationPeriodicity,
     String withholdingTaxOption,
     String vatFranchise,
     LocalDate activityStartDate,
+    Integer fiscalYearEndMonth,
+    Integer fiscalYearEndDay,
+    String urssafCategory,
+    BigDecimal defaultVatRate,
     String notes,
     String verificationStatus,
     boolean usesOnlinePlatforms,

@@ -18,6 +18,10 @@ class DeliveryTrackingService {
     return api.post(`/delivery/mail-accounts/${id}/scan-now`)
   }
 
+  scanAll() {
+    return api.post('/delivery/mail-accounts/scan-all')
+  }
+
   listTrackingCandidates() {
     return api.get('/delivery/tracking-candidates')
   }

@@ -2,6 +2,7 @@ package backend.controller;
 
 import backend.dto.GmailConnectRequest;
 import backend.dto.MailAccountResponse;
+import backend.dto.MailScanBatchResponse;
 import backend.dto.MailScanResponse;
 import backend.dto.TrackingConnectResponse;
 import backend.entity.User;
@@ -83,5 +84,10 @@ public class MailAccountController {
   @PostMapping("/{id}/scan-now")
   public MailScanResponse scanNow(@AuthenticationPrincipal User currentUser, @PathVariable Long id) {
     return mailAccountService.scanNow(currentUser.getId(), id);
+  }
+
+  @PostMapping("/scan-all")
+  public MailScanBatchResponse scanAll(@AuthenticationPrincipal User currentUser) {
+    return mailAccountService.scanAll(currentUser.getId());
   }
 }
