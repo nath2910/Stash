@@ -222,14 +222,15 @@ public class GmailMailScannerService {
     int scannedPages = 0;
 
     while (ids.size() < targetCount && scannedPages < GMAIL_PAGE_SCAN_LIMIT) {
+      final String currentPageToken = pageToken;
       Map<String, Object> response = restClient.get()
           .uri(uriBuilder -> {
             var builder = uriBuilder
                 .path(GMAIL_MESSAGES_PATH)
                 .queryParam("q", DEFAULT_QUERY)
                 .queryParam("maxResults", GMAIL_PAGE_SIZE);
-            if (pageToken != null && !pageToken.isBlank()) {
-              builder.queryParam("pageToken", pageToken);
+            if (currentPageToken != null && !currentPageToken.isBlank()) {
+              builder.queryParam("pageToken", currentPageToken);
             }
             return builder.build();
           })
