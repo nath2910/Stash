@@ -12,6 +12,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -22,6 +23,7 @@ import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilderFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.w3c.dom.Document;
@@ -30,6 +32,7 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 @Service
+@Order(110)
 public class MondialRelayTrackingClient implements CarrierTrackingClient {
 
   private static final String PROVIDER = "MONDIAL_RELAY_DIRECT";
@@ -127,7 +130,7 @@ public class MondialRelayTrackingClient implements CarrierTrackingClient {
       ));
     }
 
-    TrackingEventSnapshot latest = events.isEmpty() ? null : events.get(events.size() - 1);
+    TrackingEventSnapshot latest = latestEvent(events);
     String destination = compactLocation(text(result, "Relais_Libelle"), text(result, "Relais_Num"));
     String statusLabel = firstNonBlank(
         latest == null ? null : latest.description(),
@@ -217,6 +220,16 @@ public class MondialRelayTrackingClient implements CarrierTrackingClient {
   private boolean isDelivered(String value) {
     String normalized = value == null ? "" : value.toLowerCase(Locale.ROOT);
     return containsAny(normalized, "livre", "livré", "remis au destinataire", "colis retire", "colis retiré");
+  }
+
+  static TrackingEventSnapshot latestEvent(List<TrackingEventSnapshot> events) {
+    if (events == null || events.isEmpty()) {
+      return null;
+    }
+    return events.stream()
+        .filter(event -> event != null && event.eventTime() != null)
+        .max(Comparator.comparing(TrackingEventSnapshot::eventTime))
+        .orElse(events.get(events.size() - 1));
   }
 
   private OffsetDateTime parseMondialRelayDateTime(String dateValue, String timeValue) {

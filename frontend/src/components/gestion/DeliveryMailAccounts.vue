@@ -4,9 +4,9 @@
   >
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div>
-        <h2 class="text-base font-semibold text-slate-900">Sources mail</h2>
+        <h2 class="text-base font-semibold text-slate-900">Import Gmail</h2>
         <p class="mt-1 text-xs text-slate-500">
-          {{ accounts.length }} compte(s) Gmail lies, scan uniquement des emails livraison.
+          {{ accounts.length }} compte(s) lie(s). Le scan relit les emails transporteur et ajoute uniquement les vrais suivis detectes.
         </p>
       </div>
       <button
@@ -17,11 +17,15 @@
         @click="$emit('scan-all')"
       >
         <RefreshCw class="h-3.5 w-3.5" :class="{ 'animate-spin': scanningAll }" />
-        <span>Scanner</span>
+        <span>Rechercher des suivis</span>
       </button>
     </div>
 
     <form class="mt-4 grid gap-2" @submit.prevent="connectWithEmail">
+      <p class="text-xs text-slate-500">
+        Tu peux lier plusieurs comptes Gmail. Chaque scan cherche de nouveaux numeros de suivi dans tes emails de livraison.
+      </p>
+
       <button
         type="button"
         class="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-teal-600/20 bg-teal-700 px-4 text-sm font-semibold text-white transition hover:bg-teal-600 disabled:cursor-wait disabled:opacity-60"
@@ -100,17 +104,9 @@
       >
         <div class="flex flex-col items-start gap-3 min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between">
           <div class="min-w-0">
-            <div class="flex min-w-0 items-center gap-2">
-              <p class="truncate text-sm font-semibold text-slate-900">{{ account.emailAddress }}</p>
-              <span
-                class="shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-semibold"
-                :class="statusClass(account.status)"
-              >
-                {{ statusLabel(account.status) }}
-              </span>
-            </div>
+            <p class="truncate text-sm font-semibold text-slate-900">{{ account.emailAddress }}</p>
             <p class="mt-1 text-xs text-slate-500">
-              {{ providerLabel(account.provider) }} - Scan {{ formatDateTime(account.lastScanAt) }}
+              {{ accountHelperText(account) }}
             </p>
           </div>
 
@@ -182,40 +178,17 @@ const connectWithEmail = () => {
   emit('connect-gmail', emailAddress.value)
 }
 
-const statusLabel = (status) => {
-  switch (status) {
-    case 'ACTIVE':
-      return 'Actif'
+const accountHelperText = (account) => {
+  const lastScan = formatDateTime(account?.lastScanAt)
+  switch (account?.status) {
     case 'ERROR':
-      return 'Erreur'
     case 'REVOKED':
-      return 'Revoque'
+      return `Connexion a verifier. Dernier scan ${lastScan}.`
     case 'DISABLED':
-      return 'Desactive'
+      return `Source en pause. Dernier scan ${lastScan}.`
     default:
-      return 'Inconnu'
+      return `Dernier scan ${lastScan}.`
   }
-}
-
-const statusClass = (status) => {
-  switch (status) {
-    case 'ACTIVE':
-      return 'border-emerald-300/50 bg-emerald-50 text-emerald-700'
-    case 'ERROR':
-    case 'REVOKED':
-      return 'border-red-300/50 bg-red-50 text-red-700'
-    default:
-      return 'border-slate-300 bg-slate-100 text-slate-700'
-  }
-}
-
-const providerLabel = (provider) => {
-  if (!provider) return 'Mail'
-  return String(provider)
-    .toLowerCase()
-    .split('_')
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ')
 }
 
 const formatDateTime = (value) => {

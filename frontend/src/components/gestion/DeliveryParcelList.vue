@@ -86,14 +86,15 @@
           v-for="parcel in parcels"
           :key="parcel.id"
           type="button"
-          class="group w-full rounded-2xl border p-3 text-left transition"
+          class="delivery-parcel-card group w-full rounded-2xl border p-3 text-left transition"
           :class="
             parcel.id === selectedId
-              ? 'border-teal-600/20 bg-teal-50 shadow-[0_10px_24px_rgba(15,118,110,0.12)]'
-              : 'border-slate-200 bg-white hover:border-sky-300 hover:bg-slate-50'
+              ? 'delivery-parcel-card--selected'
+              : 'delivery-parcel-card--idle'
           "
-          @click="$emit('select', parcel.id)"
+          @click="handleCardClick(parcel.id)"
         >
+          <span v-if="parcel.id === selectedId" class="delivery-parcel-card__rail" aria-hidden="true" />
           <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div class="flex min-w-0 gap-3">
               <label
@@ -110,7 +111,7 @@
                 />
               </label>
               <div class="min-w-0">
-              <p class="break-all text-sm font-semibold text-slate-900">{{ parcel.trackingNumber }}</p>
+              <p class="break-all text-sm font-semibold text-slate-900">{{ displayTracking(parcel) }}</p>
               <div class="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
                 <span class="inline-flex items-center gap-1.5">
                   <Truck class="h-3.5 w-3.5 text-slate-400" />
@@ -126,22 +127,16 @@
                   formatDateTime(parcel.lastEventAt || parcel.updatedAt || parcel.firstSeenAt)
                 }}</span>
               </div>
-              <p
-                v-if="parcel.statusLabel"
-                class="mt-1 max-w-[520px] truncate text-xs text-slate-500"
-              >
-                {{ parcel.statusLabel }}
-              </p>
-              <p
-                v-if="parcel.destinationAddress"
-                class="mt-1 max-w-[520px] truncate text-xs text-slate-500"
-              >
-                {{ parcel.destinationAddress }}
-              </p>
               </div>
             </div>
 
             <div class="flex shrink-0 flex-row flex-wrap items-center gap-2 sm:flex-col sm:items-end">
+              <span
+                v-if="parcel.id === selectedId"
+                class="rounded-full border border-teal-300/60 bg-white px-2.5 py-1 text-[11px] font-semibold text-teal-700 shadow-sm"
+              >
+                Selectionne
+              </span>
               <span
                 class="rounded-full border px-2.5 py-1 text-[11px] font-semibold"
                 :class="statusMeta(parcel.status).class"
@@ -204,7 +199,7 @@ const props = defineProps({
   },
 })
 
-defineEmits([
+const emit = defineEmits([
   'select',
   'start-selection',
   'toggle-selection',
@@ -234,6 +229,15 @@ const statusMeta = (status) => {
 const eventCount = (parcel) => (Array.isArray(parcel?.events) ? parcel.events.length : 0)
 
 const formatDateTime = formatDeliveryDateTime
+const displayTracking = (parcel) => parcel?.normalizedTrackingNumber || parcel?.trackingNumber || '-'
+
+function handleCardClick(parcelId) {
+  if (!parcelId) return
+  if (props.selectionMode) {
+    emit('toggle-selection', parcelId)
+  }
+  emit('select', parcelId)
+}
 </script>
 
 <style scoped>
@@ -255,6 +259,43 @@ const formatDateTime = formatDeliveryDateTime
   border: 2px solid rgba(226, 232, 240, 0.9);
   border-radius: 999px;
   background: linear-gradient(180deg, rgba(15, 118, 110, 0.72), rgba(56, 189, 248, 0.56));
+}
+
+.delivery-parcel-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.delivery-parcel-card--selected {
+  border-color: rgba(13, 148, 136, 0.45);
+  background: linear-gradient(145deg, rgba(240, 253, 250, 0.98), rgba(255, 255, 255, 0.98));
+  box-shadow:
+    0 16px 34px rgba(15, 118, 110, 0.14),
+    0 0 0 1px rgba(20, 184, 166, 0.1);
+}
+
+.delivery-parcel-card--selected:hover {
+  border-color: rgba(13, 148, 136, 0.56);
+}
+
+.delivery-parcel-card--idle {
+  border-color: rgba(226, 232, 240, 1);
+  background: #ffffff;
+}
+
+.delivery-parcel-card--idle:hover {
+  border-color: rgba(125, 211, 252, 0.82);
+  background: rgba(248, 250, 252, 0.96);
+}
+
+.delivery-parcel-card__rail {
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 5px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #14b8a6, #0ea5e9);
 }
 
 .delivery-inline-loader {

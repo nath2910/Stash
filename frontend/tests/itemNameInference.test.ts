@@ -16,6 +16,15 @@ describe('itemNameInference', () => {
     })
   })
 
+  it('can infer ETB from a short TB shorthand', () => {
+    expect(inferItemClassificationFromName('TB', {
+      storedSubcategories: { POKEMON_CARD: ['ETB'] },
+    })).toMatchObject({
+      type: 'POKEMON_CARD',
+      subcategory: 'ETB',
+    })
+  })
+
   it('detects electronics from common model names', () => {
     expect(inferItemClassificationFromName('iPhone 15 Pro Max 256GB')).toMatchObject({
       type: 'ELECTRONICS',

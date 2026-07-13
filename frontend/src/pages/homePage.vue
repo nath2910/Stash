@@ -84,18 +84,22 @@
 
     <teleport to="body">
       <Transition name="quick-add-toast">
-        <div
-          v-if="quickAddToast.visible"
-          class="quick-add-toast"
-          :class="`quick-add-toast--${quickAddToast.type || 'success'}`"
-          role="status"
-          aria-live="polite"
-        >
-          <span class="quick-add-toast__icon">
-            <CheckCircle2 v-if="quickAddToast.type !== 'error'" class="h-4 w-4" aria-hidden="true" />
-            <CircleAlert v-else class="h-4 w-4" aria-hidden="true" />
-          </span>
-          <span>{{ quickAddToast.message }}</span>
+        <div v-if="quickAddToast.visible" class="quick-add-toast-layer" aria-live="polite">
+          <div class="quick-add-toast-backdrop" aria-hidden="true"></div>
+          <div
+            class="quick-add-toast"
+            :class="`quick-add-toast--${quickAddToast.type || 'success'}`"
+            role="status"
+          >
+            <span class="quick-add-toast__icon">
+              <CheckCircle2 v-if="quickAddToast.type !== 'error'" class="h-5 w-5" aria-hidden="true" />
+              <CircleAlert v-else class="h-5 w-5" aria-hidden="true" />
+            </span>
+            <div class="quick-add-toast__copy">
+              <strong>{{ quickAddToast.type === 'error' ? 'Ajout a verifier' : 'Ajout confirme' }}</strong>
+              <span>{{ quickAddToast.message }}</span>
+            </div>
+          </div>
         </div>
       </Transition>
     </teleport>
@@ -246,7 +250,7 @@ onBeforeUnmount(() => {
   }
 })
 
-function showQuickAddToast(message, type = 'success', duration = type === 'error' ? 1600 : 1000) {
+function showQuickAddToast(message, type = 'success', duration = type === 'error' ? 1900 : 1400) {
   if (quickAddToastTimer) {
     window.clearTimeout(quickAddToastTimer)
   }
@@ -409,46 +413,79 @@ function handleVisibilityChange() {
     clamp(6rem, 10vw, 8rem);
 }
 
-.quick-add-toast {
+.quick-add-toast-layer {
   position: fixed;
-  right: clamp(1rem, 2vw, 1.5rem);
-  bottom: clamp(1rem, 2vw, 1.5rem);
+  inset: 0;
   z-index: 10020;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  pointer-events: none;
+}
+
+.quick-add-toast-backdrop {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at center, rgba(15, 118, 110, 0.12), transparent 52%),
+    rgba(15, 23, 42, 0.14);
+  backdrop-filter: blur(6px);
+}
+
+.quick-add-toast {
+  position: relative;
+  z-index: 1;
   display: inline-flex;
-  max-width: min(22rem, calc(100vw - 2rem));
+  width: min(100%, 30rem);
   align-items: center;
-  gap: 0.6rem;
-  border: 1px solid rgba(20, 184, 166, 0.28);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.96);
-  padding: 0.72rem 0.9rem 0.72rem 0.72rem;
+  gap: 0.9rem;
+  border: 1px solid rgba(20, 184, 166, 0.22);
+  border-radius: 24px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(240, 253, 250, 0.96));
+  padding: 1rem 1.1rem;
   color: #0f172a;
-  font-size: 0.9rem;
-  font-weight: 850;
+  font-size: 0.96rem;
+  font-weight: 800;
   box-shadow:
-    0 18px 44px rgba(15, 23, 42, 0.16),
+    0 26px 60px rgba(15, 23, 42, 0.2),
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(14px);
+  backdrop-filter: blur(18px);
 }
 
 .quick-add-toast__icon {
   display: inline-grid;
-  width: 1.85rem;
-  height: 1.85rem;
+  width: 3rem;
+  height: 3rem;
   flex: 0 0 auto;
   place-items: center;
-  border-radius: 999px;
-  background: #ccfbf1;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #ccfbf1, #dbeafe);
   color: #0f766e;
+}
+
+.quick-add-toast__copy {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.quick-add-toast__copy strong {
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.quick-add-toast__copy span {
+  color: #475569;
+  line-height: 1.4;
 }
 
 .quick-add-toast--error {
   border-color: rgba(248, 113, 113, 0.34);
-  background: rgba(255, 251, 251, 0.98);
+  background: linear-gradient(145deg, rgba(255, 251, 251, 0.99), rgba(254, 242, 242, 0.97));
 }
 
 .quick-add-toast--error .quick-add-toast__icon {
-  background: #fee2e2;
+  background: linear-gradient(135deg, #fee2e2, #fef2f2);
   color: #b91c1c;
 }
 
@@ -462,7 +499,7 @@ function handleVisibilityChange() {
 .quick-add-toast-enter-from,
 .quick-add-toast-leave-to {
   opacity: 0;
-  transform: translateY(10px) scale(0.98);
+  transform: translateY(16px) scale(0.94);
 }
 
 @media (max-width: 640px) {
@@ -473,14 +510,20 @@ function handleVisibilityChange() {
   .home-action-shell {
     gap: 0.85rem;
     padding-inline-start: max(12px, env(safe-area-inset-left));
-    padding-inline-end: max(12px, env(safe-area-inset-right));
+      padding-inline-end: max(12px, env(safe-area-inset-right));
+  }
+
+  .quick-add-toast-layer {
+    padding:
+      max(1rem, env(safe-area-inset-top))
+      1rem
+      max(1rem, env(safe-area-inset-bottom))
+      1rem;
   }
 
   .quick-add-toast {
-    right: 1rem;
-    bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
-    left: 1rem;
-    justify-content: center;
+    width: min(100%, 24rem);
+    align-items: flex-start;
   }
 }
 
@@ -498,8 +541,19 @@ function handleVisibilityChange() {
   }
 
   .quick-add-toast {
-    border-radius: 16px;
+    gap: 0.75rem;
+    border-radius: 18px;
+    padding: 0.9rem;
     font-size: 0.82rem;
+  }
+
+  .quick-add-toast__icon {
+    width: 2.7rem;
+    height: 2.7rem;
+  }
+
+  .quick-add-toast__copy strong {
+    font-size: 0.92rem;
   }
 }
 

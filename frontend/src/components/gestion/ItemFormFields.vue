@@ -70,7 +70,6 @@
       <div class="item-field item-field--date">
         <span>Date d'achat</span>
         <CompactDateInput v-model="form.dateAchat" light size="md" />
-        <small v-if="autofillHint">{{ autofillHint }}</small>
       </div>
 
       <div v-if="quantityEnabled && !showDetails" class="item-field item-field--quantity">
@@ -259,6 +258,9 @@ const manualTypeOverride = ref(false)
 const manualSubcategoryOverride = ref(false)
 const manualRetailOverride = ref(false)
 const manualResellOverride = ref(false)
+const autoFilledSubcategory = ref(false)
+const autoFilledRetail = ref(false)
+const autoFilledResell = ref(false)
 const nameInputRef = ref(null)
 const priceInputs = ref({
   prixRetail: '',
@@ -292,14 +294,6 @@ const suggestedFromHistory = computed(() => {
     })
 
   return candidates[0]?.item || null
-})
-
-const autofillHint = computed(() => {
-  const source = suggestedFromHistory.value
-  if (!source) return ''
-  const name = getField(source, 'nomItem', '').trim()
-  const sourceName = name || itemTypeLabel(typeOf(source), categoryLabels.value)
-  return `Prefill intelligent base sur ${sourceName}.`
 })
 function lastTypeStorageKey(userId = currentUserId.value) {
   return `${LAST_TYPE_PREFIX}_${String(userId || 'guest')}`
@@ -435,6 +429,9 @@ function resetForm() {
   manualSubcategoryOverride.value = false
   manualRetailOverride.value = false
   manualResellOverride.value = false
+  autoFilledSubcategory.value = false
+  autoFilledRetail.value = false
+  autoFilledResell.value = false
   syncPriceInputsFromForm()
   applyNameInference()
   applySmartAutofill()
@@ -454,26 +451,50 @@ function focusFirstField() {
 }
 
 function applySuggestedPrice(key, value) {
-  if (numberOrNull(value) === null) return
-  form.value[key] = Number(value)
-  priceInputs.value[key] = formatPriceValue(value)
+  const parsed = numberOrNull(value)
+  if (parsed === null) return false
+  form.value[key] = Number(parsed)
+  priceInputs.value[key] = formatPriceValue(parsed)
+  if (key === 'prixRetail') autoFilledRetail.value = true
+  if (key === 'prixResell') autoFilledResell.value = true
+  return true
+}
+
+function clearAutoSuggestedPrice(key) {
+  form.value[key] = null
+  priceInputs.value[key] = ''
+  if (key === 'prixRetail') autoFilledRetail.value = false
+  if (key === 'prixResell') autoFilledResell.value = false
 }
 
 function applySmartAutofill() {
   if (props.mode !== 'create') return
   const source = suggestedFromHistory.value
-  if (!source) return
-
-  if (!manualRetailOverride.value && numberOrNull(form.value.prixRetail) === null) {
-    applySuggestedPrice('prixRetail', getField(source, 'prixRetail', null))
+  if (!source) {
+    if (!manualRetailOverride.value && autoFilledRetail.value) clearAutoSuggestedPrice('prixRetail')
+    if (!manualResellOverride.value && autoFilledResell.value) clearAutoSuggestedPrice('prixResell')
+    if (!manualSubcategoryOverride.value && autoFilledSubcategory.value) {
+      form.value.categorie = ''
+      autoFilledSubcategory.value = false
+    }
+    return
   }
 
-  if (!manualResellOverride.value && numberOrNull(form.value.prixResell) === null) {
-    applySuggestedPrice('prixResell', getField(source, 'prixResell', null))
+  if (!manualRetailOverride.value && (numberOrNull(form.value.prixRetail) === null || autoFilledRetail.value)) {
+    if (!applySuggestedPrice('prixRetail', getField(source, 'prixRetail', null)) && autoFilledRetail.value) {
+      clearAutoSuggestedPrice('prixRetail')
+    }
   }
 
-  if (!manualSubcategoryOverride.value && !form.value.categorie) {
+  if (!manualResellOverride.value && (numberOrNull(form.value.prixResell) === null || autoFilledResell.value)) {
+    if (!applySuggestedPrice('prixResell', getField(source, 'prixResell', null)) && autoFilledResell.value) {
+      clearAutoSuggestedPrice('prixResell')
+    }
+  }
+
+  if (!manualSubcategoryOverride.value && (!form.value.categorie || autoFilledSubcategory.value)) {
     form.value.categorie = normalizeSubcategoryName(getField(source, 'categorie', ''))
+    autoFilledSubcategory.value = Boolean(form.value.categorie)
   }
 }
 
@@ -532,12 +553,14 @@ function applyType(type) {
 function setType(type) {
   manualTypeOverride.value = true
   manualSubcategoryOverride.value = false
+  autoFilledSubcategory.value = false
   applyType(type)
   applySmartAutofill()
 }
 
 function setSubcategory(value) {
   manualSubcategoryOverride.value = true
+  autoFilledSubcategory.value = false
   form.value.categorie = normalizeSubcategoryName(value)
   applySmartAutofill()
 }
@@ -629,8 +652,14 @@ function updatePriceField(key, event) {
   const raw = typeof event === 'string' ? event : event?.target?.value
   priceInputs.value[key] = String(raw ?? '')
 
-  if (key === 'prixRetail') manualRetailOverride.value = true
-  if (key === 'prixResell') manualResellOverride.value = true
+  if (key === 'prixRetail') {
+    manualRetailOverride.value = true
+    autoFilledRetail.value = false
+  }
+  if (key === 'prixResell') {
+    manualResellOverride.value = true
+    autoFilledResell.value = false
+  }
 
   const parsed = parsePriceValue(priceInputs.value[key])
   form.value[key] = parsed

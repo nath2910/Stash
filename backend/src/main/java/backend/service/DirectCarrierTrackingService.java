@@ -31,7 +31,7 @@ public class DirectCarrierTrackingService {
   }
 
   public boolean supports(Parcel parcel) {
-    return clientFor(parcel).isPresent();
+    return !supportingClients(parcel).isEmpty();
   }
 
   @Transactional
@@ -40,39 +40,42 @@ public class DirectCarrierTrackingService {
       return parcel;
     }
 
-    Optional<CarrierTrackingClient> client = clientFor(parcel);
-    if (client.isEmpty()) {
+    List<CarrierTrackingClient> supportingClients = supportingClients(parcel);
+    if (supportingClients.isEmpty()) {
       parcelTrackingUpdateService.markLocalFallback(parcel, PROVIDER, "Transporteur direct non supporte");
       return parcelRepository.save(parcel);
     }
 
-    CarrierTrackingClient trackingClient = client.get();
-    if (!trackingClient.isConfigured()) {
+    List<CarrierTrackingClient> configuredClients = supportingClients.stream()
+        .filter(CarrierTrackingClient::isConfigured)
+        .toList();
+    if (configuredClients.isEmpty()) {
       parcelTrackingUpdateService.markLocalFallback(parcel, PROVIDER, "API transporteur non configuree");
       return parcelRepository.save(parcel);
     }
 
-    try {
-      Optional<TrackingSnapshot> snapshot = trackingClient.fetchTracking(parcel);
-      if (snapshot.isPresent()) {
-        parcelTrackingUpdateService.applySnapshot(parcel, snapshot.get());
-      } else {
-        parcelTrackingUpdateService.markLocalFallback(parcel, PROVIDER, "Suivi non trouve chez le transporteur");
+    for (CarrierTrackingClient trackingClient : configuredClients) {
+      try {
+        Optional<TrackingSnapshot> snapshot = trackingClient.fetchTracking(parcel);
+        if (snapshot.isPresent()) {
+          parcelTrackingUpdateService.applySnapshot(parcel, snapshot.get());
+          return parcelRepository.save(parcel);
+        }
+      } catch (Exception ex) {
+        log.warn("Direct carrier tracking failed for parcel {} with client {}", parcel.getId(), trackingClient.getClass().getSimpleName());
       }
-    } catch (Exception ex) {
-      log.warn("Direct carrier tracking failed for parcel {}", parcel.getId());
-      parcelTrackingUpdateService.markLocalFallback(parcel, PROVIDER, "Suivi transporteur indisponible");
     }
 
+    parcelTrackingUpdateService.markLocalFallback(parcel, PROVIDER, "Suivi non trouve chez le transporteur");
     return parcelRepository.save(parcel);
   }
 
-  private Optional<CarrierTrackingClient> clientFor(Parcel parcel) {
+  private List<CarrierTrackingClient> supportingClients(Parcel parcel) {
     if (parcel == null) {
-      return Optional.empty();
+      return List.of();
     }
     return clients.stream()
         .filter(client -> client.supports(parcel))
-        .findFirst();
+        .toList();
   }
 }

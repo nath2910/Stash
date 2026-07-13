@@ -42,14 +42,15 @@ public class GmailMailScannerService {
   private static final String GMAIL_MESSAGES_PATH = "/gmail/v1/users/me/messages";
   private static final int GMAIL_PAGE_SIZE = 100;
   private static final int GMAIL_PAGE_SCAN_LIMIT = 10;
-  private static final String DEFAULT_QUERY =
-      "newer_than:30d (suivi OR tracking OR colis OR livraison OR expedition OR expedie "
+  private static final String BASE_QUERY =
+      "(suivi OR tracking OR colis OR livraison OR expedition OR expedie "
           + "OR \"numero de suivi\" OR \"tracking number\" OR shipment OR shipped OR delivery "
           + "OR package OR parcel OR colissimo OR laposte OR \"la poste\" OR chronopost "
           + "OR \"mondial relay\" OR dhl OR ups OR fedex OR dpd OR gls)";
   private static final Pattern PLAIN_TEXT_LINK = Pattern.compile("https?://[^\\s<>()\"']+", Pattern.CASE_INSENSITIVE);
 
   private final int maxResults;
+  private final int lookbackDays;
   private final MailAccountRepository mailAccountRepository;
   private final SeenMailMessageRepository seenMailMessageRepository;
   private final TokenEncryptionService tokenEncryptionService;
@@ -61,6 +62,7 @@ public class GmailMailScannerService {
 
   public GmailMailScannerService(
       @Value("${app.delivery.gmail-max-results:${app.delivery.scan-batch-size:50}}") int maxResults,
+      @Value("${app.delivery.gmail-lookback-days:14}") int lookbackDays,
       @Value("${spring.security.oauth2.client.registration.google.client-id:}") String googleClientId,
       @Value("${spring.security.oauth2.client.registration.google.client-secret:}") String googleClientSecret,
       MailAccountRepository mailAccountRepository,
@@ -70,6 +72,7 @@ public class GmailMailScannerService {
       DeliveryTrackingService deliveryTrackingService
   ) {
     this.maxResults = maxResults;
+    this.lookbackDays = normalizeLookbackDays(lookbackDays);
     this.googleClientId = googleClientId;
     this.googleClientSecret = googleClientSecret;
     this.mailAccountRepository = mailAccountRepository;
@@ -112,6 +115,7 @@ public class GmailMailScannerService {
     String accessToken = ensureAccessToken(account);
     List<String> messageIds = listRecentMessageIds(account.getId(), accessToken);
     MailScanAccumulator scan = new MailScanAccumulator();
+    OffsetDateTime lookbackStart = lookbackStart();
 
     for (String messageId : messageIds) {
       if (seenMailMessageRepository.existsByMailAccount_IdAndProviderMessageId(account.getId(), messageId)) {
@@ -122,6 +126,10 @@ public class GmailMailScannerService {
       String from = headerValue(metadata, "From");
       String subject = headerValue(metadata, "Subject");
       OffsetDateTime receivedAt = receivedAt(metadata);
+      if (receivedAt.isBefore(lookbackStart)) {
+        markSeen(account, messageId, receivedAt);
+        continue;
+      }
 
       Map<String, Object> full = fetchMessage(accessToken, messageId, "full");
       EmailScanContent content = extractContentForParsing(full);
@@ -227,7 +235,7 @@ public class GmailMailScannerService {
           .uri(uriBuilder -> {
             var builder = uriBuilder
                 .path(GMAIL_MESSAGES_PATH)
-                .queryParam("q", DEFAULT_QUERY)
+                .queryParam("q", gmailQuery())
                 .queryParam("maxResults", GMAIL_PAGE_SIZE);
             if (currentPageToken != null && !currentPageToken.isBlank()) {
               builder.queryParam("pageToken", currentPageToken);
@@ -457,6 +465,18 @@ public class GmailMailScannerService {
   private String padBase64(String value) {
     int remainder = value.length() % 4;
     return remainder == 0 ? value : value + "=".repeat(4 - remainder);
+  }
+
+  private String gmailQuery() {
+    return "newer_than:" + lookbackDays + "d " + BASE_QUERY;
+  }
+
+  private OffsetDateTime lookbackStart() {
+    return OffsetDateTime.now(ZoneOffset.UTC).minusDays(lookbackDays);
+  }
+
+  private int normalizeLookbackDays(int value) {
+    return Math.max(1, Math.min(30, value));
   }
 
   private void addParcel(List<MailScanParcelResponse> target, backend.entity.Parcel parcel) {

@@ -79,6 +79,20 @@ public class DeliveryTrackingService {
     return ParcelResponse.fromEntity(parcel, parcelEventRepository.findByParcel_IdOrderByEventTimeDesc(parcelId));
   }
 
+  @Transactional
+  public List<ParcelResponse> refreshAllForUser(Long userId) {
+    List<Parcel> existingParcels = parcelRepository.findByUser_IdOrderByUpdatedAtDesc(userId);
+    if (existingParcels.isEmpty()) {
+      return List.of();
+    }
+
+    for (Parcel parcel : existingParcels) {
+      trackingAggregatorService.refreshTracking(parcel);
+    }
+
+    return listForUser(userId);
+  }
+
   @Transactional(readOnly = true)
   public List<TrackingCandidateResponse> listCandidatesForReview(Long userId) {
     return mailTrackingCandidateRepository
@@ -160,6 +174,7 @@ public class DeliveryTrackingService {
         carrierSlug
     ).isPresent();
     Parcel parcel = upsertFromMail(userId, storedCandidate.getMailAccount(), candidate, storedCandidate.getProviderMessageId());
+    applyMailStatusHint(parcel, candidate, storedCandidate.getReceivedAt());
     storedCandidate.setParcel(parcel);
     storedCandidate.setStatus(alreadyExists ? TrackingCandidateStatus.DUPLICATE : TrackingCandidateStatus.CONFIRMED);
     mailTrackingCandidateRepository.save(storedCandidate);
@@ -208,6 +223,7 @@ public class DeliveryTrackingService {
         carrierSlug
     ).isPresent();
     Parcel parcel = upsertFromMail(userId, mailAccount, candidate, sourceProviderMessageId);
+    applyMailStatusHint(parcel, candidate, receivedAt);
     saveMailCandidate(
         userId,
         mailAccount,
@@ -262,8 +278,12 @@ public class DeliveryTrackingService {
     parcel.setNormalizedTrackingNumber(candidate.normalizedTrackingNumber());
     parcel.setCarrierSlug(carrierSlug);
     parcel.setAggregator(DirectCarrierTrackingService.PROVIDER);
-    parcel.setStatus(ParcelStatus.PENDING);
-    parcel.setStatusLabel("Suivi detecte");
+    ParcelStatus hintedStatus = rawStatusToParcelStatus(candidate.rawStatus());
+    parcel.setStatus(hintedStatus == null ? ParcelStatus.PENDING : hintedStatus);
+    parcel.setStatusLabel(mailStatusLabel(candidate.rawStatus()));
+    if (hintedStatus == ParcelStatus.DELIVERED) {
+      parcel.setDeliveredAt(OffsetDateTime.now(ZoneOffset.UTC));
+    }
     parcel.setSourceProviderMessageId(sourceProviderMessageId);
     parcel.setFirstSeenAt(OffsetDateTime.now(ZoneOffset.UTC));
     parcel.setRawCurrentPayload(mailCandidatePayload(candidate));
@@ -344,6 +364,69 @@ public class DeliveryTrackingService {
   private User findUser(Long userId) {
     return userRepository.findById(userId)
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Utilisateur introuvable"));
+  }
+
+  private void applyMailStatusHint(Parcel parcel, TrackingCandidate candidate, OffsetDateTime receivedAt) {
+    if (parcel == null || candidate == null) {
+      return;
+    }
+    ParcelStatus hintedStatus = rawStatusToParcelStatus(candidate.rawStatus());
+    if (hintedStatus == null) {
+      return;
+    }
+    ParcelStatus currentStatus = parcel.getStatus();
+    if (statusPriority(hintedStatus) < statusPriority(currentStatus)) {
+      return;
+    }
+    if (hintedStatus == currentStatus && hintedStatus != ParcelStatus.DELIVERED) {
+      return;
+    }
+
+    parcel.setStatus(hintedStatus);
+    parcel.setStatusLabel(mailStatusLabel(candidate.rawStatus()));
+    if (hintedStatus == ParcelStatus.DELIVERED && parcel.getDeliveredAt() == null) {
+      parcel.setDeliveredAt(receivedAt == null ? OffsetDateTime.now(ZoneOffset.UTC) : receivedAt);
+    }
+    parcelRepository.save(parcel);
+  }
+
+  private ParcelStatus rawStatusToParcelStatus(String rawStatus) {
+    if (rawStatus == null || rawStatus.isBlank()) {
+      return null;
+    }
+    return switch (rawStatus.trim().toUpperCase()) {
+      case "DELIVERED" -> ParcelStatus.DELIVERED;
+      case "OUT_FOR_DELIVERY" -> ParcelStatus.OUT_FOR_DELIVERY;
+      case "IN_TRANSIT", "SHIPPED" -> ParcelStatus.IN_TRANSIT;
+      default -> null;
+    };
+  }
+
+  private String mailStatusLabel(String rawStatus) {
+    ParcelStatus status = rawStatusToParcelStatus(rawStatus);
+    if (status == null) {
+      return "Suivi detecte";
+    }
+    return switch (status) {
+      case DELIVERED -> "Livre selon email transporteur";
+      case OUT_FOR_DELIVERY -> "En livraison selon email transporteur";
+      case IN_TRANSIT -> "En transit selon email transporteur";
+      default -> "Suivi detecte";
+    };
+  }
+
+  private int statusPriority(ParcelStatus status) {
+    if (status == null) {
+      return 0;
+    }
+    return switch (status) {
+      case PENDING, UNKNOWN -> 0;
+      case REGISTERED -> 1;
+      case IN_TRANSIT -> 2;
+      case OUT_FOR_DELIVERY -> 3;
+      case DELIVERED -> 4;
+      case EXCEPTION -> 5;
+    };
   }
 
   private String candidateDedupeKey(

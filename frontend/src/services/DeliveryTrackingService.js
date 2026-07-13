@@ -46,6 +46,10 @@ class DeliveryTrackingService {
     return api.get(`/delivery/parcels/${id}`)
   }
 
+  refreshAllParcels() {
+    return api.post('/delivery/parcels/refresh-all')
+  }
+
   refreshParcel(id) {
     return api.post(`/delivery/parcels/${id}/refresh`)
   }

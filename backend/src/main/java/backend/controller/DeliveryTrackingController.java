@@ -36,6 +36,11 @@ public class DeliveryTrackingController {
     return deliveryTrackingService.getForUser(currentUser.getId(), id);
   }
 
+  @PostMapping("/refresh-all")
+  public List<ParcelResponse> refreshAll(@AuthenticationPrincipal User currentUser) {
+    return deliveryTrackingService.refreshAllForUser(currentUser.getId());
+  }
+
   @PostMapping
   public ParcelResponse create(@AuthenticationPrincipal User currentUser, @RequestBody ParcelCreateRequest request) {
     return deliveryTrackingService.createManual(currentUser.getId(), request);

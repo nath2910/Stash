@@ -38,7 +38,7 @@
           <div class="min-w-0 flex-1">
             <div class="flex flex-wrap items-center gap-2">
               <p class="break-all text-sm font-semibold text-slate-900">
-                {{ candidate.trackingNumber }}
+                {{ candidate.normalizedTrackingNumber || candidate.trackingNumber }}
               </p>
               <span
                 class="rounded-full border border-amber-300/50 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800"

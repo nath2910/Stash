@@ -2,6 +2,7 @@ package backend.dto;
 
 import backend.entity.MailTrackingCandidate;
 import backend.entity.TrackingCandidateStatus;
+import backend.service.TrackingLinkResolver;
 import java.time.OffsetDateTime;
 
 public record TrackingCandidateResponse(
@@ -30,7 +31,11 @@ public record TrackingCandidateResponse(
         candidate.getTrackingNumber(),
         candidate.getNormalizedTrackingNumber(),
         candidate.getCarrierSlug(),
-        candidate.getTrackingUrl(),
+        TrackingLinkResolver.preferredTrackingUrl(
+            candidate.getTrackingUrl(),
+            candidate.getCarrierSlug(),
+            candidate.getNormalizedTrackingNumber()
+        ),
         candidate.getMerchantName(),
         candidate.getRawStatus(),
         candidate.getSourceSender(),

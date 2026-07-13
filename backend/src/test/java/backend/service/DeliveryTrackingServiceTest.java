@@ -2,7 +2,9 @@ package backend.service;
 
 import backend.dto.ParcelCreateRequest;
 import backend.entity.MailAccount;
+import backend.entity.MailTrackingCandidate;
 import backend.entity.Parcel;
+import backend.entity.ParcelStatus;
 import backend.entity.User;
 import backend.repository.MailTrackingCandidateRepository;
 import backend.repository.ParcelEventRepository;
@@ -153,5 +155,73 @@ class DeliveryTrackingServiceTest {
     service.deleteForUser(1L, 41L);
 
     Mockito.verify(parcelRepository).delete(existing);
+  }
+
+  @Test
+  void refreshAllRefreshesEveryUserParcel() {
+    Parcel first = new Parcel();
+    first.setId(51L);
+    Parcel second = new Parcel();
+    second.setId(52L);
+    Mockito.when(parcelRepository.findByUser_IdOrderByUpdatedAtDesc(1L)).thenReturn(java.util.List.of(first, second));
+    Mockito.when(trackingAggregatorService.refreshTracking(first)).thenReturn(first);
+    Mockito.when(trackingAggregatorService.refreshTracking(second)).thenReturn(second);
+    Mockito.when(parcelEventRepository.findByParcel_IdInOrderByParcel_IdAscEventTimeDesc(java.util.List.of(51L, 52L)))
+        .thenReturn(java.util.List.of());
+
+    service.refreshAllForUser(1L);
+
+    Mockito.verify(trackingAggregatorService).refreshTracking(first);
+    Mockito.verify(trackingAggregatorService).refreshTracking(second);
+  }
+
+  @Test
+  void mailImportPromotesExistingParcelToDeliveredWhenCarrierEmailSaysDelivered() {
+    Parcel existing = new Parcel();
+    existing.setId(61L);
+    existing.setStatus(ParcelStatus.OUT_FOR_DELIVERY);
+    existing.setTrackingNumber("XY123456789FR");
+    existing.setNormalizedTrackingNumber("XY123456789FR");
+    existing.setCarrierSlug("chronopost");
+    User user = Mockito.mock(User.class);
+
+    Mockito.when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+    Mockito.when(parcelRepository.findByUser_IdAndNormalizedTrackingNumberAndCarrierSlug(
+        1L,
+        "XY123456789FR",
+        "chronopost"
+    )).thenReturn(Optional.of(existing));
+    Mockito.when(parcelRepository.save(Mockito.any(Parcel.class))).thenAnswer(invocation -> invocation.getArgument(0));
+    Mockito.when(mailTrackingCandidateRepository.findByUser_IdAndDedupeKey(
+        Mockito.eq(1L),
+        Mockito.anyString()
+    )).thenReturn(Optional.of(new MailTrackingCandidate()));
+    Mockito.when(mailTrackingCandidateRepository.saveAndFlush(Mockito.any(MailTrackingCandidate.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    service.importDetectedFromMail(
+        1L,
+        new MailAccount(),
+        new TrackingCandidate(
+            "chronopost",
+            "XY123456789FR",
+            "XY123456789FR",
+            90,
+            TrackingParserService.TrackingConfidence.HIGH,
+            null,
+            null,
+            "Chronopost",
+            "DELIVERED",
+            "mail status"
+        ),
+        "msg-1",
+        "Votre colis est livre",
+        "Chronopost",
+        java.time.OffsetDateTime.parse("2026-07-13T10:00:00Z")
+    );
+
+    Assertions.assertEquals(ParcelStatus.DELIVERED, existing.getStatus());
+    Assertions.assertEquals("Livre selon email transporteur", existing.getStatusLabel());
+    Assertions.assertNotNull(existing.getDeliveredAt());
   }
 }

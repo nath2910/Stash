@@ -121,7 +121,7 @@ public class GmailOAuthService {
         .queryParam("response_type", "code")
         .queryParam("scope", GMAIL_READONLY_SCOPE)
         .queryParam("access_type", "offline")
-        .queryParam("prompt", "consent")
+        .queryParam("prompt", "consent select_account")
         .queryParam("include_granted_scopes", "false")
         .queryParam("state", state);
 

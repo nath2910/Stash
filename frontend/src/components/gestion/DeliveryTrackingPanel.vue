@@ -1,49 +1,5 @@
 <template>
   <section class="delivery-tracking-panel min-w-0 space-y-4">
-    <Transition
-      enter-active-class="transition duration-200 ease-out"
-      enter-from-class="opacity-0 -translate-y-1"
-      enter-to-class="opacity-100 translate-y-0"
-      leave-active-class="transition duration-150 ease-in"
-      leave-from-class="opacity-100 translate-y-0"
-      leave-to-class="opacity-0 -translate-y-1"
-    >
-      <div
-        v-if="callbackNotice"
-        class="rounded-2xl border px-4 py-3 text-sm"
-        :class="
-          callbackNotice.kind === 'success'
-            ? 'border-emerald-300/40 bg-emerald-50 text-emerald-800'
-            : 'border-red-300/40 bg-red-50 text-red-700'
-        "
-      >
-        {{ callbackNotice.message }}
-      </div>
-    </Transition>
-
-    <Transition
-      enter-active-class="transition duration-200 ease-out"
-      enter-from-class="opacity-0 -translate-y-1"
-      enter-to-class="opacity-100 translate-y-0"
-      leave-active-class="transition duration-150 ease-in"
-      leave-from-class="opacity-100 translate-y-0"
-      leave-to-class="opacity-0 -translate-y-1"
-    >
-      <div
-        v-if="scanNotice"
-        class="rounded-2xl border px-4 py-3 text-sm"
-        :class="
-          scanNotice.kind === 'success'
-            ? 'border-emerald-300/40 bg-emerald-50 text-emerald-800'
-            : scanNotice.kind === 'warning'
-              ? 'border-amber-300/40 bg-amber-50 text-amber-800'
-              : 'border-slate-200 bg-white text-slate-700'
-        "
-      >
-        {{ scanNotice.message }}
-      </div>
-    </Transition>
-
     <div class="min-w-0 space-y-4">
       <Transition
         enter-active-class="transition duration-200 ease-out"
@@ -134,28 +90,17 @@
           </div>
           <div class="flex flex-wrap items-center gap-2">
             <button
-              v-if="hasMailAccounts"
               type="button"
               class="inline-flex h-9 items-center justify-center gap-2 rounded-full border border-teal-600/20 bg-teal-700 px-3 text-xs font-semibold text-white transition hover:bg-teal-600 disabled:cursor-wait disabled:opacity-60"
-              :disabled="scanningAll || accountsLoading || parcelsLoading"
-              title="Analyse les mails Gmail et importe les nouveaux numeros de suivi"
-              @click="scanAllNow"
-            >
-              <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': scanningAll }" />
-              <span>{{ scanningAll ? 'Scan...' : 'Scanner mails' }}</span>
-            </button>
-            <button
-              type="button"
-              class="inline-flex h-9 items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-sky-300 hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60"
-              :disabled="scanningAll || accountsLoading || parcelsLoading"
-              title="Recharge la liste sans scanner les mails"
-              @click="refreshAll"
+              :disabled="refreshingAllParcels || scanningAll || accountsLoading || parcelsLoading"
+              :title="refreshActionDetail"
+              @click="handleRefreshAction"
             >
               <RefreshCw
                 class="h-4 w-4"
-                :class="{ 'animate-spin': !scanningAll && (accountsLoading || parcelsLoading) }"
+                :class="{ 'animate-spin': refreshingAllParcels || scanningAll || accountsLoading || parcelsLoading }"
               />
-              <span>Rafraichir liste</span>
+              <span>{{ refreshActionLabel }}</span>
             </button>
           </div>
         </div>
@@ -172,7 +117,7 @@
           </span>
         </div>
 
-        <div class="mt-4 grid gap-2 lg:grid-cols-3">
+        <div class="mt-4 grid gap-2 lg:grid-cols-2">
           <button
             type="button"
             class="flex items-center justify-between rounded-[20px] border border-slate-200 bg-white px-4 py-3 text-left transition hover:border-sky-300 hover:bg-slate-50"
@@ -192,23 +137,10 @@
             <div>
               <p class="text-sm font-semibold text-teal-900">{{ primaryActionLabel }}</p>
               <p class="mt-1 text-xs text-teal-700">
-                {{ hasMailAccounts ? 'Import auto depuis Gmail' : 'Lier un compte pour scanner' }}
+                {{ hasMailAccounts ? 'Gerer tes comptes Gmail et le scan automatique' : 'Lier Gmail pour importer automatiquement les suivis' }}
               </p>
             </div>
             <MailPlus class="h-4 w-4 text-teal-700" />
-          </button>
-          <button
-            type="button"
-            class="flex items-center justify-between rounded-[20px] border border-slate-200 bg-white px-4 py-3 text-left transition hover:border-sky-300 hover:bg-slate-50"
-            @click="selectionMode ? clearParcelSelection() : startParcelSelection()"
-          >
-            <div>
-              <p class="text-sm font-semibold text-slate-900">Selection multiple</p>
-              <p class="mt-1 text-xs text-slate-500">
-                {{ selectionMode ? `${selectedParcelIds.length} colis coches` : 'Supprimer en lot' }}
-              </p>
-            </div>
-            <Layers3 class="h-4 w-4 text-slate-400" />
           </button>
         </div>
 
@@ -222,7 +154,7 @@
               v-model="searchTerm"
               type="search"
               class="h-10 w-full rounded-full border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
-              placeholder="Tracking, transporteur, statut (/)"
+              placeholder="Rechercher un numero, un transporteur ou un statut"
             />
           </label>
           <div class="flex w-full flex-wrap gap-2 lg:w-auto">
@@ -298,13 +230,34 @@
             />
           </div>
 
-          <DeliveryScanReport
-            :report="latestScanReport"
-            :loading="scanningAll || scanningAccountId !== null"
-          />
         </div>
       </div>
     </div>
+
+    <teleport to="body">
+      <Transition
+        enter-active-class="transition duration-200 ease-out"
+        enter-from-class="translate-y-3 opacity-0"
+        enter-to-class="translate-y-0 opacity-100"
+        leave-active-class="transition duration-150 ease-in"
+        leave-from-class="translate-y-0 opacity-100"
+        leave-to-class="translate-y-3 opacity-0"
+      >
+        <div v-if="feedbackToast" class="delivery-toast-layer" aria-live="polite" role="status">
+          <div class="delivery-toast" :class="`is-${feedbackToast.kind}`">
+            <span class="delivery-toast__icon">
+              <CheckCircle2 v-if="feedbackToast.kind === 'success'" class="h-5 w-5" />
+              <AlertTriangle v-else-if="feedbackToast.kind === 'warning' || feedbackToast.kind === 'error'" class="h-5 w-5" />
+              <MailPlus v-else class="h-5 w-5" />
+            </span>
+            <div class="delivery-toast__copy">
+              <strong>{{ feedbackToast.title }}</strong>
+              <span>{{ feedbackToast.message }}</span>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </teleport>
 
     <Transition
       enter-active-class="transition duration-200 ease-out"
@@ -364,7 +317,6 @@ import {
   AlertTriangle,
   CheckCircle2,
   Clock3,
-  Layers3,
   MailPlus,
   PencilLine,
   PackageCheck,
@@ -378,7 +330,6 @@ import DeliveryTrackingService from '@/services/DeliveryTrackingService.js'
 import DeliveryMailAccounts from '@/components/gestion/DeliveryMailAccounts.vue'
 import DeliveryManualParcelForm from '@/components/gestion/DeliveryManualParcelForm.vue'
 import DeliveryCandidateReviewList from '@/components/gestion/DeliveryCandidateReviewList.vue'
-import DeliveryScanReport from '@/components/gestion/DeliveryScanReport.vue'
 import DeliveryParcelList from '@/components/gestion/DeliveryParcelList.vue'
 import DeliveryParcelTimeline from '@/components/gestion/DeliveryParcelTimeline.vue'
 import { isActiveParcelStatus } from '@/utils/deliveryPresentation.js'
@@ -398,6 +349,7 @@ const connectingGmail = ref(false)
 const creatingManualParcel = ref(false)
 const scanningAccountId = ref(null)
 const scanningAll = ref(false)
+const refreshingAllParcels = ref(false)
 const refreshingParcelId = ref(null)
 const deletingParcelId = ref(null)
 const deletingParcelIds = ref([])
@@ -409,14 +361,14 @@ const selectedParcelIds = ref([])
 const activeStatusFilter = ref('all')
 const searchTerm = ref('')
 const autoScanAfterCallbackStarted = ref(false)
-const scanNotice = ref(null)
-const latestScanReport = ref(null)
 const manualSuccessToken = ref(0)
 const manualModalOpen = ref(false)
 const searchInput = ref(null)
 const manualFormRef = ref(null)
 const mailAccountsSectionRef = ref(null)
 const lastSuccessfulSyncAt = ref(null)
+const feedbackToast = ref(null)
+let feedbackToastTimer = null
 
 const filteredParcels = computed(() => {
   const term = searchTerm.value.trim().toLowerCase()
@@ -454,9 +406,22 @@ const selectedParcel = computed(
 )
 const selectionMode = computed(() => selectedParcelIds.value.length > 0 || bulkDeletingParcels.value)
 const primaryActionLabel = computed(() =>
-  hasMailAccounts.value ? 'Scanner mes mails' : 'Connecter Gmail',
+  hasMailAccounts.value ? 'Sources Gmail' : 'Connecter Gmail',
+)
+const refreshActionLabel = computed(() =>
+  refreshingAllParcels.value ? 'Mise a jour...' : 'Actualiser tout',
+)
+const refreshActionDetail = computed(() =>
+  'Rafraichit tous les colis en interrogeant directement leurs pages de suivi',
 )
 const activityState = computed(() => {
+  if (refreshingAllParcels.value) {
+    return {
+      title: 'Rafraichissement global des colis',
+      detail: 'Lecture rapide des pages de suivi pour mettre a jour le statut de chaque colis.',
+      badge: 'Tous les colis',
+    }
+  }
   if (scanningAll.value) {
     return {
       title: 'Scan Gmail en cours',
@@ -507,12 +472,15 @@ const activeMailAccounts = computed(() =>
 const hasMailAccounts = computed(() => mailAccounts.value.length > 0)
 const automationLabel = computed(() => {
   if (!hasMailAccounts.value) {
-    return 'Connecte un ou plusieurs Gmail, puis scanne uniquement les nouveaux emails de livraison.'
+    return 'Connecte Gmail pour relire tes emails transporteur et recuperer automatiquement les suivis.'
   }
   if (scanningAll.value) {
-    return 'Scan des boites Gmail en cours. Seuls les vrais numeros de suivi sont gardes.'
+    return 'Lecture Gmail en cours. Seuls les vrais numeros de suivi sont gardes.'
   }
-  return `${activeMailAccounts.value.length || mailAccounts.value.length} source(s) surveillee(s), suivi gratuit via Gmail + transporteurs compatibles.`
+  if (refreshingAllParcels.value) {
+    return 'Mise a jour en cours des statuts via les pages de suivi transporteur.'
+  }
+  return `${activeMailAccounts.value.length || mailAccounts.value.length} source(s) Gmail relues pour detecter de nouveaux suivis.`
 })
 
 const activeParcelCount = computed(
@@ -591,15 +559,40 @@ const statusFilters = computed(() => [
 
 const quickFilters = computed(() => statusFilters.value.slice(0, 6))
 
-const callbackNotice = computed(() => {
-  if (route.query?.gmail === 'connected') {
-    return { kind: 'success', message: 'Compte Gmail lie. Scan automatique lance.' }
+const toastTitleByKind = {
+  success: 'Action terminee',
+  warning: 'A verifier',
+  error: 'Action impossible',
+  info: 'Info livraison',
+}
+
+const clearFeedbackToast = () => {
+  if (feedbackToastTimer) {
+    window.clearTimeout(feedbackToastTimer)
+    feedbackToastTimer = null
   }
-  if (route.query?.gmail === 'error') {
-    return { kind: 'error', message: 'Connexion Gmail interrompue.' }
+}
+
+const showFeedbackToast = (toast) => {
+  if (!toast?.message) return
+  clearFeedbackToast()
+  const kind = toast.kind || 'info'
+  feedbackToast.value = {
+    kind,
+    title: toast.title || toastTitleByKind[kind] || toastTitleByKind.info,
+    message: toast.message,
   }
-  return null
-})
+  feedbackToastTimer = window.setTimeout(() => {
+    feedbackToast.value = null
+    feedbackToastTimer = null
+  }, kind === 'error' ? 4200 : 3000)
+}
+
+const showFeedbackSummary = (summary, title) => {
+  const notice = scanNoticeFromSummary(summary)
+  if (!notice) return
+  showFeedbackToast({ ...notice, title })
+}
 
 const loadMailAccounts = async () => {
   accountsLoading.value = true
@@ -668,11 +661,38 @@ const scrollToMailAccounts = () => {
 }
 
 const handlePrimaryAction = async () => {
-  if (hasMailAccounts.value) {
-    await scanAllNow()
+  scrollToMailAccounts()
+}
+
+const handleRefreshAction = async () => {
+  await refreshAllParcelStatuses()
+}
+
+const refreshAllParcelStatuses = async () => {
+  if (!parcels.value.length) {
+    await refreshAll()
     return
   }
-  scrollToMailAccounts()
+
+  refreshingAllParcels.value = true
+  parcelsError.value = ''
+  try {
+    const { data } = await DeliveryTrackingService.refreshAllParcels()
+    parcels.value = Array.isArray(data) ? data : []
+    if (selectedParcelId.value && !parcels.value.some((parcel) => parcel.id === selectedParcelId.value)) {
+      selectedParcelId.value = parcels.value[0]?.id ?? null
+    }
+    lastSuccessfulSyncAt.value = new Date().toISOString()
+    showFeedbackToast({
+      kind: 'success',
+      title: 'Suivis mis a jour',
+      message: `${parcels.value.length} colis rafraichi(s).`,
+    })
+  } catch (error) {
+    parcelsError.value = error?.response?.data?.message || 'Mise a jour globale des suivis impossible'
+  } finally {
+    refreshingAllParcels.value = false
+  }
 }
 
 const connectGmail = async (emailAddress = '') => {
@@ -700,22 +720,8 @@ const scanAccount = async (accountId, refresh = true, showNotice = true) => {
   accountsError.value = ''
   try {
     const { data } = await DeliveryTrackingService.scanNow(accountId)
-    latestScanReport.value = normalizeScanBatchReport({
-      scannedAccounts: data?.success ? 1 : 0,
-      scannedMessages: Number(data?.scannedMessages || 0),
-      deliveryMessages: Number(data?.deliveryMessages || 0),
-      importedCount: Number(data?.importedCount || 0),
-      reviewCount: Number(data?.reviewCount || 0),
-      rejectedCount: Number(data?.rejectedCount || 0),
-      duplicateCount: Number(data?.duplicateCount || 0),
-      message: data?.message || '',
-      accountReports: data ? [data] : [],
-      importedParcels: Array.isArray(data?.importedParcels) ? data.importedParcels : [],
-      duplicateParcels: Array.isArray(data?.duplicateParcels) ? data.duplicateParcels : [],
-      candidatesToReview: Array.isArray(data?.candidatesToReview) ? data.candidatesToReview : [],
-    })
     if (showNotice) {
-      scanNotice.value = scanNoticeFromSummary(data)
+      showFeedbackSummary(data, 'Scan Gmail termine')
     }
     if (refresh) {
       await refreshAll()
@@ -738,8 +744,7 @@ const scanAllNow = async () => {
   accountsError.value = ''
   try {
     const { data } = await DeliveryTrackingService.scanAll()
-    latestScanReport.value = normalizeScanBatchReport(data)
-    scanNotice.value = scanNoticeFromSummary(data)
+    showFeedbackSummary(data, 'Import Gmail termine')
     await refreshAll()
   } catch (error) {
     accountsError.value = error?.response?.data?.message || 'Scan Gmail impossible'
@@ -803,12 +808,13 @@ const createManualParcel = async (payload) => {
     }
     manualSuccessToken.value += 1
     manualModalOpen.value = false
-    scanNotice.value = {
+    showFeedbackToast({
       kind: failedNumbers.length ? 'warning' : 'success',
+      title: failedNumbers.length ? 'Ajout partiel' : 'Suivi ajoute',
       message: failedNumbers.length
         ? `${createdParcels.length} suivi(s) ajoute(s), ${failedNumbers.length} refuse(s).`
         : `${createdParcels.length} suivi(s) ajoute(s) au tableau de livraison.`,
-    }
+    })
   } catch (error) {
     manualParcelError.value = error?.response?.data?.message || 'Ajout du colis impossible'
   } finally {
@@ -853,10 +859,14 @@ const confirmCandidate = async (candidateId) => {
         : [data, ...parcels.value]
       selectedParcelId.value = data.id
     } else {
-    await loadParcels()
-    lastSuccessfulSyncAt.value = new Date().toISOString()
+      await loadParcels()
+      lastSuccessfulSyncAt.value = new Date().toISOString()
     }
-    scanNotice.value = { kind: 'success', message: 'Candidat valide et ajoute au suivi.' }
+    showFeedbackToast({
+      kind: 'success',
+      title: 'Colis ajoute',
+      message: 'Candidat valide et ajoute au suivi.',
+    })
   } catch (error) {
     candidatesError.value = error?.response?.data?.message || 'Validation impossible'
   } finally {
@@ -873,7 +883,11 @@ const ignoreCandidate = async (candidateId) => {
     trackingCandidates.value = trackingCandidates.value.filter(
       (candidate) => candidate.id !== candidateId,
     )
-    scanNotice.value = { kind: 'info', message: 'Candidat ignore.' }
+    showFeedbackToast({
+      kind: 'info',
+      title: 'Candidat retire',
+      message: 'Le candidat ne sera plus propose.',
+    })
   } catch (error) {
     candidatesError.value = error?.response?.data?.message || 'Action impossible'
   } finally {
@@ -896,6 +910,11 @@ const deleteParcel = async (parcelId) => {
     if (selectedParcelId.value === parcelId) {
       selectedParcelId.value = filteredParcels.value[0]?.id || null
     }
+    showFeedbackToast({
+      kind: 'success',
+      title: 'Suivi supprime',
+      message: 'Le colis a ete retire de la liste.',
+    })
   } catch (error) {
     parcelsError.value = error?.response?.data?.message || 'Suppression du suivi impossible'
   } finally {
@@ -909,6 +928,11 @@ const deleteAccount = async (accountId) => {
   try {
     await DeliveryTrackingService.deleteMailAccount(accountId)
     await refreshAll()
+    showFeedbackToast({
+      kind: 'success',
+      title: 'Compte retire',
+      message: 'La source Gmail a ete supprimee.',
+    })
   } catch (error) {
     accountsError.value = error?.response?.data?.message || 'Suppression du compte impossible'
   }
@@ -977,17 +1001,19 @@ const deleteSelectedParcels = async () => {
 
   if (failedIds.length) {
     parcelsError.value = `${failedIds.length} suppression(s) ont echoue.`
-    scanNotice.value = {
+    showFeedbackToast({
       kind: 'warning',
+      title: 'Suppression partielle',
       message: `${ids.length - failedIds.length} suivi(s) supprime(s), ${failedIds.length} en erreur.`,
-    }
+    })
     return
   }
 
-  scanNotice.value = {
+  showFeedbackToast({
     kind: 'success',
+    title: 'Selection supprimee',
     message: `${ids.length} suivi(s) supprime(s) de la liste.`,
-  }
+  })
 }
 
 const matchesStatusFilter = (parcel, filter) => {
@@ -1020,21 +1046,6 @@ const sortableDate = (parcel) => {
   const date = raw ? new Date(raw) : null
   return date && !Number.isNaN(date.getTime()) ? date.getTime() : 0
 }
-
-const normalizeScanBatchReport = (report = {}) => ({
-  scannedAccounts: Number(report?.scannedAccounts || 0),
-  scannedMessages: Number(report?.scannedMessages || 0),
-  deliveryMessages: Number(report?.deliveryMessages || 0),
-  importedCount: Number(report?.importedCount || 0),
-  reviewCount: Number(report?.reviewCount || 0),
-  rejectedCount: Number(report?.rejectedCount || 0),
-  duplicateCount: Number(report?.duplicateCount || 0),
-  message: String(report?.message || '').trim(),
-  accountReports: Array.isArray(report?.accountReports) ? report.accountReports : [],
-  importedParcels: Array.isArray(report?.importedParcels) ? report.importedParcels : [],
-  duplicateParcels: Array.isArray(report?.duplicateParcels) ? report.duplicateParcels : [],
-  candidatesToReview: Array.isArray(report?.candidatesToReview) ? report.candidatesToReview : [],
-})
 
 const parseManualTrackingEntries = (rawValue) => {
   const source = String(rawValue || '')
@@ -1077,13 +1088,9 @@ const scanNoticeFromSummary = (summary = {}) => {
     }
   }
   if (summary.scannedMessages === 0) {
-    return { kind: 'info', message: 'Aucun nouvel email de livraison a analyser.' }
+    return null
   }
-  return {
-    kind: 'info',
-    message:
-      'Aucun numero de suivi fiable trouve. Les numeros faibles ont ete ignores.',
-  }
+  return null
 }
 
 const shouldIgnoreShortcut = (target) => {
@@ -1153,17 +1160,108 @@ watch(
 
 const bootstrapDelivery = async () => {
   await refreshAll()
+  if (route.query?.gmail === 'connected') {
+    showFeedbackToast({
+      kind: 'success',
+      title: 'Gmail connecte',
+      message: 'Compte Gmail lie. Scan automatique lance.',
+    })
+  } else if (route.query?.gmail === 'error') {
+    showFeedbackToast({
+      kind: 'error',
+      title: 'Connexion interrompue',
+      message: 'La connexion Gmail a ete interrompue.',
+    })
+  }
   await scanNewestAccountAfterCallback()
   window.addEventListener('keydown', handleGlobalShortcut)
 }
 
 onMounted(bootstrapDelivery)
 onBeforeUnmount(() => {
+  clearFeedbackToast()
   window.removeEventListener('keydown', handleGlobalShortcut)
 })
 </script>
 
 <style scoped>
+.delivery-toast-layer {
+  position: fixed;
+  right: 1rem;
+  bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  z-index: 110;
+  width: min(100vw - 2rem, 26rem);
+  pointer-events: none;
+}
+
+.delivery-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.97);
+  padding: 0.95rem 1rem;
+  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(14px);
+}
+
+.delivery-toast.is-success {
+  border-color: rgba(16, 185, 129, 0.28);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(236, 253, 245, 0.96));
+}
+
+.delivery-toast.is-warning,
+.delivery-toast.is-error {
+  border-color: rgba(245, 158, 11, 0.28);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(255, 251, 235, 0.96));
+}
+
+.delivery-toast.is-error {
+  border-color: rgba(248, 113, 113, 0.28);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(254, 242, 242, 0.97));
+}
+
+.delivery-toast__icon {
+  display: inline-flex;
+  height: 2.75rem;
+  width: 2.75rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  background: rgba(15, 118, 110, 0.1);
+  color: #0f766e;
+}
+
+.delivery-toast.is-warning .delivery-toast__icon {
+  background: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+}
+
+.delivery-toast.is-error .delivery-toast__icon {
+  background: rgba(248, 113, 113, 0.14);
+  color: #b91c1c;
+}
+
+.delivery-toast__copy {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.delivery-toast__copy strong {
+  color: #0f172a;
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.delivery-toast__copy span {
+  color: #475569;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
 .delivery-panel-loader {
   width: 34%;
   animation: delivery-panel-progress 1.2s ease-in-out infinite;
@@ -1180,6 +1278,14 @@ onBeforeUnmount(() => {
 
   100% {
     transform: translateX(250%);
+  }
+}
+
+@media (max-width: 640px) {
+  .delivery-toast-layer {
+    left: 1rem;
+    right: 1rem;
+    width: auto;
   }
 }
 </style>

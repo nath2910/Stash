@@ -6,10 +6,16 @@
       <div class="min-w-0">
         <h3 class="text-base font-semibold text-slate-900">Detail livraison</h3>
         <p class="mt-1 truncate text-xs text-slate-500">
-          {{ parcel ? parcel.trackingNumber : 'Aucun colis' }}
+          {{ parcel ? parcel.normalizedTrackingNumber || parcel.trackingNumber : 'Aucun colis' }}
         </p>
       </div>
       <div v-if="parcel" class="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
+        <span
+          class="inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold"
+          :class="statusMeta(parcel.status).class"
+        >
+          {{ statusMeta(parcel.status).label }}
+        </span>
         <a
           v-if="parcel.trackingUrl"
           :href="parcel.trackingUrl"
@@ -22,15 +28,6 @@
         </a>
         <button
           type="button"
-          class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 transition hover:border-sky-300 hover:text-slate-900 disabled:cursor-wait disabled:opacity-60"
-          title="Mettre a jour le suivi"
-          :disabled="refreshing || deleting"
-          @click="$emit('refresh', parcel.id)"
-        >
-          <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': refreshing }" />
-        </button>
-        <button
-          type="button"
           class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-red-300/40 bg-red-50 text-red-700 transition hover:border-red-400 hover:bg-red-100 disabled:cursor-wait disabled:opacity-60"
           title="Supprimer ce suivi"
           :disabled="refreshing || deleting"
@@ -40,21 +37,6 @@
           <Trash2 v-else class="h-4 w-4" />
         </button>
       </div>
-    </div>
-
-    <div v-if="parcel" class="mt-4 rounded-2xl border border-slate-200 bg-white p-3">
-      <div class="flex flex-wrap items-center justify-between gap-2">
-        <span class="text-xs text-slate-500">Statut</span>
-        <span
-          class="inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold"
-          :class="statusMeta(parcel.status).class"
-        >
-          {{ statusMeta(parcel.status).label }}
-        </span>
-      </div>
-      <p v-if="parcel.statusLabel" class="mt-2 text-sm font-medium text-slate-800">
-        {{ parcel.statusLabel }}
-      </p>
     </div>
 
     <div
@@ -71,7 +53,7 @@
     </div>
 
     <div
-      v-if="parcel && trackingHealth"
+      v-if="parcel && trackingHealth && trackingHealth.tone === 'warning'"
       class="mt-3 rounded-2xl border px-3 py-3"
       :class="
         trackingHealth.tone === 'warning'
@@ -95,7 +77,7 @@
 
     <div v-if="parcel" class="mt-3 rounded-2xl border border-slate-200 bg-white p-3">
       <div class="flex flex-wrap items-center justify-between gap-2">
-        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Avancement</p>
+        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Avancement transporteur</p>
         <span class="text-xs text-slate-500">{{ progressHeadline }}</span>
       </div>
 
@@ -144,7 +126,7 @@
 
     <div v-else-if="events.length" class="mt-5">
       <p class="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-        Historique
+        Evenements transporteur
       </p>
       <ol class="delivery-timeline-scroll max-h-[520px] space-y-3 overflow-y-auto pr-1">
         <li
@@ -179,7 +161,7 @@
       v-else
       class="mt-5 rounded-2xl border border-dashed border-slate-300 bg-white/70 p-5 text-center text-sm text-slate-500"
     >
-      Aucun evenement local.
+      Aucun evenement transporteur pour l'instant.
     </div>
   </aside>
 </template>
@@ -289,26 +271,6 @@ const detailItems = computed(() => {
       label: 'Livraison estimee',
       value: formatDateTime(parcel.estimatedDeliveryAt),
       show: Boolean(parcel.estimatedDeliveryAt),
-    },
-    {
-      label: 'Destination',
-      value: parcel.destinationAddress,
-      show: Boolean(parcel.destinationAddress),
-    },
-    {
-      label: 'Origine',
-      value: parcel.originAddress,
-      show: Boolean(parcel.originAddress),
-    },
-    {
-      label: 'Service',
-      value: parcel.shipmentType,
-      show: Boolean(parcel.shipmentType),
-    },
-    {
-      label: 'Reception',
-      value: parcel.signedBy,
-      show: Boolean(parcel.signedBy),
     },
   ].filter((item) => item.show && item.value)
 })

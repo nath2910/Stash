@@ -6,7 +6,7 @@
         <h1>Accueil</h1>
       </div>
       <div class="search-heading-meta">
-        <span class="search-shortcut">/ ou R</span>
+        <span class="search-shortcut" aria-hidden="true">/ ou R</span>
         <span class="search-count">{{ stockLabel }}</span>
       </div>
     </div>
@@ -377,6 +377,16 @@ h1 {
 
   .search-count {
     justify-self: start;
+  }
+
+  .search-shortcut {
+    display: none;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .search-shortcut {
+    display: none;
   }
 }
 

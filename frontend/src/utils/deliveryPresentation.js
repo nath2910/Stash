@@ -166,22 +166,6 @@ export const getDeliveryTrackingHealth = (parcel) => {
   const statusLabel = String(parcel.statusLabel || '').toLowerCase()
 
   if (aggregator === 'DIRECT_CARRIER') {
-    if (statusLabel.includes('non supporte')) {
-      return {
-        tone: 'warning',
-        title: 'Suivi live indisponible',
-        message:
-          "Ce transporteur n'a pas de connecteur gratuit branche sur cette version. Le colis est centralise ici, mais l'avancement detaille ne remontera pas automatiquement.",
-      }
-    }
-    if (statusLabel.includes('non configuree')) {
-      return {
-        tone: 'warning',
-        title: 'Connecteur non configure',
-        message:
-          "Le transporteur est bien gere par l'app, mais les credentials serveur manquent en production. Le suivi reste local tant que la config n'est pas complete.",
-      }
-    }
     if (statusLabel.includes('non trouve')) {
       return {
         tone: 'info',

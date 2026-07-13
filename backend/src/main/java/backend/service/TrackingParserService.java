@@ -28,6 +28,8 @@ public class TrackingParserService {
   private static final Pattern UPU_PATTERN = Pattern.compile("^[A-Z]{2}\\d{9}[A-Z]{2}$");
   private static final Pattern LA_POSTE_2C_PATTERN = Pattern.compile("^\\d[A-Z]\\d{11}$");
   private static final Pattern NUMERIC_PATTERN = Pattern.compile("^\\d+$");
+  private static final Pattern DIGIT_PATTERN = Pattern.compile("\\d");
+  private static final Pattern LETTER_PATTERN = Pattern.compile("[A-Z]");
   private static final Pattern URL_PATTERN = Pattern.compile("https?://[^\\s<>()\"']+", Pattern.CASE_INSENSITIVE);
 
   private static final List<Pattern> CANDIDATE_PATTERNS = List.of(
@@ -371,7 +373,7 @@ public class TrackingParserService {
           normalized,
           score.value(),
           confidence,
-          bestTrackingUrl(normalized, occurrence, safeLinks),
+          bestTrackingUrl(normalized, score.carrierSlug(), occurrence, safeLinks),
           contextSnippet(visibleText, occurrence.start(), occurrence.end(), CONTEXT_RADIUS),
           displayName(from),
           rawStatus(visibleText),
@@ -419,6 +421,9 @@ public class TrackingParserService {
       return false;
     }
     if (NUMERIC_PATTERN.matcher(normalized).matches() && normalized.length() < 10) {
+      return false;
+    }
+    if (!hasBalancedTrackingSignal(normalized)) {
       return false;
     }
     return true;
@@ -491,6 +496,9 @@ public class TrackingParserService {
     }
     if (looksLikeDate(normalized)) {
       return CandidateScore.rejected("ressemble a une date");
+    }
+    if (!hasBalancedTrackingSignal(normalized)) {
+      return CandidateScore.rejected("format trop faible");
     }
 
     String context = occurrence.source() == CandidateSource.VISIBLE
@@ -582,11 +590,6 @@ public class TrackingParserService {
         return Optional.of(rule.slug());
       }
     }
-    for (CarrierRule rule : RULES) {
-      if (rule.hasSignal(combined)) {
-        return Optional.of(rule.slug());
-      }
-    }
 
     String inferred = inferCarrierSlug(normalized);
     return inferred == null ? Optional.empty() : Optional.of(inferred);
@@ -632,7 +635,7 @@ public class TrackingParserService {
     if (NUMERIC_PATTERN.matcher(normalized).matches()) {
       return new FormatScore(normalized.length() >= 12 ? 12 : 5, "format numerique faible");
     }
-    return new FormatScore(18, "format alphanumerique plausible");
+    return new FormatScore(10, "format alphanumerique faible");
   }
 
   private TrackingConfidence confidence(int score) {
@@ -688,12 +691,25 @@ public class TrackingParserService {
     return false;
   }
 
-  private String bestTrackingUrl(String normalizedTracking, Occurrence occurrence, List<String> links) {
-    if (occurrence.source() == CandidateSource.LINK && isTrackingRelatedLink(occurrence.link())) {
+  private String bestTrackingUrl(
+      String normalizedTracking,
+      String carrierSlug,
+      Occurrence occurrence,
+      List<String> links
+  ) {
+    if (
+        occurrence.source() == CandidateSource.LINK &&
+        isTrackingRelatedLink(occurrence.link()) &&
+        TrackingLinkResolver.isTrustedTrackingUrl(occurrence.link(), carrierSlug)
+    ) {
       return sanitizeUrl(occurrence.link());
     }
     for (String link : links) {
-      if (isTrackingRelatedLink(link) && normalizeTrackingNumber(decodeUrl(link)).contains(normalizedTracking)) {
+      if (
+          isTrackingRelatedLink(link) &&
+          normalizeTrackingNumber(decodeUrl(link)).contains(normalizedTracking) &&
+          TrackingLinkResolver.isTrustedTrackingUrl(link, carrierSlug)
+      ) {
         return sanitizeUrl(link);
       }
     }
@@ -796,6 +812,36 @@ public class TrackingParserService {
     return containsAny(context, Set.of("eur", "euro", "usd", "total", "montant", "prix", "amount", "paid", "ttc", "ht"));
   }
 
+  private boolean hasBalancedTrackingSignal(String normalized) {
+    int digitCount = countMatches(DIGIT_PATTERN, normalized);
+    if (digitCount < 4) {
+      return false;
+    }
+    if (NUMERIC_PATTERN.matcher(normalized).matches()) {
+      return normalized.length() >= 10;
+    }
+    boolean knownCarrierFormat = matchesKnownCarrierFormat(normalized);
+    int letterCount = countMatches(LETTER_PATTERN, normalized);
+    if (!knownCarrierFormat && digitCount < 8) {
+      return false;
+    }
+    if (!knownCarrierFormat && letterCount > digitCount) {
+      return false;
+    }
+    return letterCount <= Math.max(8, digitCount + 2);
+  }
+
+  private boolean matchesKnownCarrierFormat(String normalized) {
+    if (UPS_PATTERN.matcher(normalized).matches()
+        || AMAZON_PATTERN.matcher(normalized).matches()
+        || UPU_PATTERN.matcher(normalized).matches()
+        || LA_POSTE_2C_PATTERN.matcher(normalized).matches()
+        || Pattern.compile("^YT\\d{12,18}$").matcher(normalized).matches()) {
+      return true;
+    }
+    return RULES.stream().anyMatch(rule -> rule.matchesFormat(normalized));
+  }
+
   private boolean isDateParts(int year, int month, int day) {
     return year >= 2000 && year <= 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31;
   }
@@ -822,6 +868,15 @@ public class TrackingParserService {
   private boolean containsAny(String value, Set<String> keywords) {
     String text = value == null ? "" : value;
     return keywords.stream().anyMatch(text::contains);
+  }
+
+  private int countMatches(Pattern pattern, String value) {
+    Matcher matcher = pattern.matcher(safe(value));
+    int count = 0;
+    while (matcher.find()) {
+      count++;
+    }
+    return count;
   }
 
   private String normalizeText(String value) {

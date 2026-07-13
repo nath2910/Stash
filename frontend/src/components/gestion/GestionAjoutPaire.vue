@@ -45,6 +45,7 @@
                 details-default-open
                 quantity-enabled
                 :show-details-toggle="false"
+                auto-infer-from-name
                 submit-label="Ajouter"
                 @cancel="handleClose"
                 @error="handleValidationError"

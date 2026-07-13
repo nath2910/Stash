@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -21,10 +22,12 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
 @Service
+@Order(100)
 public class LaPosteTrackingClient implements CarrierTrackingClient {
 
   private static final String PROVIDER = "LA_POSTE_OKAPI";
@@ -110,7 +113,7 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
       }
     }
 
-    TrackingEventSnapshot latest = events.isEmpty() ? null : events.get(events.size() - 1);
+    TrackingEventSnapshot latest = latestEvent(events);
     String statusLabel = latest == null
         ? firstNonBlank(stringValue(shipment.get("shortLabel")), stringValue(shipment.get("longLabel")))
         : latest.description();
@@ -177,6 +180,16 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
       return ParcelStatus.REGISTERED;
     }
     return ParcelStatus.UNKNOWN;
+  }
+
+  static TrackingEventSnapshot latestEvent(List<TrackingEventSnapshot> events) {
+    if (events == null || events.isEmpty()) {
+      return null;
+    }
+    return events.stream()
+        .filter(event -> event != null && event.eventTime() != null)
+        .max(Comparator.comparing(TrackingEventSnapshot::eventTime))
+        .orElse(events.get(events.size() - 1));
   }
 
   private String canonicalCarrier(String existingCarrier, String product) {

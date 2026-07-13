@@ -219,4 +219,48 @@ class TrackingParserServiceTest {
     Assertions.assertNull(parser.inferCarrierSlug("1234567890"));
     Assertions.assertNull(parser.inferCarrierSlug("ABC"));
   }
+
+  @Test
+  void doesNotAutoImportWeakMerchantTrackingLikeValuesFromContextOnlyCarrierHints() {
+    TrackingDetectionResult result = parser.detect(
+        "HHV <service@hhv.de>",
+        "Suivi livraison UPS",
+        "Reference de suivi ZF-12-AB-34-CD",
+        List.of("https://www.hhv.de/account/track?code=ZF-12-AB-34-CD")
+    );
+
+    Assertions.assertTrue(result.autoImportCandidates().isEmpty());
+    Assertions.assertTrue(result.reviewCandidates().isEmpty());
+  }
+
+  @Test
+  void rejectsWeakFragmentedCodesEvenWithStrongTrackingWording() {
+    TrackingDetectionResult result = parser.detect(
+        "shop@example.com",
+        "Votre colis arrive",
+        "Numero de suivi: ZF-12-AB-34-CD. Suivre votre colis ici."
+    );
+
+    Assertions.assertTrue(result.autoImportCandidates().isEmpty());
+    Assertions.assertTrue(result.reviewCandidates().isEmpty());
+  }
+
+  @Test
+  void keepsOnlyTrustedCarrierLinksForTrackingUrl() {
+    TrackingDetectionResult result = parser.detect(
+        "UPS <tracking@ups.com>",
+        "Tracking number for your shipment",
+        "Tracking number: 1Z999AA10123456784",
+        List.of(
+            "https://www.hhv.de/account/track?code=1Z999AA10123456784",
+            "https://www.ups.com/track?tracknum=1Z999AA10123456784"
+        )
+    );
+
+    Assertions.assertEquals(1, result.autoImportCandidates().size());
+    Assertions.assertEquals(
+        "https://www.ups.com/track?tracknum=1Z999AA10123456784",
+        result.autoImportCandidates().get(0).trackingUrl()
+    );
+  }
 }

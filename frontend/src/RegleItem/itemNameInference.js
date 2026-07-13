@@ -200,7 +200,7 @@ const SUBCATEGORY_KEYWORDS = {
     display: ['display', 'boite display'],
     'carte gradee': ['carte gradee', 'psa', 'cgc', 'bgs', 'grade'],
     coffret: ['coffret', 'box collection'],
-    etb: ['etb', 'elite trainer box'],
+    etb: ['etb', 'tb', 'elite trainer box', 'trainer box'],
   },
   TICKET: {
     concert: ['concert', 'arena', 'accor arena', 'zenith'],
@@ -231,6 +231,7 @@ function buildSearch(value) {
   return {
     text,
     paddedText: ` ${text} `,
+    compactText: text.replace(/\s+/g, ''),
     words,
   }
 }
@@ -247,6 +248,11 @@ function phraseScore(search, phrase) {
 
   if (tokens.length > 1 && tokens.every((token) => search.words.has(token))) {
     return 6
+  }
+
+  const compact = normalized.replace(/\s+/g, '')
+  if (search.compactText.length >= 2 && compact.includes(search.compactText)) {
+    return compact === search.compactText ? 8 : search.compactText.length <= 2 ? 6 : 5
   }
 
   return 0
@@ -293,6 +299,18 @@ function inferSubcategory(search, type, options = {}) {
   return best.score >= MIN_SUBCATEGORY_SCORE ? best : { value: '', score: best.score }
 }
 
+function inferTypeFromSubcategories(search, options = {}, typeOptions = []) {
+  let best = { value: '', score: 0 }
+  for (const option of typeOptions) {
+    const itemType = normalizeItemType(option?.value)
+    const candidate = inferSubcategory(search, itemType, options)
+    if (candidate.score > best.score) {
+      best = { value: itemType, score: candidate.score }
+    }
+  }
+  return best.score >= MIN_SUBCATEGORY_SCORE ? best : { value: '', score: best.score }
+}
+
 export function inferItemClassificationFromName(name, options = {}) {
   const search = buildSearch(name)
   if (search.text.length < 2) {
@@ -309,7 +327,11 @@ export function inferItemClassificationFromName(name, options = {}) {
     }
   }
 
-  const type = bestType.score >= MIN_TYPE_SCORE ? bestType.value : ''
+  const bestSubcategoryType = inferTypeFromSubcategories(search, options, typeOptions)
+  const type =
+    bestType.score >= MIN_TYPE_SCORE
+      ? bestType.value
+      : bestSubcategoryType.value
   const subcategoryType = type || normalizeItemType(options.currentType)
   const bestSubcategory = subcategoryType
     ? inferSubcategory(search, subcategoryType, options)
@@ -318,7 +340,7 @@ export function inferItemClassificationFromName(name, options = {}) {
   return {
     type,
     subcategory: bestSubcategory.value,
-    typeScore: bestType.score,
+    typeScore: Math.max(bestType.score, bestSubcategoryType.score),
     subcategoryScore: bestSubcategory.score,
   }
 }
