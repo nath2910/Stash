@@ -49,6 +49,7 @@ defineExpose({
 .quick-add-panel {
   position: relative;
   display: grid;
+  align-content: start;
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;

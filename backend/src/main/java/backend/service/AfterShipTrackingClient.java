@@ -461,7 +461,7 @@ public class AfterShipTrackingClient implements TrackingAggregatorService {
   private ParcelStatus normalizeStatus(String raw) {
     String status = raw == null ? "" : raw.toLowerCase(Locale.ROOT).replaceAll("[\\s_\\-]", "");
     if (status.contains("delivered")) return ParcelStatus.DELIVERED;
-    if (status.contains("outfordelivery") || status.contains("courier")) return ParcelStatus.OUT_FOR_DELIVERY;
+    if (status.contains("outfordelivery") || status.contains("courier")) return ParcelStatus.IN_TRANSIT;
     if (status.contains("intransit") || status.contains("transit")) return ParcelStatus.IN_TRANSIT;
     if (status.contains("attemptfail") || status.contains("exception") || status.contains("failed")
         || status.contains("expired")) {

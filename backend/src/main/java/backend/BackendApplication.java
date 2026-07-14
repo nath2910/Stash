@@ -1,5 +1,6 @@
 
 package backend;
+import backend.config.DatabaseStartupFailureReporter;
 import backend.config.StripeProperties;
 
 import org.springframework.boot.SpringApplication;
@@ -14,7 +15,9 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableConfigurationProperties(StripeProperties.class)
 public class BackendApplication {
   public static void main(String[] args) {
-    SpringApplication.run(BackendApplication.class, args);
+    SpringApplication application = new SpringApplication(BackendApplication.class);
+    application.addListeners(new DatabaseStartupFailureReporter());
+    application.run(args);
   }
 }
 

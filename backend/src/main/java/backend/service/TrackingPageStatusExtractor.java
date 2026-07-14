@@ -1,11 +1,9 @@
 package backend.service;
 
 import backend.entity.ParcelStatus;
-import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 import org.jsoup.Jsoup;
@@ -16,78 +14,29 @@ final class TrackingPageStatusExtractor {
 
   private static final int MIN_CONFIDENCE_SCORE = 74;
   private static final int DELIVERED_OVERRIDE_SCORE = 80;
-
-  private static final List<StatusRule> STATUS_RULES = List.of(
-      new StatusRule(
-          ParcelStatus.DELIVERED,
-          List.of(
-              new Phrase("votre colis a ete livre", 98),
-              new Phrase("colis a ete livre", 96),
-              new Phrase("remis au destinataire", 95),
-              new Phrase("livraison effectuee", 95),
-              new Phrase("livraison terminee", 94),
-              new Phrase("delivery completed", 92),
-              new Phrase("successfully delivered", 92),
-              new Phrase("parcel delivered", 90),
-              new Phrase("a ete distribue", 90),
-              new Phrase("remis dans votre boite aux lettres", 89),
-              new Phrase("colis livre", 88),
-              new Phrase("delivered", 80),
-              new Phrase("livre", 74),
-              new Phrase("distribue", 72)
-          )
-      ),
-      new StatusRule(
-          ParcelStatus.OUT_FOR_DELIVERY,
-          List.of(
-              new Phrase("en cours de livraison", 90),
-              new Phrase("out for delivery", 90),
-              new Phrase("livraison ce jour", 86),
-              new Phrase("available for pickup", 82),
-              new Phrase("disponible au point relais", 82),
-              new Phrase("disponible en point relais", 82),
-              new Phrase("en livraison", 74)
-          )
-      ),
-      new StatusRule(
-          ParcelStatus.EXCEPTION,
-          List.of(
-              new Phrase("delivery exception", 92),
-              new Phrase("echec de livraison", 90),
-              new Phrase("delivery failed", 90),
-              new Phrase("retour expediteur", 88),
-              new Phrase("returned to sender", 88),
-              new Phrase("adresse incomplete", 86),
-              new Phrase("incident de livraison", 84),
-              new Phrase("incident", 74),
-              new Phrase("retard", 70)
-          )
-      ),
-      new StatusRule(
-          ParcelStatus.IN_TRANSIT,
-          List.of(
-              new Phrase("shipment in transit", 84),
-              new Phrase("colis en transit", 82),
-              new Phrase("in transit", 80),
-              new Phrase("on the way", 76),
-              new Phrase("pris en charge", 76),
-              new Phrase("arrive en agence", 74),
-              new Phrase("arrived at sorting center", 74),
-              new Phrase("achemine", 72),
-              new Phrase("en transit", 70)
-          )
-      ),
-      new StatusRule(
-          ParcelStatus.REGISTERED,
-          List.of(
-              new Phrase("shipment information received", 82),
-              new Phrase("etiquette creee", 80),
-              new Phrase("label created", 80),
-              new Phrase("pre-advice", 78),
-              new Phrase("annonce au transporteur", 76),
-              new Phrase("preparation de votre colis", 76)
-          )
-      )
+  private static final String ACTIVE_STEP_SELECTOR = String.join(",",
+      ".ch-suivi-colis-light-info.active",
+      ".ch-suivi-colis-light-info.current",
+      "[class*=step].active",
+      "[class*=step].current",
+      "[id*=step].active",
+      "[id*=step].current",
+      "[aria-current=step]",
+      "[aria-current=true]",
+      "[aria-selected=true]"
+  );
+  private static final String COMPLETED_STEP_SELECTOR = String.join(",",
+      ".ch-suivi-colis-light-info.done",
+      ".ch-suivi-colis-light-info.complete",
+      ".ch-suivi-colis-light-info.completed",
+      "[class*=step].done",
+      "[class*=step].checked",
+      "[class*=step].complete",
+      "[class*=step].completed",
+      "[id*=step].done",
+      "[id*=step].checked",
+      "[id*=step].complete",
+      "[id*=step].completed"
   );
 
   private TrackingPageStatusExtractor() {
@@ -99,9 +48,17 @@ final class TrackingPageStatusExtractor {
     }
 
     Document document = Jsoup.parse(html);
-    List<Snippet> snippets = collectSnippets(document);
     List<Match> matches = new ArrayList<>();
     Match bestMatch = null;
+
+    for (Match progressMatch : collectProgressMatches(document)) {
+      matches.add(progressMatch);
+      if (bestMatch == null || progressMatch.score() > bestMatch.score()) {
+        bestMatch = progressMatch;
+      }
+    }
+
+    List<Snippet> snippets = collectSnippets(document);
     for (Snippet snippet : snippets) {
       Match match = matchSnippet(snippet);
       if (match == null) {
@@ -131,11 +88,75 @@ final class TrackingPageStatusExtractor {
     if (deliveredMatch != null
         && (deliveredMatch.score() >= DELIVERED_OVERRIDE_SCORE
         || bestMatch == null
-        || bestMatch.status() != ParcelStatus.OUT_FOR_DELIVERY
+        || bestMatch.status() != ParcelStatus.IN_TRANSIT
         || deliveredMatch.score() >= bestMatch.score() - 8)) {
       return deliveredMatch;
     }
     return bestMatch;
+  }
+
+  private static List<Match> collectProgressMatches(Document document) {
+    LinkedHashSet<Match> matches = new LinkedHashSet<>();
+    for (Element element : document.select(ACTIVE_STEP_SELECTOR)) {
+      Match match = matchProgressElement(element, 28);
+      if (match != null) {
+        matches.add(match);
+      }
+    }
+    for (Element element : document.select(COMPLETED_STEP_SELECTOR)) {
+      Match match = matchProgressElement(element, 20);
+      if (match != null) {
+        matches.add(match);
+      }
+    }
+    return new ArrayList<>(matches);
+  }
+
+  private static Match matchProgressElement(Element element, int sourceBoost) {
+    if (element == null) {
+      return null;
+    }
+    Match best = null;
+    for (String candidate : progressTextCandidates(element)) {
+      Optional<CarrierStatusResolver.StatusMatch> resolved = CarrierStatusResolver.best(candidate);
+      if (resolved.isEmpty()) {
+        continue;
+      }
+      CarrierStatusResolver.StatusMatch statusMatch = resolved.get();
+      Match match = new Match(
+          statusMatch.status(),
+          cleanLabel(candidate),
+          statusMatch.score() + sourceBoost
+      );
+      if (best == null || match.score() > best.score()) {
+        best = match;
+      }
+    }
+    return best;
+  }
+
+  private static List<String> progressTextCandidates(Element element) {
+    LinkedHashSet<String> values = new LinkedHashSet<>();
+    addProgressValue(values, element.ownText());
+    addProgressValue(values, textOf(element.selectFirst(".ch-suivi-colis-light-text")));
+    for (Element child : element.select("[class*=text],[class*=label],[class*=title],span,p,div,strong")) {
+      addProgressValue(values, textOf(child));
+      if (values.size() >= 10) {
+        break;
+      }
+    }
+    addProgressValue(values, element.attr("aria-label"));
+    addProgressValue(values, element.attr("title"));
+    addProgressValue(values, element.text());
+    return new ArrayList<>(values);
+  }
+
+  private static void addProgressValue(Set<String> values, String raw) {
+    String value = raw == null ? "" : raw.replaceAll("\\s+", " ").trim();
+    if (value.length() < 4 || value.length() > 120) {
+      return;
+    }
+    values.add(value);
   }
 
   private static List<Snippet> collectSnippets(Document document) {
@@ -149,6 +170,7 @@ final class TrackingPageStatusExtractor {
     for (Element element : document.select("h1,h2,h3,h4,[class*=status],[id*=status],[class*=etat],[id*=etat],"
         + "[class*=state],[id*=state],[class*=current],[id*=current],[class*=active],[id*=active]")) {
       addSnippet(snippets, element.text(), 10);
+      addAttributeSnippets(snippets, element, 8);
       if (snippets.size() >= 24) {
         break;
       }
@@ -156,7 +178,15 @@ final class TrackingPageStatusExtractor {
 
     for (Element element : document.select("[class*=step],[id*=step],[class*=event],[id*=event],p,li")) {
       addSnippet(snippets, element.text(), 0);
+      addAttributeSnippets(snippets, element, 2);
       if (snippets.size() >= 40) {
+        break;
+      }
+    }
+
+    for (Element element : document.select("script[type=application/ld+json],script[type=application/json],script:not([src])")) {
+      addSnippet(snippets, compactScript(element.data()), 4);
+      if (snippets.size() >= 56) {
         break;
       }
     }
@@ -164,30 +194,49 @@ final class TrackingPageStatusExtractor {
     return new ArrayList<>(snippets);
   }
 
+  private static void addAttributeSnippets(Set<Snippet> snippets, Element element, int sourceBoost) {
+    if (element == null) {
+      return;
+    }
+    for (String attributeName : List.of(
+        "data-status",
+        "data-state",
+        "data-current-status",
+        "data-delivery-status",
+        "aria-label",
+        "title"
+    )) {
+      addSnippet(snippets, element.attr(attributeName), sourceBoost);
+    }
+  }
+
   private static void addSnippet(Set<Snippet> snippets, String raw, int sourceBoost) {
     String value = raw == null ? "" : raw.replaceAll("\\s+", " ").trim();
-    if (value.length() < 8 || value.length() > 220) {
+    if (value.length() < 8 || value.length() > 360) {
       return;
     }
     snippets.add(new Snippet(value, sourceBoost));
   }
 
-  private static Match matchSnippet(Snippet snippet) {
-    String normalized = normalize(snippet.text());
-    Match best = null;
-    for (StatusRule rule : STATUS_RULES) {
-      for (Phrase phrase : rule.phrases()) {
-        if (!normalized.contains(phrase.value())) {
-          continue;
-        }
-        int score = phrase.score() + Math.min(10, phrase.value().length() / 6) + snippet.sourceBoost();
-        Match candidate = new Match(rule.status(), cleanLabel(snippet.text()), score);
-        if (best == null || candidate.score() > best.score()) {
-          best = candidate;
-        }
-      }
+  private static String compactScript(String raw) {
+    if (raw == null || raw.isBlank()) {
+      return "";
     }
-    return best;
+    String compact = raw.replaceAll("[\\r\\n\\t]+", " ").replaceAll("\\s{2,}", " ").trim();
+    if (compact.length() <= 360) {
+      return compact;
+    }
+    return compact.substring(0, 360);
+  }
+
+  private static Match matchSnippet(Snippet snippet) {
+    return CarrierStatusResolver.best(snippet.text())
+        .map(match -> new Match(
+            match.status(),
+            cleanLabel(snippet.text()),
+            match.score() + Math.min(10, match.phrase().length() / 6) + snippet.sourceBoost()
+        ))
+        .orElse(null);
   }
 
   private static String cleanLabel(String snippet) {
@@ -198,19 +247,15 @@ final class TrackingPageStatusExtractor {
     return compact.substring(0, 137).trim() + "...";
   }
 
-  private static String normalize(String value) {
-    String lowercase = value == null ? "" : value.toLowerCase(Locale.ROOT);
-    return Normalizer.normalize(lowercase, Normalizer.Form.NFD)
-        .replaceAll("\\p{M}", "");
+  private static String textOf(Element element) {
+    if (element == null) {
+      return null;
+    }
+    String text = element.text();
+    return text == null || text.isBlank() ? null : text.trim();
   }
 
   record ExtractedStatus(ParcelStatus status, String label) {
-  }
-
-  private record StatusRule(ParcelStatus status, List<Phrase> phrases) {
-  }
-
-  private record Phrase(String value, int score) {
   }
 
   private record Match(ParcelStatus status, String label, int score) {

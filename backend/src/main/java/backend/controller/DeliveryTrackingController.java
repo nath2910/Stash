@@ -3,6 +3,7 @@ package backend.controller;
 import backend.dto.ParcelCreateRequest;
 import backend.dto.ParcelResponse;
 import backend.entity.User;
+import backend.service.DeliveryRefreshService;
 import backend.service.DeliveryTrackingService;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -21,9 +22,14 @@ import org.springframework.web.bind.annotation.RestController;
 public class DeliveryTrackingController {
 
   private final DeliveryTrackingService deliveryTrackingService;
+  private final DeliveryRefreshService deliveryRefreshService;
 
-  public DeliveryTrackingController(DeliveryTrackingService deliveryTrackingService) {
+  public DeliveryTrackingController(
+      DeliveryTrackingService deliveryTrackingService,
+      DeliveryRefreshService deliveryRefreshService
+  ) {
     this.deliveryTrackingService = deliveryTrackingService;
+    this.deliveryRefreshService = deliveryRefreshService;
   }
 
   @GetMapping
@@ -38,7 +44,7 @@ public class DeliveryTrackingController {
 
   @PostMapping("/refresh-all")
   public List<ParcelResponse> refreshAll(@AuthenticationPrincipal User currentUser) {
-    return deliveryTrackingService.refreshAllForUser(currentUser.getId());
+    return deliveryRefreshService.refreshAllForUser(currentUser.getId());
   }
 
   @PostMapping

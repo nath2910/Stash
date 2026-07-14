@@ -214,6 +214,7 @@ class TrackingParserServiceTest {
   @Test
   void infersOnlyReliableCarrierFamiliesFromManualTrackingNumber() {
     Assertions.assertEquals("colissimo", parser.inferCarrierSlug("LA-123456789-FR"));
+    Assertions.assertEquals("chronopost", parser.inferCarrierSlug("XR646836167TS"));
     Assertions.assertEquals("ups", parser.inferCarrierSlug("1Z999AA10123456784"));
     Assertions.assertEquals("amazon-logistics", parser.inferCarrierSlug("TBA123456789012"));
     Assertions.assertNull(parser.inferCarrierSlug("1234567890"));
@@ -262,5 +263,24 @@ class TrackingParserServiceTest {
         "https://www.ups.com/track?tracknum=1Z999AA10123456784",
         result.autoImportCandidates().get(0).trackingUrl()
     );
+  }
+
+  @Test
+  void prefersDeliveredMailStatusWhenBodyStillContainsOlderOutForDeliveryStep() {
+    TrackingDetectionResult result = parser.detect(
+        "Chronopost <notifications@chronopost.fr>",
+        "Votre colis Chronopost est livre",
+        """
+            Votre colis a ete livre aujourd'hui.
+            Historique:
+            - En cours de livraison
+            - Pris en charge sur notre site
+
+            Numero de suivi: XY123456789FR
+            """
+    );
+
+    Assertions.assertEquals(1, result.autoImportCandidates().size());
+    Assertions.assertEquals("DELIVERED", result.autoImportCandidates().get(0).rawStatus());
   }
 }

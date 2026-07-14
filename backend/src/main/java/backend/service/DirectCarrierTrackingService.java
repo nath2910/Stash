@@ -1,7 +1,11 @@
 package backend.service;
 
 import backend.entity.Parcel;
+import backend.entity.ParcelStatus;
 import backend.repository.ParcelRepository;
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -54,19 +58,32 @@ public class DirectCarrierTrackingService {
       return parcelRepository.save(parcel);
     }
 
+    TrackingSnapshot bestSnapshot = null;
+    List<String> diagnostics = new ArrayList<>();
     for (CarrierTrackingClient trackingClient : configuredClients) {
+      String clientName = trackingClient.getClass().getSimpleName();
       try {
         Optional<TrackingSnapshot> snapshot = trackingClient.fetchTracking(parcel);
         if (snapshot.isPresent()) {
-          parcelTrackingUpdateService.applySnapshot(parcel, snapshot.get());
-          return parcelRepository.save(parcel);
+          TrackingSnapshot candidate = snapshot.get();
+          if (bestSnapshot == null || isBetterSnapshot(candidate, bestSnapshot)) {
+            bestSnapshot = candidate;
+          }
+        } else {
+          diagnostics.add(clientName + ": vide");
         }
       } catch (Exception ex) {
-        log.warn("Direct carrier tracking failed for parcel {} with client {}", parcel.getId(), trackingClient.getClass().getSimpleName());
+        diagnostics.add(clientName + ": " + summarizeException(ex));
+        log.warn("Direct carrier tracking failed for parcel {} with client {}", parcel.getId(), clientName);
       }
     }
 
-    parcelTrackingUpdateService.markLocalFallback(parcel, PROVIDER, "Suivi non trouve chez le transporteur");
+    if (bestSnapshot != null) {
+      parcelTrackingUpdateService.applySnapshot(parcel, bestSnapshot);
+      return parcelRepository.save(parcel);
+    }
+
+    parcelTrackingUpdateService.markLocalFallback(parcel, PROVIDER, fallbackLabel(diagnostics));
     return parcelRepository.save(parcel);
   }
 
@@ -77,5 +94,73 @@ public class DirectCarrierTrackingService {
     return clients.stream()
         .filter(client -> client.supports(parcel))
         .toList();
+  }
+
+  private boolean isBetterSnapshot(TrackingSnapshot candidate, TrackingSnapshot currentBest) {
+    Comparator<TrackingSnapshot> comparator = Comparator
+        .comparingInt((TrackingSnapshot snapshot) -> statusPriority(snapshot.status()))
+        .thenComparing(snapshot -> snapshot.deliveredAt() != null)
+        .thenComparing(snapshot -> safeTime(snapshot.deliveredAt()))
+        .thenComparing(snapshot -> safeTime(latestEventTime(snapshot)))
+        .thenComparingInt(snapshot -> snapshot.events() == null ? 0 : snapshot.events().size())
+        .thenComparing(snapshot -> snapshot.statusLabel() != null && !snapshot.statusLabel().isBlank());
+    return comparator.compare(candidate, currentBest) > 0;
+  }
+
+  private int statusPriority(ParcelStatus status) {
+    if (status == null) {
+      return 0;
+    }
+    return switch (status) {
+      case PENDING, UNKNOWN -> 0;
+      case REGISTERED -> 1;
+      case IN_TRANSIT -> 2;
+      case OUT_FOR_DELIVERY -> 3;
+      case EXCEPTION -> 4;
+      case DELIVERED -> 5;
+    };
+  }
+
+  private OffsetDateTime latestEventTime(TrackingSnapshot snapshot) {
+    if (snapshot == null || snapshot.events() == null || snapshot.events().isEmpty()) {
+      return null;
+    }
+    return snapshot.events().stream()
+        .map(TrackingEventSnapshot::eventTime)
+        .filter(java.util.Objects::nonNull)
+        .max(OffsetDateTime::compareTo)
+        .orElse(null);
+  }
+
+  private OffsetDateTime safeTime(OffsetDateTime value) {
+    return value == null ? OffsetDateTime.MIN : value;
+  }
+
+  private String fallbackLabel(List<String> diagnostics) {
+    if (diagnostics == null || diagnostics.isEmpty()) {
+      return "Suivi non trouve chez le transporteur";
+    }
+    String summary = String.join(" | ", diagnostics);
+    if (summary.length() > 180) {
+      summary = summary.substring(0, 177) + "...";
+    }
+    return summary;
+  }
+
+  private String summarizeException(Exception ex) {
+    Throwable current = ex;
+    while (current.getCause() != null && current.getCause() != current) {
+      current = current.getCause();
+    }
+    String type = current.getClass().getSimpleName();
+    String message = current.getMessage();
+    if (message == null || message.isBlank()) {
+      return type;
+    }
+    String compact = message.replaceAll("\\s+", " ").trim();
+    if (compact.length() > 80) {
+      compact = compact.substring(0, 77) + "...";
+    }
+    return type + " - " + compact;
   }
 }

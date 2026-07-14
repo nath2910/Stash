@@ -226,6 +226,7 @@ defineExpose({
 .quick-search-panel {
   position: relative;
   display: grid;
+  align-content: start;
   gap: 1rem;
   border: 1px solid rgba(203, 213, 225, 0.72);
   border-radius: 20px;
@@ -248,6 +249,11 @@ defineExpose({
   align-items: flex-end;
   justify-content: space-between;
   gap: 1rem;
+  min-width: 0;
+}
+
+.search-heading > * {
+  min-width: 0;
 }
 
 .search-heading-meta {
@@ -298,6 +304,7 @@ h1 {
   position: relative;
   display: grid;
   align-items: center;
+  min-width: 0;
 }
 
 .search-icon {
@@ -311,7 +318,7 @@ h1 {
 
 .search-input {
   width: 100%;
-  min-height: 58px;
+  min-height: clamp(3.15rem, 3.8vw, 3.65rem);
   border: 1px solid rgba(100, 116, 139, 0.26);
   border-radius: 16px;
   background: #f8fafc;
@@ -365,10 +372,20 @@ h1 {
   color: #0369a1;
 }
 
+@media (max-width: 820px) {
+  .search-heading {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .search-heading-meta {
+    justify-content: start;
+  }
+}
+
 @media (max-width: 560px) {
   .search-heading {
     display: grid;
-    align-items: start;
   }
 
   .search-heading-meta {

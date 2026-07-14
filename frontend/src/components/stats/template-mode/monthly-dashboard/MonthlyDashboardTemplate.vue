@@ -1252,7 +1252,7 @@ onBeforeUnmount(() => {
 }
 
 .monthly-dashboard__inner {
-  width: min(1780px, 100%);
+  width: min(1860px, 100%);
   min-height: 100%;
   min-width: 0;
   margin: 0 auto;
@@ -2285,8 +2285,9 @@ onBeforeUnmount(() => {
 
 @media (max-width: 960px) {
   .monthly-dashboard__inner {
-    padding-left: clamp(14px, 2.2vw, 28px);
-    padding-bottom: 96px;
+    padding-left: clamp(12px, 3vw, 22px);
+    padding-right: clamp(12px, 3vw, 22px);
+    padding-bottom: 94px;
   }
 }
 

@@ -3517,6 +3517,7 @@ body.canvas-pan-cursor * {
 .template-mode,
 .canvas-root.theme-light .template-mode {
   padding-top: clamp(18px, 2.2vh, 30px);
+  padding-inline: clamp(8px, 1vw, 18px);
   background: #f7f4ee;
 }
 
@@ -3531,6 +3532,7 @@ body.canvas-pan-cursor * {
   .template-mode,
   .canvas-root.theme-light .template-mode {
     padding-top: 10px;
+    padding-inline: 0;
   }
 }
 
@@ -3606,6 +3608,8 @@ body.canvas-pan-cursor * {
   .template-mode ~ .template-rail {
     background: #fbfaf7;
     box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+    padding-inline-start: max(8px, env(safe-area-inset-left));
+    padding-inline-end: max(8px, env(safe-area-inset-right));
   }
 }
 
@@ -3643,37 +3647,37 @@ body.canvas-pan-cursor * {
   }
 }
 
-@media (min-width: 1800px) {
+@media (min-width: 1600px) {
   .canvas-root {
     --stats-side-gap: clamp(24px, 2vw, 40px);
     --stats-rail-offset: clamp(18px, 1.3vw, 26px);
-    --template-rail-width: 70px;
+    --template-rail-width: 74px;
   }
 
   .template-rail,
   .template-mode ~ .template-rail {
     top: 16px;
     bottom: 16px;
-    padding: 10px 7px;
+    padding: 10px 8px;
   }
 
   .template-rail__user,
   .template-mode ~ .template-rail .template-rail__user {
-    width: 56px;
-    height: 56px;
+    width: 58px;
+    height: 58px;
   }
 
   .template-rail__nav-btn,
   .template-mode ~ .template-rail .template-rail__nav-btn {
-    width: 46px;
-    height: 46px;
+    width: 48px;
+    height: 48px;
   }
 
   .template-rail__meta-btn,
   .template-rail__profile-btn,
   .template-mode ~ .template-rail .template-rail__meta-btn,
   .template-mode ~ .template-rail .template-rail__profile-btn {
-    width: 46px;
-    height: 40px;
+    width: 48px;
+    height: 42px;
   }
 }

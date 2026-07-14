@@ -54,4 +54,107 @@ class ParcelTrackingUpdateServiceTest {
     Assertions.assertEquals("FR", parcel.getRawCurrentPayload().get("destination_raw_location"));
     Mockito.verify(eventRepository).save(Mockito.any());
   }
+
+  @Test
+  void doesNotDowngradeDeliveredParcelWithOlderCarrierSnapshot() {
+    ParcelEventRepository eventRepository = Mockito.mock(ParcelEventRepository.class);
+    ParcelTrackingUpdateService service = new ParcelTrackingUpdateService(eventRepository);
+    Parcel parcel = new Parcel();
+    parcel.setId(43L);
+    parcel.setStatus(ParcelStatus.DELIVERED);
+    parcel.setStatusLabel("Livre selon email transporteur");
+
+    TrackingSnapshot snapshot = new TrackingSnapshot(
+        "PUBLIC_TRACKING_PAGE",
+        "XY123456789FR",
+        "chronopost",
+        ParcelStatus.IN_TRANSIT,
+        "Votre colis est en cours de livraison",
+        null,
+        null,
+        "https://www.chronopost.fr/tracking-no-cms/suivi-page?listeNumerosLT=XY123456789FR",
+        null,
+        null,
+        null,
+        null,
+        Map.of("source", "test"),
+        List.of()
+    );
+
+    service.applySnapshot(parcel, snapshot);
+
+    Assertions.assertEquals(ParcelStatus.DELIVERED, parcel.getStatus());
+    Assertions.assertEquals("Livre selon email transporteur", parcel.getStatusLabel());
+  }
+
+  @Test
+  void deliveredSnapshotOverridesPreviousExceptionStatus() {
+    ParcelEventRepository eventRepository = Mockito.mock(ParcelEventRepository.class);
+    ParcelTrackingUpdateService service = new ParcelTrackingUpdateService(eventRepository);
+    Parcel parcel = new Parcel();
+    parcel.setId(44L);
+    parcel.setStatus(ParcelStatus.EXCEPTION);
+    parcel.setStatusLabel("Incident de livraison");
+
+    TrackingSnapshot snapshot = new TrackingSnapshot(
+        "LA_POSTE_OKAPI",
+        "XY123456789FR",
+        "chronopost",
+        ParcelStatus.DELIVERED,
+        "Votre colis a été livré",
+        null,
+        OffsetDateTime.now(ZoneOffset.UTC),
+        "https://www.chronopost.fr/tracking-no-cms/suivi-page?listeNumerosLT=XY123456789FR",
+        null,
+        null,
+        null,
+        null,
+        Map.of("source", "test"),
+        List.of()
+    );
+
+    service.applySnapshot(parcel, snapshot);
+
+    Assertions.assertEquals(ParcelStatus.DELIVERED, parcel.getStatus());
+    Assertions.assertEquals("Votre colis a été livré", parcel.getStatusLabel());
+  }
+  @Test
+  void promotesRegisteredSnapshotToDeliveredWhenTimelineContainsDeliveredSignal() {
+    ParcelEventRepository eventRepository = Mockito.mock(ParcelEventRepository.class);
+    ParcelTrackingUpdateService service = new ParcelTrackingUpdateService(eventRepository);
+    Parcel parcel = new Parcel();
+    parcel.setId(45L);
+    parcel.setStatus(ParcelStatus.REGISTERED);
+    parcel.setStatusLabel("Bordereau cree");
+
+    TrackingSnapshot snapshot = new TrackingSnapshot(
+        "PUBLIC_TRACKING_PAGE",
+        "XY123456789FR",
+        "chronopost",
+        ParcelStatus.REGISTERED,
+        "Bordereau cree",
+        null,
+        null,
+        "https://www.chronopost.fr/tracking-no-cms/suivi-page?listeNumerosLT=XY123456789FR",
+        null,
+        null,
+        null,
+        null,
+        Map.of("source", "test"),
+        List.of(new TrackingEventSnapshot(
+            ParcelStatus.DELIVERED,
+            null,
+            "Votre colis a ete livre",
+            null,
+            OffsetDateTime.parse("2026-07-13T10:00:00Z"),
+            Map.of()
+        ))
+    );
+
+    service.applySnapshot(parcel, snapshot);
+
+    Assertions.assertEquals(ParcelStatus.DELIVERED, parcel.getStatus());
+    Assertions.assertEquals("Votre colis a ete livre", parcel.getStatusLabel());
+    Assertions.assertNotNull(parcel.getDeliveredAt());
+  }
 }

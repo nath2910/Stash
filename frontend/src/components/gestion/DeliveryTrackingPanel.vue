@@ -11,11 +11,11 @@
       >
         <div
           v-if="manualModalOpen"
-          class="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm"
+          class="fixed inset-0 z-40 flex items-end justify-center bg-slate-950/45 p-3 backdrop-blur-sm sm:items-center sm:p-4"
           @click.self="closeManualModal"
         >
           <div
-            class="w-full max-w-xl rounded-[28px] border border-slate-200 bg-[#fbfaf7] p-5 shadow-[0_24px_70px_rgba(15,23,42,0.20)] sm:p-6"
+            class="max-h-[calc(100dvh-1rem)] w-full max-w-xl overflow-y-auto rounded-[28px] border border-slate-200 bg-[#fbfaf7] p-4 shadow-[0_24px_70px_rgba(15,23,42,0.20)] sm:max-h-[calc(100dvh-2rem)] sm:p-6"
           >
             <div class="flex items-start justify-between gap-4">
               <div>
@@ -43,6 +43,85 @@
                 :success-token="manualSuccessToken"
                 @create-parcel="createManualParcel"
               />
+            </div>
+          </div>
+        </div>
+      </Transition>
+
+      <Transition
+        enter-active-class="transition duration-200 ease-out"
+        enter-from-class="opacity-0"
+        enter-to-class="opacity-100"
+        leave-active-class="transition duration-150 ease-in"
+        leave-from-class="opacity-100"
+        leave-to-class="opacity-0"
+      >
+        <div
+          v-if="deliveredCleanupParcel && !manualModalOpen"
+          class="fixed inset-0 z-40 flex items-end justify-center bg-slate-950/45 p-3 backdrop-blur-sm sm:items-center sm:p-4"
+          @click.self="snoozeDeliveredCleanup"
+        >
+          <div
+            class="max-h-[calc(100dvh-1rem)] w-full max-w-lg overflow-y-auto rounded-[28px] border border-slate-200 bg-[#fbfaf7] p-4 shadow-[0_24px_70px_rgba(15,23,42,0.20)] sm:max-h-[calc(100dvh-2rem)] sm:p-6"
+          >
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <p class="text-lg font-semibold text-slate-900">Nettoyer les colis livres</p>
+                <p class="mt-1 text-sm text-slate-500">
+                  Ce colis est livre depuis plus de deux semaines. Tu peux le retirer de la liste.
+                </p>
+              </div>
+              <button
+                type="button"
+                class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-sky-300 hover:text-slate-900"
+                aria-label="Fermer le rappel de suppression"
+                @click="snoozeDeliveredCleanup"
+              >
+                <X class="h-4 w-4" />
+              </button>
+            </div>
+
+            <div class="mt-5 rounded-[24px] border border-emerald-200 bg-white p-4 sm:p-5">
+              <div class="flex flex-wrap items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                    {{ carrierLabel(deliveredCleanupParcel.carrierSlug) }}
+                  </p>
+                  <p class="mt-2 break-all text-lg font-semibold text-slate-900">
+                    {{ deliveredCleanupParcel.trackingNumber }}
+                  </p>
+                </div>
+                <span class="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
+                  Livre depuis {{ deliveredParcelAgeDays(deliveredCleanupParcel) }} jours
+                </span>
+              </div>
+              <p class="mt-3 text-sm text-slate-600">
+                Livraison confirmee le
+                <span class="font-semibold text-slate-900">
+                  {{ formatDeliveryPopupDate(deliveredCleanupParcel) }}
+                </span>
+              </p>
+              <p v-if="deliveredCleanupCount > 1" class="mt-2 text-xs text-slate-500">
+                {{ deliveredCleanupCount }} colis livres de plus de 14 jours attendent encore dans la liste.
+              </p>
+            </div>
+
+            <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                class="inline-flex h-10 items-center justify-center rounded-full border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-sky-300 hover:bg-slate-50"
+                @click="snoozeDeliveredCleanup"
+              >
+                Plus tard
+              </button>
+              <button
+                type="button"
+                class="inline-flex h-10 items-center justify-center rounded-full border border-red-300/40 bg-red-50 px-4 text-sm font-semibold text-red-700 transition hover:border-red-400 hover:bg-red-100 disabled:cursor-wait disabled:opacity-60"
+                :disabled="deletingDeliveredCleanupParcel"
+                @click="deleteDeliveredCleanupParcel"
+              >
+                {{ deletingDeliveredCleanupParcel ? 'Suppression...' : 'Supprimer ce colis' }}
+              </button>
             </div>
           </div>
         </div>
@@ -176,7 +255,7 @@
         </div>
       </section>
 
-      <div class="grid gap-4 2xl:grid-cols-[minmax(0,1.15fr)_360px]">
+      <div class="grid gap-4 xl:grid-cols-[minmax(0,1.08fr)_minmax(300px,0.92fr)] 2xl:grid-cols-[minmax(0,1.15fr)_360px]">
         <div class="min-w-0 space-y-4">
           <DeliveryParcelList
             :parcels="filteredParcels"
@@ -319,7 +398,6 @@ import {
   Clock3,
   MailPlus,
   PencilLine,
-  PackageCheck,
   PackageSearch,
   RefreshCw,
   Search,
@@ -332,9 +410,10 @@ import DeliveryManualParcelForm from '@/components/gestion/DeliveryManualParcelF
 import DeliveryCandidateReviewList from '@/components/gestion/DeliveryCandidateReviewList.vue'
 import DeliveryParcelList from '@/components/gestion/DeliveryParcelList.vue'
 import DeliveryParcelTimeline from '@/components/gestion/DeliveryParcelTimeline.vue'
-import { isActiveParcelStatus } from '@/utils/deliveryPresentation.js'
+import { carrierLabel, isActiveParcelStatus } from '@/utils/deliveryPresentation.js'
 
 const route = useRoute()
+const DELIVERED_CLEANUP_DAYS = 14
 const mailAccounts = ref([])
 const parcels = ref([])
 const trackingCandidates = ref([])
@@ -368,6 +447,7 @@ const manualFormRef = ref(null)
 const mailAccountsSectionRef = ref(null)
 const lastSuccessfulSyncAt = ref(null)
 const feedbackToast = ref(null)
+const deliveredCleanupSnoozed = ref(false)
 let feedbackToastTimer = null
 
 const filteredParcels = computed(() => {
@@ -403,6 +483,18 @@ const selectedParcel = computed(
     filteredParcels.value.find((parcel) => parcel.id === selectedParcelId.value) ||
     filteredParcels.value[0] ||
     null,
+)
+const deliveredCleanupCandidates = computed(() =>
+  parcels.value
+    .filter(isDeliveredCleanupCandidate)
+    .sort((a, b) => deliveredReferenceTime(a) - deliveredReferenceTime(b)),
+)
+const deliveredCleanupParcel = computed(() =>
+  deliveredCleanupSnoozed.value ? null : deliveredCleanupCandidates.value[0] || null,
+)
+const deliveredCleanupCount = computed(() => deliveredCleanupCandidates.value.length)
+const deletingDeliveredCleanupParcel = computed(
+  () => !!deliveredCleanupParcel.value?.id && deletingParcelIds.value.includes(deliveredCleanupParcel.value.id),
 )
 const selectionMode = computed(() => selectedParcelIds.value.length > 0 || bulkDeletingParcels.value)
 const primaryActionLabel = computed(() =>
@@ -493,11 +585,8 @@ const exceptionParcelCount = computed(
   () => parcels.value.filter((parcel) => parcel.status === 'EXCEPTION').length,
 )
 const candidateReviewCount = computed(() => trackingCandidates.value.length)
-const outForDeliveryCount = computed(
-  () => parcels.value.filter((parcel) => parcel.status === 'OUT_FOR_DELIVERY').length,
-)
 const inTransitCount = computed(
-  () => parcels.value.filter((parcel) => parcel.status === 'IN_TRANSIT').length,
+  () => parcels.value.filter((parcel) => ['IN_TRANSIT', 'OUT_FOR_DELIVERY'].includes(parcel.status)).length,
 )
 
 const metrics = computed(() => [
@@ -542,12 +631,6 @@ const statusFilters = computed(() => [
   { value: 'all', label: 'Tous les colis', count: parcels.value.length, icon: PackageSearch },
   { value: 'active', label: 'En cours', count: activeParcelCount.value, icon: Clock3 },
   { value: 'IN_TRANSIT', label: 'En transit', count: inTransitCount.value, icon: Truck },
-  {
-    value: 'OUT_FOR_DELIVERY',
-    label: 'En livraison',
-    count: outForDeliveryCount.value,
-    icon: PackageCheck,
-  },
   { value: 'DELIVERED', label: 'Livres', count: deliveredParcelCount.value, icon: CheckCircle2 },
   {
     value: 'EXCEPTION',
@@ -654,6 +737,10 @@ const closeManualModal = () => {
   if (creatingManualParcel.value) return
   manualModalOpen.value = false
   manualParcelError.value = ''
+}
+
+const snoozeDeliveredCleanup = () => {
+  deliveredCleanupSnoozed.value = true
 }
 
 const scrollToMailAccounts = () => {
@@ -895,32 +982,59 @@ const ignoreCandidate = async (candidateId) => {
   }
 }
 
-const deleteParcel = async (parcelId) => {
+const removeParcelFromState = (parcelId) => {
+  parcels.value = parcels.value.filter((parcel) => parcel.id !== parcelId)
+  selectedParcelIds.value = selectedParcelIds.value.filter((id) => id !== parcelId)
+  if (selectedParcelId.value === parcelId) {
+    selectedParcelId.value = filteredParcels.value[0]?.id || null
+  }
+}
+
+const performDeleteParcel = async (
+  parcelId,
+  {
+    confirmMessage = null,
+    successTitle = 'Suivi supprime',
+    successMessage = 'Le colis a ete retire de la liste.',
+  } = {},
+) => {
   if (!parcelId) return
-  const confirmed = window.confirm('Supprimer ce suivi de livraison ?')
-  if (!confirmed) return
+  if (confirmMessage && !window.confirm(confirmMessage)) return false
 
   deletingParcelId.value = parcelId
   deletingParcelIds.value = [parcelId]
   parcelsError.value = ''
   try {
     await DeliveryTrackingService.deleteParcel(parcelId)
-    parcels.value = parcels.value.filter((parcel) => parcel.id !== parcelId)
-    selectedParcelIds.value = selectedParcelIds.value.filter((id) => id !== parcelId)
-    if (selectedParcelId.value === parcelId) {
-      selectedParcelId.value = filteredParcels.value[0]?.id || null
-    }
+    removeParcelFromState(parcelId)
     showFeedbackToast({
       kind: 'success',
-      title: 'Suivi supprime',
-      message: 'Le colis a ete retire de la liste.',
+      title: successTitle,
+      message: successMessage,
     })
+    return true
   } catch (error) {
     parcelsError.value = error?.response?.data?.message || 'Suppression du suivi impossible'
+    return false
   } finally {
     deletingParcelId.value = null
     deletingParcelIds.value = []
   }
+}
+
+const deleteParcel = async (parcelId) =>
+  performDeleteParcel(parcelId, {
+    confirmMessage: 'Supprimer ce suivi de livraison ?',
+  })
+
+const deleteDeliveredCleanupParcel = async () => {
+  const parcel = deliveredCleanupParcel.value
+  if (!parcel?.id) return
+  deliveredCleanupSnoozed.value = false
+  await performDeleteParcel(parcel.id, {
+    successTitle: 'Colis retire',
+    successMessage: 'Le colis livre depuis plus de deux semaines a ete supprime.',
+  })
 }
 
 const deleteAccount = async (accountId) => {
@@ -1019,6 +1133,7 @@ const deleteSelectedParcels = async () => {
 const matchesStatusFilter = (parcel, filter) => {
   if (filter === 'all') return true
   if (filter === 'active') return isActiveParcelStatus(parcel.status)
+  if (filter === 'IN_TRANSIT') return ['IN_TRANSIT', 'OUT_FOR_DELIVERY'].includes(parcel.status)
   return parcel.status === filter
 }
 
@@ -1026,18 +1141,17 @@ const parcelPriority = (parcel) => {
   switch (parcel?.status) {
     case 'EXCEPTION':
       return 0
+    case 'IN_TRANSIT':
     case 'OUT_FOR_DELIVERY':
       return 1
-    case 'IN_TRANSIT':
-      return 2
     case 'REGISTERED':
     case 'PENDING':
     case 'UNKNOWN':
-      return 3
+      return 2
     case 'DELIVERED':
-      return 4
+      return 3
     default:
-      return 5
+      return 4
   }
 }
 
@@ -1045,6 +1159,26 @@ const sortableDate = (parcel) => {
   const raw = parcel.lastEventAt || parcel.updatedAt || parcel.firstSeenAt
   const date = raw ? new Date(raw) : null
   return date && !Number.isNaN(date.getTime()) ? date.getTime() : 0
+}
+
+const deliveredReferenceTime = (parcel) => {
+  if (!parcel) return Number.POSITIVE_INFINITY
+  const raw = parcel.deliveredAt || parcel.lastEventAt || parcel.updatedAt
+  const date = raw ? new Date(raw) : null
+  return date && !Number.isNaN(date.getTime()) ? date.getTime() : Number.POSITIVE_INFINITY
+}
+
+const isDeliveredCleanupCandidate = (parcel) => {
+  if (!parcel || parcel.status !== 'DELIVERED') return false
+  const deliveredTime = deliveredReferenceTime(parcel)
+  if (!Number.isFinite(deliveredTime)) return false
+  return Date.now() - deliveredTime >= DELIVERED_CLEANUP_DAYS * 24 * 60 * 60 * 1000
+}
+
+const deliveredParcelAgeDays = (parcel) => {
+  const deliveredTime = deliveredReferenceTime(parcel)
+  if (!Number.isFinite(deliveredTime)) return DELIVERED_CLEANUP_DAYS
+  return Math.max(DELIVERED_CLEANUP_DAYS, Math.floor((Date.now() - deliveredTime) / (24 * 60 * 60 * 1000)))
 }
 
 const parseManualTrackingEntries = (rawValue) => {
@@ -1066,6 +1200,16 @@ const formatShortDateTime = (value) => {
   return new Intl.DateTimeFormat('fr-FR', {
     dateStyle: 'short',
     timeStyle: 'short',
+  }).format(date)
+}
+
+const formatDeliveryPopupDate = (parcel) => {
+  const raw = parcel?.deliveredAt || parcel?.lastEventAt || parcel?.updatedAt
+  if (!raw) return 'date inconnue'
+  const date = new Date(raw)
+  if (Number.isNaN(date.getTime())) return 'date inconnue'
+  return new Intl.DateTimeFormat('fr-FR', {
+    dateStyle: 'medium',
   }).format(date)
 }
 
@@ -1105,6 +1249,12 @@ const shouldIgnoreShortcut = (target) => {
 }
 
 const handleGlobalShortcut = (event) => {
+  if (deliveredCleanupParcel.value && event.key === 'Escape') {
+    event.preventDefault()
+    snoozeDeliveredCleanup()
+    return
+  }
+
   if (manualModalOpen.value && event.key === 'Escape') {
     event.preventDefault()
     closeManualModal()

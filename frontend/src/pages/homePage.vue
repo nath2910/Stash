@@ -47,21 +47,23 @@
     </teleport>
 
     <section class="home-action-shell" aria-label="Actions rapides">
-      <QuickSearchBar
-        :items="stockItems"
-        :loading="stockLoading"
-        @select="openItemModal"
-        @add-requested="focusQuickAddForm"
-      />
+      <div class="home-hero-grid">
+        <QuickSearchBar
+          :items="stockItems"
+          :loading="stockLoading"
+          @select="openItemModal"
+          @add-requested="focusQuickAddForm"
+        />
 
-      <QuickAddItemForm
-        ref="quickAddFormRef"
-        :items="stockItems"
-        :saving="quickAddSaving"
-        :success-key="quickAddSuccessKey"
-        @error="handleQuickAddValidationError"
-        @submit="handleQuickAdd"
-      />
+        <QuickAddItemForm
+          ref="quickAddFormRef"
+          :items="stockItems"
+          :saving="quickAddSaving"
+          :success-key="quickAddSuccessKey"
+          @error="handleQuickAddValidationError"
+          @submit="handleQuickAdd"
+        />
+      </div>
 
       <HomeMonthlyKpis
         :summary="kpiSummary"
@@ -413,6 +415,28 @@ function handleVisibilityChange() {
     clamp(6rem, 10vw, 8rem);
 }
 
+.home-hero-grid {
+  display: grid;
+  gap: inherit;
+  align-items: start;
+}
+
+.home-hero-grid > * {
+  min-width: 0;
+}
+
+@media (min-width: 1100px) {
+  .home-hero-grid {
+    grid-template-columns: minmax(0, 1.08fr) minmax(22rem, 0.92fr);
+  }
+}
+
+@media (min-width: 1500px) {
+  .home-hero-grid {
+    grid-template-columns: minmax(0, 1.14fr) minmax(24rem, 0.86fr);
+  }
+}
+
 .quick-add-toast-layer {
   position: fixed;
   inset: 0;
@@ -510,7 +534,7 @@ function handleVisibilityChange() {
   .home-action-shell {
     gap: 0.85rem;
     padding-inline-start: max(12px, env(safe-area-inset-left));
-      padding-inline-end: max(12px, env(safe-area-inset-right));
+    padding-inline-end: max(12px, env(safe-area-inset-right));
   }
 
   .quick-add-toast-layer {
@@ -560,7 +584,7 @@ function handleVisibilityChange() {
 @media (min-width: 1800px) {
   .home-action-shell {
     width: min(100%, 1840px);
-    gap: clamp(1.25rem, 1.4vw, 1.75rem);
+    gap: clamp(1.25rem, 1.25vw, 1.8rem);
     padding-inline: clamp(32px, 3vw, 56px);
   }
 }

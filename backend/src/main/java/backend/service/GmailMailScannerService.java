@@ -118,37 +118,45 @@ public class GmailMailScannerService {
     OffsetDateTime lookbackStart = lookbackStart();
 
     for (String messageId : messageIds) {
-      if (seenMailMessageRepository.existsByMailAccount_IdAndProviderMessageId(account.getId(), messageId)) {
-        continue;
-      }
+      boolean alreadySeen = seenMailMessageRepository.existsByMailAccount_IdAndProviderMessageId(account.getId(), messageId);
 
       Map<String, Object> metadata = fetchMessage(accessToken, messageId, "metadata");
       String from = headerValue(metadata, "From");
       String subject = headerValue(metadata, "Subject");
       OffsetDateTime receivedAt = receivedAt(metadata);
       if (receivedAt.isBefore(lookbackStart)) {
-        markSeen(account, messageId, receivedAt);
+        if (!alreadySeen) {
+          markSeen(account, messageId, receivedAt);
+        }
         continue;
       }
 
       Map<String, Object> full = fetchMessage(accessToken, messageId, "full");
       EmailScanContent content = extractContentForParsing(full);
-      scan.scannedMessages++;
+      if (!alreadySeen) {
+        scan.scannedMessages++;
+      }
 
       if (!trackingParserService.shouldInspectMessage(from, subject, content.visibleText())) {
-        markSeen(account, messageId, receivedAt);
+        if (!alreadySeen) {
+          markSeen(account, messageId, receivedAt);
+        }
         continue;
       }
 
-      scan.deliveryMessages++;
+      if (!alreadySeen) {
+        scan.deliveryMessages++;
+      }
       TrackingDetectionResult detection = trackingParserService.detect(
           from,
           subject,
           content.visibleText(),
           content.links()
       );
-      scan.rejectedCount += detection.rejectedCount();
-      scan.duplicateCount += detection.duplicateCount();
+      if (!alreadySeen) {
+        scan.rejectedCount += detection.rejectedCount();
+        scan.duplicateCount += detection.duplicateCount();
+      }
 
       for (TrackingCandidate candidate : detection.autoImportCandidates()) {
         DeliveryTrackingService.MailCandidateImportResult result = deliveryTrackingService.importDetectedFromMail(
@@ -160,13 +168,19 @@ public class GmailMailScannerService {
             from,
             receivedAt
         );
-        if (result.imported()) {
-          scan.importedCount++;
-          addParcel(scan.importedParcels, result.parcel());
-        } else {
-          scan.duplicateCount++;
-          addParcel(scan.duplicateParcels, result.parcel());
+        if (!alreadySeen) {
+          if (result.imported()) {
+            scan.importedCount++;
+            addParcel(scan.importedParcels, result.parcel());
+          } else {
+            scan.duplicateCount++;
+            addParcel(scan.duplicateParcels, result.parcel());
+          }
         }
+      }
+
+      if (alreadySeen) {
+        continue;
       }
 
       for (TrackingCandidate candidate : detection.reviewCandidates()) {
@@ -260,9 +274,6 @@ public class GmailMailScannerService {
           continue;
         }
         String providerMessageId = String.valueOf(id);
-        if (seenMailMessageRepository.existsByMailAccount_IdAndProviderMessageId(mailAccountId, providerMessageId)) {
-          continue;
-        }
         if (!ids.contains(providerMessageId)) {
           ids.add(providerMessageId);
         }

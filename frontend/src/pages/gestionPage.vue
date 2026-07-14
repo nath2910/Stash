@@ -2011,8 +2011,9 @@ watch(
 .gestion-tab-shell {
   display: flex;
   justify-content: center;
-  overflow: visible;
-  padding-bottom: 0.1rem;
+  overflow-x: auto;
+  overflow-y: visible;
+  padding-bottom: 0.25rem;
   scrollbar-width: none;
 }
 
@@ -2023,6 +2024,7 @@ watch(
 .gestion-tab-nav {
   display: inline-flex;
   gap: 0.55rem;
+  min-width: max-content;
   border: 0;
   border-radius: 999px;
   background: transparent;
@@ -2032,6 +2034,7 @@ watch(
 
 .gestion-tab-button {
   min-width: 128px;
+  min-height: 44px;
   border-radius: 999px;
   color: #475569;
   padding: 0.62rem 1rem;
@@ -3127,9 +3130,10 @@ watch(
 
 .inventory-toolbar-actions {
   display: inline-flex;
-  min-width: max-content;
+  min-width: 0;
   align-items: center;
   justify-content: flex-end;
+  flex-wrap: wrap;
   gap: 0.55rem;
 }
 
@@ -3143,6 +3147,10 @@ watch(
   align-items: center;
   gap: 0.6rem;
   padding: 0.68rem clamp(0.95rem, 1.8vw, 1.25rem);
+}
+
+.inventory-control-row > * {
+  min-width: 0;
 }
 
 .inventory-control-row :deep(.gestion-search-field) {
@@ -3195,14 +3203,7 @@ watch(
 }
 
 .inventory-filter-shell.is-open .filter-compact-grid.is-open {
-  grid-template-columns:
-    minmax(5.5rem, 0.34fr)
-    minmax(8rem, 0.7fr)
-    minmax(9rem, 0.76fr)
-    minmax(7rem, 0.48fr)
-    minmax(6.2rem, 0.42fr)
-    minmax(10.5rem, 0.88fr)
-    minmax(10.5rem, 0.88fr);
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
 }
 
 .inventory-danger-button {
@@ -3223,6 +3224,22 @@ watch(
 }
 
 @media (max-width: 920px) {
+  .gestion-tab-shell {
+    justify-content: stretch;
+  }
+
+  .gestion-tab-nav {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+    min-width: 0;
+  }
+
+  .gestion-tab-button {
+    min-width: 0;
+    padding-inline: 0.8rem;
+  }
+
   .inventory-toolbar {
     grid-template-columns: 1fr;
     align-items: stretch;
@@ -3243,7 +3260,35 @@ watch(
   }
 }
 
+@media (max-width: 720px) {
+  .inventory-control-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .inventory-control-row > :first-child {
+    grid-column: 1 / -1;
+  }
+
+  .inventory-control-row .filter-panel-toggle,
+  .filter-reset-button--inline {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .inventory-list-scroll {
+    overflow-x: hidden;
+  }
+}
+
 @media (max-width: 560px) {
+  .gestion-tab-nav {
+    gap: 0.4rem;
+  }
+
+  .gestion-tab-button {
+    padding-inline: 0.55rem;
+  }
+
   .inventory-toolbar-actions {
     grid-template-columns: 1fr;
   }

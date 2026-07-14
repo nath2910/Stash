@@ -196,14 +196,15 @@ defineEmits(['refresh', 'delete'])
 const events = computed(() => (Array.isArray(props.parcel?.events) ? props.parcel.events : []))
 const trackingHealth = computed(() => getDeliveryTrackingHealth(props.parcel))
 
-const progressOrder = ['PENDING', 'REGISTERED', 'IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED']
+const progressOrder = ['PENDING', 'REGISTERED', 'IN_TRANSIT', 'DELIVERED']
 
 const currentProgressIndex = computed(() => {
   const status = props.parcel?.status
   if (status === 'EXCEPTION') {
     return 2
   }
-  const index = progressOrder.indexOf(status)
+  const normalizedStatus = status === 'OUT_FOR_DELIVERY' ? 'IN_TRANSIT' : status
+  const index = progressOrder.indexOf(normalizedStatus)
   return index >= 0 ? index : 0
 })
 
@@ -214,15 +215,11 @@ const progressSteps = computed(() => [
   },
   {
     key: 'registered',
-    label: 'Prise en charge',
+    label: 'Bordereau',
   },
   {
     key: 'transit',
     label: props.parcel?.status === 'EXCEPTION' ? 'Blocage' : 'Transit',
-  },
-  {
-    key: 'delivery',
-    label: 'Livraison',
   },
   {
     key: 'delivered',

@@ -392,6 +392,7 @@ const goAdminProfile = () => {
 .account-profile-title-row {
   display: flex;
   align-items: center;
+  min-width: 0;
   gap: 0.75rem;
 }
 
@@ -429,6 +430,7 @@ const goAdminProfile = () => {
 .account-profile-change {
   display: inline-flex;
   min-height: 38px;
+  max-width: 100%;
   align-items: center;
   justify-content: center;
   gap: 0.45rem;
@@ -465,6 +467,7 @@ const goAdminProfile = () => {
   color: #ffffff;
   font-size: 0.96rem;
   line-height: 1.25;
+  overflow-wrap: anywhere;
 }
 
 .account-profile-current p {
@@ -523,6 +526,22 @@ const goAdminProfile = () => {
   border: 1px solid rgba(251, 113, 133, 0.38);
   background: rgba(127, 29, 29, 0.18);
   color: rgb(254 202 202);
+}
+
+@media (max-width: 780px) {
+  .account-profile-current {
+    grid-template-columns: 1fr;
+  }
+
+  .account-profile-icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  .account-profile-title-row {
+    align-items: flex-start;
+    justify-content: flex-start;
+  }
 }
 
 @media (max-width: 640px) {

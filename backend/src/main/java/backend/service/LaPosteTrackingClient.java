@@ -114,15 +114,19 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
     }
 
     TrackingEventSnapshot latest = latestEvent(events);
-    String statusLabel = latest == null
-        ? firstNonBlank(stringValue(shipment.get("shortLabel")), stringValue(shipment.get("longLabel")))
-        : latest.description();
-    ParcelStatus status = latest == null ? normalizeStatus(statusLabel) : latest.status();
+    OffsetDateTime deliveredAt = parseDateTime(stringValue(shipment.get("deliveryDate")));
+    ResolvedStatus resolvedStatus = resolveStatus(
+        events,
+        stringValue(shipment.get("shortLabel")),
+        stringValue(shipment.get("longLabel")),
+        deliveredAt
+    );
+    String statusLabel = resolvedStatus.label();
+    ParcelStatus status = resolvedStatus.status();
 
-    OffsetDateTime deliveredAt = parseDateTime(firstNonBlank(
-        stringValue(shipment.get("deliveryDate")),
-        status == ParcelStatus.DELIVERED && latest != null ? String.valueOf(latest.eventTime()) : null
-    ));
+    if (deliveredAt == null && status == ParcelStatus.DELIVERED && latest != null) {
+      deliveredAt = parseDateTime(String.valueOf(latest.eventTime()));
+    }
 
     Map<String, Object> context = mapValue(shipment.get("contextData"));
     String origin = stringValue(context.get("originCountry"));
@@ -139,7 +143,7 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
         statusLabel,
         parseDateTime(stringValue(shipment.get("estimatedDeliveryDate"))),
         deliveredAt,
-        firstNonBlank(stringValue(shipment.get("url")), fallbackTrackingUrl(parcel)),
+        firstNonBlank(stringValue(shipment.get("url")), fallbackTrackingUrl(parcel, stringValue(shipment.get("product")))),
         origin,
         destination,
         stringValue(shipment.get("product")),
@@ -163,23 +167,7 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
   }
 
   private ParcelStatus normalizeStatus(String value) {
-    String normalized = value == null ? "" : value.toLowerCase(Locale.ROOT);
-    if (containsAny(normalized, "livre", "livré", "distribue", "distribué", "remis")) {
-      return ParcelStatus.DELIVERED;
-    }
-    if (containsAny(normalized, "en cours de livraison", "mise en livraison", "livraison ce jour")) {
-      return ParcelStatus.OUT_FOR_DELIVERY;
-    }
-    if (containsAny(normalized, "incident", "impossible", "retard", "anomalie", "indisponible", "echec", "échec")) {
-      return ParcelStatus.EXCEPTION;
-    }
-    if (containsAny(normalized, "transit", "plateforme", "tri", "achemine", "acheminé", "pris en charge", "depose", "déposé")) {
-      return ParcelStatus.IN_TRANSIT;
-    }
-    if (containsAny(normalized, "preparation", "préparation", "bientot", "bientôt", "confie", "confié")) {
-      return ParcelStatus.REGISTERED;
-    }
-    return ParcelStatus.UNKNOWN;
+    return normalizeStatusStatic(value);
   }
 
   static TrackingEventSnapshot latestEvent(List<TrackingEventSnapshot> events) {
@@ -190,6 +178,45 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
         .filter(event -> event != null && event.eventTime() != null)
         .max(Comparator.comparing(TrackingEventSnapshot::eventTime))
         .orElse(events.get(events.size() - 1));
+  }
+
+  static ResolvedStatus resolveStatus(
+      List<TrackingEventSnapshot> events,
+      String shortLabel,
+      String longLabel,
+      OffsetDateTime deliveredAt
+  ) {
+    List<ResolvedStatus> candidates = new ArrayList<>();
+    if (events != null) {
+      for (TrackingEventSnapshot event : events) {
+        if (event != null) {
+          candidates.add(new ResolvedStatus(event.status(), event.description()));
+        }
+      }
+    }
+    if (deliveredAt != null) {
+      candidates.add(new ResolvedStatus(ParcelStatus.DELIVERED, firstNonBlankStatic(shortLabel, longLabel, "Livre")));
+    }
+    if (shortLabel != null && !shortLabel.isBlank()) {
+      candidates.add(new ResolvedStatus(normalizeStatusStatic(shortLabel), shortLabel));
+    }
+    if (longLabel != null && !longLabel.isBlank()) {
+      candidates.add(new ResolvedStatus(normalizeStatusStatic(longLabel), longLabel));
+    }
+
+    ResolvedStatus resolved = candidates.stream()
+        .filter(candidate -> candidate.status() != null && candidate.status() != ParcelStatus.UNKNOWN)
+        .max(Comparator.comparingInt(candidate -> statusPriority(candidate.status())))
+        .orElseGet(() -> {
+          TrackingEventSnapshot latest = latestEvent(events == null ? List.of() : events);
+          String fallbackLabel = firstNonBlankStatic(
+              latest == null ? null : latest.description(),
+              shortLabel,
+              longLabel
+          );
+          return new ResolvedStatus(normalizeStatusStatic(fallbackLabel), fallbackLabel);
+        });
+    return preferSummaryLabel(resolved, shortLabel, longLabel);
   }
 
   private String canonicalCarrier(String existingCarrier, String product) {
@@ -205,8 +232,15 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
   }
 
   private String fallbackTrackingUrl(Parcel parcel) {
-    return "https://www.laposte.fr/outils/suivre-vos-envois?code="
-        + URLEncoder.encode(parcel.getTrackingNumber().trim(), StandardCharsets.UTF_8);
+    return fallbackTrackingUrl(parcel, null);
+  }
+
+  private String fallbackTrackingUrl(Parcel parcel, String product) {
+    String carrier = canonicalCarrier(parcel == null ? null : parcel.getCarrierSlug(), product);
+    String baseUrl = "chronopost".equals(carrier)
+        ? "https://www.chronopost.fr/tracking-no-cms/suivi-page?listeNumerosLT="
+        : "https://www.laposte.fr/outils/suivre-vos-envois?code=";
+    return baseUrl + URLEncoder.encode(parcel.getTrackingNumber().trim(), StandardCharsets.UTF_8);
   }
 
   @SuppressWarnings("unchecked")
@@ -288,5 +322,51 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
       return "https://api.laposte.fr/suivi/v2/idships";
     }
     return value.endsWith("/") ? value.substring(0, value.length() - 1) : value;
+  }
+
+  private static ParcelStatus normalizeStatusStatic(String value) {
+    return CarrierStatusResolver.resolve(value);
+  }
+
+  private static String firstNonBlankStatic(String... values) {
+    if (values == null) {
+      return null;
+    }
+    for (String value : values) {
+      if (value != null && !value.isBlank() && !"null".equalsIgnoreCase(value)) {
+        return value;
+      }
+    }
+    return null;
+  }
+
+  private static int statusPriority(ParcelStatus status) {
+    if (status == null) {
+      return 0;
+    }
+    return switch (status) {
+      case UNKNOWN, PENDING -> 0;
+      case REGISTERED -> 1;
+      case IN_TRANSIT -> 2;
+      case OUT_FOR_DELIVERY -> 3;
+      case EXCEPTION -> 4;
+      case DELIVERED -> 5;
+    };
+  }
+
+  private static ResolvedStatus preferSummaryLabel(ResolvedStatus resolved, String primaryLabel, String secondaryLabel) {
+    if (resolved == null || resolved.status() == null) {
+      return resolved;
+    }
+    if (primaryLabel != null && normalizeStatusStatic(primaryLabel) == resolved.status()) {
+      return new ResolvedStatus(resolved.status(), primaryLabel);
+    }
+    if (secondaryLabel != null && normalizeStatusStatic(secondaryLabel) == resolved.status()) {
+      return new ResolvedStatus(resolved.status(), secondaryLabel);
+    }
+    return resolved;
+  }
+
+  record ResolvedStatus(ParcelStatus status, String label) {
   }
 }

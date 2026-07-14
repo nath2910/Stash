@@ -8,7 +8,9 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -36,13 +38,23 @@ public class ParcelTrackingUpdateService {
     if (snapshot.carrierSlug() != null && !snapshot.carrierSlug().isBlank()) {
       parcel.setCarrierSlug(snapshot.carrierSlug());
     }
+    boolean appliedStatus = false;
     if (snapshot.status() != null) {
-      parcel.setStatus(snapshot.status());
+      ParcelStatus currentStatus = parcel.getStatus();
+      ParcelStatus incomingStatus = resolveIncomingStatus(snapshot);
+      if (shouldApplyStatus(currentStatus, incomingStatus)) {
+        parcel.setStatus(incomingStatus);
+        appliedStatus = true;
+      }
     } else if (parcel.getStatus() == null || parcel.getStatus() == ParcelStatus.PENDING) {
       parcel.setStatus(ParcelStatus.REGISTERED);
+      appliedStatus = true;
     }
-    if (snapshot.statusLabel() != null && !snapshot.statusLabel().isBlank()) {
-      parcel.setStatusLabel(snapshot.statusLabel());
+    String resolvedLabel = resolvedStatusLabel(snapshot, parcel.getStatus());
+    if ((appliedStatus || parcel.getStatusLabel() == null || parcel.getStatusLabel().isBlank())
+        && resolvedLabel != null
+        && !resolvedLabel.isBlank()) {
+      parcel.setStatusLabel(resolvedLabel);
     }
     if (snapshot.estimatedDeliveryAt() != null) {
       parcel.setEstimatedDeliveryAt(snapshot.estimatedDeliveryAt());
@@ -161,5 +173,97 @@ public class ParcelTrackingUpdateService {
 
   private String safe(String value) {
     return value == null ? "" : value;
+  }
+
+  private ParcelStatus resolveIncomingStatus(TrackingSnapshot snapshot) {
+    if (snapshot == null) {
+      return null;
+    }
+    if (snapshot.deliveredAt() != null) {
+      return ParcelStatus.DELIVERED;
+    }
+    if (CarrierStatusResolver.resolve(snapshot.statusLabel()) == ParcelStatus.DELIVERED) {
+      return ParcelStatus.DELIVERED;
+    }
+    if (snapshot.events() != null) {
+      for (TrackingEventSnapshot event : snapshot.events()) {
+        if (event == null) {
+          continue;
+        }
+        if (event.status() == ParcelStatus.DELIVERED) {
+          return ParcelStatus.DELIVERED;
+        }
+        if (CarrierStatusResolver.resolve(event.description(), event.substatus(), event.location()) == ParcelStatus.DELIVERED) {
+          return ParcelStatus.DELIVERED;
+        }
+      }
+    }
+    return snapshot.status();
+  }
+
+  private String resolvedStatusLabel(TrackingSnapshot snapshot, ParcelStatus appliedStatus) {
+    if (snapshot == null) {
+      return null;
+    }
+
+    List<String> candidates = new ArrayList<>();
+    candidates.add(snapshot.statusLabel());
+    if (snapshot.events() != null) {
+      for (TrackingEventSnapshot event : snapshot.events()) {
+        if (event == null) {
+          continue;
+        }
+        candidates.add(event.description());
+        candidates.add(event.substatus());
+      }
+    }
+
+    if (appliedStatus == ParcelStatus.DELIVERED) {
+      for (String candidate : candidates) {
+        if (CarrierStatusResolver.resolve(candidate) == ParcelStatus.DELIVERED) {
+          return candidate;
+        }
+      }
+    }
+
+    for (String candidate : candidates) {
+      if (candidate != null && !candidate.isBlank()) {
+        return candidate;
+      }
+    }
+    return null;
+  }
+
+  private boolean shouldApplyStatus(ParcelStatus currentStatus, ParcelStatus incomingStatus) {
+    if (incomingStatus == null) {
+      return false;
+    }
+    if (currentStatus == null || currentStatus == ParcelStatus.PENDING || currentStatus == ParcelStatus.UNKNOWN) {
+      return true;
+    }
+    if (incomingStatus == currentStatus) {
+      return true;
+    }
+    if (currentStatus == ParcelStatus.DELIVERED && incomingStatus != ParcelStatus.DELIVERED) {
+      return false;
+    }
+    if (incomingStatus == ParcelStatus.EXCEPTION) {
+      return currentStatus != ParcelStatus.DELIVERED;
+    }
+    return statusPriority(incomingStatus) >= statusPriority(currentStatus);
+  }
+
+  private int statusPriority(ParcelStatus status) {
+    if (status == null) {
+      return 0;
+    }
+    return switch (status) {
+      case PENDING, UNKNOWN -> 0;
+      case REGISTERED -> 1;
+      case IN_TRANSIT -> 2;
+      case OUT_FOR_DELIVERY -> 3;
+      case EXCEPTION -> 4;
+      case DELIVERED -> 5;
+    };
   }
 }

@@ -22,8 +22,8 @@ import java.util.regex.Pattern;
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilderFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.MediaType;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.w3c.dom.Document;
@@ -132,8 +132,8 @@ public class MondialRelayTrackingClient implements CarrierTrackingClient {
 
     TrackingEventSnapshot latest = latestEvent(events);
     String destination = compactLocation(text(result, "Relais_Libelle"), text(result, "Relais_Num"));
-    String statusLabel = firstNonBlank(
-        latest == null ? null : latest.description(),
+    ResolvedStatus resolvedStatus = resolveStatus(
+        events,
         text(result, "Libelle02"),
         text(result, "Libelle01")
     );
@@ -148,10 +148,10 @@ public class MondialRelayTrackingClient implements CarrierTrackingClient {
         PROVIDER,
         parcel.getNormalizedTrackingNumber(),
         "mondial-relay",
-        latest == null ? normalizeStatus(statusLabel) : latest.status(),
-        statusLabel,
+        resolvedStatus.status(),
+        resolvedStatus.label(),
         null,
-        isDelivered(statusLabel) && latest != null ? latest.eventTime() : null,
+        resolvedStatus.status() == ParcelStatus.DELIVERED && latest != null ? latest.eventTime() : null,
         fallbackTrackingUrl(parcel),
         null,
         destination,
@@ -198,28 +198,7 @@ public class MondialRelayTrackingClient implements CarrierTrackingClient {
   }
 
   private ParcelStatus normalizeStatus(String value) {
-    String normalized = value == null ? "" : value.toLowerCase(Locale.ROOT);
-    if (isDelivered(normalized)) {
-      return ParcelStatus.DELIVERED;
-    }
-    if (containsAny(normalized, "disponible", "mis a disposition", "mis à disposition", "livraison en cours")) {
-      return ParcelStatus.OUT_FOR_DELIVERY;
-    }
-    if (containsAny(normalized, "incident", "anomalie", "retour", "perdu", "refuse", "refusé", "echec", "échec")) {
-      return ParcelStatus.EXCEPTION;
-    }
-    if (containsAny(normalized, "achemine", "acheminé", "agence", "site logistique", "pris en charge", "expedie", "expédié")) {
-      return ParcelStatus.IN_TRANSIT;
-    }
-    if (containsAny(normalized, "annonce", "creation", "création", "prepare", "prépare")) {
-      return ParcelStatus.REGISTERED;
-    }
-    return ParcelStatus.UNKNOWN;
-  }
-
-  private boolean isDelivered(String value) {
-    String normalized = value == null ? "" : value.toLowerCase(Locale.ROOT);
-    return containsAny(normalized, "livre", "livré", "remis au destinataire", "colis retire", "colis retiré");
+    return normalizeStatusStatic(value);
   }
 
   static TrackingEventSnapshot latestEvent(List<TrackingEventSnapshot> events) {
@@ -230,6 +209,41 @@ public class MondialRelayTrackingClient implements CarrierTrackingClient {
         .filter(event -> event != null && event.eventTime() != null)
         .max(Comparator.comparing(TrackingEventSnapshot::eventTime))
         .orElse(events.get(events.size() - 1));
+  }
+
+  static ResolvedStatus resolveStatus(
+      List<TrackingEventSnapshot> events,
+      String primaryLabel,
+      String secondaryLabel
+  ) {
+    List<ResolvedStatus> candidates = new ArrayList<>();
+    if (events != null) {
+      for (TrackingEventSnapshot event : events) {
+        if (event != null) {
+          candidates.add(new ResolvedStatus(event.status(), event.description()));
+        }
+      }
+    }
+    if (primaryLabel != null && !primaryLabel.isBlank()) {
+      candidates.add(new ResolvedStatus(normalizeStatusStatic(primaryLabel), primaryLabel));
+    }
+    if (secondaryLabel != null && !secondaryLabel.isBlank()) {
+      candidates.add(new ResolvedStatus(normalizeStatusStatic(secondaryLabel), secondaryLabel));
+    }
+
+    ResolvedStatus resolved = candidates.stream()
+        .filter(candidate -> candidate.status() != null && candidate.status() != ParcelStatus.UNKNOWN)
+        .max(Comparator.comparingInt(candidate -> statusPriority(candidate.status())))
+        .orElseGet(() -> {
+          TrackingEventSnapshot latest = latestEvent(events == null ? List.of() : events);
+          String fallbackLabel = firstNonBlankStatic(
+              latest == null ? null : latest.description(),
+              primaryLabel,
+              secondaryLabel
+          );
+          return new ResolvedStatus(normalizeStatusStatic(fallbackLabel), fallbackLabel);
+        });
+    return preferSummaryLabel(resolved, primaryLabel, secondaryLabel);
   }
 
   private OffsetDateTime parseMondialRelayDateTime(String dateValue, String timeValue) {
@@ -321,15 +335,6 @@ public class MondialRelayTrackingClient implements CarrierTrackingClient {
     }
   }
 
-  private boolean containsAny(String value, String... needles) {
-    for (String needle : needles) {
-      if (value.contains(needle)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
   private String firstNonBlank(String... values) {
     if (values == null) {
       return null;
@@ -353,4 +358,51 @@ public class MondialRelayTrackingClient implements CarrierTrackingClient {
         .replace("\"", "&quot;")
         .replace("'", "&apos;");
   }
+
+  private static ParcelStatus normalizeStatusStatic(String value) {
+    return CarrierStatusResolver.resolve(value);
+  }
+
+  private static String firstNonBlankStatic(String... values) {
+    if (values == null) {
+      return null;
+    }
+    for (String value : values) {
+      if (value != null && !value.isBlank()) {
+        return value;
+      }
+    }
+    return null;
+  }
+
+  private static int statusPriority(ParcelStatus status) {
+    if (status == null) {
+      return 0;
+    }
+    return switch (status) {
+      case UNKNOWN, PENDING -> 0;
+      case REGISTERED -> 1;
+      case IN_TRANSIT -> 2;
+      case OUT_FOR_DELIVERY -> 3;
+      case EXCEPTION -> 4;
+      case DELIVERED -> 5;
+    };
+  }
+
+  private static ResolvedStatus preferSummaryLabel(ResolvedStatus resolved, String primaryLabel, String secondaryLabel) {
+    if (resolved == null || resolved.status() == null) {
+      return resolved;
+    }
+    if (primaryLabel != null && normalizeStatusStatic(primaryLabel) == resolved.status()) {
+      return new ResolvedStatus(resolved.status(), primaryLabel);
+    }
+    if (secondaryLabel != null && normalizeStatusStatic(secondaryLabel) == resolved.status()) {
+      return new ResolvedStatus(resolved.status(), secondaryLabel);
+    }
+    return resolved;
+  }
+
+  record ResolvedStatus(ParcelStatus status, String label) {
+  }
+
 }

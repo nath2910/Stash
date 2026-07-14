@@ -102,6 +102,11 @@ const estimatedSubtitle = computed(() => {
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
+  min-width: 0;
+}
+
+.panel-heading > * {
+  min-width: 0;
 }
 
 .panel-eyebrow {
@@ -124,6 +129,7 @@ h2 {
   font-size: 0.82rem;
   font-weight: 600;
   text-align: right;
+  overflow-wrap: anywhere;
 }
 
 .kpi-grid {
@@ -185,7 +191,7 @@ h2 {
   padding: 0.55rem 0.9rem;
 }
 
-@media (max-width: 980px) {
+@media (max-width: 1180px) {
   .kpi-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -200,7 +206,7 @@ h2 {
   }
 }
 
-@media (max-width: 560px) {
+@media (max-width: 620px) {
   .panel-heading {
     display: grid;
   }

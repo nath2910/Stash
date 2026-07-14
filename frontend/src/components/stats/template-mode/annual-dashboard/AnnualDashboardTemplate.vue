@@ -1028,7 +1028,7 @@ onBeforeUnmount(() => {
 }
 
 .annual-dashboard__inner {
-  width: min(1680px, 100%);
+  width: min(1760px, 100%);
   min-height: 100%;
   min-width: 0;
   margin: 0 auto;
@@ -1873,8 +1873,9 @@ onBeforeUnmount(() => {
 
 @media (max-width: 960px) {
   .annual-dashboard__inner {
-    padding-left: clamp(14px, 2.2vw, 28px);
-    padding-bottom: 96px;
+    padding-left: clamp(12px, 3vw, 22px);
+    padding-right: clamp(12px, 3vw, 22px);
+    padding-bottom: 94px;
   }
 }
 

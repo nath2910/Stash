@@ -30,7 +30,7 @@ class TrackingPageStatusExtractorTest {
   }
 
   @Test
-  void extractsOutForDeliveryStatusFromTrackingBlock() {
+  void collapsesDeliveryInProgressIntoTransitStatus() {
     Optional<TrackingPageStatusExtractor.ExtractedStatus> status = TrackingPageStatusExtractor.extractStatus("""
         <html>
           <body>
@@ -40,7 +40,7 @@ class TrackingPageStatusExtractorTest {
         """);
 
     Assertions.assertTrue(status.isPresent());
-    Assertions.assertEquals(ParcelStatus.OUT_FOR_DELIVERY, status.get().status());
+    Assertions.assertEquals(ParcelStatus.IN_TRANSIT, status.get().status());
   }
 
   @Test
@@ -77,5 +77,67 @@ class TrackingPageStatusExtractorTest {
         """);
 
     Assertions.assertTrue(status.isEmpty());
+  }
+
+  @Test
+  void extractsDeliveredStatusFromEmbeddedJsonState() {
+    Optional<TrackingPageStatusExtractor.ExtractedStatus> status = TrackingPageStatusExtractor.extractStatus("""
+        <html>
+          <body>
+            <script type="application/json">
+              {"tracking":{"currentStatus":"Votre colis a ete livre","history":["En cours de livraison"]}}
+            </script>
+          </body>
+        </html>
+        """);
+
+    Assertions.assertTrue(status.isPresent());
+    Assertions.assertEquals(ParcelStatus.DELIVERED, status.get().status());
+  }
+
+  @Test
+  void extractsRegisteredStatusFromLabelCreatedSnippet() {
+    Optional<TrackingPageStatusExtractor.ExtractedStatus> status = TrackingPageStatusExtractor.extractStatus("""
+        <html>
+          <body>
+            <div class="tracking-status">Bordereau cree chez le transporteur</div>
+          </body>
+        </html>
+        """);
+
+    Assertions.assertTrue(status.isPresent());
+    Assertions.assertEquals(ParcelStatus.REGISTERED, status.get().status());
+  }
+
+  @Test
+  void extractsDeliveredStatusFromShortActiveStepperLabel() {
+    Optional<TrackingPageStatusExtractor.ExtractedStatus> status = TrackingPageStatusExtractor.extractStatus("""
+        <html>
+          <body>
+            <div id="step4" class="tracking-step done"><span>En cours de livraison</span></div>
+            <div id="step5" class="tracking-step active"><span>Livré</span></div>
+          </body>
+        </html>
+        """);
+
+    Assertions.assertTrue(status.isPresent());
+    Assertions.assertEquals(ParcelStatus.DELIVERED, status.get().status());
+    Assertions.assertEquals("Livré", status.get().label());
+  }
+
+  @Test
+  void prefersActiveTransitStepOverFutureDeliveredStep() {
+    Optional<TrackingPageStatusExtractor.ExtractedStatus> status = TrackingPageStatusExtractor.extractStatus("""
+        <html>
+          <body>
+            <div id="step3" class="tracking-step active"><span>En cours d'acheminement</span></div>
+            <div id="step4" class="tracking-step"><span>En cours de livraison</span></div>
+            <div id="step5" class="tracking-step"><span>Livré</span></div>
+          </body>
+        </html>
+        """);
+
+    Assertions.assertTrue(status.isPresent());
+    Assertions.assertEquals(ParcelStatus.IN_TRANSIT, status.get().status());
   }
 }

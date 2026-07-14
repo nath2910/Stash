@@ -17,12 +17,12 @@ const STATUS_META = {
     stage: 'delivered',
   },
   OUT_FOR_DELIVERY: {
-    label: 'En livraison',
-    shortLabel: 'Aujourd hui',
+    label: 'En transit',
+    shortLabel: 'Transit',
     badgeClass: 'border-sky-400/50 bg-sky-500/10 text-sky-200',
     lightBadgeClass: 'border-sky-300/50 bg-sky-500/10 text-sky-800',
     accentClass: 'text-sky-700',
-    stage: 'today',
+    stage: 'transit',
   },
   IN_TRANSIT: {
     label: 'En transit',
@@ -41,8 +41,8 @@ const STATUS_META = {
     stage: 'attention',
   },
   REGISTERED: {
-    label: 'Pris en charge',
-    shortLabel: 'Pris en charge',
+    label: 'Bordereau cree',
+    shortLabel: 'Debut',
     badgeClass: 'border-amber-400/50 bg-amber-500/10 text-amber-100',
     lightBadgeClass: 'border-amber-300/50 bg-amber-500/10 text-amber-800',
     accentClass: 'text-amber-700',
@@ -74,7 +74,7 @@ const STAGE_META = {
   },
   pending: {
     label: 'Attente',
-    description: 'Numeros detectes ou colis en prise en charge',
+    description: 'Bordereaux crees ou attente de prise en charge',
     accentClass: 'border-amber-200/80 bg-amber-50/80 text-amber-950',
   },
   transit: {
@@ -83,8 +83,8 @@ const STAGE_META = {
     accentClass: 'border-violet-200/80 bg-violet-50/80 text-violet-950',
   },
   today: {
-    label: 'Aujourd hui',
-    description: 'Colis annonces pour la livraison',
+    label: 'En transit',
+    description: 'Colis en phase finale de transport',
     accentClass: 'border-sky-200/80 bg-sky-50/80 text-sky-950',
   },
   delivered: {
@@ -180,6 +180,14 @@ export const getDeliveryTrackingHealth = (parcel) => {
         title: 'Transporteur temporairement indisponible',
         message:
           "La source de suivi n'a pas repondu correctement au dernier rafraichissement. Le colis reste stocke et pourra etre retente plus tard.",
+      }
+    }
+    if (statusLabel.includes('cloudflare') || statusLabel.includes('bloque la requete') || statusLabel.includes('bloque la page')) {
+      return {
+        tone: 'info',
+        title: 'Chronopost bloque le scraping',
+        message:
+          "La page Chronopost repond avec une protection anti-bot au lieu du vrai suivi. Le refresh part bien, mais le serveur ne recoit pas encore les donnees de statut.",
       }
     }
   }

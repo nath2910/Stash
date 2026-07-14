@@ -2012,9 +2012,9 @@ function errorMessage(errorObject, fallback) {
 }
 
 .admin-shell {
-  width: min(1180px, 100%);
+  width: min(1360px, 100%);
   margin: 0 auto;
-  padding: 28px 20px 40px;
+  padding: clamp(20px, 2.4vw, 32px) clamp(16px, 2vw, 24px) 40px;
 }
 
 .admin-header,
@@ -2027,8 +2027,8 @@ function errorMessage(errorObject, fallback) {
 .settings-panel {
   background: #ffffff;
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  border-radius: 18px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
 }
 
 .admin-header {
@@ -2063,13 +2063,15 @@ function errorMessage(errorObject, fallback) {
   justify-content: flex-end;
   gap: 10px;
   flex-wrap: wrap;
+  min-width: 0;
 }
 
 .period-controls {
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  align-items: end;
   gap: 8px;
-  flex-wrap: wrap;
+  min-width: min(100%, 28rem);
 }
 
 .period-controls label,
@@ -2171,6 +2173,7 @@ function errorMessage(errorObject, fallback) {
   font-weight: 760;
   text-decoration: none;
   cursor: pointer;
+  white-space: normal;
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
 }
 
@@ -2463,13 +2466,17 @@ function errorMessage(errorObject, fallback) {
   margin-top: 22px;
 }
 
+.primary-actions > * {
+  flex: 1 1 220px;
+}
+
 .services-panel {
   margin-bottom: 14px;
 }
 
 .service-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 12px;
   margin-top: 14px;
 }
@@ -2592,7 +2599,7 @@ function errorMessage(errorObject, fallback) {
 
 .copy-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 10px;
   margin-top: 14px;
 }
@@ -2675,7 +2682,8 @@ function errorMessage(errorObject, fallback) {
   color: #4b5563;
   font-size: 0.78rem;
   font-weight: 800;
-  white-space: nowrap;
+  white-space: normal;
+  text-align: center;
 }
 
 .status-pill.is-success {
@@ -2882,7 +2890,7 @@ function errorMessage(errorObject, fallback) {
 
 .data-summary-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 10px;
 }
 
@@ -2954,7 +2962,7 @@ function errorMessage(errorObject, fallback) {
 
 .document-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   gap: 12px;
   margin-top: 16px;
 }
@@ -3017,7 +3025,7 @@ function errorMessage(errorObject, fallback) {
 
 .form-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 14px;
 }
 
@@ -3057,18 +3065,15 @@ function errorMessage(errorObject, fallback) {
     width: 100%;
   }
 
-  .copy-grid,
-  .document-grid,
-  .data-summary-grid,
-  .service-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .period-controls {
+    width: 100%;
+    min-width: 0;
   }
-
 }
 
 @media (max-width: 640px) {
   .admin-shell {
-    padding: 16px 12px 30px;
+    padding: 14px 10px 30px;
   }
 
   .admin-header,
@@ -3092,6 +3097,10 @@ function errorMessage(errorObject, fallback) {
     width: 100%;
   }
 
+  .period-controls {
+    grid-template-columns: 1fr;
+  }
+
   .issue-card,
   .action-head,
   .section-heading,
@@ -3106,14 +3115,6 @@ function errorMessage(errorObject, fallback) {
 
   .amount-block strong {
     font-size: clamp(2.25rem, 16vw, 3.4rem);
-  }
-
-  .copy-grid,
-  .document-grid,
-  .data-summary-grid,
-  .service-grid,
-  .form-grid {
-    grid-template-columns: 1fr;
   }
 
   .issue-card,

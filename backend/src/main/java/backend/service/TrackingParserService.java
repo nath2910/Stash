@@ -447,6 +447,7 @@ public class TrackingParserService {
         case "US" -> "usps";
         case "GB" -> "royal-mail";
         case "FR" -> "colissimo";
+        case "TS" -> "chronopost";
         default -> null;
       };
     }
@@ -764,19 +765,71 @@ public class TrackingParserService {
 
   private String rawStatus(String body) {
     String normalized = normalizeText(body);
-    if (normalized.contains("out for delivery") || normalized.contains("en cours de livraison")) {
-      return "OUT_FOR_DELIVERY";
+    if (normalized.isBlank()) {
+      return null;
     }
-    if (normalized.contains("delivered") || normalized.contains("livre")) {
+
+    int deliveredScore = scoreStatus(normalized, Set.of(
+        "delivered",
+        "successfully delivered",
+        "parcel delivered",
+        "colis livre",
+        "votre colis est livre",
+        "votre colis a ete livre",
+        "remis au destinataire",
+        "remis en boite aux lettres",
+        "livraison effectuee",
+        "livraison terminee",
+        "distribue"
+    ));
+    int outForDeliveryScore = scoreStatus(normalized, Set.of(
+        "out for delivery",
+        "en cours de livraison",
+        "en livraison",
+        "livraison ce jour",
+        "votre colis est en cours de livraison"
+    ));
+    int inTransitScore = scoreStatus(normalized, Set.of(
+        "in transit",
+        "shipment in transit",
+        "en transit",
+        "pris en charge",
+        "achemine",
+        "acheminement"
+    ));
+    int shippedScore = scoreStatus(normalized, Set.of(
+        "shipped",
+        "shipment information received",
+        "expedie",
+        "etiquette creee",
+        "label created"
+    ));
+
+    if (deliveredScore > 0
+        && (deliveredScore >= outForDeliveryScore
+        || deliveredScore >= outForDeliveryScore - 1)) {
       return "DELIVERED";
     }
-    if (normalized.contains("in transit") || normalized.contains("en transit")) {
+    if (outForDeliveryScore > 0 && outForDeliveryScore >= inTransitScore) {
+      return "OUT_FOR_DELIVERY";
+    }
+    if (inTransitScore > 0 && inTransitScore >= shippedScore) {
       return "IN_TRANSIT";
     }
-    if (normalized.contains("shipped") || normalized.contains("expedie")) {
+    if (shippedScore > 0) {
       return "SHIPPED";
     }
     return null;
+  }
+
+  private int scoreStatus(String normalized, Set<String> phrases) {
+    int score = 0;
+    for (String phrase : phrases) {
+      if (normalized.contains(phrase)) {
+        score += Math.max(1, phrase.length() / 8);
+      }
+    }
+    return score;
   }
 
   private boolean looksLikeDate(String normalized) {
