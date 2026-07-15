@@ -73,6 +73,31 @@
       >
         {{ trackingHealth.message }}
       </p>
+
+      <form
+        v-if="parcel.completionRequired"
+        class="mt-3 flex flex-col gap-2 sm:flex-row"
+        @submit.prevent="submitPostalCode"
+      >
+        <input
+          v-model.trim="postalCodeInput"
+          inputmode="numeric"
+          maxlength="5"
+          autocomplete="postal-code"
+          class="h-10 flex-1 rounded-full border border-amber-300 bg-white px-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+          placeholder="Code postal destinataire"
+        />
+        <button
+          type="submit"
+          class="inline-flex h-10 items-center justify-center rounded-full border border-amber-400/50 bg-amber-500 px-4 text-sm font-semibold text-white transition hover:bg-amber-600 disabled:cursor-wait disabled:opacity-60"
+          :disabled="completing || !postalCodeInput"
+        >
+          {{ completing ? 'Activation...' : 'Activer le suivi' }}
+        </button>
+      </form>
+      <p v-if="completionError" class="mt-2 text-xs text-red-700">
+        {{ completionError }}
+      </p>
     </div>
 
     <div v-if="parcel" class="mt-3 rounded-2xl border border-slate-200 bg-white p-3">
@@ -167,7 +192,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { ExternalLink, RefreshCw, Trash2 } from 'lucide-vue-next'
 import {
   carrierLabel,
@@ -189,9 +214,19 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  completing: {
+    type: Boolean,
+    default: false,
+  },
+  completionError: {
+    type: String,
+    default: '',
+  },
 })
 
-defineEmits(['refresh', 'delete'])
+const emit = defineEmits(['refresh', 'delete', 'complete'])
+
+const postalCodeInput = ref('')
 
 const events = computed(() => (Array.isArray(props.parcel?.events) ? props.parcel.events : []))
 const trackingHealth = computed(() => getDeliveryTrackingHealth(props.parcel))
@@ -278,6 +313,18 @@ const statusMeta = (status) => {
 }
 
 const formatDateTime = formatDeliveryDateTime
+
+watch(
+  () => props.parcel?.id,
+  () => {
+    postalCodeInput.value = ''
+  },
+)
+
+const submitPostalCode = () => {
+  if (!props.parcel?.id || !postalCodeInput.value) return
+  emit('complete', { id: props.parcel.id, postalCode: postalCodeInput.value })
+}
 </script>
 
 <style scoped>

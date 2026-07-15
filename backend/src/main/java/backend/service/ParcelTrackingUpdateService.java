@@ -46,7 +46,9 @@ public class ParcelTrackingUpdateService {
         parcel.setStatus(incomingStatus);
         appliedStatus = true;
       }
-    } else if (parcel.getStatus() == null || parcel.getStatus() == ParcelStatus.PENDING) {
+    } else if (parcel.getStatus() == null
+        || parcel.getStatus() == ParcelStatus.PENDING
+        || parcel.getStatus() == ParcelStatus.INCOMPLETE) {
       parcel.setStatus(ParcelStatus.REGISTERED);
       appliedStatus = true;
     }
@@ -182,6 +184,12 @@ public class ParcelTrackingUpdateService {
     if (snapshot.deliveredAt() != null) {
       return ParcelStatus.DELIVERED;
     }
+    if (TrackingBrowserPageSupport.isTerminalCompletedLabel(snapshot.statusLabel())) {
+      return ParcelStatus.DELIVERED;
+    }
+    if (TrackingBrowserPageSupport.isNotFoundLabel(snapshot.statusLabel())) {
+      return ParcelStatus.EXCEPTION;
+    }
     if (CarrierStatusResolver.resolve(snapshot.statusLabel()) == ParcelStatus.DELIVERED) {
       return ParcelStatus.DELIVERED;
     }
@@ -238,7 +246,10 @@ public class ParcelTrackingUpdateService {
     if (incomingStatus == null) {
       return false;
     }
-    if (currentStatus == null || currentStatus == ParcelStatus.PENDING || currentStatus == ParcelStatus.UNKNOWN) {
+    if (currentStatus == null
+        || currentStatus == ParcelStatus.INCOMPLETE
+        || currentStatus == ParcelStatus.PENDING
+        || currentStatus == ParcelStatus.UNKNOWN) {
       return true;
     }
     if (incomingStatus == currentStatus) {
@@ -258,7 +269,7 @@ public class ParcelTrackingUpdateService {
       return 0;
     }
     return switch (status) {
-      case PENDING, UNKNOWN -> 0;
+      case INCOMPLETE, PENDING, UNKNOWN -> 0;
       case REGISTERED -> 1;
       case IN_TRANSIT -> 2;
       case OUT_FOR_DELIVERY -> 3;

@@ -55,6 +55,23 @@
         </p>
       </label>
 
+      <label v-if="carrierSlug === 'mondial-relay'" class="grid gap-2">
+        <span class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500"
+          >Code postal</span
+        >
+        <input
+          v-model.trim="postalCode"
+          inputmode="numeric"
+          maxlength="5"
+          autocomplete="postal-code"
+          class="h-10 w-full min-w-0 rounded-full border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+          placeholder="17000"
+        />
+        <p class="text-[11px] leading-relaxed text-slate-500">
+          Optionnel a l'ajout. Sans ce code postal, le suivi Mondial Relay sera cree en mode a completer.
+        </p>
+      </label>
+
       <button
         type="submit"
         class="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-teal-600/20 bg-teal-700 px-4 text-sm font-semibold text-white transition hover:bg-teal-600 disabled:cursor-wait disabled:opacity-60"
@@ -102,6 +119,7 @@ const emit = defineEmits(['create-parcel'])
 
 const trackingInput = ref('')
 const carrierSlug = ref('')
+const postalCode = ref('')
 const trackingTextarea = ref(null)
 
 const submit = () => {
@@ -109,6 +127,7 @@ const submit = () => {
   emit('create-parcel', {
     trackingInput: trackingInput.value,
     carrierSlug: carrierSlug.value || null,
+    postalCode: carrierSlug.value === 'mondial-relay' ? postalCode.value || null : null,
   })
 }
 
@@ -117,8 +136,15 @@ watch(
   () => {
     trackingInput.value = ''
     carrierSlug.value = ''
+    postalCode.value = ''
   },
 )
+
+watch(carrierSlug, (value) => {
+  if (value !== 'mondial-relay') {
+    postalCode.value = ''
+  }
+})
 
 const focusFirstField = () => {
   trackingTextarea.value?.focus()

@@ -1,5 +1,6 @@
 package backend.controller;
 
+import backend.dto.ParcelCompletionRequest;
 import backend.dto.ParcelCreateRequest;
 import backend.dto.ParcelResponse;
 import backend.entity.User;
@@ -50,6 +51,15 @@ public class DeliveryTrackingController {
   @PostMapping
   public ParcelResponse create(@AuthenticationPrincipal User currentUser, @RequestBody ParcelCreateRequest request) {
     return deliveryTrackingService.createManual(currentUser.getId(), request);
+  }
+
+  @PostMapping("/{id}/complete")
+  public ParcelResponse complete(
+      @AuthenticationPrincipal User currentUser,
+      @PathVariable Long id,
+      @RequestBody ParcelCompletionRequest request
+  ) {
+    return deliveryTrackingService.completeParcel(currentUser.getId(), id, request);
   }
 
   @PostMapping("/{id}/refresh")

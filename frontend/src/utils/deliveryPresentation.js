@@ -8,6 +8,14 @@ const ACTIVE_STATUSES = new Set([
 ])
 
 const STATUS_META = {
+  INCOMPLETE: {
+    label: 'A completer',
+    shortLabel: 'A completer',
+    badgeClass: 'border-amber-400/50 bg-amber-500/10 text-amber-100',
+    lightBadgeClass: 'border-amber-300/50 bg-amber-500/10 text-amber-800',
+    accentClass: 'text-amber-700',
+    stage: 'pending',
+  },
   DELIVERED: {
     label: 'Livre',
     shortLabel: 'Livre',
@@ -161,6 +169,16 @@ export const formatRelativeDeliveryDate = (value) => {
 
 export const getDeliveryTrackingHealth = (parcel) => {
   if (!parcel) return null
+
+  if (parcel.completionRequired || parcel.status === 'INCOMPLETE') {
+    return {
+      tone: 'warning',
+      title: 'Suivi Mondial Relay incomplet',
+      message:
+        parcel.completionHint ||
+        'Le code postal du destinataire manque encore. Renseigne-le pour relancer le suivi transporteur.',
+    }
+  }
 
   const aggregator = String(parcel.aggregator || '').toUpperCase()
   const statusLabel = String(parcel.statusLabel || '').toLowerCase()

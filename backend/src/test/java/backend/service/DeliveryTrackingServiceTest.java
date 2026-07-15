@@ -1,11 +1,13 @@
 package backend.service;
 
+import backend.dto.ParcelCompletionRequest;
 import backend.dto.ParcelCreateRequest;
 import backend.entity.MailAccount;
 import backend.entity.MailTrackingCandidate;
 import backend.entity.Parcel;
 import backend.entity.ParcelStatus;
 import backend.entity.User;
+import java.util.HashMap;
 import backend.repository.MailTrackingCandidateRepository;
 import backend.repository.ParcelEventRepository;
 import backend.repository.ParcelRepository;
@@ -118,7 +120,7 @@ class DeliveryTrackingServiceTest {
         invocation.getArgument(0)
     );
 
-    var response = service.createManual(1L, new ParcelCreateRequest("LA-123456789-FR", "colissimo"));
+    var response = service.createManual(1L, new ParcelCreateRequest("LA-123456789-FR", "colissimo", null));
 
     Assertions.assertEquals("LA123456789FR", response.normalizedTrackingNumber());
     Assertions.assertEquals("colissimo", response.carrierSlug());
@@ -140,7 +142,7 @@ class DeliveryTrackingServiceTest {
     )).thenReturn(Optional.of(existing));
     Mockito.when(trackingAggregatorService.refreshTracking(existing)).thenReturn(existing);
 
-    var response = service.createManual(1L, new ParcelCreateRequest("LA123456789FR", "colissimo"));
+    var response = service.createManual(1L, new ParcelCreateRequest("LA123456789FR", "colissimo", null));
 
     Assertions.assertEquals(31L, response.id());
     Mockito.verify(trackingAggregatorService).refreshTracking(existing);
@@ -148,7 +150,7 @@ class DeliveryTrackingServiceTest {
   }
 
   @Test
-  void createManualAutoDetectsMondialRelayEightDigitTracking() {
+  void createManualMondialRelayWithoutPostalCodeCreatesIncompleteParcel() {
     User user = Mockito.mock(User.class);
     Mockito.when(userRepository.findById(1L)).thenReturn(Optional.of(user));
     Mockito.when(parcelRepository.findByUser_IdAndNormalizedTrackingNumberAndCarrierSlug(
@@ -162,10 +164,32 @@ class DeliveryTrackingServiceTest {
       return parcel;
     });
 
-    var response = service.createManual(1L, new ParcelCreateRequest("12 34 56 78", null));
+    var response = service.createManual(1L, new ParcelCreateRequest("12 34 56 78", null, null));
 
     Assertions.assertEquals("12345678", response.normalizedTrackingNumber());
     Assertions.assertEquals("mondial-relay", response.carrierSlug());
+    Assertions.assertEquals(ParcelStatus.INCOMPLETE, response.status());
+    Mockito.verify(trackingAggregatorService, Mockito.never()).registerTracking(Mockito.any(Parcel.class));
+  }
+
+  @Test
+  void createManualMondialRelayWithPostalCodeRegistersImmediately() {
+    User user = Mockito.mock(User.class);
+    Mockito.when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+    Mockito.when(parcelRepository.findByUser_IdAndNormalizedTrackingNumberAndCarrierSlug(
+        1L,
+        "12345678",
+        "mondial-relay"
+    )).thenReturn(Optional.empty());
+    Mockito.when(parcelRepository.saveAndFlush(Mockito.any(Parcel.class))).thenAnswer(invocation -> {
+      Parcel parcel = invocation.getArgument(0);
+      parcel.setId(34L);
+      return parcel;
+    });
+
+    var response = service.createManual(1L, new ParcelCreateRequest("12 34 56 78", null, "17000"));
+
+    Assertions.assertEquals(ParcelStatus.PENDING, response.status());
     Mockito.verify(trackingAggregatorService).registerTracking(Mockito.any(Parcel.class));
   }
 
@@ -184,7 +208,7 @@ class DeliveryTrackingServiceTest {
       return parcel;
     });
 
-    var response = service.createManual(1L, new ParcelCreateRequest("XY123456789FR", null));
+    var response = service.createManual(1L, new ParcelCreateRequest("XY123456789FR", null, null));
 
     Assertions.assertEquals("chronopost", response.carrierSlug());
   }
@@ -193,7 +217,7 @@ class DeliveryTrackingServiceTest {
   void createManualRejectsCarrierMismatchWithClearMessage() {
     ResponseStatusException exception = Assertions.assertThrows(
         ResponseStatusException.class,
-        () -> service.createManual(1L, new ParcelCreateRequest("LA123456789FR", "mondial-relay"))
+        () -> service.createManual(1L, new ParcelCreateRequest("LA123456789FR", "mondial-relay", null))
     );
 
     Assertions.assertEquals(
@@ -219,16 +243,39 @@ class DeliveryTrackingServiceTest {
     first.setId(51L);
     Parcel second = new Parcel();
     second.setId(52L);
+    second.setCarrierSlug("mondial-relay");
+    second.setStatus(ParcelStatus.INCOMPLETE);
+    second.setRawCurrentPayload(new HashMap<>());
     Mockito.when(parcelRepository.findByUser_IdOrderByUpdatedAtDesc(1L)).thenReturn(java.util.List.of(first, second));
     Mockito.when(trackingAggregatorService.refreshTracking(first)).thenReturn(first);
-    Mockito.when(trackingAggregatorService.refreshTracking(second)).thenReturn(second);
     Mockito.when(parcelEventRepository.findByParcel_IdInOrderByParcel_IdAscEventTimeDesc(java.util.List.of(51L, 52L)))
         .thenReturn(java.util.List.of());
 
     service.refreshAllForUser(1L);
 
     Mockito.verify(trackingAggregatorService).refreshTracking(first);
-    Mockito.verify(trackingAggregatorService).refreshTracking(second);
+    Mockito.verify(trackingAggregatorService, Mockito.never()).refreshTracking(second);
+  }
+
+  @Test
+  void completeParcelStoresMondialRelayPostalCodeAndRefreshes() {
+    Parcel parcel = new Parcel();
+    parcel.setId(71L);
+    parcel.setTrackingNumber("12345678");
+    parcel.setNormalizedTrackingNumber("12345678");
+    parcel.setCarrierSlug("mondial-relay");
+    parcel.setStatus(ParcelStatus.INCOMPLETE);
+    parcel.setRawCurrentPayload(new HashMap<>());
+    Mockito.when(parcelRepository.findByIdAndUser_Id(71L, 1L)).thenReturn(Optional.of(parcel));
+    Mockito.when(parcelRepository.save(Mockito.any(Parcel.class))).thenAnswer(invocation -> invocation.getArgument(0));
+    Mockito.when(trackingAggregatorService.refreshTracking(parcel)).thenReturn(parcel);
+
+    var response = service.completeParcel(1L, 71L, new ParcelCompletionRequest("17000"));
+
+    Assertions.assertEquals(71L, response.id());
+    Assertions.assertEquals("17000", String.valueOf(parcel.getRawCurrentPayload().get("mondial_relay_postal_code")));
+    Assertions.assertTrue(String.valueOf(parcel.getRawCurrentPayload().get("tracking_url")).contains("codePostal=17000"));
+    Mockito.verify(trackingAggregatorService).refreshTracking(parcel);
   }
 
   @Test

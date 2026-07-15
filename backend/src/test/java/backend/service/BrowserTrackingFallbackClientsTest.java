@@ -68,6 +68,66 @@ class BrowserTrackingFallbackClientsTest {
   }
 
   @Test
+  void mondialRelayBrowserSnapshotMarksTerminalExpiredTrackingAsFinished() {
+    Parcel parcel = new Parcel();
+    parcel.setCarrierSlug("mondial-relay");
+    parcel.setTrackingNumber("90651136");
+    parcel.setNormalizedTrackingNumber("90651136");
+
+    TrackingSnapshot snapshot = MondialRelayTrackingClient.toBrowserSnapshot(
+        parcel,
+        new BrowserTrackingScriptRunner.BrowserPagePayload(
+            "local_browser",
+            "Suivi Mondial Relay",
+            """
+                Ce suivi n'est plus disponible.
+                Suivi termine et archive.
+                """,
+            """
+                <div class="status-banner">Ce suivi n'est plus disponible</div>
+                <div>Suivi termine et archive</div>
+                """,
+            "https://www.mondialrelay.fr/suivi-de-colis/?numeroExpedition=90651136&codePostal=17000"
+        )
+    );
+
+    Assertions.assertEquals(ParcelStatus.DELIVERED, snapshot.status());
+    Assertions.assertEquals(
+        "https://www.mondialrelay.fr/suivi-de-colis/?numeroExpedition=90651136&codePostal=17000",
+        snapshot.trackingUrl()
+    );
+  }
+
+  @Test
+  void mondialRelayBrowserSnapshotKeepsPostalCodeRequirementVisible() {
+    Parcel parcel = new Parcel();
+    parcel.setCarrierSlug("mondial-relay");
+    parcel.setTrackingNumber("90651136");
+    parcel.setNormalizedTrackingNumber("90651136");
+
+    TrackingSnapshot snapshot = MondialRelayTrackingClient.toBrowserSnapshot(
+        parcel,
+        new BrowserTrackingScriptRunner.BrowserPagePayload(
+            "local_browser",
+            "Suivi Mondial Relay",
+            """
+                Merci de renseigner votre code postal pour consulter ce suivi.
+                """,
+            """
+                <div class="status-banner">Merci de renseigner votre code postal pour consulter ce suivi.</div>
+                """,
+            "https://www.mondialrelay.fr/suivi-de-colis/?numeroExpedition=90651136"
+        )
+    );
+
+    Assertions.assertEquals(ParcelStatus.UNKNOWN, snapshot.status());
+    Assertions.assertEquals(
+        "Merci de renseigner votre code postal pour consulter ce suivi.",
+        snapshot.statusLabel()
+    );
+  }
+
+  @Test
   void laposteBrowserSnapshotIgnoresGenericPageTitleWithoutTrackingStatus() {
     Parcel parcel = new Parcel();
     parcel.setCarrierSlug("colissimo");

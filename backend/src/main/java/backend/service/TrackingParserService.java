@@ -1,5 +1,6 @@
 package backend.service;
 
+import java.net.URLEncoder;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.text.Normalizer;
@@ -31,6 +32,35 @@ public class TrackingParserService {
   private static final Pattern DIGIT_PATTERN = Pattern.compile("\\d");
   private static final Pattern LETTER_PATTERN = Pattern.compile("[A-Z]");
   private static final Pattern URL_PATTERN = Pattern.compile("https?://[^\\s<>()\"']+", Pattern.CASE_INSENSITIVE);
+  private static final Pattern POSTAL_CODE_PATTERN = Pattern.compile("\\b(\\d{5})\\b");
+  private static final Pattern POSTAL_CODE_LABEL_PATTERN = Pattern.compile(
+      "\\b(?:code\\s+postal|cp|postal\\s+code|zip(?:\\s+code)?)\\b[^\\d]{0,12}(\\d{5})\\b",
+      Pattern.CASE_INSENSITIVE
+  );
+  private static final Pattern MONDIAL_RELAY_POSTAL_QUERY_PATTERN = Pattern.compile(
+      "[?&]codepostal=(\\d{5})(?:[&#]|$)",
+      Pattern.CASE_INSENSITIVE
+  );
+  private static final Set<String> MONDIAL_RELAY_POSTAL_LINE_HINTS = Set.of(
+      "mondial relay",
+      "point relais",
+      "relais",
+      "adresse",
+      "livraison",
+      "destinataire",
+      "pickup"
+  );
+  private static final Set<String> MONDIAL_RELAY_POSTAL_LINE_NEGATIVE_HINTS = Set.of(
+      "commande",
+      "order",
+      "facture",
+      "invoice",
+      "montant",
+      "prix",
+      "total",
+      "telephone",
+      "mobile"
+  );
 
   private static final List<Pattern> CANDIDATE_PATTERNS = List.of(
       Pattern.compile("\\b1Z[0-9A-Z][0-9A-Z\\s\\-]{14,22}[0-9A-Z]\\b", Pattern.CASE_INSENSITIVE),
@@ -369,14 +399,16 @@ public class TrackingParserService {
         continue;
       }
 
+      String contextSnippet = contextSnippet(visibleText, occurrence.start(), occurrence.end(), CONTEXT_RADIUS);
+
       TrackingCandidate candidate = new TrackingCandidate(
           score.carrierSlug(),
           occurrence.raw().trim(),
           normalized,
           score.value(),
           confidence,
-          bestTrackingUrl(normalized, score.carrierSlug(), occurrence, safeLinks),
-          contextSnippet(visibleText, occurrence.start(), occurrence.end(), CONTEXT_RADIUS),
+          bestTrackingUrl(normalized, score.carrierSlug(), occurrence, safeLinks, visibleText, contextSnippet),
+          contextSnippet,
           displayName(from),
           rawStatus(visibleText),
           String.join("; ", score.reasons())
@@ -699,6 +731,30 @@ public class TrackingParserService {
       String normalizedTracking,
       String carrierSlug,
       Occurrence occurrence,
+      List<String> links,
+      String visibleText,
+      String candidateContext
+  ) {
+    String trustedUrl = trustedTrackingUrl(normalizedTracking, carrierSlug, occurrence, links);
+    String normalizedCarrier = TrackingCarrierRules.normalizeCarrierSlug(carrierSlug);
+    if (!"mondial-relay".equals(normalizedCarrier)) {
+      return trustedUrl;
+    }
+
+    String postalCode = mondialRelayPostalCodeFromUrl(trustedUrl);
+    if (postalCode == null) {
+      postalCode = extractMondialRelayPostalCode(visibleText, candidateContext, links);
+    }
+    if (postalCode != null) {
+      return buildMondialRelayTrackingUrl(normalizedTracking, postalCode);
+    }
+    return trustedUrl;
+  }
+
+  private String trustedTrackingUrl(
+      String normalizedTracking,
+      String carrierSlug,
+      Occurrence occurrence,
       List<String> links
   ) {
     if (
@@ -718,6 +774,102 @@ public class TrackingParserService {
       }
     }
     return null;
+  }
+
+  private String extractMondialRelayPostalCode(String visibleText, String candidateContext, List<String> links) {
+    for (String link : links) {
+      if (!TrackingLinkResolver.isTrustedTrackingUrl(link, "mondial-relay")) {
+        continue;
+      }
+      String postalCode = mondialRelayPostalCodeFromUrl(link);
+      if (postalCode != null) {
+        return postalCode;
+      }
+    }
+
+    String postalCode = bestPostalCodeFromText(candidateContext, true);
+    if (postalCode != null) {
+      return postalCode;
+    }
+    return bestPostalCodeFromText(visibleText, false);
+  }
+
+  private String bestPostalCodeFromText(String text, boolean contextualScan) {
+    String safeText = safe(text);
+    if (safeText.isBlank()) {
+      return null;
+    }
+
+    Matcher labeledMatcher = POSTAL_CODE_LABEL_PATTERN.matcher(safeText);
+    if (labeledMatcher.find()) {
+      return labeledMatcher.group(1);
+    }
+
+    List<PostalCodeScore> candidates = new ArrayList<>();
+    String[] lines = safeText.split("\\R+");
+    for (String line : lines) {
+      String normalizedLine = normalizeText(line);
+      if (normalizedLine.isBlank()) {
+        continue;
+      }
+
+      int lineScore = 0;
+      if (containsAny(normalizedLine, MONDIAL_RELAY_POSTAL_LINE_HINTS)) {
+        lineScore += 25;
+      }
+      if (containsAny(normalizedLine, MONDIAL_RELAY_POSTAL_LINE_NEGATIVE_HINTS)) {
+        lineScore -= 20;
+      }
+      if (normalizedLine.contains("code postal") || normalizedLine.matches(".*\\bcp\\b.*")) {
+        lineScore += 35;
+      }
+      if (normalizedLine.matches(".*\\b\\d{5}\\s+[a-z].*")) {
+        lineScore += 10;
+      }
+
+      Matcher matcher = POSTAL_CODE_PATTERN.matcher(line);
+      while (matcher.find()) {
+        candidates.add(new PostalCodeScore(matcher.group(1), lineScore));
+      }
+    }
+
+    if (candidates.isEmpty()) {
+      return null;
+    }
+
+    candidates.sort((left, right) -> Integer.compare(right.score(), left.score()));
+    PostalCodeScore best = candidates.get(0);
+    int minimumScore = contextualScan ? 15 : 25;
+    if (best.score() < minimumScore) {
+      return null;
+    }
+
+    boolean conflictingBest = candidates.stream()
+        .filter(candidate -> candidate.score() == best.score())
+        .map(PostalCodeScore::postalCode)
+        .distinct()
+        .count() > 1;
+    if (conflictingBest) {
+      return null;
+    }
+
+    return best.postalCode();
+  }
+
+  private String mondialRelayPostalCodeFromUrl(String link) {
+    String decoded = decodeUrl(link).toLowerCase(Locale.ROOT);
+    Matcher matcher = MONDIAL_RELAY_POSTAL_QUERY_PATTERN.matcher(decoded);
+    if (!matcher.find()) {
+      return null;
+    }
+    return matcher.group(1);
+  }
+
+  private String buildMondialRelayTrackingUrl(String normalizedTracking, String postalCode) {
+    return "https://www.mondialrelay.fr/suivi-de-colis/?numeroExpedition="
+        + URLEncoder.encode(normalizedTracking, StandardCharsets.UTF_8)
+        + "&codePostal="
+        + URLEncoder.encode(postalCode, StandardCharsets.UTF_8);
   }
 
   private String sanitizeUrl(String link) {
@@ -994,6 +1146,9 @@ public class TrackingParserService {
   }
 
   private record FormatScore(int value, String reason) {
+  }
+
+  private record PostalCodeScore(String postalCode, int score) {
   }
 
   private record CarrierRule(

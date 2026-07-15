@@ -124,12 +124,12 @@ async function dismissConsentBanners(page) {
   }
 }
 
-async function populateTrackingForm(page, trackingNumber, inputHints = [], submitHints = []) {
-  if (!trackingNumber) {
+async function populateInputByHints(page, value, inputHints = [], marker = 'tracking') {
+  if (!value) {
     return false
   }
 
-  const filled = await page.evaluate((value, hints) => {
+  return page.evaluate((fieldValue, hints, fieldMarker) => {
     const hintList = (hints || []).map((hint) => String(hint || '').toLowerCase()).filter(Boolean)
     const candidates = Array.from(document.querySelectorAll('input'))
     const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set
@@ -162,11 +162,11 @@ async function populateTrackingForm(page, trackingNumber, inputHints = [], submi
             score += 3
           }
         }
-        if (text.includes('track') || text.includes('suivi') || text.includes('colis') || text.includes('expedition')) {
-          score += 2
-        }
         if (input.form) {
           score += 1
+        }
+        if (input.hasAttribute('data-codex-field')) {
+          score -= 2
         }
         return { input, score }
       })
@@ -182,17 +182,39 @@ async function populateTrackingForm(page, trackingNumber, inputHints = [], submi
     if (nativeSetter) {
       nativeSetter.call(input, '')
       input.dispatchEvent(new Event('input', { bubbles: true }))
-      nativeSetter.call(input, value)
+      nativeSetter.call(input, fieldValue)
     } else {
-      input.value = value
+      input.value = fieldValue
     }
     input.dispatchEvent(new Event('input', { bubbles: true }))
     input.dispatchEvent(new Event('change', { bubbles: true }))
-    input.setAttribute('data-codex-tracking-input', 'true')
+    input.setAttribute('data-codex-field', fieldMarker)
     return true
-  }, trackingNumber, inputHints)
+  }, value, inputHints, marker)
+}
 
-  if (!filled) {
+async function populateTrackingForm(page, trackingNumber, inputHints = [], submitHints = [], additionalFields = []) {
+  if (!trackingNumber && !(additionalFields || []).some((field) => field?.value)) {
+    return false
+  }
+
+  const filled = await populateInputByHints(
+    page,
+    trackingNumber,
+    [...inputHints, 'track', 'suivi', 'colis', 'expedition'],
+    'tracking',
+  )
+
+  let additionalFilled = false
+  for (const field of additionalFields || []) {
+    if (!field?.value) {
+      continue
+    }
+    const currentFilled = await populateInputByHints(page, field.value, field.hints || [], field.key || 'extra')
+    additionalFilled = additionalFilled || currentFilled
+  }
+
+  if (!filled && !additionalFilled) {
     return false
   }
 
@@ -201,7 +223,7 @@ async function populateTrackingForm(page, trackingNumber, inputHints = [], submi
   const submitted = await clickButtonByText(page, submitHints)
   if (!submitted) {
     try {
-      await page.focus('[data-codex-tracking-input="true"]')
+      await page.focus('[data-codex-field="tracking"], [data-codex-field]')
       await page.keyboard.press('Enter')
     } catch {
       // fallback below
@@ -217,6 +239,7 @@ export async function scrapeTrackingPage({
   trackingNumber = '',
   trackingInputHints = [],
   submitButtonHints = [],
+  additionalFields = [],
   waitPatterns = [],
   blockPatterns = [],
   timeoutMs = 20000,
@@ -269,11 +292,17 @@ export async function scrapeTrackingPage({
     if (typeof preparePage === 'function') {
       await preparePage(page, {
         dismissConsentBanners: () => dismissConsentBanners(page),
-        populateTrackingForm: () => populateTrackingForm(page, trackingNumber, trackingInputHints, submitButtonHints),
+        populateTrackingForm: () => populateTrackingForm(
+          page,
+          trackingNumber,
+          trackingInputHints,
+          submitButtonHints,
+          additionalFields,
+        ),
         sleep,
       })
     } else if (trackingNumber && trackingInputHints.length) {
-      await populateTrackingForm(page, trackingNumber, trackingInputHints, submitButtonHints)
+      await populateTrackingForm(page, trackingNumber, trackingInputHints, submitButtonHints, additionalFields)
     }
 
     await dismissConsentBanners(page)

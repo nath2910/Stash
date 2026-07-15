@@ -102,6 +102,7 @@ public class DeliveryTrackingAggregatorService implements TrackingAggregatorServ
       return 180;
     }
     return switch (status) {
+      case INCOMPLETE -> 720;
       case OUT_FOR_DELIVERY -> 60;
       case IN_TRANSIT -> 180;
       case PENDING, REGISTERED, UNKNOWN -> 360;

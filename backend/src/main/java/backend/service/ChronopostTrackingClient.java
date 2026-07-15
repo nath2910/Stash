@@ -519,7 +519,7 @@ public class ChronopostTrackingClient implements CarrierTrackingClient {
       return 0;
     }
     return switch (status) {
-      case PENDING, UNKNOWN -> 0;
+      case INCOMPLETE, PENDING, UNKNOWN -> 0;
       case REGISTERED -> 1;
       case IN_TRANSIT -> 2;
       case OUT_FOR_DELIVERY -> 3;

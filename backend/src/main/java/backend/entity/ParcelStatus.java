@@ -1,6 +1,7 @@
 package backend.entity;
 
 public enum ParcelStatus {
+  INCOMPLETE,
   PENDING,
   REGISTERED,
   IN_TRANSIT,

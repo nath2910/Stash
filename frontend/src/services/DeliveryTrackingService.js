@@ -42,6 +42,10 @@ class DeliveryTrackingService {
     return api.post('/delivery/parcels', payload, { timeout: 45000 })
   }
 
+  completeParcel(id, payload) {
+    return api.post(`/delivery/parcels/${id}/complete`, payload, { timeout: 45000 })
+  }
+
   getParcel(id) {
     return api.get(`/delivery/parcels/${id}`)
   }

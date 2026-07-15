@@ -91,6 +91,57 @@ class TrackingParserServiceTest {
   }
 
   @Test
+  void enrichesMondialRelayTrackingUrlWithPostalCodeFromMailBody() {
+    TrackingDetectionResult result = parser.detect(
+        "Mondial Relay <suivi@mondialrelay.fr>",
+        "Votre colis est disponible au Point Relais",
+        """
+            Votre colis est disponible au Point Relais.
+            Numero d expedition : 90651136
+            Code postal : 17000
+            """
+    );
+
+    Assertions.assertEquals(1, result.autoImportCandidates().size());
+    Assertions.assertEquals(
+        "https://www.mondialrelay.fr/suivi-de-colis/?numeroExpedition=90651136&codePostal=17000",
+        result.autoImportCandidates().get(0).trackingUrl()
+    );
+  }
+
+  @Test
+  void keepsMondialRelayPostalCodeAlreadyPresentInTrustedLink() {
+    TrackingDetectionResult result = parser.detect(
+        "Mondial Relay <suivi@mondialrelay.fr>",
+        "Suivi Mondial Relay",
+        "Suivre votre colis 90651136",
+        List.of("https://www.mondialrelay.fr/suivi-de-colis/?numeroExpedition=90651136&codePostal=17000")
+    );
+
+    Assertions.assertEquals(1, result.autoImportCandidates().size());
+    Assertions.assertEquals(
+        "https://www.mondialrelay.fr/suivi-de-colis/?numeroExpedition=90651136&codePostal=17000",
+        result.autoImportCandidates().get(0).trackingUrl()
+    );
+  }
+
+  @Test
+  void doesNotInventMondialRelayPostalCodeWhenOnlyGenericNumbersArePresent() {
+    TrackingDetectionResult result = parser.detect(
+        "Mondial Relay <suivi@mondialrelay.fr>",
+        "Votre colis est disponible",
+        """
+            Votre colis est disponible au Point Relais.
+            Numero d expedition : 90651136
+            Commande : 17000
+            """
+    );
+
+    Assertions.assertEquals(1, result.autoImportCandidates().size());
+    Assertions.assertNull(result.autoImportCandidates().get(0).trackingUrl());
+  }
+
+  @Test
   void ignoresOrderNumberOnly() {
     TrackingDetectionResult result = parser.detect(
         "shop@example.com",

@@ -292,8 +292,11 @@
             :parcel="selectedParcel"
             :refreshing="refreshingParcelId === selectedParcel?.id"
             :deleting="deletingParcelIds.includes(selectedParcel?.id)"
+            :completing="completingParcelId === selectedParcel?.id"
+            :completion-error="parcelCompletionError"
             @refresh="refreshParcel"
             @delete="deleteParcel"
+            @complete="completeParcel"
           />
 
           <div ref="mailAccountsSectionRef">
@@ -432,6 +435,7 @@ const scanningAccountId = ref(null)
 const scanningAll = ref(false)
 const refreshingAllParcels = ref(false)
 const refreshingParcelId = ref(null)
+const completingParcelId = ref(null)
 const deletingParcelId = ref(null)
 const deletingParcelIds = ref([])
 const bulkDeletingParcels = ref(false)
@@ -444,6 +448,7 @@ const searchTerm = ref('')
 const autoScanAfterCallbackStarted = ref(false)
 const manualSuccessToken = ref(0)
 const manualModalOpen = ref(false)
+const parcelCompletionError = ref('')
 const searchInput = ref(null)
 const manualFormRef = ref(null)
 const mailAccountsSectionRef = ref(null)
@@ -586,6 +591,9 @@ const deliveredParcelCount = computed(
 const exceptionParcelCount = computed(
   () => parcels.value.filter((parcel) => parcel.status === 'EXCEPTION').length,
 )
+const incompleteParcelCount = computed(
+  () => parcels.value.filter((parcel) => parcel.status === 'INCOMPLETE').length,
+)
 const candidateReviewCount = computed(() => trackingCandidates.value.length)
 const inTransitCount = computed(
   () => parcels.value.filter((parcel) => ['IN_TRANSIT', 'OUT_FOR_DELIVERY'].includes(parcel.status)).length,
@@ -632,6 +640,7 @@ const metrics = computed(() => [
 const statusFilters = computed(() => [
   { value: 'all', label: 'Tous les colis', count: parcels.value.length, icon: PackageSearch },
   { value: 'active', label: 'En cours', count: activeParcelCount.value, icon: Clock3 },
+  { value: 'INCOMPLETE', label: 'A completer', count: incompleteParcelCount.value, icon: AlertTriangle },
   { value: 'IN_TRANSIT', label: 'En transit', count: inTransitCount.value, icon: Truck },
   { value: 'DELIVERED', label: 'Livres', count: deliveredParcelCount.value, icon: CheckCircle2 },
   {
@@ -891,6 +900,7 @@ const createManualParcel = async (payload) => {
         const { data } = await DeliveryTrackingService.createParcel({
           trackingNumber,
           carrierSlug: payload?.carrierSlug || null,
+          postalCode: payload?.postalCode || null,
         })
         if (data?.id) {
           createdParcels.push(data)
@@ -915,17 +925,20 @@ const createManualParcel = async (payload) => {
     await loadParcels()
     lastSuccessfulSyncAt.value = new Date().toISOString()
     const latestParcel = createdParcels[createdParcels.length - 1]
+    const incompleteCount = createdParcels.filter((parcel) => parcel?.status === 'INCOMPLETE').length
     if (latestParcel?.id) {
       selectedParcelId.value = latestParcel.id
     }
     manualSuccessToken.value += 1
     manualModalOpen.value = false
     showFeedbackToast({
-      kind: failedNumbers.length ? 'warning' : 'success',
-      title: failedNumbers.length ? 'Ajout partiel' : 'Suivi ajoute',
+      kind: failedNumbers.length || incompleteCount ? 'warning' : 'success',
+      title: failedNumbers.length ? 'Ajout partiel' : incompleteCount ? 'Suivi a completer' : 'Suivi ajoute',
       message: failedNumbers.length
         ? `${createdParcels.length} suivi(s) ajoute(s), ${failedNumbers.length} refuse(s).`
-        : `${createdParcels.length} suivi(s) ajoute(s) au tableau de livraison.`,
+        : incompleteCount
+          ? `${incompleteCount} suivi(s) Mondial Relay attendent encore un code postal.`
+          : `${createdParcels.length} suivi(s) ajoute(s) au tableau de livraison.`,
     })
   } catch (error) {
     manualParcelError.value = requestErrorMessage(
@@ -942,6 +955,7 @@ const refreshParcel = async (parcelId) => {
   if (!parcelId) return
   refreshingParcelId.value = parcelId
   parcelsError.value = ''
+  parcelCompletionError.value = ''
   try {
     const { data } = await DeliveryTrackingService.refreshParcel(parcelId)
     if (data?.id) {
@@ -960,6 +974,37 @@ const refreshParcel = async (parcelId) => {
     )
   } finally {
     refreshingParcelId.value = null
+  }
+}
+
+const completeParcel = async ({ id, postalCode }) => {
+  if (!id) return
+  completingParcelId.value = id
+  parcelCompletionError.value = ''
+  parcelsError.value = ''
+  try {
+    const { data } = await DeliveryTrackingService.completeParcel(id, { postalCode })
+    if (data?.id) {
+      parcels.value = parcels.value.map((parcel) => (parcel.id === data.id ? data : parcel))
+      selectedParcelId.value = data.id
+      lastSuccessfulSyncAt.value = new Date().toISOString()
+    } else {
+      await loadParcels()
+      lastSuccessfulSyncAt.value = new Date().toISOString()
+    }
+    showFeedbackToast({
+      kind: 'success',
+      title: 'Suivi active',
+      message: 'Le code postal a ete enregistre et le suivi Mondial Relay a ete relance.',
+    })
+  } catch (error) {
+    parcelCompletionError.value = requestErrorMessage(
+      error,
+      'Code postal impossible a enregistrer',
+      "Le serveur n'a pas reussi a activer ce suivi a temps. Reessaie dans quelques secondes.",
+    )
+  } finally {
+    completingParcelId.value = null
   }
 }
 
@@ -1087,6 +1132,7 @@ const deleteAccount = async (accountId) => {
 
 const selectParcel = (parcelId) => {
   selectedParcelId.value = parcelId
+  parcelCompletionError.value = ''
 }
 
 const startParcelSelection = () => {
@@ -1174,17 +1220,19 @@ const parcelPriority = (parcel) => {
   switch (parcel?.status) {
     case 'EXCEPTION':
       return 0
+    case 'INCOMPLETE':
+      return 1
     case 'IN_TRANSIT':
     case 'OUT_FOR_DELIVERY':
-      return 1
+      return 2
     case 'REGISTERED':
     case 'PENDING':
     case 'UNKNOWN':
-      return 2
-    case 'DELIVERED':
       return 3
-    default:
+    case 'DELIVERED':
       return 4
+    default:
+      return 5
   }
 }
 

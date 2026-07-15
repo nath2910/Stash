@@ -300,10 +300,18 @@ public class MondialRelayTrackingClient implements CarrierTrackingClient {
   }
 
   private String fallbackTrackingUrl(Parcel parcel) {
+    String trustedUrl = rawTrackingUrl(parcel);
+    if (TrackingLinkResolver.isTrustedTrackingUrl(trustedUrl, "mondial-relay")) {
+      return trustedUrl.trim();
+    }
     return TrackingLinkResolver.fallbackTrackingUrl("mondial-relay", parcel.getTrackingNumber());
   }
 
   private static String browserFallbackTrackingUrl(Parcel parcel) {
+    String trustedUrl = rawTrackingUrlStatic(parcel);
+    if (TrackingLinkResolver.isTrustedTrackingUrl(trustedUrl, "mondial-relay")) {
+      return trustedUrl.trim();
+    }
     String trackingNumber = parcel == null ? null : TrackingBrowserPageSupport.firstNonBlank(
         parcel.getTrackingNumber(),
         parcel.getNormalizedTrackingNumber()
@@ -322,6 +330,11 @@ public class MondialRelayTrackingClient implements CarrierTrackingClient {
     List<TrackingEventSnapshot> events = TrackingBrowserPageSupport.extractEuropeanEvents(payload.text());
     String statusLabel = TrackingBrowserPageSupport.bestStatusLabel(payload.text(), payload.title());
     ParcelStatus status = TrackingBrowserPageSupport.resolveBestStatus(payload.html(), payload.text(), events);
+    if (status == ParcelStatus.UNKNOWN && TrackingBrowserPageSupport.isTerminalCompletedLabel(statusLabel)) {
+      status = ParcelStatus.DELIVERED;
+    } else if (status == ParcelStatus.UNKNOWN && TrackingBrowserPageSupport.isNotFoundLabel(statusLabel)) {
+      status = ParcelStatus.EXCEPTION;
+    }
     OffsetDateTime deliveredAt = TrackingBrowserPageSupport.latestDeliveredAt(events);
     if (deliveredAt == null && status == ParcelStatus.DELIVERED) {
       deliveredAt = TrackingBrowserPageSupport.latestEventTime(events);
@@ -413,6 +426,18 @@ public class MondialRelayTrackingClient implements CarrierTrackingClient {
         .replace("'", "&apos;");
   }
 
+  private String rawTrackingUrl(Parcel parcel) {
+    return rawTrackingUrlStatic(parcel);
+  }
+
+  private static String rawTrackingUrlStatic(Parcel parcel) {
+    if (parcel == null || parcel.getRawCurrentPayload() == null) {
+      return null;
+    }
+    Object rawUrl = parcel.getRawCurrentPayload().get("tracking_url");
+    return rawUrl == null ? null : String.valueOf(rawUrl);
+  }
+
   private static ParcelStatus normalizeStatusStatic(String value) {
     return CarrierStatusResolver.resolve(value);
   }
@@ -434,7 +459,7 @@ public class MondialRelayTrackingClient implements CarrierTrackingClient {
       return 0;
     }
     return switch (status) {
-      case UNKNOWN, PENDING -> 0;
+      case INCOMPLETE, UNKNOWN, PENDING -> 0;
       case REGISTERED -> 1;
       case IN_TRANSIT -> 2;
       case OUT_FOR_DELIVERY -> 3;

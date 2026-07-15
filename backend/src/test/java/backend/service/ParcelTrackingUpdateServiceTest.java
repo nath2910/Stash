@@ -157,4 +157,37 @@ class ParcelTrackingUpdateServiceTest {
     Assertions.assertEquals("Votre colis a ete livre", parcel.getStatusLabel());
     Assertions.assertNotNull(parcel.getDeliveredAt());
   }
+
+  @Test
+  void marksTerminalArchivedTrackingAsDeliveredWhenCarrierPageSaysItIsNoLongerAvailable() {
+    ParcelEventRepository eventRepository = Mockito.mock(ParcelEventRepository.class);
+    ParcelTrackingUpdateService service = new ParcelTrackingUpdateService(eventRepository);
+    Parcel parcel = new Parcel();
+    parcel.setId(46L);
+    parcel.setStatus(ParcelStatus.IN_TRANSIT);
+    parcel.setStatusLabel("En transit");
+
+    TrackingSnapshot snapshot = new TrackingSnapshot(
+        "MONDIAL_RELAY_BROWSER_PAGE",
+        "90651136",
+        "mondial-relay",
+        ParcelStatus.UNKNOWN,
+        "Ce suivi n'est plus disponible",
+        null,
+        null,
+        "https://www.mondialrelay.fr/suivi-de-colis/?numeroExpedition=90651136&codePostal=17000",
+        null,
+        null,
+        null,
+        null,
+        Map.of("source", "test"),
+        List.of()
+    );
+
+    service.applySnapshot(parcel, snapshot);
+
+    Assertions.assertEquals(ParcelStatus.DELIVERED, parcel.getStatus());
+    Assertions.assertEquals("Ce suivi n'est plus disponible", parcel.getStatusLabel());
+    Assertions.assertNotNull(parcel.getDeliveredAt());
+  }
 }

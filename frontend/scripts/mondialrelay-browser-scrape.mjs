@@ -3,6 +3,7 @@ import { scrapeTrackingPage } from './browser-scrape-common.mjs'
 const trackingUrl = process.argv[2]
 const parsedUrl = trackingUrl ? new URL(trackingUrl) : null
 const trackingNumber = parsedUrl?.searchParams.get('numeroExpedition')?.trim() || ''
+const postalCode = parsedUrl?.searchParams.get('codePostal')?.trim() || ''
 
 const payload = await scrapeTrackingPage({
   trackingUrl,
@@ -14,6 +15,15 @@ const payload = await scrapeTrackingPage({
     'tracking',
     'numero',
   ],
+  additionalFields: postalCode
+    ? [
+        {
+          key: 'postal-code',
+          value: postalCode,
+          hints: ['code postal', 'postal', 'cp', 'postcode'],
+        },
+      ]
+    : [],
   submitButtonHints: [
     'suivre',
     'rechercher',
@@ -29,6 +39,7 @@ const payload = await scrapeTrackingPage({
     'disponible',
     'livre',
     'retire',
+    'code postal',
     'aucune information',
     'introuvable',
   ],

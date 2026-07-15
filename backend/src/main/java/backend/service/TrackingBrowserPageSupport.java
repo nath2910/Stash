@@ -22,6 +22,41 @@ import java.util.regex.Pattern;
 
 final class TrackingBrowserPageSupport {
 
+  private static final List<String> TERMINAL_COMPLETION_PHRASES = List.of(
+      "suivi termine",
+      "livraison terminee",
+      "n est plus consultable",
+      "n'est plus consultable",
+      "n est plus disponible",
+      "n'est plus disponible",
+      "historique n est plus disponible",
+      "historique n'est plus disponible",
+      "plus consultable",
+      "plus disponible",
+      "archive",
+      "archived",
+      "suivi expire",
+      "tracking expired"
+  );
+  private static final List<String> NOT_FOUND_PHRASES = List.of(
+      "aucune information",
+      "aucun resultat",
+      "aucun envoi",
+      "introuvable",
+      "information not available",
+      "not found",
+      "we could not locate"
+  );
+  private static final List<String> EXTRA_INFO_REQUIRED_PHRASES = List.of(
+      "code postal",
+      "postcode",
+      "postal code",
+      "information complementaire",
+      "information complémentaire",
+      "completer",
+      "compléter"
+  );
+
   private static final Pattern EUROPEAN_DATE_PATTERN = Pattern.compile(
       "\\b\\d{1,2}/\\d{1,2}/\\d{4}(?:\\s+(?:a\\s+)?\\d{1,2}[:hH]\\d{2})?\\b",
       Pattern.CASE_INSENSITIVE
@@ -92,6 +127,9 @@ final class TrackingBrowserPageSupport {
     for (String line : meaningfulLines(text)) {
       Optional<CarrierStatusResolver.StatusMatch> match = CarrierStatusResolver.best(line);
       if (match.isEmpty()) {
+        if (looksLikeInformationalStatus(line)) {
+          return line;
+        }
         continue;
       }
       StatusLine candidate = new StatusLine(line, match.get().status(), match.get().score());
@@ -120,8 +158,7 @@ final class TrackingBrowserPageSupport {
     }
 
     String normalized = candidate.toLowerCase(Locale.ROOT);
-    if (containsAny(normalized, "aucune information", "aucun resultat", "aucun envoi", "introuvable",
-        "information not available", "not found", "we could not locate")) {
+    if (looksLikeInformationalStatus(normalized)) {
       return candidate;
     }
     return null;
@@ -162,7 +199,11 @@ final class TrackingBrowserPageSupport {
         .map(TrackingPageStatusExtractor.ExtractedStatus::status)
         .orElse(ParcelStatus.UNKNOWN);
 
-    ParcelStatus fromLabel = CarrierStatusResolver.resolve(bestStatusLabel(text));
+    String bestLabel = bestStatusLabel(text);
+    ParcelStatus fromLabel = resolveInformationalStatus(bestLabel);
+    if (fromLabel == ParcelStatus.UNKNOWN) {
+      fromLabel = CarrierStatusResolver.resolve(bestLabel);
+    }
     if (statusPriority(fromLabel) > statusPriority(best)) {
       best = fromLabel;
     }
@@ -175,6 +216,21 @@ final class TrackingBrowserPageSupport {
       }
     }
     return best == null ? ParcelStatus.UNKNOWN : best;
+  }
+
+  static boolean isTerminalCompletedLabel(String value) {
+    String normalized = compact(value).toLowerCase(Locale.ROOT);
+    return containsAny(normalized, TERMINAL_COMPLETION_PHRASES);
+  }
+
+  static boolean requiresAdditionalInfoLabel(String value) {
+    String normalized = compact(value).toLowerCase(Locale.ROOT);
+    return containsAny(normalized, EXTRA_INFO_REQUIRED_PHRASES);
+  }
+
+  static boolean isNotFoundLabel(String value) {
+    String normalized = compact(value).toLowerCase(Locale.ROOT);
+    return containsAny(normalized, NOT_FOUND_PHRASES);
   }
 
   static String compact(String value) {
@@ -203,6 +259,41 @@ final class TrackingBrowserPageSupport {
       }
     }
     return false;
+  }
+
+  private static boolean containsAny(String value, List<String> needles) {
+    if (value == null || needles == null) {
+      return false;
+    }
+    for (String needle : needles) {
+      if (needle != null && value.contains(needle)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static boolean looksLikeInformationalStatus(String value) {
+    String normalized = compact(value).toLowerCase(Locale.ROOT);
+    return containsAny(normalized, TERMINAL_COMPLETION_PHRASES)
+        || containsAny(normalized, NOT_FOUND_PHRASES)
+        || containsAny(normalized, EXTRA_INFO_REQUIRED_PHRASES);
+  }
+
+  private static ParcelStatus resolveInformationalStatus(String value) {
+    if (value == null || value.isBlank()) {
+      return ParcelStatus.UNKNOWN;
+    }
+    if (isTerminalCompletedLabel(value)) {
+      return ParcelStatus.DELIVERED;
+    }
+    if (isNotFoundLabel(value)) {
+      return ParcelStatus.EXCEPTION;
+    }
+    if (requiresAdditionalInfoLabel(value)) {
+      return ParcelStatus.UNKNOWN;
+    }
+    return ParcelStatus.UNKNOWN;
   }
 
   private static List<TrackingEventSnapshot> extractEvents(
@@ -307,7 +398,7 @@ final class TrackingBrowserPageSupport {
       return 0;
     }
     return switch (status) {
-      case UNKNOWN, PENDING -> 0;
+      case INCOMPLETE, UNKNOWN, PENDING -> 0;
       case REGISTERED -> 1;
       case IN_TRANSIT -> 2;
       case OUT_FOR_DELIVERY -> 3;
