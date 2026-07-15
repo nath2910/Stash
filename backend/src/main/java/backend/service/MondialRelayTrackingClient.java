@@ -36,6 +36,8 @@ import org.w3c.dom.NodeList;
 public class MondialRelayTrackingClient implements CarrierTrackingClient {
 
   private static final String PROVIDER = "MONDIAL_RELAY_DIRECT";
+  private static final String BROWSER_PROVIDER = "MONDIAL_RELAY_BROWSER_PAGE";
+  private static final String BROWSER_SCRIPT = "mondialrelay-browser-scrape.mjs";
   private static final String SOAP_ACTION = "http://www.mondialrelay.fr/webservice/WSI2_TracingColisDetaille";
   private static final Pattern MONDIAL_RELAY_LIKE = Pattern.compile("\\d{8,12}");
   private static final DateTimeFormatter MR_DATE = DateTimeFormatter.ofPattern("dd/MM/yyyy");
@@ -75,23 +77,28 @@ public class MondialRelayTrackingClient implements CarrierTrackingClient {
 
   @Override
   public Optional<TrackingSnapshot> fetchTracking(Parcel parcel) {
-    if (!isConfigured()) {
-      return Optional.empty();
+    if (isConfigured()) {
+      try {
+        String response = restClient.post()
+            .uri(endpoint)
+            .contentType(MediaType.parseMediaType("text/xml; charset=utf-8"))
+            .header("SOAPAction", SOAP_ACTION)
+            .body(soapEnvelope(parcel.getTrackingNumber()))
+            .retrieve()
+            .body(String.class);
+
+        if (response != null && !response.isBlank()) {
+          TrackingSnapshot snapshot = toSnapshot(parcel, parseXml(response));
+          if (snapshot != null) {
+            return Optional.of(snapshot);
+          }
+        }
+      } catch (Exception ignored) {
+        // Browser fallback below.
+      }
     }
 
-    String response = restClient.post()
-        .uri(endpoint)
-        .contentType(MediaType.parseMediaType("text/xml; charset=utf-8"))
-        .header("SOAPAction", SOAP_ACTION)
-        .body(soapEnvelope(parcel.getTrackingNumber()))
-        .retrieve()
-        .body(String.class);
-
-    if (response == null || response.isBlank()) {
-      return Optional.empty();
-    }
-
-    return Optional.ofNullable(toSnapshot(parcel, parseXml(response)));
+    return fetchFromBrowserPage(parcel);
   }
 
   private TrackingSnapshot toSnapshot(Parcel parcel, Document document) {
@@ -299,6 +306,60 @@ public class MondialRelayTrackingClient implements CarrierTrackingClient {
         + URLEncoder.encode(parcel.getTrackingNumber().trim(), StandardCharsets.UTF_8);
   }
 
+  private static String browserFallbackTrackingUrl(Parcel parcel) {
+    String trackingNumber = parcel == null ? null : TrackingBrowserPageSupport.firstNonBlank(
+        parcel.getTrackingNumber(),
+        parcel.getNormalizedTrackingNumber()
+    );
+    if (trackingNumber == null) {
+      return null;
+    }
+    return "https://www.mondialrelay.fr/suivi-de-colis/?numeroExpedition="
+        + URLEncoder.encode(trackingNumber.trim(), StandardCharsets.UTF_8);
+  }
+
+  private Optional<TrackingSnapshot> fetchFromBrowserPage(Parcel parcel) {
+    return BrowserTrackingScriptRunner.run(BROWSER_SCRIPT, browserFallbackTrackingUrl(parcel))
+        .filter(payload -> !PublicTrackingPageClient.looksLikeBotChallenge(payload.html()))
+        .map(payload -> toBrowserSnapshot(parcel, payload))
+        .filter(snapshot -> snapshot.status() != ParcelStatus.UNKNOWN || snapshot.statusLabel() != null);
+  }
+
+  static TrackingSnapshot toBrowserSnapshot(Parcel parcel, BrowserTrackingScriptRunner.BrowserPagePayload payload) {
+    List<TrackingEventSnapshot> events = TrackingBrowserPageSupport.extractEuropeanEvents(payload.text());
+    String statusLabel = TrackingBrowserPageSupport.bestStatusLabel(payload.text(), payload.title());
+    ParcelStatus status = TrackingBrowserPageSupport.resolveBestStatus(payload.html(), payload.text(), events);
+    OffsetDateTime deliveredAt = TrackingBrowserPageSupport.latestDeliveredAt(events);
+    if (deliveredAt == null && status == ParcelStatus.DELIVERED) {
+      deliveredAt = TrackingBrowserPageSupport.latestEventTime(events);
+    }
+
+    Map<String, Object> rawPayload = new HashMap<>();
+    rawPayload.put("mode", "browser_tracking_page");
+    rawPayload.put("tracking_url", TrackingBrowserPageSupport.firstNonBlank(payload.currentUrl(), browserFallbackTrackingUrl(parcel)));
+    putIfPresent(rawPayload, "page_title", payload.title());
+    putIfPresent(rawPayload, "page_text_excerpt", excerpt(payload.text(), 4000));
+    putIfPresent(rawPayload, "page_html_excerpt", excerpt(payload.html(), 8000));
+    putIfPresent(rawPayload, "source", payload.source());
+
+    return new TrackingSnapshot(
+        BROWSER_PROVIDER,
+        parcel.getNormalizedTrackingNumber(),
+        "mondial-relay",
+        status,
+        statusLabel,
+        null,
+        deliveredAt,
+        TrackingBrowserPageSupport.firstNonBlank(payload.currentUrl(), browserFallbackTrackingUrl(parcel)),
+        null,
+        null,
+        "Mondial Relay",
+        null,
+        rawPayload,
+        events
+    );
+  }
+
   private String md5Upper(String value) {
     try {
       byte[] digest = MessageDigest.getInstance("MD5").digest(value.getBytes(StandardCharsets.UTF_8));
@@ -329,7 +390,7 @@ public class MondialRelayTrackingClient implements CarrierTrackingClient {
     return sb.length() == 0 ? null : sb.toString();
   }
 
-  private void putIfPresent(Map<String, Object> target, String key, String value) {
+  private static void putIfPresent(Map<String, Object> target, String key, String value) {
     if (value != null && !value.isBlank()) {
       target.put(key, value);
     }
@@ -403,6 +464,14 @@ public class MondialRelayTrackingClient implements CarrierTrackingClient {
   }
 
   record ResolvedStatus(ParcelStatus status, String label) {
+  }
+
+  private static String excerpt(String value, int maxLength) {
+    if (value == null || value.isBlank()) {
+      return null;
+    }
+    String compact = TrackingBrowserPageSupport.compact(value);
+    return compact.length() <= maxLength ? compact : compact.substring(0, maxLength);
   }
 
 }

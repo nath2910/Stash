@@ -123,6 +123,10 @@ public class PublicTrackingPageClient implements CarrierTrackingClient {
     String normalized = html.toLowerCase(Locale.ROOT);
     return normalized.contains("just a moment")
         || normalized.contains("enable javascript and cookies to continue")
+        || normalized.contains("access denied")
+        || normalized.contains("you don't have permission to access")
+        || normalized.contains("attention required! | cloudflare")
+        || normalized.contains("sorry, you have been blocked")
         || normalized.contains("cf-chl")
         || normalized.contains("challenges.cloudflare.com");
   }

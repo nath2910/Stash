@@ -1110,4 +1110,13 @@ defineExpose({
     width: 100%;
   }
 }
+
+@media (hover: none) and (pointer: coarse) {
+  .item-field input,
+  .item-field textarea,
+  .quantity-input,
+  :deep(.cd-input) {
+    font-size: 16px !important;
+  }
+}
 </style>

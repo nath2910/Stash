@@ -396,7 +396,7 @@ public class DeliveryTrackingService {
     }
     return switch (rawStatus.trim().toUpperCase()) {
       case "DELIVERED" -> ParcelStatus.DELIVERED;
-      case "OUT_FOR_DELIVERY" -> ParcelStatus.IN_TRANSIT;
+      case "OUT_FOR_DELIVERY" -> ParcelStatus.OUT_FOR_DELIVERY;
       case "IN_TRANSIT", "SHIPPED" -> ParcelStatus.IN_TRANSIT;
       default -> null;
     };
@@ -409,7 +409,8 @@ public class DeliveryTrackingService {
     }
     return switch (status) {
       case DELIVERED -> "Livre selon email transporteur";
-      case IN_TRANSIT, OUT_FOR_DELIVERY -> "En transit selon email transporteur";
+      case OUT_FOR_DELIVERY -> "En cours de livraison selon email transporteur";
+      case IN_TRANSIT -> "En transit selon email transporteur";
       default -> "Suivi detecte";
     };
   }

@@ -31,6 +31,8 @@ import org.springframework.web.client.RestClient;
 public class LaPosteTrackingClient implements CarrierTrackingClient {
 
   private static final String PROVIDER = "LA_POSTE_OKAPI";
+  private static final String BROWSER_PROVIDER = "LA_POSTE_BROWSER_PAGE";
+  private static final String BROWSER_SCRIPT = "laposte-browser-scrape.mjs";
   private static final Pattern LA_POSTE_LIKE = Pattern.compile(
       "([A-Z]{2}\\d{9}[A-Z]{2}|\\d[A-Z]\\d{11}|\\d{13}|[A-Z0-9]{13,16})",
       Pattern.CASE_INSENSITIVE
@@ -56,9 +58,14 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
   @Override
   public boolean supports(Parcel parcel) {
     String carrier = normalizedCarrier(parcel);
-    if (carrier.equals("colissimo") || carrier.equals("laposte") || carrier.equals("la-poste")
-        || carrier.equals("chronopost")) {
+    if (carrier.equals("chronopost")) {
+      return false;
+    }
+    if (carrier.equals("colissimo") || carrier.equals("laposte") || carrier.equals("la-poste")) {
       return true;
+    }
+    if ("chronopost".equals(TrackingLinkResolver.detectCarrierSlug(rawTrackingUrl(parcel)))) {
+      return false;
     }
     String tracking = normalizedTracking(parcel);
     return LA_POSTE_LIKE.matcher(tracking).matches();
@@ -71,22 +78,24 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
 
   @Override
   public Optional<TrackingSnapshot> fetchTracking(Parcel parcel) {
-    if (!isConfigured()) {
-      return Optional.empty();
+    if (isConfigured()) {
+      try {
+        Map<String, Object> response = restClient.get()
+            .uri(trackingUri(parcel))
+            .header("Accept", "application/json")
+            .header("X-Okapi-Key", apiKey)
+            .retrieve()
+            .body(new ParameterizedTypeReference<>() {});
+
+        if (response != null && isSuccess(response)) {
+          return Optional.of(toSnapshot(parcel, response));
+        }
+      } catch (Exception ignored) {
+        // Browser fallback below.
+      }
     }
 
-    Map<String, Object> response = restClient.get()
-        .uri(trackingUri(parcel))
-        .header("Accept", "application/json")
-        .header("X-Okapi-Key", apiKey)
-        .retrieve()
-        .body(new ParameterizedTypeReference<>() {});
-
-    if (response == null || !isSuccess(response)) {
-      return Optional.empty();
-    }
-
-    return Optional.of(toSnapshot(parcel, response));
+    return fetchFromBrowserPage(parcel);
   }
 
   private TrackingSnapshot toSnapshot(Parcel parcel, Map<String, Object> response) {
@@ -243,6 +252,60 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
     return baseUrl + URLEncoder.encode(parcel.getTrackingNumber().trim(), StandardCharsets.UTF_8);
   }
 
+  private static String browserFallbackTrackingUrl(Parcel parcel) {
+    String trackingNumber = parcel == null ? null : TrackingBrowserPageSupport.firstNonBlank(
+        parcel.getTrackingNumber(),
+        parcel.getNormalizedTrackingNumber()
+    );
+    if (trackingNumber == null) {
+      return null;
+    }
+    return "https://www.laposte.fr/outils/suivre-vos-envois?code="
+        + URLEncoder.encode(trackingNumber.trim(), StandardCharsets.UTF_8);
+  }
+
+  private Optional<TrackingSnapshot> fetchFromBrowserPage(Parcel parcel) {
+    return BrowserTrackingScriptRunner.run(BROWSER_SCRIPT, browserFallbackTrackingUrl(parcel))
+        .filter(payload -> !PublicTrackingPageClient.looksLikeBotChallenge(payload.html()))
+        .map(payload -> toBrowserSnapshot(parcel, payload))
+        .filter(snapshot -> snapshot.status() != ParcelStatus.UNKNOWN || snapshot.statusLabel() != null);
+  }
+
+  static TrackingSnapshot toBrowserSnapshot(Parcel parcel, BrowserTrackingScriptRunner.BrowserPagePayload payload) {
+    List<TrackingEventSnapshot> events = TrackingBrowserPageSupport.extractEuropeanEvents(payload.text());
+    String statusLabel = TrackingBrowserPageSupport.bestStatusLabel(payload.text(), payload.title());
+    ParcelStatus status = TrackingBrowserPageSupport.resolveBestStatus(payload.html(), payload.text(), events);
+    OffsetDateTime deliveredAt = TrackingBrowserPageSupport.latestDeliveredAt(events);
+    if (deliveredAt == null && status == ParcelStatus.DELIVERED) {
+      deliveredAt = TrackingBrowserPageSupport.latestEventTime(events);
+    }
+
+    Map<String, Object> rawPayload = new HashMap<>();
+    rawPayload.put("mode", "browser_tracking_page");
+    rawPayload.put("tracking_url", TrackingBrowserPageSupport.firstNonBlank(payload.currentUrl(), browserFallbackTrackingUrl(parcel)));
+    putIfPresent(rawPayload, "page_title", payload.title());
+    putIfPresent(rawPayload, "page_text_excerpt", excerpt(payload.text(), 4000));
+    putIfPresent(rawPayload, "page_html_excerpt", excerpt(payload.html(), 8000));
+    putIfPresent(rawPayload, "source", payload.source());
+
+    return new TrackingSnapshot(
+        BROWSER_PROVIDER,
+        TrackingBrowserPageSupport.firstNonBlank(parcel.getNormalizedTrackingNumber(), parcel.getTrackingNumber()),
+        canonicalBrowserCarrier(parcel),
+        status,
+        statusLabel,
+        null,
+        deliveredAt,
+        TrackingBrowserPageSupport.firstNonBlank(payload.currentUrl(), browserFallbackTrackingUrl(parcel)),
+        null,
+        null,
+        "Colissimo / La Poste",
+        null,
+        rawPayload,
+        events
+    );
+  }
+
   @SuppressWarnings("unchecked")
   private Map<String, Object> mapValue(Object value) {
     if (value instanceof Map<?, ?> map) {
@@ -289,6 +352,14 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
 
   private String normalizedCarrier(Parcel parcel) {
     return parcel.getCarrierSlug() == null ? "" : parcel.getCarrierSlug().trim().toLowerCase(Locale.ROOT);
+  }
+
+  private String rawTrackingUrl(Parcel parcel) {
+    if (parcel == null || parcel.getRawCurrentPayload() == null) {
+      return null;
+    }
+    Object rawUrl = parcel.getRawCurrentPayload().get("tracking_url");
+    return rawUrl == null ? null : String.valueOf(rawUrl);
   }
 
   private String normalizedTracking(Parcel parcel) {
@@ -368,5 +439,29 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
   }
 
   record ResolvedStatus(ParcelStatus status, String label) {
+  }
+
+  private static String excerpt(String value, int maxLength) {
+    if (value == null || value.isBlank()) {
+      return null;
+    }
+    String compact = TrackingBrowserPageSupport.compact(value);
+    return compact.length() <= maxLength ? compact : compact.substring(0, maxLength);
+  }
+
+  private static String canonicalBrowserCarrier(Parcel parcel) {
+    String carrier = parcel == null || parcel.getCarrierSlug() == null
+        ? ""
+        : parcel.getCarrierSlug().trim().toLowerCase(Locale.ROOT);
+    if (carrier.contains("poste")) {
+      return "laposte";
+    }
+    return "colissimo";
+  }
+
+  private static void putIfPresent(Map<String, Object> target, String key, String value) {
+    if (value != null && !value.isBlank()) {
+      target.put(key, value);
+    }
   }
 }

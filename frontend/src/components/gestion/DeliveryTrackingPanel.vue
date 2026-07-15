@@ -677,6 +677,17 @@ const showFeedbackSummary = (summary, title) => {
   showFeedbackToast({ ...notice, title })
 }
 
+const requestErrorMessage = (error, fallbackMessage, timeoutMessage) => {
+  if (error?.response?.data?.message) {
+    return error.response.data.message
+  }
+  const message = String(error?.message || '').toLowerCase()
+  if (error?.code === 'ECONNABORTED' || message.includes('timeout')) {
+    return timeoutMessage
+  }
+  return fallbackMessage
+}
+
 const loadMailAccounts = async () => {
   accountsLoading.value = true
   accountsError.value = ''
@@ -776,7 +787,11 @@ const refreshAllParcelStatuses = async () => {
       message: `${parcels.value.length} colis rafraichi(s).`,
     })
   } catch (error) {
-    parcelsError.value = error?.response?.data?.message || 'Mise a jour globale des suivis impossible'
+    parcelsError.value = requestErrorMessage(
+      error,
+      'Mise a jour globale des suivis impossible',
+      'La mise a jour des suivis prend trop de temps. Reessaie dans quelques secondes.',
+    )
   } finally {
     refreshingAllParcels.value = false
   }
@@ -903,7 +918,11 @@ const createManualParcel = async (payload) => {
         : `${createdParcels.length} suivi(s) ajoute(s) au tableau de livraison.`,
     })
   } catch (error) {
-    manualParcelError.value = error?.response?.data?.message || 'Ajout du colis impossible'
+    manualParcelError.value = requestErrorMessage(
+      error,
+      'Ajout du colis impossible',
+      "L'ajout du colis prend trop de temps. Reessaie dans quelques secondes.",
+    )
   } finally {
     creatingManualParcel.value = false
   }
@@ -924,7 +943,11 @@ const refreshParcel = async (parcelId) => {
       lastSuccessfulSyncAt.value = new Date().toISOString()
     }
   } catch (error) {
-    parcelsError.value = error?.response?.data?.message || 'Mise a jour du suivi impossible'
+    parcelsError.value = requestErrorMessage(
+      error,
+      'Mise a jour du suivi impossible',
+      'La mise a jour du suivi prend trop de temps. Reessaie dans quelques secondes.',
+    )
   } finally {
     refreshingParcelId.value = null
   }

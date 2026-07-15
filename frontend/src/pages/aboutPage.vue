@@ -92,7 +92,7 @@ import { RouterLink } from 'vue-router'
 
 .about-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.7fr) minmax(280px, 0.95fr);
+  grid-template-columns: minmax(0, 1.55fr) minmax(18rem, 0.95fr);
   gap: 1.2rem;
   align-items: stretch;
 }
@@ -172,7 +172,7 @@ import { RouterLink } from 'vue-router'
 
 .about-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
   gap: 1rem;
 }
 
@@ -201,7 +201,7 @@ import { RouterLink } from 'vue-router'
 
 .about-band {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
   gap: 1rem;
 }
 
@@ -241,11 +241,8 @@ import { RouterLink } from 'vue-router'
   transform: translateY(-1px);
 }
 
-@media (max-width: 980px) {
-  .about-hero,
-  .about-grid,
-  .about-band,
-  .about-cta {
+@media (max-width: 920px) {
+  .about-hero {
     grid-template-columns: 1fr;
   }
 

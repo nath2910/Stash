@@ -3301,4 +3301,30 @@ watch(
     width: 100%;
   }
 }
+
+@media (max-width: 1023px) {
+  .inventory-list-scroll {
+    max-height: none;
+    overflow-x: hidden;
+    overflow-y: visible;
+    padding-right: 0;
+    scrollbar-gutter: auto;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .filter-control,
+  .date-range-inputs :deep(.cd-input),
+  .inventory-control-row :deep(.gestion-search-input) {
+    font-size: 16px;
+  }
+
+  .inventory-control-row :deep(.gestion-search-field),
+  .inventory-control-row .filter-panel-toggle,
+  .filter-reset-button--inline,
+  .inventory-danger-button,
+  .inventory-toolbar-actions :deep(button) {
+    min-height: 48px;
+  }
+}
 </style>

@@ -39,6 +39,7 @@ public class ChronopostTrackingClient implements CarrierTrackingClient {
   private static final Logger log = LoggerFactory.getLogger(ChronopostTrackingClient.class);
   private static final String PROVIDER = "CHRONOPOST_DIRECT";
   private static final String BASE_URL = "https://www.chronopost.fr/tracking-no-cms";
+  private static final long LOCAL_BROWSER_TIMEOUT_SECONDS = 20;
   private static final String BROWSER_USER_AGENT =
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
           + "(KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36";
@@ -366,7 +367,7 @@ public class ChronopostTrackingClient implements CarrierTrackingClient {
           trackingPageUrl(parcel)
       ).redirectErrorStream(true).start();
 
-      boolean finished = process.waitFor(90, java.util.concurrent.TimeUnit.SECONDS);
+      boolean finished = process.waitFor(LOCAL_BROWSER_TIMEOUT_SECONDS, java.util.concurrent.TimeUnit.SECONDS);
       if (!finished) {
         process.destroyForcibly();
         throw new IllegalStateException("Chronopost local browser fallback timed out");

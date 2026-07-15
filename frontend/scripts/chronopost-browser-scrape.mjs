@@ -57,7 +57,7 @@ try {
 
   await page.goto(trackingUrl, {
     waitUntil: 'domcontentloaded',
-    timeout: 45000,
+    timeout: 15000,
   })
 
   await page.waitForFunction(
@@ -75,7 +75,7 @@ try {
       )
     },
     {
-      timeout: 45000,
+      timeout: 15000,
       polling: 500,
     },
   )

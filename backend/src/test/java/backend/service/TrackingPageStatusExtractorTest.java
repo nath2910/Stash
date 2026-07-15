@@ -30,7 +30,7 @@ class TrackingPageStatusExtractorTest {
   }
 
   @Test
-  void collapsesDeliveryInProgressIntoTransitStatus() {
+  void extractsDeliveryInProgressAsOutForDeliveryStatus() {
     Optional<TrackingPageStatusExtractor.ExtractedStatus> status = TrackingPageStatusExtractor.extractStatus("""
         <html>
           <body>
@@ -40,7 +40,7 @@ class TrackingPageStatusExtractorTest {
         """);
 
     Assertions.assertTrue(status.isPresent());
-    Assertions.assertEquals(ParcelStatus.IN_TRANSIT, status.get().status());
+    Assertions.assertEquals(ParcelStatus.OUT_FOR_DELIVERY, status.get().status());
   }
 
   @Test

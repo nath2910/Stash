@@ -127,7 +127,7 @@ import { RouterLink } from 'vue-router'
 
 .privacy-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
   gap: 1rem;
 }
 
@@ -177,9 +177,4 @@ import { RouterLink } from 'vue-router'
   padding: 0.72rem 1rem;
 }
 
-@media (max-width: 980px) {
-  .privacy-grid {
-    grid-template-columns: 1fr;
-  }
-}
 </style>

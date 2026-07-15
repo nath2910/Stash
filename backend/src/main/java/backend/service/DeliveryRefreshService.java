@@ -8,19 +8,14 @@ import org.springframework.stereotype.Service;
 public class DeliveryRefreshService {
 
   private final DeliveryTrackingService deliveryTrackingService;
-  private final MailAccountService mailAccountService;
 
-  public DeliveryRefreshService(
-      DeliveryTrackingService deliveryTrackingService,
-      MailAccountService mailAccountService
-  ) {
+  public DeliveryRefreshService(DeliveryTrackingService deliveryTrackingService) {
     this.deliveryTrackingService = deliveryTrackingService;
-    this.mailAccountService = mailAccountService;
   }
 
   public List<ParcelResponse> refreshAllForUser(Long userId) {
-    // Refresh mail-derived hints first, then reconcile parcel statuses with direct carrier checks.
-    mailAccountService.scanAll(userId);
+    // Keep manual parcel refresh focused on carrier tracking only.
+    // Gmail scanning already has its own dedicated actions and should not slow this endpoint down.
     return deliveryTrackingService.refreshAllForUser(userId);
   }
 }

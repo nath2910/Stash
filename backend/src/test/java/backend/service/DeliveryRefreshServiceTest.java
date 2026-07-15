@@ -9,17 +9,15 @@ import org.mockito.Mockito;
 class DeliveryRefreshServiceTest {
 
   @Test
-  void refreshAllScansMailAccountsBeforeRefreshingParcels() {
+  void refreshAllRefreshesParcelsWithoutTriggeringMailScan() {
     DeliveryTrackingService deliveryTrackingService = Mockito.mock(DeliveryTrackingService.class);
-    MailAccountService mailAccountService = Mockito.mock(MailAccountService.class);
     List<ParcelResponse> expected = List.of();
     Mockito.when(deliveryTrackingService.refreshAllForUser(1L)).thenReturn(expected);
 
-    DeliveryRefreshService service = new DeliveryRefreshService(deliveryTrackingService, mailAccountService);
+    DeliveryRefreshService service = new DeliveryRefreshService(deliveryTrackingService);
 
     List<ParcelResponse> result = service.refreshAllForUser(1L);
 
-    Mockito.verify(mailAccountService).scanAll(1L);
     Mockito.verify(deliveryTrackingService).refreshAllForUser(1L);
     Assertions.assertSame(expected, result);
   }

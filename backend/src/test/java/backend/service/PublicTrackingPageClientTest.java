@@ -31,4 +31,14 @@ class PublicTrackingPageClientTest {
         </html>
         """));
   }
+
+  @Test
+  void detectsAkamaiAccessDeniedAsNonTrackingPage() {
+    Assertions.assertTrue(PublicTrackingPageClient.looksLikeBotChallenge("""
+        <html>
+          <head><title>Access Denied</title></head>
+          <body>You don't have permission to access this resource.</body>
+        </html>
+        """));
+  }
 }

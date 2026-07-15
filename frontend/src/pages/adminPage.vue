@@ -2014,7 +2014,7 @@ function errorMessage(errorObject, fallback) {
 .admin-shell {
   width: min(1360px, 100%);
   margin: 0 auto;
-  padding: clamp(20px, 2.4vw, 32px) clamp(16px, 2vw, 24px) 40px;
+  padding: clamp(16px, 2.2vw, 32px) clamp(12px, 2vw, 24px) 40px;
 }
 
 .admin-header,
@@ -2234,7 +2234,7 @@ function errorMessage(errorObject, fallback) {
 
 .command-center {
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
+  grid-template-columns: minmax(0, 1.18fr) minmax(17rem, 0.82fr);
   gap: 14px;
   margin-bottom: 14px;
 }

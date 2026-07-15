@@ -134,7 +134,7 @@ h2 {
 
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13.5rem), 1fr));
   gap: 0.9rem;
 }
 
@@ -191,11 +191,7 @@ h2 {
   padding: 0.55rem 0.9rem;
 }
 
-@media (max-width: 1180px) {
-  .kpi-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
+@media (max-width: 920px) {
   .home-empty-state {
     align-items: flex-start;
     flex-direction: column;
@@ -213,10 +209,6 @@ h2 {
 
   .panel-error {
     text-align: left;
-  }
-
-  .kpi-grid {
-    grid-template-columns: 1fr;
   }
 }
 </style>

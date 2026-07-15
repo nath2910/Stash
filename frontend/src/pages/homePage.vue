@@ -403,7 +403,7 @@ function handleVisibilityChange() {
 }
 
 .home-action-shell {
-  width: min(100%, 1700px);
+  width: min(100%, 1380px);
   max-width: 100%;
   box-sizing: border-box;
   display: grid;
@@ -417,24 +417,13 @@ function handleVisibilityChange() {
 
 .home-hero-grid {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: inherit;
   align-items: start;
 }
 
 .home-hero-grid > * {
   min-width: 0;
-}
-
-@media (min-width: 1100px) {
-  .home-hero-grid {
-    grid-template-columns: minmax(0, 1.08fr) minmax(22rem, 0.92fr);
-  }
-}
-
-@media (min-width: 1500px) {
-  .home-hero-grid {
-    grid-template-columns: minmax(0, 1.14fr) minmax(24rem, 0.86fr);
-  }
 }
 
 .quick-add-toast-layer {
@@ -583,7 +572,7 @@ function handleVisibilityChange() {
 
 @media (min-width: 1800px) {
   .home-action-shell {
-    width: min(100%, 1840px);
+    width: min(100%, 1480px);
     gap: clamp(1.25rem, 1.25vw, 1.8rem);
     padding-inline: clamp(32px, 3vw, 56px);
   }

@@ -57,4 +57,10 @@ const emit = defineEmits(['update:modelValue'])
   transform: translateY(-1px);
 }
 
+@media (hover: none) and (pointer: coarse) {
+  .gestion-search-input {
+    font-size: 16px;
+  }
+}
+
 </style>

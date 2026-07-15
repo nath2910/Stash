@@ -51,10 +51,25 @@ final class CarrierStatusResolver {
           )
       ),
       new StatusRule(
+          ParcelStatus.OUT_FOR_DELIVERY,
+          List.of(
+              new Phrase("out for delivery", 96),
+              new Phrase("en cours de livraison", 96),
+              new Phrase("delivery today", 92),
+              new Phrase("livraison aujourd hui", 90),
+              new Phrase("sera livre aujourd hui", 90),
+              new Phrase("depart en livraison", 88),
+              new Phrase("distribution en cours", 88),
+              new Phrase("loaded on delivery vehicle", 88),
+              new Phrase("with the delivery courier", 86),
+              new Phrase("driver is on the way", 84),
+              new Phrase("envoi en cours de livraison", 84),
+              new Phrase("livraison imminente", 82)
+          )
+      ),
+      new StatusRule(
           ParcelStatus.IN_TRANSIT,
           List.of(
-              new Phrase("en cours de livraison", 90),
-              new Phrase("out for delivery", 90),
               new Phrase("livraison ce jour", 86),
               new Phrase("available for pickup", 84),
               new Phrase("disponible au point relais", 84),

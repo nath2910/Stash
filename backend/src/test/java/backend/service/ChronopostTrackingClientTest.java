@@ -3,7 +3,6 @@ package backend.service;
 import backend.entity.Parcel;
 import backend.entity.ParcelStatus;
 import java.time.OffsetDateTime;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Assertions;
@@ -29,8 +28,10 @@ class ChronopostTrackingClientTest {
     parcel.setCarrierSlug("unknown");
     parcel.setTrackingNumber("XR646836167TS");
     parcel.setNormalizedTrackingNumber("XR646836167TS");
-    HashMap<String, Object> payload = new HashMap<>();
-    payload.put("tracking_url", "https://www.chronopost.fr/tracking-no-cms/suivi-page?listeNumerosLT=XR646836167TS");
+    Map<String, Object> payload = Map.of(
+        "tracking_url",
+        "https://www.chronopost.fr/tracking-no-cms/suivi-page?listeNumerosLT=XR646836167TS"
+    );
     parcel.setRawCurrentPayload(payload);
 
     Assertions.assertTrue(client.supports(parcel));

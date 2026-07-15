@@ -39,7 +39,7 @@ class DeliveryTrackingService {
   }
 
   createParcel(payload) {
-    return api.post('/delivery/parcels', payload)
+    return api.post('/delivery/parcels', payload, { timeout: 45000 })
   }
 
   getParcel(id) {
@@ -47,11 +47,11 @@ class DeliveryTrackingService {
   }
 
   refreshAllParcels() {
-    return api.post('/delivery/parcels/refresh-all')
+    return api.post('/delivery/parcels/refresh-all', null, { timeout: 120000 })
   }
 
   refreshParcel(id) {
-    return api.post(`/delivery/parcels/${id}/refresh`)
+    return api.post(`/delivery/parcels/${id}/refresh`, null, { timeout: 45000 })
   }
 
   deleteParcel(id) {
