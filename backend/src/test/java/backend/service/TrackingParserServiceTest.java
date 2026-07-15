@@ -75,6 +75,22 @@ class TrackingParserServiceTest {
   }
 
   @Test
+  void parsesMondialRelayTrackingWhenContextIsExplicit() {
+    TrackingDetectionResult result = parser.detect(
+        "Mondial Relay <suivi@mondialrelay.fr>",
+        "Votre colis est disponible",
+        """
+            Votre colis est disponible au Point Relais.
+            Numero d expedition: 12345678
+            """
+    );
+
+    Assertions.assertEquals(1, result.autoImportCandidates().size());
+    Assertions.assertEquals("mondial-relay", result.autoImportCandidates().get(0).carrierSlug());
+    Assertions.assertEquals("12345678", result.autoImportCandidates().get(0).normalizedTrackingNumber());
+  }
+
+  @Test
   void ignoresOrderNumberOnly() {
     TrackingDetectionResult result = parser.detect(
         "shop@example.com",
@@ -214,6 +230,7 @@ class TrackingParserServiceTest {
   @Test
   void infersOnlyReliableCarrierFamiliesFromManualTrackingNumber() {
     Assertions.assertEquals("colissimo", parser.inferCarrierSlug("LA-123456789-FR"));
+    Assertions.assertEquals("chronopost", parser.inferCarrierSlug("XY123456789FR"));
     Assertions.assertEquals("chronopost", parser.inferCarrierSlug("XR646836167TS"));
     Assertions.assertEquals("ups", parser.inferCarrierSlug("1Z999AA10123456784"));
     Assertions.assertEquals("amazon-logistics", parser.inferCarrierSlug("TBA123456789012"));

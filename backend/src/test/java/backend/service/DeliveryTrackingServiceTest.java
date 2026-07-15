@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
+import org.springframework.web.server.ResponseStatusException;
 
 class DeliveryTrackingServiceTest {
 
@@ -144,6 +145,61 @@ class DeliveryTrackingServiceTest {
     Assertions.assertEquals(31L, response.id());
     Mockito.verify(trackingAggregatorService).refreshTracking(existing);
     Mockito.verify(trackingAggregatorService, Mockito.never()).registerTracking(Mockito.any(Parcel.class));
+  }
+
+  @Test
+  void createManualAutoDetectsMondialRelayEightDigitTracking() {
+    User user = Mockito.mock(User.class);
+    Mockito.when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+    Mockito.when(parcelRepository.findByUser_IdAndNormalizedTrackingNumberAndCarrierSlug(
+        1L,
+        "12345678",
+        "mondial-relay"
+    )).thenReturn(Optional.empty());
+    Mockito.when(parcelRepository.saveAndFlush(Mockito.any(Parcel.class))).thenAnswer(invocation -> {
+      Parcel parcel = invocation.getArgument(0);
+      parcel.setId(32L);
+      return parcel;
+    });
+
+    var response = service.createManual(1L, new ParcelCreateRequest("12 34 56 78", null));
+
+    Assertions.assertEquals("12345678", response.normalizedTrackingNumber());
+    Assertions.assertEquals("mondial-relay", response.carrierSlug());
+    Mockito.verify(trackingAggregatorService).registerTracking(Mockito.any(Parcel.class));
+  }
+
+  @Test
+  void createManualAutoDetectsChronopostFrPrefixWithoutFallingBackToColissimo() {
+    User user = Mockito.mock(User.class);
+    Mockito.when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+    Mockito.when(parcelRepository.findByUser_IdAndNormalizedTrackingNumberAndCarrierSlug(
+        1L,
+        "XY123456789FR",
+        "chronopost"
+    )).thenReturn(Optional.empty());
+    Mockito.when(parcelRepository.saveAndFlush(Mockito.any(Parcel.class))).thenAnswer(invocation -> {
+      Parcel parcel = invocation.getArgument(0);
+      parcel.setId(33L);
+      return parcel;
+    });
+
+    var response = service.createManual(1L, new ParcelCreateRequest("XY123456789FR", null));
+
+    Assertions.assertEquals("chronopost", response.carrierSlug());
+  }
+
+  @Test
+  void createManualRejectsCarrierMismatchWithClearMessage() {
+    ResponseStatusException exception = Assertions.assertThrows(
+        ResponseStatusException.class,
+        () -> service.createManual(1L, new ParcelCreateRequest("LA123456789FR", "mondial-relay"))
+    );
+
+    Assertions.assertEquals(
+        "Ce numero ne correspond pas a un format Mondial Relay reconnu.",
+        exception.getReason()
+    );
   }
 
   @Test

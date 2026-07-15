@@ -69,20 +69,20 @@
             </p>
           </div>
 
-          <div class="flex shrink-0 flex-wrap items-center gap-2 lg:justify-end">
+          <div class="grid shrink-0 gap-2 sm:flex sm:flex-wrap sm:items-center lg:justify-end">
             <a
               v-if="candidate.trackingUrl"
               :href="candidate.trackingUrl"
               target="_blank"
               rel="noreferrer"
-              class="inline-flex h-9 items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-sky-300 hover:text-slate-900"
+              class="inline-flex h-9 w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-sky-300 hover:text-slate-900 sm:w-auto"
             >
               <ExternalLink class="h-3.5 w-3.5" />
               <span>Ouvrir</span>
             </a>
             <button
               type="button"
-              class="inline-flex h-9 items-center justify-center gap-2 rounded-full border border-emerald-300/50 bg-emerald-50 px-3 text-xs font-semibold text-emerald-700 transition hover:border-emerald-400 hover:bg-emerald-100 disabled:cursor-wait disabled:opacity-60"
+              class="inline-flex h-9 w-full items-center justify-center gap-2 rounded-full border border-emerald-300/50 bg-emerald-50 px-3 text-xs font-semibold text-emerald-700 transition hover:border-emerald-400 hover:bg-emerald-100 disabled:cursor-wait disabled:opacity-60 sm:w-auto"
               :disabled="confirmingId === candidate.id || ignoringId === candidate.id"
               @click="$emit('confirm', candidate.id)"
             >
@@ -91,7 +91,7 @@
             </button>
             <button
               type="button"
-              class="inline-flex h-9 items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-red-300 hover:text-red-700 disabled:cursor-wait disabled:opacity-60"
+              class="inline-flex h-9 w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-red-300 hover:text-red-700 disabled:cursor-wait disabled:opacity-60 sm:w-auto"
               :disabled="confirmingId === candidate.id || ignoringId === candidate.id"
               @click="$emit('ignore', candidate.id)"
             >

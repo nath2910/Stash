@@ -167,10 +167,10 @@
               {{ lastSyncLabel }}
             </p>
           </div>
-          <div class="flex flex-wrap items-center gap-2">
+          <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto">
             <button
               type="button"
-              class="inline-flex h-9 items-center justify-center gap-2 rounded-full border border-teal-600/20 bg-teal-700 px-3 text-xs font-semibold text-white transition hover:bg-teal-600 disabled:cursor-wait disabled:opacity-60"
+              class="inline-flex h-9 w-full items-center justify-center gap-2 rounded-full border border-teal-600/20 bg-teal-700 px-3 text-xs font-semibold text-white transition hover:bg-teal-600 disabled:cursor-wait disabled:opacity-60 sm:w-auto"
               :disabled="refreshingAllParcels || scanningAll || accountsLoading || parcelsLoading"
               :title="refreshActionDetail"
               @click="handleRefreshAction"
@@ -184,19 +184,19 @@
           </div>
         </div>
 
-        <div class="mt-4 flex flex-wrap gap-2">
+        <div class="mt-4 grid gap-2 sm:grid-cols-2 xl:flex xl:flex-wrap">
           <span
             v-for="metric in metrics"
             :key="metric.label"
-            class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600"
+            class="inline-flex min-w-0 items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600"
           >
             <component :is="metric.icon" class="h-3.5 w-3.5" :class="metric.iconClass" />
-            <span>{{ metric.label }}</span>
-            <span class="font-semibold text-slate-900">{{ metric.value }}</span>
+            <span class="truncate">{{ metric.label }}</span>
+            <span class="ml-auto font-semibold text-slate-900">{{ metric.value }}</span>
           </span>
         </div>
 
-        <div class="mt-4 grid gap-2 lg:grid-cols-2">
+        <div class="mt-4 grid gap-2 md:grid-cols-2">
           <button
             type="button"
             class="flex items-center justify-between rounded-[20px] border border-slate-200 bg-white px-4 py-3 text-left transition hover:border-sky-300 hover:bg-slate-50"
@@ -236,12 +236,14 @@
               placeholder="Rechercher un numero, un transporteur ou un statut"
             />
           </label>
-          <div class="flex w-full flex-wrap gap-2 lg:w-auto">
+          <div
+            class="delivery-filter-strip -mx-1 flex w-auto gap-2 overflow-x-auto px-1 pb-1 lg:mx-0 lg:w-auto lg:flex-wrap lg:overflow-visible lg:px-0 lg:pb-0"
+          >
             <button
               v-for="quick in quickFilters"
               :key="quick.value"
               type="button"
-              class="flex-1 rounded-full border px-3 py-1.5 text-xs font-semibold transition sm:flex-none"
+              class="shrink-0 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition"
               :class="
                 activeStatusFilter === quick.value
                   ? 'border-teal-600/20 bg-teal-700 text-white'
@@ -359,7 +361,7 @@
               Raccourcis: `/` recherche, `N` ajout manuel, `M` mode multi-selection.
             </p>
           </div>
-          <div class="flex flex-wrap items-center gap-2">
+          <div class="grid gap-2 sm:flex sm:flex-wrap sm:items-center">
             <button
               type="button"
               class="inline-flex h-9 items-center justify-center rounded-full border border-slate-200 bg-slate-50 px-3 text-xs font-semibold text-slate-700 transition hover:border-sky-300 hover:bg-white"
@@ -883,6 +885,7 @@ const createManualParcel = async (payload) => {
 
     const createdParcels = []
     const failedNumbers = []
+    let firstFailureMessage = ''
     for (const trackingNumber of numbers) {
       try {
         const { data } = await DeliveryTrackingService.createParcel({
@@ -892,13 +895,20 @@ const createManualParcel = async (payload) => {
         if (data?.id) {
           createdParcels.push(data)
         }
-      } catch {
+      } catch (error) {
         failedNumbers.push(trackingNumber)
+        if (!firstFailureMessage) {
+          firstFailureMessage =
+            error?.response?.data?.message || "Ce numero ne correspond pas aux formats reconnus."
+        }
       }
     }
 
     if (!createdParcels.length) {
-      manualParcelError.value = "Aucun suivi n'a pu etre ajoute."
+      manualParcelError.value =
+        numbers.length === 1 && firstFailureMessage
+          ? firstFailureMessage
+          : "Aucun suivi n'a pu etre ajoute."
       return
     }
 
@@ -1358,6 +1368,14 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+.delivery-filter-strip {
+  scrollbar-width: none;
+}
+
+.delivery-filter-strip::-webkit-scrollbar {
+  display: none;
+}
+
 .delivery-toast-layer {
   position: fixed;
   right: 1rem;

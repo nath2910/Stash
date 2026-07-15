@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Map;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -31,6 +33,9 @@ import org.springframework.web.server.ResponseStatusException;
 public class DeliveryTrackingService {
 
   private static final String UNKNOWN_CARRIER = "unknown";
+  private static final String SUPPORTED_TRACKING_MESSAGE =
+      "Ce numero ne correspond pas aux formats connus Chronopost, Colissimo ou Mondial Relay.";
+  private static final Logger log = LoggerFactory.getLogger(DeliveryTrackingService.class);
 
   private final ParcelRepository parcelRepository;
   private final ParcelEventRepository parcelEventRepository;
@@ -110,7 +115,11 @@ public class DeliveryTrackingService {
     }
 
     String normalizedTrackingNumber = trackingParserService.normalizeTrackingNumber(rawTrackingNumber);
-    String carrierSlug = normalizeCarrier(request.carrierSlug(), normalizedTrackingNumber);
+    String carrierSlug = resolveManualCarrier(request == null ? null : request.carrierSlug(), normalizedTrackingNumber);
+    if (carrierSlug == null || carrierSlug.isBlank() || UNKNOWN_CARRIER.equals(carrierSlug)) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, SUPPORTED_TRACKING_MESSAGE);
+    }
+    log.info("Delivery manual tracking normalized={} carrier={}", normalizedTrackingNumber, carrierSlug);
     var existingParcel = parcelRepository.findByUser_IdAndNormalizedTrackingNumberAndCarrierSlug(
         userId,
         normalizedTrackingNumber,
@@ -470,6 +479,35 @@ public class DeliveryTrackingService {
       case "mondialrelay", "mondial relay" -> "mondial-relay";
       case "amazon", "amazon logistics" -> "amazon-logistics";
       default -> normalizedCarrier;
+    };
+  }
+
+  private String resolveManualCarrier(String requestedCarrier, String normalizedTrackingNumber) {
+    String normalizedCarrier = TrackingCarrierRules.normalizeCarrierSlug(requestedCarrier);
+    if (normalizedCarrier != null) {
+      if (TrackingCarrierRules.isSupportedCarrier(normalizedCarrier)
+          && !TrackingCarrierRules.isValidForCarrier(normalizedTrackingNumber, normalizedCarrier)) {
+        throw new ResponseStatusException(
+            HttpStatus.BAD_REQUEST,
+            invalidCarrierFormatMessage(normalizedCarrier)
+        );
+      }
+      return normalizeCarrier(normalizedCarrier, normalizedTrackingNumber);
+    }
+
+    String supportedCarrier = TrackingCarrierRules.inferSupportedCarrier(normalizedTrackingNumber);
+    if (supportedCarrier != null) {
+      return supportedCarrier;
+    }
+    return null;
+  }
+
+  private String invalidCarrierFormatMessage(String carrierSlug) {
+    return switch (TrackingCarrierRules.normalizeCarrierSlug(carrierSlug)) {
+      case "chronopost" -> "Ce numero ne correspond pas a un format Chronopost reconnu.";
+      case "colissimo" -> "Ce numero ne correspond pas a un format Colissimo / La Poste reconnu.";
+      case "mondial-relay" -> "Ce numero ne correspond pas a un format Mondial Relay reconnu.";
+      default -> SUPPORTED_TRACKING_MESSAGE;
     };
   }
 

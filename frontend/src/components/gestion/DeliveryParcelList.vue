@@ -9,25 +9,25 @@
         <h2 class="text-base font-semibold leading-tight text-slate-900">Colis</h2>
         <p class="text-xs text-slate-500">{{ countLabel }}</p>
       </div>
-      <div v-if="parcels.length" class="flex flex-wrap items-center gap-2">
+      <div v-if="parcels.length" class="flex w-full flex-wrap items-center gap-2 sm:w-auto">
         <template v-if="selectionMode">
           <button
             type="button"
-            class="inline-flex h-8 items-center justify-center rounded-full border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-sky-300 hover:text-slate-900"
+            class="inline-flex h-8 w-full items-center justify-center rounded-full border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-sky-300 hover:text-slate-900 sm:w-auto"
             @click="$emit('toggle-all-visible')"
           >
             {{ allVisibleSelected ? 'Tout deselectionner' : 'Tout selectionner' }}
           </button>
           <button
             type="button"
-            class="inline-flex h-8 items-center justify-center rounded-full border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-sky-300 hover:text-slate-900"
+            class="inline-flex h-8 w-full items-center justify-center rounded-full border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-sky-300 hover:text-slate-900 sm:w-auto"
             @click="$emit('clear-selection')"
           >
             Annuler
           </button>
           <button
             type="button"
-            class="inline-flex h-8 items-center justify-center rounded-full border border-red-300/40 bg-red-50 px-3 text-xs font-semibold text-red-700 transition hover:border-red-400 hover:bg-red-100 disabled:cursor-wait disabled:opacity-60"
+            class="inline-flex h-8 w-full items-center justify-center rounded-full border border-red-300/40 bg-red-50 px-3 text-xs font-semibold text-red-700 transition hover:border-red-400 hover:bg-red-100 disabled:cursor-wait disabled:opacity-60 sm:w-auto"
             :disabled="!selectedIds.length || deletingSelection"
             @click="$emit('delete-selected')"
           >
@@ -37,7 +37,7 @@
         <button
           v-else
           type="button"
-          class="inline-flex h-8 items-center justify-center rounded-full border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-sky-300 hover:text-slate-900"
+          class="inline-flex h-8 w-full items-center justify-center rounded-full border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-sky-300 hover:text-slate-900 sm:w-auto"
           @click="$emit('start-selection')"
         >
           Selectionner
@@ -68,7 +68,8 @@
       </div>
     </div>
 
-    <div v-else class="delivery-list-scroll max-h-[690px] overflow-y-auto p-3 pr-2 sm:p-4 sm:pr-2">
+    <div class="p-3 sm:p-4" v-else>
+      <div class="delivery-list-scroll max-h-none overflow-visible pr-0 lg:max-h-[690px] lg:overflow-y-auto lg:pr-2">
       <div
         v-if="loading"
         class="mb-3 rounded-2xl border border-sky-200 bg-sky-50 px-3 py-3 text-sm text-sky-900"
@@ -95,7 +96,7 @@
           @click="handleCardClick(parcel.id)"
         >
           <span v-if="parcel.id === selectedId" class="delivery-parcel-card__rail" aria-hidden="true" />
-          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
             <div class="flex min-w-0 gap-3">
               <label
                 v-if="selectionMode"
@@ -130,7 +131,7 @@
               </div>
             </div>
 
-            <div class="flex shrink-0 flex-row flex-wrap items-center gap-2 sm:flex-col sm:items-end">
+            <div class="flex shrink-0 flex-row flex-wrap items-center gap-2 md:max-w-[11rem] md:justify-end lg:flex-col lg:items-end">
               <span
                 v-if="parcel.id === selectedId"
                 class="rounded-full border border-teal-300/60 bg-white px-2.5 py-1 text-[11px] font-semibold text-teal-700 shadow-sm"
@@ -149,6 +150,7 @@
             </div>
           </div>
         </button>
+      </div>
       </div>
     </div>
   </section>

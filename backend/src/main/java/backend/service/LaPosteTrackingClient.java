@@ -19,7 +19,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
-import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.annotation.Order;
@@ -33,10 +32,6 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
   private static final String PROVIDER = "LA_POSTE_OKAPI";
   private static final String BROWSER_PROVIDER = "LA_POSTE_BROWSER_PAGE";
   private static final String BROWSER_SCRIPT = "laposte-browser-scrape.mjs";
-  private static final Pattern LA_POSTE_LIKE = Pattern.compile(
-      "([A-Z]{2}\\d{9}[A-Z]{2}|\\d[A-Z]\\d{11}|\\d{13}|[A-Z0-9]{13,16})",
-      Pattern.CASE_INSENSITIVE
-  );
   private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
 
   private final String apiKey;
@@ -68,7 +63,7 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
       return false;
     }
     String tracking = normalizedTracking(parcel);
-    return LA_POSTE_LIKE.matcher(tracking).matches();
+    return TrackingCarrierRules.isValidForCarrier(tracking, "colissimo");
   }
 
   @Override
@@ -246,10 +241,7 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
 
   private String fallbackTrackingUrl(Parcel parcel, String product) {
     String carrier = canonicalCarrier(parcel == null ? null : parcel.getCarrierSlug(), product);
-    String baseUrl = "chronopost".equals(carrier)
-        ? "https://www.chronopost.fr/tracking-no-cms/suivi-page?listeNumerosLT="
-        : "https://www.laposte.fr/outils/suivre-vos-envois?code=";
-    return baseUrl + URLEncoder.encode(parcel.getTrackingNumber().trim(), StandardCharsets.UTF_8);
+    return TrackingLinkResolver.fallbackTrackingUrl(carrier, parcel.getTrackingNumber());
   }
 
   private static String browserFallbackTrackingUrl(Parcel parcel) {
@@ -257,11 +249,7 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
         parcel.getTrackingNumber(),
         parcel.getNormalizedTrackingNumber()
     );
-    if (trackingNumber == null) {
-      return null;
-    }
-    return "https://www.laposte.fr/outils/suivre-vos-envois?code="
-        + URLEncoder.encode(trackingNumber.trim(), StandardCharsets.UTF_8);
+    return TrackingLinkResolver.fallbackTrackingUrl("colissimo", trackingNumber);
   }
 
   private Optional<TrackingSnapshot> fetchFromBrowserPage(Parcel parcel) {

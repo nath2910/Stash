@@ -18,7 +18,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
-import java.util.regex.Pattern;
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilderFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -39,7 +38,6 @@ public class MondialRelayTrackingClient implements CarrierTrackingClient {
   private static final String BROWSER_PROVIDER = "MONDIAL_RELAY_BROWSER_PAGE";
   private static final String BROWSER_SCRIPT = "mondialrelay-browser-scrape.mjs";
   private static final String SOAP_ACTION = "http://www.mondialrelay.fr/webservice/WSI2_TracingColisDetaille";
-  private static final Pattern MONDIAL_RELAY_LIKE = Pattern.compile("\\d{8,12}");
   private static final DateTimeFormatter MR_DATE = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
   private final String enseigne;
@@ -67,7 +65,7 @@ public class MondialRelayTrackingClient implements CarrierTrackingClient {
       return true;
     }
     String tracking = parcel.getNormalizedTrackingNumber() == null ? "" : parcel.getNormalizedTrackingNumber();
-    return MONDIAL_RELAY_LIKE.matcher(tracking).matches();
+    return TrackingCarrierRules.isValidForCarrier(tracking, "mondial-relay");
   }
 
   @Override
@@ -302,8 +300,7 @@ public class MondialRelayTrackingClient implements CarrierTrackingClient {
   }
 
   private String fallbackTrackingUrl(Parcel parcel) {
-    return "https://www.mondialrelay.fr/suivi-de-colis/?numeroExpedition="
-        + URLEncoder.encode(parcel.getTrackingNumber().trim(), StandardCharsets.UTF_8);
+    return TrackingLinkResolver.fallbackTrackingUrl("mondial-relay", parcel.getTrackingNumber());
   }
 
   private static String browserFallbackTrackingUrl(Parcel parcel) {
@@ -311,11 +308,7 @@ public class MondialRelayTrackingClient implements CarrierTrackingClient {
         parcel.getTrackingNumber(),
         parcel.getNormalizedTrackingNumber()
     );
-    if (trackingNumber == null) {
-      return null;
-    }
-    return "https://www.mondialrelay.fr/suivi-de-colis/?numeroExpedition="
-        + URLEncoder.encode(trackingNumber.trim(), StandardCharsets.UTF_8);
+    return TrackingLinkResolver.fallbackTrackingUrl("mondial-relay", trackingNumber);
   }
 
   private Optional<TrackingSnapshot> fetchFromBrowserPage(Parcel parcel) {

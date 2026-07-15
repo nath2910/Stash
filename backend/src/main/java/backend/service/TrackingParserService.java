@@ -39,7 +39,7 @@ public class TrackingParserService {
       Pattern.compile("\\b\\d[A-Z][\\s\\-]?\\d{11}\\b", Pattern.CASE_INSENSITIVE),
       Pattern.compile("\\b(?:JD|JJD)[0-9A-Z]{10,24}\\b", Pattern.CASE_INSENSITIVE),
       Pattern.compile("\\b(?:YT|LP|SY|CN)[0-9A-Z]{9,22}\\b", Pattern.CASE_INSENSITIVE),
-      Pattern.compile("\\b\\d[\\d\\s\\-]{8,30}\\d\\b")
+      Pattern.compile("\\b\\d[\\d\\s\\-]{6,30}\\d\\b")
   );
 
   private static final Set<String> PREFILTER_KEYWORDS = Set.of(
@@ -51,6 +51,7 @@ public class TrackingParserService {
       "commande expediee",
       "votre colis",
       "numero de suivi",
+      "numero d expedition",
       "suivre votre colis",
       "transporteur",
       "en transit",
@@ -83,6 +84,7 @@ public class TrackingParserService {
       "tracking id",
       "track your package",
       "track your parcel",
+      "numero d expedition",
       "suivre votre colis",
       "suivre mon colis",
       "votre numero de suivi",
@@ -420,7 +422,9 @@ public class TrackingParserService {
     if (looksLikeDate(normalized) || looksLikeAmountContext("", normalized)) {
       return false;
     }
-    if (NUMERIC_PATTERN.matcher(normalized).matches() && normalized.length() < 10) {
+    if (NUMERIC_PATTERN.matcher(normalized).matches()
+        && normalized.length() < 10
+        && !TrackingCarrierRules.matchesSupportedCarrierFormat(normalized)) {
       return false;
     }
     if (!hasBalancedTrackingSignal(normalized)) {
@@ -440,19 +444,18 @@ public class TrackingParserService {
     if (Pattern.compile("^YT\\d{12,18}$").matcher(normalized).matches()) {
       return "yunexpress";
     }
+    String supportedCarrier = TrackingCarrierRules.inferSupportedCarrier(normalized);
+    if (supportedCarrier != null && !"mondial-relay".equals(supportedCarrier)) {
+      return supportedCarrier;
+    }
     if (UPU_PATTERN.matcher(normalized).matches()) {
       String suffix = normalized.substring(normalized.length() - 2);
       return switch (suffix) {
         case "CN" -> "china-post";
         case "US" -> "usps";
         case "GB" -> "royal-mail";
-        case "FR" -> "colissimo";
-        case "TS" -> "chronopost";
         default -> null;
       };
-    }
-    if (LA_POSTE_2C_PATTERN.matcher(normalized).matches()) {
-      return "colissimo";
     }
     return null;
   }
@@ -871,7 +874,7 @@ public class TrackingParserService {
       return false;
     }
     if (NUMERIC_PATTERN.matcher(normalized).matches()) {
-      return normalized.length() >= 10;
+      return normalized.length() >= 10 || TrackingCarrierRules.matchesSupportedCarrierFormat(normalized);
     }
     boolean knownCarrierFormat = matchesKnownCarrierFormat(normalized);
     int letterCount = countMatches(LETTER_PATTERN, normalized);
@@ -885,7 +888,8 @@ public class TrackingParserService {
   }
 
   private boolean matchesKnownCarrierFormat(String normalized) {
-    if (UPS_PATTERN.matcher(normalized).matches()
+    if (TrackingCarrierRules.matchesSupportedCarrierFormat(normalized)
+        || UPS_PATTERN.matcher(normalized).matches()
         || AMAZON_PATTERN.matcher(normalized).matches()
         || UPU_PATTERN.matcher(normalized).matches()
         || LA_POSTE_2C_PATTERN.matcher(normalized).matches()

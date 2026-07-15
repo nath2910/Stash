@@ -12,7 +12,7 @@
       <button
         v-if="accounts.length"
         type="button"
-        class="inline-flex h-8 items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-sky-300 hover:text-slate-900 disabled:cursor-wait disabled:opacity-50"
+        class="inline-flex h-8 w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-sky-300 hover:text-slate-900 disabled:cursor-wait disabled:opacity-50 sm:w-auto"
         :disabled="loading || scanningAll"
         @click="$emit('scan-all')"
       >
@@ -28,7 +28,7 @@
 
       <button
         type="button"
-        class="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-teal-600/20 bg-teal-700 px-4 text-sm font-semibold text-white transition hover:bg-teal-600 disabled:cursor-wait disabled:opacity-60"
+        class="inline-flex h-10 w-full items-center justify-center gap-2 rounded-full border border-teal-600/20 bg-teal-700 px-4 text-sm font-semibold text-white transition hover:bg-teal-600 disabled:cursor-wait disabled:opacity-60 sm:w-auto"
         :disabled="connecting"
         @click="connectWithEmail"
       >
@@ -95,7 +95,7 @@
 
     <div
       v-else
-      class="delivery-accounts-scroll mt-5 grid max-h-[340px] gap-2.5 overflow-y-auto pr-1"
+      class="delivery-accounts-scroll mt-5 grid max-h-none gap-2.5 overflow-visible pr-0 lg:max-h-[340px] lg:overflow-y-auto lg:pr-1"
     >
       <article
         v-for="account in accounts"
@@ -110,10 +110,10 @@
             </p>
           </div>
 
-          <div class="flex shrink-0 items-center gap-2 self-end min-[420px]:self-auto">
+          <div class="flex shrink-0 items-center gap-2 self-stretch min-[420px]:self-auto">
             <button
               type="button"
-              class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-700 transition hover:border-sky-300 hover:text-slate-900 disabled:cursor-wait disabled:opacity-50"
+              class="inline-flex h-8 flex-1 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-700 transition hover:border-sky-300 hover:text-slate-900 disabled:cursor-wait disabled:opacity-50 min-[420px]:h-8 min-[420px]:w-8 min-[420px]:flex-none"
               :disabled="scanningAll || scanningId === account.id"
               title="Scanner maintenant"
               @click="$emit('scan-now', account.id)"
@@ -125,7 +125,7 @@
             </button>
             <button
               type="button"
-              class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-red-300/40 bg-red-50 text-red-700 transition hover:border-red-400 hover:bg-red-100"
+              class="inline-flex h-8 flex-1 items-center justify-center rounded-full border border-red-300/40 bg-red-50 text-red-700 transition hover:border-red-400 hover:bg-red-100 min-[420px]:h-8 min-[420px]:w-8 min-[420px]:flex-none"
               title="Supprimer"
               @click="$emit('delete-account', account.id)"
             >

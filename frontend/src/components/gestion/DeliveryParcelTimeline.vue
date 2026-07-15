@@ -5,11 +5,11 @@
     <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div class="min-w-0">
         <h3 class="text-base font-semibold text-slate-900">Detail livraison</h3>
-        <p class="mt-1 truncate text-xs text-slate-500">
+        <p class="mt-1 break-all text-xs text-slate-500 sm:truncate">
           {{ parcel ? parcel.normalizedTrackingNumber || parcel.trackingNumber : 'Aucun colis' }}
         </p>
       </div>
-      <div v-if="parcel" class="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
+      <div v-if="parcel" class="flex w-full shrink-0 flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
         <span
           class="inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold"
           :class="statusMeta(parcel.status).class"
@@ -21,14 +21,14 @@
           :href="parcel.trackingUrl"
           target="_blank"
           rel="noreferrer"
-          class="inline-flex h-9 items-center justify-center gap-2 rounded-full border border-teal-600/20 bg-teal-700 px-3 text-xs font-semibold text-white transition hover:bg-teal-600"
+          class="inline-flex h-9 flex-1 items-center justify-center gap-2 rounded-full border border-teal-600/20 bg-teal-700 px-3 text-xs font-semibold text-white transition hover:bg-teal-600 sm:flex-none"
         >
           <ExternalLink class="h-3.5 w-3.5" />
           <span>Transporteur</span>
         </a>
         <button
           type="button"
-          class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-red-300/40 bg-red-50 text-red-700 transition hover:border-red-400 hover:bg-red-100 disabled:cursor-wait disabled:opacity-60"
+          class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-red-300/40 bg-red-50 text-red-700 transition hover:border-red-400 hover:bg-red-100 disabled:cursor-wait disabled:opacity-60"
           title="Supprimer ce suivi"
           :disabled="refreshing || deleting"
           @click="$emit('delete', parcel.id)"
@@ -106,7 +106,7 @@
       </div>
     </div>
 
-    <div v-if="parcel && detailItems.length" class="mt-3 grid gap-2 sm:grid-cols-2 2xl:grid-cols-1">
+    <div v-if="parcel && detailItems.length" class="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
       <div
         v-for="item in detailItems"
         :key="item.label"
@@ -128,7 +128,7 @@
       <p class="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
         Evenements transporteur
       </p>
-      <ol class="delivery-timeline-scroll max-h-[520px] space-y-3 overflow-y-auto pr-1">
+      <ol class="delivery-timeline-scroll max-h-none space-y-3 overflow-visible pr-0 lg:max-h-[520px] lg:overflow-y-auto lg:pr-1">
         <li
           v-for="event in events"
           :key="event.id || `${event.eventTime}-${event.description}`"

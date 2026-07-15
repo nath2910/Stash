@@ -34,10 +34,15 @@ public final class TrackingLinkResolver {
     if (isTrustedTrackingUrl(rawUrl, carrierSlug) || (isBlank(carrierSlug) && detectCarrierSlug(rawUrl) != null)) {
       return rawUrl == null ? null : rawUrl.trim();
     }
-    return fallbackTrackingUrl(carrierSlug, trackingNumber);
+    String supportedUrl = TrackingCarrierRules.officialTrackingUrl(carrierSlug, trackingNumber);
+    return supportedUrl != null ? supportedUrl : fallbackTrackingUrl(carrierSlug, trackingNumber);
   }
 
   public static String detectCarrierSlug(String rawUrl) {
+    String supportedCarrier = TrackingCarrierRules.detectCarrierSlugFromUrl(rawUrl);
+    if (supportedCarrier != null) {
+      return supportedCarrier;
+    }
     if (rawUrl == null || rawUrl.isBlank()) {
       return null;
     }
@@ -60,7 +65,10 @@ public final class TrackingLinkResolver {
     if (!normalizedUrl.startsWith("http")) {
       return false;
     }
-    Set<String> domains = TRUSTED_DOMAINS.get(normalizeCarrier(carrierSlug));
+    Set<String> domains = TrackingCarrierRules.trustedDomains(carrierSlug);
+    if (domains.isEmpty()) {
+      domains = TRUSTED_DOMAINS.get(normalizeCarrier(carrierSlug));
+    }
     if (domains == null || domains.isEmpty()) {
       return false;
     }
@@ -72,14 +80,13 @@ public final class TrackingLinkResolver {
       return null;
     }
 
+    String supportedUrl = TrackingCarrierRules.officialTrackingUrl(carrierSlug, trackingNumber);
+    if (supportedUrl != null) {
+      return supportedUrl;
+    }
+
     String encodedTracking = URLEncoder.encode(trackingNumber.trim(), StandardCharsets.UTF_8);
     return switch (normalizeCarrier(carrierSlug)) {
-      case "colissimo", "laposte", "la-poste" ->
-          "https://www.laposte.fr/outils/suivre-vos-envois?code=" + encodedTracking;
-      case "chronopost" ->
-          "https://www.chronopost.fr/tracking-no-cms/suivi-page?listeNumerosLT=" + encodedTracking;
-      case "mondial-relay", "mondialrelay" ->
-          "https://www.mondialrelay.fr/suivi-de-colis/?numeroExpedition=" + encodedTracking;
       case "ups" ->
           "https://www.ups.com/track?tracknum=" + encodedTracking;
       case "fedex" ->
