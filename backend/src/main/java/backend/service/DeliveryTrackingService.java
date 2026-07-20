@@ -352,6 +352,8 @@ public class DeliveryTrackingService {
       Parcel saved = parcelRepository.saveAndFlush(parcel);
       if (!requiresCompletion) {
         trackingAggregatorService.registerTracking(saved);
+        var reloaded = parcelRepository.findById(saved.getId());
+        return reloaded == null ? saved : reloaded.orElse(saved);
       }
       return saved;
     } catch (DataIntegrityViolationException ex) {

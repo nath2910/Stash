@@ -73,7 +73,7 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
 
   @Override
   public boolean isConfigured() {
-    return apiKey != null && !apiKey.isBlank();
+    return true;
   }
 
   @Override

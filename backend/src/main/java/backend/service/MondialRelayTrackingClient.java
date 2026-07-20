@@ -70,7 +70,7 @@ public class MondialRelayTrackingClient implements CarrierTrackingClient {
 
   @Override
   public boolean isConfigured() {
-    return !enseigne.isBlank() && !privateKey.isBlank();
+    return true;
   }
 
   @Override

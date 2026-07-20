@@ -235,6 +235,46 @@ class DeliveryTrackingServiceTest {
   }
 
   @Test
+  void createManualReturnsReloadedParcelAfterRegisterTrackingRefresh() {
+    User user = Mockito.mock(User.class);
+    Mockito.when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+    Mockito.when(parcelRepository.findByUser_IdAndNormalizedTrackingNumberAndCarrierSlug(
+        1L,
+        "05308083313940F",
+        "colissimo"
+    )).thenReturn(Optional.empty());
+    Mockito.when(parcelRepository.saveAndFlush(Mockito.any(Parcel.class))).thenAnswer(invocation -> {
+      Parcel parcel = invocation.getArgument(0);
+      parcel.setId(36L);
+      return parcel;
+    });
+
+    Parcel refreshed = new Parcel();
+    refreshed.setId(36L);
+    refreshed.setTrackingNumber("05308083313940F");
+    refreshed.setNormalizedTrackingNumber("05308083313940F");
+    refreshed.setCarrierSlug("chronopost");
+    refreshed.setStatus(ParcelStatus.DELIVERED);
+    refreshed.setStatusLabel("Livraison effectuee");
+
+    Mockito.doAnswer(invocation -> {
+      Parcel parcel = invocation.getArgument(0);
+      parcel.setCarrierSlug("chronopost");
+      parcel.setStatus(ParcelStatus.DELIVERED);
+      parcel.setStatusLabel("Livraison effectuee");
+      return null;
+    }).when(trackingAggregatorService).registerTracking(Mockito.any(Parcel.class));
+    Mockito.when(parcelRepository.findById(36L)).thenReturn(Optional.of(refreshed));
+
+    var response = service.createManual(1L, new ParcelCreateRequest("05308083313940F", null, null));
+
+    Assertions.assertEquals(36L, response.id());
+    Assertions.assertEquals("chronopost", response.carrierSlug());
+    Assertions.assertEquals(ParcelStatus.DELIVERED, response.status());
+    Assertions.assertEquals("Livraison effectuee", response.statusLabel());
+  }
+
+  @Test
   void createManualRejectsCarrierMismatchWithClearMessage() {
     ResponseStatusException exception = Assertions.assertThrows(
         ResponseStatusException.class,
