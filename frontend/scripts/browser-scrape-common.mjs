@@ -99,13 +99,19 @@ async function clickButtonByText(page, labels = []) {
 async function dismissConsentBanners(page) {
   const selectorLabels = [
     '#onetrust-reject-all-handler',
+    '#onetrust-accept-btn-handler',
     '#popin_tc_privacy_button_2',
+    '#popin_tc_privacy_button',
+    '#didomi-notice-agree-button',
     '#didomi-notice-disagree-button',
     'button[aria-label*="cookie" i]',
     'button[aria-label*="consent" i]',
+    'button[aria-label*="accepter" i]',
+    'button[title*="accepter" i]',
   ]
   const textLabels = [
     'ne pas accepter',
+    'ne pas accepter et fermer',
     'essential cookies only',
     'refuser',
     'reject all',
@@ -113,9 +119,15 @@ async function dismissConsentBanners(page) {
     'continuer sans accepter',
     'allow essential',
     'continue without accepting',
+    'accepter et fermer',
+    'tout accepter',
+    'accepter',
+    "j'accepte",
+    'accept all',
+    'allow all',
   ]
 
-  for (let attempt = 0; attempt < 3; attempt += 1) {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
     const clicked = await clickFirstVisible(page, selectorLabels) || await clickButtonByText(page, textLabels)
     if (!clicked) {
       return

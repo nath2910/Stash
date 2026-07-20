@@ -1887,12 +1887,17 @@ watch(
 
 .gestion-page-stack {
   gap: clamp(1rem, 1.7vw, 1.45rem);
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .gestion-hero-panel,
 .inventory-list-panel,
 .command-controls {
   position: relative;
+  min-width: 0;
+  max-width: 100%;
   border: 1px solid var(--gestion-border);
   border-radius: 20px;
   background:
@@ -1996,6 +2001,7 @@ watch(
 
 .gestion-hero-pills span {
   display: inline-flex;
+  max-width: 100%;
   min-height: 2rem;
   align-items: center;
   border: 1px solid rgba(100, 116, 139, 0.2);
@@ -2010,8 +2016,11 @@ watch(
 
 .gestion-tab-shell {
   display: flex;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   justify-content: center;
-  overflow-x: auto;
+  overflow-x: hidden;
   overflow-y: visible;
   padding-bottom: 0.25rem;
   scrollbar-width: none;
@@ -2023,8 +2032,12 @@ watch(
 
 .gestion-tab-nav {
   display: inline-flex;
+  width: min(100%, 720px);
   gap: 0.55rem;
-  min-width: max-content;
+  min-width: 0;
+  max-width: 100%;
+  flex-wrap: wrap;
+  justify-content: center;
   border: 0;
   border-radius: 999px;
   background: transparent;
@@ -2033,7 +2046,8 @@ watch(
 }
 
 .gestion-tab-button {
-  min-width: 128px;
+  min-width: 0;
+  max-width: 100%;
   min-height: 44px;
   border-radius: 999px;
   color: #475569;
@@ -2414,8 +2428,9 @@ watch(
 
 .filter-toolbar-actions {
   display: flex;
-  min-width: max-content;
-  flex-wrap: nowrap;
+  min-width: 0;
+  max-width: 100%;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   gap: 0.5rem;
@@ -2433,8 +2448,9 @@ watch(
 }
 
 .filter-panel-toggle {
-  width: 8.4rem;
-  flex: 0 0 8.4rem;
+  width: auto;
+  max-width: 100%;
+  flex: 0 1 auto;
   height: 40px;
   min-height: 40px;
   white-space: nowrap;
@@ -2589,6 +2605,9 @@ watch(
 
 .gestion-page-light {
   min-height: 100%;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
   background: #f7f4ee;
 }
 
@@ -3130,7 +3149,9 @@ watch(
 
 .inventory-toolbar-actions {
   display: inline-flex;
+  width: 100%;
   min-width: 0;
+  max-width: 100%;
   align-items: center;
   justify-content: flex-end;
   flex-wrap: wrap;
@@ -3208,10 +3229,14 @@ watch(
 
 .inventory-danger-button {
   width: auto;
+  max-width: 100%;
   min-height: 44px;
   border-radius: 14px;
   padding-inline: 1rem;
   font-size: 0.82rem;
+  line-height: 1.15;
+  text-align: center;
+  white-space: normal;
 }
 
 .inventory-toolbar-actions :deep(button) {
@@ -3299,6 +3324,90 @@ watch(
 
   .inventory-control-row .filter-panel-toggle {
     width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .gestion-hero-panel > div:first-child {
+    align-items: stretch;
+  }
+
+  .gestion-hero-pills {
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    justify-content: stretch;
+  }
+
+  .gestion-hero-pills span {
+    justify-content: center;
+    padding: 0.55rem 0.7rem;
+    text-align: center;
+    white-space: normal;
+  }
+
+  .gestion-tab-nav {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.55rem;
+    width: 100%;
+  }
+
+  .gestion-tab-button {
+    justify-content: flex-start;
+    border-radius: 16px;
+    padding: 0.8rem 0.9rem;
+  }
+
+  .gestion-tab-button strong,
+  .gestion-tab-button small {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
+
+  .gestion-tab-button small {
+    display: block;
+  }
+
+  .inventory-toolbar-copy h2 {
+    font-size: 0.98rem;
+  }
+
+  .inventory-toolbar-copy p {
+    font-size: 0.74rem;
+  }
+
+  .inventory-toolbar-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .inventory-toolbar-actions > * {
+    width: 100%;
+  }
+
+  .inventory-control-row {
+    grid-template-columns: 1fr;
+  }
+
+  .inventory-control-row .filter-panel-toggle,
+  .filter-reset-button--inline,
+  .inventory-danger-button,
+  .inventory-toolbar-actions :deep(button) {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .inventory-filter-shell.is-open .filter-compact-grid.is-open {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .gestion-hero-pills {
+    grid-template-columns: 1fr;
   }
 }
 

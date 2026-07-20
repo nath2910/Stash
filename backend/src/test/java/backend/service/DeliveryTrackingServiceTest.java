@@ -214,6 +214,27 @@ class DeliveryTrackingServiceTest {
   }
 
   @Test
+  void createManualAutoDetectsLaPoste15CharTrackingWithoutFallingBackToChronopost() {
+    User user = Mockito.mock(User.class);
+    Mockito.when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+    Mockito.when(parcelRepository.findByUser_IdAndNormalizedTrackingNumberAndCarrierSlug(
+        1L,
+        "05308083313940F",
+        "colissimo"
+    )).thenReturn(Optional.empty());
+    Mockito.when(parcelRepository.saveAndFlush(Mockito.any(Parcel.class))).thenAnswer(invocation -> {
+      Parcel parcel = invocation.getArgument(0);
+      parcel.setId(35L);
+      return parcel;
+    });
+
+    var response = service.createManual(1L, new ParcelCreateRequest("05308083313940F", null, null));
+
+    Assertions.assertEquals("colissimo", response.carrierSlug());
+    Assertions.assertEquals("05308083313940F", response.normalizedTrackingNumber());
+  }
+
+  @Test
   void createManualRejectsCarrierMismatchWithClearMessage() {
     ResponseStatusException exception = Assertions.assertThrows(
         ResponseStatusException.class,

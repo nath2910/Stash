@@ -3,6 +3,17 @@ import { scrapeTrackingPage } from './browser-scrape-common.mjs'
 const trackingUrl = process.argv[2]
 const parsedUrl = trackingUrl ? new URL(trackingUrl) : null
 const trackingNumber = parsedUrl?.searchParams.get('code')?.trim() || ''
+const baseTrackingUrl = 'https://www.laposte.fr/outils/suivre-vos-envois'
+
+async function pageContainsTracking(page) {
+  if (!trackingNumber) {
+    return false
+  }
+  return page.evaluate((needle) => {
+    const text = (document.body?.innerText || '').toLowerCase()
+    return text.includes(String(needle || '').toLowerCase())
+  }, trackingNumber)
+}
 
 const payload = await scrapeTrackingPage({
   trackingUrl,
@@ -48,13 +59,26 @@ const payload = await scrapeTrackingPage({
     if (!trackingNumber) {
       return
     }
-    await tools.populateTrackingForm()
+
+    if (!(await pageContainsTracking(page))) {
+      if (page.url() !== baseTrackingUrl) {
+        await page.goto(baseTrackingUrl, {
+          waitUntil: 'domcontentloaded',
+          timeout: 18000,
+        }).catch(() => {})
+      }
+      await tools.dismissConsentBanners()
+      await tools.populateTrackingForm()
+    }
+
     await tools.dismissConsentBanners()
-    if (page.url() === 'https://www.laposte.fr/outils/suivre-vos-envois') {
-      await page.goto(`https://www.laposte.fr/outils/suivre-vos-envois?code=${encodeURIComponent(trackingNumber)}`, {
+
+    if (!(await pageContainsTracking(page))) {
+      await page.goto(`${baseTrackingUrl}?code=${encodeURIComponent(trackingNumber)}`, {
         waitUntil: 'domcontentloaded',
         timeout: 18000,
       }).catch(() => {})
+      await tools.dismissConsentBanners()
     }
   },
 })

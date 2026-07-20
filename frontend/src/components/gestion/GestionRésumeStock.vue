@@ -110,6 +110,7 @@ const formattedStockValue = computed(() => {
   display: flex;
   align-items: baseline;
   justify-content: flex-end;
+  flex-wrap: wrap;
   gap: 0.25rem;
   min-width: 0;
   color: #0f172a;
@@ -136,10 +137,6 @@ const formattedStockValue = computed(() => {
 }
 
 @media (max-width: 760px) {
-  .stock-summary-compact {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
   .stock-summary-item {
     display: grid;
     min-height: 72px;
@@ -153,7 +150,7 @@ const formattedStockValue = computed(() => {
   }
 }
 
-@media (max-width: 520px) {
+@media (max-width: 640px) {
   .stock-summary-compact {
     grid-template-columns: 1fr;
   }

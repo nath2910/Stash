@@ -13,6 +13,9 @@ final class TrackingCarrierRules {
   private static final Pattern UPU_PATTERN = Pattern.compile("^[A-Z]{2}\\d{9}[A-Z]{2}$", Pattern.CASE_INSENSITIVE);
   private static final Pattern LA_POSTE_2C_PATTERN = Pattern.compile("^\\d[A-Z]\\d{11}$", Pattern.CASE_INSENSITIVE);
   private static final Pattern COLISSIMO_NUMERIC_PATTERN = Pattern.compile("^\\d{13}$");
+  private static final Pattern LA_POSTE_14_DIGIT_PATTERN = Pattern.compile("^\\d{14}$");
+  private static final Pattern LA_POSTE_15_DIGIT_PATTERN = Pattern.compile("^\\d{15}$");
+  private static final Pattern LA_POSTE_15_CHAR_PATTERN = Pattern.compile("^\\d{14}[A-Z]$", Pattern.CASE_INSENSITIVE);
   private static final Pattern MONDIAL_RELAY_PATTERN = Pattern.compile("^\\d{8,12}$");
   private static final Pattern CHRONOPOST_X_UPU_PATTERN = Pattern.compile("^X[A-Z]\\d{9}(?:FR|TS)$", Pattern.CASE_INSENSITIVE);
   private static final Pattern CHRONOPOST_GENERIC_PATTERN = Pattern.compile("^(?=.*[A-Z])(?=.*\\d)[A-Z0-9]{13,16}$");
@@ -34,6 +37,9 @@ final class TrackingCarrierRules {
         return matches(CHRONOPOST_GENERIC_PATTERN, trackingNumber)
             && !matches(UPU_PATTERN, trackingNumber)
             && !matches(LA_POSTE_2C_PATTERN, trackingNumber)
+            && !matches(LA_POSTE_14_DIGIT_PATTERN, trackingNumber)
+            && !matches(LA_POSTE_15_DIGIT_PATTERN, trackingNumber)
+            && !matches(LA_POSTE_15_CHAR_PATTERN, trackingNumber)
             && !matches(COLISSIMO_NUMERIC_PATTERN, trackingNumber);
       },
       trackingNumber -> "https://www.chronopost.fr/tracking-no-cms/suivi-page?listeNumerosLT="
@@ -48,6 +54,9 @@ final class TrackingCarrierRules {
       Pattern.compile("^(?!X[A-Z])[A-Z]{2}\\d{9}FR$", Pattern.CASE_INSENSITIVE),
       trackingNumber -> matches(LA_POSTE_2C_PATTERN, trackingNumber)
           || matches(COLISSIMO_NUMERIC_PATTERN, trackingNumber)
+          || matches(LA_POSTE_14_DIGIT_PATTERN, trackingNumber)
+          || matches(LA_POSTE_15_DIGIT_PATTERN, trackingNumber)
+          || matches(LA_POSTE_15_CHAR_PATTERN, trackingNumber)
           || (matches(UPU_PATTERN, trackingNumber)
           && "FR".equals(suffix(trackingNumber))
           && !matches(CHRONOPOST_X_UPU_PATTERN, trackingNumber)),

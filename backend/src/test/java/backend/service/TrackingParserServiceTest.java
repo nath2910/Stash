@@ -281,12 +281,27 @@ class TrackingParserServiceTest {
   @Test
   void infersOnlyReliableCarrierFamiliesFromManualTrackingNumber() {
     Assertions.assertEquals("colissimo", parser.inferCarrierSlug("LA-123456789-FR"));
+    Assertions.assertEquals("colissimo", parser.inferCarrierSlug("05308083313940F"));
     Assertions.assertEquals("chronopost", parser.inferCarrierSlug("XY123456789FR"));
     Assertions.assertEquals("chronopost", parser.inferCarrierSlug("XR646836167TS"));
+    Assertions.assertEquals("chronopost", parser.inferCarrierSlug("XW496078433TS"));
     Assertions.assertEquals("ups", parser.inferCarrierSlug("1Z999AA10123456784"));
     Assertions.assertEquals("amazon-logistics", parser.inferCarrierSlug("TBA123456789012"));
     Assertions.assertNull(parser.inferCarrierSlug("1234567890"));
     Assertions.assertNull(parser.inferCarrierSlug("ABC"));
+  }
+
+  @Test
+  void parsesLaPoste15CharacterTrackingWhenCarrierContextIsExplicit() {
+    TrackingDetectionResult result = parser.detect(
+        "La Poste <noreply@laposte.fr>",
+        "Votre courrier suivi est en route",
+        "Numero de suivi : 05308083313940F"
+    );
+
+    Assertions.assertEquals(1, result.autoImportCandidates().size());
+    Assertions.assertEquals("colissimo", result.autoImportCandidates().get(0).carrierSlug());
+    Assertions.assertEquals("05308083313940F", result.autoImportCandidates().get(0).normalizedTrackingNumber());
   }
 
   @Test

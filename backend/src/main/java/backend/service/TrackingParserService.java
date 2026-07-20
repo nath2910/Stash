@@ -67,6 +67,7 @@ public class TrackingParserService {
       Pattern.compile("\\bTBA[0-9A-Z]{9,20}\\b", Pattern.CASE_INSENSITIVE),
       Pattern.compile("\\b[A-Z]{2}[\\s\\-]?\\d{9}[\\s\\-]?[A-Z]{2}\\b", Pattern.CASE_INSENSITIVE),
       Pattern.compile("\\b\\d[A-Z][\\s\\-]?\\d{11}\\b", Pattern.CASE_INSENSITIVE),
+      Pattern.compile("\\b\\d{14}[A-Z]\\b", Pattern.CASE_INSENSITIVE),
       Pattern.compile("\\b(?:JD|JJD)[0-9A-Z]{10,24}\\b", Pattern.CASE_INSENSITIVE),
       Pattern.compile("\\b(?:YT|LP|SY|CN)[0-9A-Z]{9,22}\\b", Pattern.CASE_INSENSITIVE),
       Pattern.compile("\\b\\d[\\d\\s\\-]{6,30}\\d\\b")
@@ -215,7 +216,14 @@ public class TrackingParserService {
           "Colissimo",
           Set.of("colissimo.fr", "laposte.fr", "suivi.laposte.fr", "notif-colissimo-laposte.info"),
           Set.of("colissimo", "la poste", "laposte"),
-          List.of(UPU_PATTERN, LA_POSTE_2C_PATTERN, Pattern.compile("^\\d{13}$")),
+          List.of(
+              UPU_PATTERN,
+              LA_POSTE_2C_PATTERN,
+              Pattern.compile("^\\d{13}$"),
+              Pattern.compile("^\\d{14}$"),
+              Pattern.compile("^\\d{15}$"),
+              Pattern.compile("^\\d{14}[A-Z]$", Pattern.CASE_INSENSITIVE)
+          ),
           35,
           true
       ),
