@@ -19,6 +19,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.annotation.Order;
@@ -33,6 +35,9 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
   private static final String BROWSER_PROVIDER = "LA_POSTE_BROWSER_PAGE";
   private static final String BROWSER_SCRIPT = "laposte-browser-scrape.mjs";
   private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
+  private static final Pattern DELIVERY_DATE_JSON_PATTERN = Pattern.compile("\"deliveryDate\"\\s*:\\s*\"([^\"]+)\"");
+  private static final Pattern DELIVERY_LINE_PATTERN = Pattern.compile("(?im)^livraison\\s*:\\s*(.+)$");
+  private static final Pattern ISO_TIMESTAMP_PATTERN = Pattern.compile("\\b\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(?::\\d{2})?(?:Z|[+-]\\d{2}:\\d{2})\\b");
 
   private final String apiKey;
   private final String baseUrl;
@@ -279,6 +284,9 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
     }
     OffsetDateTime deliveredAt = TrackingBrowserPageSupport.latestDeliveredAt(events);
     if (deliveredAt == null && status == ParcelStatus.DELIVERED) {
+      deliveredAt = extractBrowserDeliveredAt(payload);
+    }
+    if (deliveredAt == null && status == ParcelStatus.DELIVERED) {
       deliveredAt = TrackingBrowserPageSupport.latestEventTime(events);
     }
 
@@ -293,7 +301,7 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
     return new TrackingSnapshot(
         BROWSER_PROVIDER,
         TrackingBrowserPageSupport.firstNonBlank(parcel.getNormalizedTrackingNumber(), parcel.getTrackingNumber()),
-        canonicalBrowserCarrier(parcel),
+        canonicalBrowserCarrier(parcel, payload),
         status,
         statusLabel,
         null,
@@ -455,14 +463,92 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
     return compact.length() <= maxLength ? compact : compact.substring(0, maxLength);
   }
 
-  private static String canonicalBrowserCarrier(Parcel parcel) {
+  private static String canonicalBrowserCarrier(Parcel parcel, BrowserTrackingScriptRunner.BrowserPagePayload payload) {
+    String extractedProduct = extractBrowserProduct(payload);
+    if (extractedProduct.contains("chrono")) {
+      return "chronopost";
+    }
     String carrier = parcel == null || parcel.getCarrierSlug() == null
         ? ""
         : parcel.getCarrierSlug().trim().toLowerCase(Locale.ROOT);
+    if (carrier.contains("chrono")) {
+      return "chronopost";
+    }
     if (carrier.contains("poste")) {
       return "laposte";
     }
     return "colissimo";
+  }
+
+  private static String extractBrowserProduct(BrowserTrackingScriptRunner.BrowserPagePayload payload) {
+    String html = payload == null || payload.html() == null ? "" : payload.html().toLowerCase(Locale.ROOT);
+    String text = payload == null || payload.text() == null ? "" : payload.text().toLowerCase(Locale.ROOT);
+    if (html.contains("data-product=\"chronopost\"") || html.contains("\"product\":\"chronopost\"")) {
+      return "chronopost";
+    }
+    if (html.contains("data-product=\"colissimo\"") || html.contains("\"product\":\"colissimo\"")) {
+      return "colissimo";
+    }
+    if (text.contains("produit: chronopost")) {
+      return "chronopost";
+    }
+    if (text.contains("produit: colissimo")) {
+      return "colissimo";
+    }
+    return "";
+  }
+
+  private static OffsetDateTime extractBrowserDeliveredAt(BrowserTrackingScriptRunner.BrowserPagePayload payload) {
+    if (payload == null) {
+      return null;
+    }
+    OffsetDateTime deliveredAt = extractPatternDate(payload.html(), DELIVERY_DATE_JSON_PATTERN);
+    if (deliveredAt != null) {
+      return deliveredAt;
+    }
+    deliveredAt = extractPatternDate(payload.text(), DELIVERY_LINE_PATTERN);
+    if (deliveredAt != null) {
+      return deliveredAt;
+    }
+    return extractPatternDate(payload.text(), ISO_TIMESTAMP_PATTERN);
+  }
+
+  private static OffsetDateTime extractPatternDate(String value, Pattern pattern) {
+    if (value == null || value.isBlank() || pattern == null) {
+      return null;
+    }
+    Matcher matcher = pattern.matcher(value);
+    if (!matcher.find()) {
+      return null;
+    }
+    String candidate = matcher.groupCount() >= 1 ? matcher.group(1) : matcher.group();
+    if (candidate == null || candidate.isBlank()) {
+      return null;
+    }
+    return parseDateTimeStatic(candidate.trim());
+  }
+
+  private static OffsetDateTime parseDateTimeStatic(String value) {
+    if (value == null || value.isBlank() || "null".equalsIgnoreCase(value)) {
+      return null;
+    }
+    try {
+      return OffsetDateTime.parse(value);
+    } catch (Exception ignored) {
+      try {
+        return OffsetDateTime.ofInstant(Instant.parse(value), ZoneOffset.UTC);
+      } catch (Exception ignoredAgain) {
+        try {
+          return LocalDateTime.parse(value).atOffset(ZoneOffset.UTC);
+        } catch (Exception ignoredThird) {
+          try {
+            return LocalDate.parse(value).atStartOfDay().atOffset(ZoneOffset.UTC);
+          } catch (Exception ignoredFourth) {
+            return null;
+          }
+        }
+      }
+    }
   }
 
   private static void putIfPresent(Map<String, Object> target, String key, String value) {

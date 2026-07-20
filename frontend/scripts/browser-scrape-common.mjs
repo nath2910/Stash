@@ -257,6 +257,7 @@ export async function scrapeTrackingPage({
   timeoutMs = 20000,
   extraWaitMs = 1200,
   preparePage,
+  extractPayload,
 }) {
   if (!trackingUrl) {
     throw new Error('Missing tracking URL')
@@ -349,6 +350,19 @@ export async function scrapeTrackingPage({
 
     if (extraWaitMs > 0) {
       await new Promise((resolve) => setTimeout(resolve, extraWaitMs))
+    }
+
+    if (typeof extractPayload === 'function') {
+      const extracted = await extractPayload(page)
+      if (extracted && typeof extracted === 'object') {
+        return {
+          source: 'local_browser',
+          title: extracted.title || '',
+          text: extracted.text || '',
+          html: extracted.html || '',
+          currentUrl: extracted.currentUrl || page.url(),
+        }
+      }
     }
 
     return await page.evaluate(() => ({

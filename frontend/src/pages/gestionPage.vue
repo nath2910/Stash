@@ -1883,6 +1883,11 @@ watch(
   --gestion-surface: rgba(255, 255, 255, 0.92);
   --gestion-shadow: 0 24px 60px rgba(15, 23, 42, 0.07), 0 10px 32px rgba(14, 165, 233, 0.06);
   background: transparent;
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: clip;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 .gestion-page-stack {
@@ -3406,8 +3411,36 @@ watch(
 }
 
 @media (max-width: 480px) {
+  .gestion-page-stack {
+    width: 100%;
+    max-width: 100%;
+    padding-inline: 0.7rem;
+  }
+
+  .gestion-title {
+    overflow-wrap: anywhere;
+    font-size: clamp(2rem, 10vw, 2.45rem);
+  }
+
+  .gestion-subtitle {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
   .gestion-hero-pills {
     grid-template-columns: 1fr;
+  }
+
+  .gestion-tab-button {
+    gap: 0.6rem;
+    padding: 0.78rem 0.82rem;
+  }
+
+  .gestion-tab-button > span,
+  .inventory-toolbar-copy,
+  .inventory-toolbar-copy h2,
+  .inventory-toolbar-copy p {
+    overflow-wrap: anywhere;
   }
 }
 
@@ -3422,6 +3455,11 @@ watch(
 }
 
 @media (hover: none) and (pointer: coarse) {
+  .gestion-page-light {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
   .filter-control,
   .date-range-inputs :deep(.cd-input),
   .inventory-control-row :deep(.gestion-search-input) {
