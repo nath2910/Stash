@@ -38,6 +38,26 @@ class ChronopostTrackingClientTest {
   }
 
   @Test
+  void supportsAmbiguousSharedFormatsWhenRefreshNeedsChronopostVerification() {
+    Parcel parcel = new Parcel();
+    parcel.setCarrierSlug("colissimo");
+    parcel.setTrackingNumber("05308083313940F");
+    parcel.setNormalizedTrackingNumber("05308083313940F");
+
+    Assertions.assertTrue(client.supports(parcel));
+  }
+
+  @Test
+  void supportsFrUpuNumbersWhenChronopostMayOwnTheFinalMile() {
+    Parcel parcel = new Parcel();
+    parcel.setCarrierSlug("colissimo");
+    parcel.setTrackingNumber("EL986413726FR");
+    parcel.setNormalizedTrackingNumber("EL986413726FR");
+
+    Assertions.assertTrue(client.supports(parcel));
+  }
+
+  @Test
   void parsesDeliveredChronopostResponseFromAjaxEndpoint() {
     Parcel parcel = new Parcel();
     parcel.setTrackingNumber("XR646836167TS");

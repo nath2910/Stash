@@ -445,10 +445,11 @@ onBeforeUnmount(() => {
 }
 
 .subcategory-field-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0.45rem;
+  min-width: 0;
 }
 
 .subcategory-label {
@@ -460,7 +461,7 @@ onBeforeUnmount(() => {
 
 .subcategory-manage-button {
   display: inline-flex;
-  min-height: 1.85rem;
+  min-height: 2rem;
   max-width: 100%;
   align-items: center;
   justify-content: center;
@@ -472,6 +473,7 @@ onBeforeUnmount(() => {
   color: #0f766e;
   font-size: 0.74rem;
   font-weight: 850;
+  justify-self: end;
   white-space: nowrap;
   transition:
     border-color 140ms ease,
@@ -928,6 +930,16 @@ onBeforeUnmount(() => {
   .subcategory-manage-button,
   .subcategory-add-button {
     width: 100%;
+  }
+}
+
+@media (max-width: 720px) {
+  .subcategory-field-header {
+    grid-template-columns: 1fr;
+  }
+
+  .subcategory-manage-button {
+    justify-self: start;
   }
 }
 </style>

@@ -50,7 +50,7 @@ public class Parcel {
   private String carrierSlug;
 
   @Column(name = "aggregator", nullable = false, length = 64)
-  private String aggregator = "AFTERSHIP";
+  private String aggregator = "DIRECT_CARRIER";
 
   @Column(name = "aggregator_tracking_id", length = 255)
   private String aggregatorTrackingId;
@@ -99,7 +99,7 @@ public class Parcel {
       status = ParcelStatus.PENDING;
     }
     if (aggregator == null || aggregator.isBlank()) {
-      aggregator = "AFTERSHIP";
+      aggregator = "DIRECT_CARRIER";
     }
     if (nextTrackingRefreshAt == null) {
       nextTrackingRefreshAt = now;

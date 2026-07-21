@@ -10,21 +10,21 @@ import org.junit.jupiter.api.Test;
 class ParcelResponseTest {
 
   @Test
-  void fallsBackToTrustedCarrierUrlWhenPayloadContainsMerchantLink() {
+  void keepsOfficialColissimoTrackingUrl() {
     Parcel parcel = new Parcel();
     parcel.setId(1L);
-    parcel.setCarrierSlug("ups");
-    parcel.setTrackingNumber("1Z999AA10123456784");
-    parcel.setNormalizedTrackingNumber("1Z999AA10123456784");
+    parcel.setCarrierSlug("colissimo");
+    parcel.setTrackingNumber("6A04296519970");
+    parcel.setNormalizedTrackingNumber("6A04296519970");
     parcel.setStatus(ParcelStatus.IN_TRANSIT);
     HashMap<String, Object> payload = new HashMap<>();
-    payload.put("tracking_url", "https://www.hhv.de/account/track?code=1Z999AA10123456784");
+    payload.put("tracking_url", "https://www.laposte.fr/outils/suivre-vos-envois?code=6A04296519970");
     parcel.setRawCurrentPayload(payload);
 
     ParcelResponse response = ParcelResponse.fromEntity(parcel, List.of());
 
     Assertions.assertEquals(
-        "https://www.ups.com/track?tracknum=1Z999AA10123456784",
+        "https://www.laposte.fr/outils/suivre-vos-envois?code=6A04296519970",
         response.trackingUrl()
     );
   }

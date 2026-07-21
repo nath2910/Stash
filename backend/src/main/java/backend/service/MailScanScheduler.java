@@ -34,7 +34,7 @@ public class MailScanScheduler {
 
   @Scheduled(fixedDelayString = "${app.delivery.scan-fixed-delay-ms:300000}")
   public void scanDueMailAccounts() {
-    List<MailAccount> dueAccounts = mailAccountRepository.findDueForScan(
+    List<MailAccount> dueAccounts = mailAccountRepository.findPrimaryDueForScan(
         MailAccountStatus.ACTIVE,
         OffsetDateTime.now(ZoneOffset.UTC),
         PageRequest.of(0, Math.max(1, batchSize))

@@ -436,6 +436,9 @@ onBeforeUnmount(() => {
 <style scoped>
 .category-field {
   position: relative;
+  display: grid;
+  min-width: 0;
+  gap: 0.35rem;
 }
 
 .category-field--dropdown {
@@ -443,11 +446,16 @@ onBeforeUnmount(() => {
 }
 
 .field-heading {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 0.625rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0.45rem;
+  margin-bottom: 0.35rem;
+  min-width: 0;
+}
+
+.field-heading > div {
+  min-width: 0;
 }
 
 .field-label {
@@ -465,15 +473,18 @@ onBeforeUnmount(() => {
 
 .manage-link {
   display: inline-flex;
+  min-height: 2rem;
   align-items: center;
+  justify-content: center;
   gap: 0.375rem;
   border-radius: 999px;
   border: 1px solid rgba(168, 85, 247, 0.28);
   background: rgba(88, 28, 135, 0.2);
-  padding: 0.35rem 0.625rem;
+  padding: 0.28rem 0.62rem;
   color: rgb(216 180 254);
   font-size: 0.75rem;
   font-weight: 700;
+  justify-self: end;
   transition:
     background 140ms ease,
     border-color 140ms ease,
@@ -1020,6 +1031,16 @@ onBeforeUnmount(() => {
 
   .category-manager-panel {
     max-height: calc(100dvh - 0.75rem);
+  }
+}
+
+@media (max-width: 720px) {
+  .field-heading {
+    grid-template-columns: 1fr;
+  }
+
+  .manage-link {
+    justify-self: start;
   }
 }
 

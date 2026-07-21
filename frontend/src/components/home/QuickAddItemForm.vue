@@ -54,6 +54,7 @@ defineExpose({
   max-width: 100%;
   box-sizing: border-box;
   gap: 0.8rem;
+  overflow: hidden;
   border: 1px solid rgba(203, 213, 225, 0.72);
   border-radius: 20px;
   background: #ffffff;

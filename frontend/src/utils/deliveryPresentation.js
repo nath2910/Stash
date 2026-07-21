@@ -102,15 +102,82 @@ const STAGE_META = {
   },
 }
 
-export const getDeliveryStatusMeta = (status) =>
-  STATUS_META[status] || {
-    label: 'Inconnu',
-    shortLabel: 'Inconnu',
-    badgeClass: 'border-slate-600 bg-slate-900 text-slate-300',
-    lightBadgeClass: 'border-slate-300 bg-slate-200/70 text-slate-700',
-    accentClass: 'text-slate-700',
-    stage: 'pending',
+const defaultStatusMeta = {
+  label: 'Inconnu',
+  shortLabel: 'Inconnu',
+  badgeClass: 'border-slate-600 bg-slate-900 text-slate-300',
+  lightBadgeClass: 'border-slate-300 bg-slate-200/70 text-slate-700',
+  accentClass: 'text-slate-700',
+  stage: 'pending',
+}
+
+const RELAY_READY_PHRASES = [
+  'disponible en relais',
+  'disponible au relais',
+  'point relais',
+  'point de retrait',
+  'relais pickup',
+  'pickup pass',
+  'code de retrait',
+  'a retirer',
+  'vous attend dans votre point de retrait',
+]
+
+const PICKED_UP_PHRASES = ['colis retire', 'retire par le destinataire']
+
+const normalizeStatusLabel = (value) =>
+  String(value || '')
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase()
+
+const hasAnyPhrase = (value, phrases) => phrases.some((phrase) => value.includes(phrase))
+
+const resolveStatusInput = (input, statusLabelOverride = '') => {
+  if (input && typeof input === 'object' && !Array.isArray(input)) {
+    return {
+      status: input.status,
+      statusLabel: String(input.statusLabel || statusLabelOverride || ''),
+    }
   }
+  return {
+    status: input,
+    statusLabel: String(statusLabelOverride || ''),
+  }
+}
+
+export const getDeliveryStatusMeta = (input, statusLabelOverride = '') => {
+  const { status, statusLabel } = resolveStatusInput(input, statusLabelOverride)
+  const base = STATUS_META[status] || defaultStatusMeta
+  const normalizedLabel = normalizeStatusLabel(statusLabel)
+
+  if (status === 'DELIVERED' && normalizedLabel.includes('boite aux lettres')) {
+    return { ...base, label: 'Livre boite', shortLabel: 'Livre' }
+  }
+
+  if (status === 'OUT_FOR_DELIVERY') {
+    return { ...base, label: 'En livraison', shortLabel: 'Livraison', stage: 'today' }
+  }
+
+  if (status === 'IN_TRANSIT') {
+    if (hasAnyPhrase(normalizedLabel, RELAY_READY_PHRASES)) {
+      return { ...base, label: 'Disponible relais', shortLabel: 'Relais', stage: 'transit' }
+    }
+    if (normalizedLabel.includes('pris en charge')) {
+      return { ...base, label: 'Pris en charge', shortLabel: 'Pris', stage: 'pending' }
+    }
+  }
+
+  if (status === 'REGISTERED' && normalizedLabel.includes('pris en charge')) {
+    return { ...base, label: 'Pris en charge', shortLabel: 'Pris', stage: 'pending' }
+  }
+
+  if (status === 'DELIVERED' && hasAnyPhrase(normalizedLabel, PICKED_UP_PHRASES)) {
+    return { ...base, label: 'Retire', shortLabel: 'Retire' }
+  }
+
+  return base
+}
 
 export const getDeliveryStageMeta = (stage) =>
   STAGE_META[stage] || {
@@ -119,7 +186,8 @@ export const getDeliveryStageMeta = (stage) =>
     accentClass: 'border-slate-200/80 bg-slate-50/80 text-slate-950',
   }
 
-export const getDeliveryStageKey = (status) => getDeliveryStatusMeta(status).stage
+export const getDeliveryStageKey = (input, statusLabelOverride = '') =>
+  getDeliveryStatusMeta(input, statusLabelOverride).stage
 
 export const isActiveParcelStatus = (status) => ACTIVE_STATUSES.has(status)
 
@@ -184,6 +252,18 @@ export const getDeliveryTrackingHealth = (parcel) => {
   const statusLabel = String(parcel.statusLabel || '').toLowerCase()
 
   if (aggregator === 'DIRECT_CARRIER') {
+    if (
+      statusLabel.includes('api officielle la poste non configuree')
+      || statusLabel.includes('no supported browser executable found')
+      || statusLabel.includes('browser tracking script failed')
+    ) {
+      return {
+        tone: 'warning',
+        title: 'Source La Poste indisponible',
+        message:
+          "Le suivi Colissimo n'a pas pu etre relu automatiquement. Verifie la cle API La Poste ou le navigateur local utilise par le scraper.",
+      }
+    }
     if (statusLabel.includes('non trouve')) {
       return {
         tone: 'info',

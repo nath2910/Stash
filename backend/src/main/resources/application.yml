@@ -96,7 +96,7 @@ app:
     scan-fixed-delay-ms: ${APP_DELIVERY_SCAN_FIXED_DELAY_MS:300000}
     scan-batch-size: ${APP_DELIVERY_SCAN_BATCH_SIZE:25}
     gmail-max-results: ${APP_DELIVERY_GMAIL_MAX_RESULTS:${app.delivery.scan-batch-size}}
-    gmail-lookback-days: ${APP_DELIVERY_GMAIL_LOOKBACK_DAYS:14}
+    gmail-lookback-days: ${APP_DELIVERY_GMAIL_LOOKBACK_DAYS:15}
     gmail-redirect-uri: ${APP_DELIVERY_GMAIL_REDIRECT_URI:${app.backend.public-base-url}/delivery/mail-accounts/gmail/callback}
     token-encryption-key: ${APP_TOKEN_ENCRYPTION_KEY:}
     tracking-provider: ${APP_DELIVERY_TRACKING_PROVIDER:DIRECT}

@@ -64,7 +64,6 @@
           @input="updatePriceField('prixRetail', $event)"
           @blur="formatPriceField('prixRetail')"
         />
-        <small v-if="pricePreview('prixRetail')">{{ pricePreview('prixRetail') }}</small>
       </label>
 
       <div class="item-field item-field--date">
@@ -72,7 +71,7 @@
         <CompactDateInput v-model="form.dateAchat" light size="md" />
       </div>
 
-      <div v-if="quantityEnabled && !showDetails" class="item-field item-field--quantity">
+      <div v-if="quantityEnabled && (!showDetails || isQuickSurface)" class="item-field item-field--quantity">
         <span>Quantite</span>
         <div class="quantity-stepper">
           <button
@@ -107,7 +106,7 @@
         </div>
       </div>
 
-      <template v-if="showDetails">
+      <template v-if="showInlineDetails">
         <div class="item-field item-field--date">
           <span>Date de vente</span>
           <CompactDateInput v-model="form.dateVente" light size="md" />
@@ -123,7 +122,6 @@
             @input="updatePriceField('prixResell', $event)"
             @blur="formatPriceField('prixResell')"
           />
-          <small v-if="pricePreview('prixResell')">{{ pricePreview('prixResell') }}</small>
         </label>
 
         <label class="item-field item-field--notes">
@@ -150,7 +148,7 @@
         </label>
       </template>
 
-      <div v-if="quantityEnabled && showDetails" class="item-field item-field--quantity">
+      <div v-if="quantityEnabled && showInlineDetails" class="item-field item-field--quantity">
         <span>Quantite</span>
         <div class="quantity-stepper">
           <button
@@ -222,7 +220,6 @@ import {
   readStoredSubcategories,
 } from '@/RegleItem/subcategoryStore'
 import { inferItemClassificationFromName } from '@/RegleItem/itemNameInference'
-import { formatEUR } from '@/utils/formatters'
 import { getField, typeOf } from '@/utils/snkVente'
 import { numberOrNull, toYmdLocal } from '@/utils/homeDashboard'
 
@@ -271,6 +268,8 @@ const itemTypes = computed(() => resolveItemTypeOptions(categoryLabels.value))
 const discoveredSubcategories = computed(() =>
   extractSubcategoriesByType(props.items, categoryLabels.value),
 )
+const isQuickSurface = computed(() => props.surface === 'quick')
+const showInlineDetails = computed(() => showDetails.value)
 const mainCategoryAliases = computed(() => buildItemCategoryAliases(categoryLabels.value))
 const metadataFields = computed(() => METADATA_FIELDS[form.value.type] || [])
 const currentTypeLabel = computed(() => itemTypeLabel(form.value.type, categoryLabels.value))
@@ -669,12 +668,6 @@ function formatPriceField(key) {
   const parsed = parsePriceValue(priceInputs.value[key])
   form.value[key] = parsed
   priceInputs.value[key] = formatPriceValue(parsed)
-}
-
-function pricePreview(key) {
-  const parsed = numberOrNull(form.value[key])
-  if (parsed === null) return ''
-  return formatEUR(parsed)
 }
 
 function cleanedMetadata() {
@@ -1109,6 +1102,7 @@ defineExpose({
   .item-primary-button {
     width: 100%;
   }
+
 }
 
 @media (hover: none) and (pointer: coarse) {

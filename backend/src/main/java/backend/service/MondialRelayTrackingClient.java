@@ -70,33 +70,33 @@ public class MondialRelayTrackingClient implements CarrierTrackingClient {
 
   @Override
   public boolean isConfigured() {
-    return true;
+    return !enseigne.isBlank() && !privateKey.isBlank();
   }
 
   @Override
   public Optional<TrackingSnapshot> fetchTracking(Parcel parcel) {
-    if (isConfigured()) {
-      try {
-        String response = restClient.post()
-            .uri(endpoint)
-            .contentType(MediaType.parseMediaType("text/xml; charset=utf-8"))
-            .header("SOAPAction", SOAP_ACTION)
-            .body(soapEnvelope(parcel.getTrackingNumber()))
-            .retrieve()
-            .body(String.class);
-
-        if (response != null && !response.isBlank()) {
-          TrackingSnapshot snapshot = toSnapshot(parcel, parseXml(response));
-          if (snapshot != null) {
-            return Optional.of(snapshot);
-          }
-        }
-      } catch (Exception ignored) {
-        // Browser fallback below.
-      }
+    if (!isConfigured()) {
+      return Optional.empty();
     }
+    try {
+      String response = restClient.post()
+          .uri(endpoint)
+          .contentType(MediaType.parseMediaType("text/xml; charset=utf-8"))
+          .header("SOAPAction", SOAP_ACTION)
+          .body(soapEnvelope(parcel.getTrackingNumber()))
+          .retrieve()
+          .body(String.class);
 
-    return fetchFromBrowserPage(parcel);
+      if (response != null && !response.isBlank()) {
+        TrackingSnapshot snapshot = toSnapshot(parcel, parseXml(response));
+        if (snapshot != null) {
+          return Optional.of(snapshot);
+        }
+      }
+    } catch (Exception ignored) {
+      // Generic public-page fallback is handled by PublicTrackingPageClient.
+    }
+    return Optional.empty();
   }
 
   private TrackingSnapshot toSnapshot(Parcel parcel, Document document) {

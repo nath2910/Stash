@@ -6,7 +6,7 @@
       <div>
         <h2 class="text-base font-semibold text-slate-900">Import Gmail</h2>
         <p class="mt-1 text-xs text-slate-500">
-          {{ accounts.length }} compte(s) lie(s). Le scan relit les emails transporteur et ajoute uniquement les vrais suivis detectes.
+          {{ accounts.length ? '1 compte Gmail connecte.' : 'Aucun compte Gmail connecte.' }} Le scan relit uniquement les emails Colissimo des 15 derniers jours.
         </p>
       </div>
       <button
@@ -23,7 +23,7 @@
 
     <form class="mt-4 grid gap-2" @submit.prevent="connectWithEmail">
       <p class="text-xs text-slate-500">
-        Tu peux lier plusieurs comptes Gmail. Chaque scan cherche de nouveaux numeros de suivi dans tes emails de livraison.
+        Un seul Gmail est gere ici. La connexion Google sert uniquement a lire les emails Colissimo recents.
       </p>
 
       <button
@@ -34,7 +34,7 @@
       >
         <LinkIcon class="h-4 w-4" />
         <span>{{
-          connecting ? 'Connexion...' : accounts.length ? 'Lier un autre Gmail' : 'Connecter Gmail'
+          connecting ? 'Connexion...' : accounts.length ? 'Reconnecter Gmail' : 'Connecter Gmail'
         }}</span>
       </button>
 
@@ -89,7 +89,7 @@
       <Mail class="mx-auto h-7 w-7 text-slate-400" />
       <p class="mt-3 text-sm font-medium text-slate-800">Aucun compte lie</p>
       <p class="mt-2 text-xs leading-relaxed text-slate-500">
-        Tu peux connecter un ou plusieurs Gmail. Le scan ne garde que les vrais numeros de suivi detectes.
+        Connecte ton Gmail Google pour scanner uniquement les emails Colissimo des 15 derniers jours.
       </p>
     </div>
 

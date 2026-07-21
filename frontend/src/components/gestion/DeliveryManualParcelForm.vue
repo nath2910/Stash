@@ -30,7 +30,7 @@
           autocomplete="off"
           spellcheck="false"
           class="min-h-[96px] w-full min-w-0 rounded-[20px] border border-slate-200 bg-white px-4 py-3 text-sm uppercase text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
-          placeholder="1Z999AA10123456784&#10;LA123456789FR&#10;ou separes par des virgules"
+          placeholder="LA123456789FR&#10;6A28526502105&#10;ou separes par des virgules"
         ></textarea>
         <p class="text-[11px] leading-relaxed text-slate-500">
           Collez une ou plusieurs references. Separez-les par une ligne, une virgule ou un point-virgule.
@@ -45,30 +45,10 @@
           v-model="carrierSlug"
           class="h-10 w-full min-w-0 rounded-full border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
         >
-          <option value="">Detection auto</option>
           <option value="colissimo">Colissimo / La Poste</option>
-          <option value="chronopost">Chronopost</option>
-          <option value="mondial-relay">Mondial Relay</option>
         </select>
         <p class="text-[11px] leading-relaxed text-slate-500">
-          Suivi live gratuit branche ici: Colissimo / La Poste, Chronopost et Mondial Relay. Les autres transporteurs ne sont pas proposes tant qu'aucun connecteur fiable n'est actif.
-        </p>
-      </label>
-
-      <label v-if="carrierSlug === 'mondial-relay'" class="grid gap-2">
-        <span class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500"
-          >Code postal</span
-        >
-        <input
-          v-model.trim="postalCode"
-          inputmode="numeric"
-          maxlength="5"
-          autocomplete="postal-code"
-          class="h-10 w-full min-w-0 rounded-full border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
-          placeholder="17000"
-        />
-        <p class="text-[11px] leading-relaxed text-slate-500">
-          Optionnel a l'ajout. Sans ce code postal, le suivi Mondial Relay sera cree en mode a completer.
+          Pour le moment, l ajout manuel est limite a Colissimo / La Poste.
         </p>
       </label>
 
@@ -118,8 +98,7 @@ const props = defineProps({
 const emit = defineEmits(['create-parcel'])
 
 const trackingInput = ref('')
-const carrierSlug = ref('')
-const postalCode = ref('')
+const carrierSlug = ref('colissimo')
 const trackingTextarea = ref(null)
 
 const submit = () => {
@@ -127,7 +106,6 @@ const submit = () => {
   emit('create-parcel', {
     trackingInput: trackingInput.value,
     carrierSlug: carrierSlug.value || null,
-    postalCode: carrierSlug.value === 'mondial-relay' ? postalCode.value || null : null,
   })
 }
 
@@ -135,16 +113,9 @@ watch(
   () => props.successToken,
   () => {
     trackingInput.value = ''
-    carrierSlug.value = ''
-    postalCode.value = ''
+    carrierSlug.value = 'colissimo'
   },
 )
-
-watch(carrierSlug, (value) => {
-  if (value !== 'mondial-relay') {
-    postalCode.value = ''
-  }
-})
 
 const focusFirstField = () => {
   trackingTextarea.value?.focus()

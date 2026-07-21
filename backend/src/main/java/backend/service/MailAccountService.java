@@ -37,9 +37,10 @@ public class MailAccountService {
 
   @Transactional(readOnly = true)
   public List<MailAccountResponse> listForUser(Long userId) {
-    return mailAccountRepository.findByUser_IdOrderByCreatedAtDesc(userId).stream()
+    return mailAccountRepository.findTopByUser_IdOrderByCreatedAtDesc(userId)
         .map(MailAccountResponse::fromEntity)
-        .toList();
+        .map(List::of)
+        .orElseGet(List::of);
   }
 
   public TrackingConnectResponse connectGmail(User user, String emailHint) {
@@ -68,9 +69,24 @@ public class MailAccountService {
   }
 
   public MailScanBatchResponse scanAll(Long userId) {
-    List<MailAccount> accounts = mailAccountRepository.findByUser_IdOrderByCreatedAtDesc(userId);
+    List<MailAccount> accounts = mailAccountRepository.findTopByUser_IdOrderByCreatedAtDesc(userId)
+        .map(List::of)
+        .orElseGet(List::of);
     if (accounts.isEmpty()) {
-      return new MailScanBatchResponse(0, 0, 0, 0, 0, 0, 0, "Ajoutez au moins un compte Gmail pour scanner vos emails.", List.of(), List.of(), List.of(), List.of());
+      return new MailScanBatchResponse(
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          "Connectez un compte Gmail pour scanner vos emails Colissimo.",
+          List.of(),
+          List.of(),
+          List.of(),
+          List.of()
+      );
     }
 
     int scannedAccounts = 0;
@@ -181,13 +197,13 @@ public class MailAccountService {
 
   private String scanMessage(MailScanSummary summary) {
     if (summary.scannedMessages() == 0) {
-      return "Aucun nouvel email de livraison a analyser.";
+      return "Aucun nouvel email Colissimo a analyser.";
     }
     if (summary.importedCount() > 0 || summary.reviewCount() > 0) {
       StringBuilder message = new StringBuilder();
-      message.append(summary.importedCount()).append(" vrai(s) suivi(s) importe(s)");
+      message.append(summary.importedCount()).append(" suivi(s) Colissimo importe(s)");
       if (summary.duplicateCount() > 0) {
-        message.append(", ").append(summary.duplicateCount()).append(" deja suivi(s)");
+        message.append(", ").append(summary.duplicateCount()).append(" deja present(s)");
       }
       if (summary.reviewCount() > 0) {
         message.append(", ").append(summary.reviewCount()).append(" a verifier");
@@ -196,9 +212,9 @@ public class MailAccountService {
       return message.toString();
     }
     if (summary.deliveryMessages() == 0) {
-      return "Aucun email de livraison fiable n'a ete trouve.";
+      return "Aucun email Colissimo pertinent n'a ete trouve.";
     }
-    return "Aucun numero de suivi fiable n'a ete trouve. Certains numeros ressemblaient plutot a des commandes, factures ou references internes.";
+    return "Aucun numero de suivi Colissimo fiable n'a ete trouve.";
   }
 
   private String scanFailureMessage(MailAccount account) {

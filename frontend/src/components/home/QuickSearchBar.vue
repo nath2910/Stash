@@ -6,7 +6,6 @@
         <h1>Accueil</h1>
       </div>
       <div class="search-heading-meta">
-        <span class="search-shortcut" aria-hidden="true">/ ou R</span>
         <span class="search-count">{{ stockLabel }}</span>
       </div>
     </div>
@@ -289,17 +288,6 @@ h1 {
   white-space: nowrap;
 }
 
-.search-shortcut {
-  border: 1px dashed rgba(14, 165, 233, 0.28);
-  border-radius: 999px;
-  background: rgba(248, 250, 252, 0.9);
-  color: #475569;
-  padding: 0.32rem 0.55rem;
-  font-size: 0.72rem;
-  font-weight: 800;
-  white-space: nowrap;
-}
-
 .search-box {
   position: relative;
   display: grid;
@@ -394,16 +382,6 @@ h1 {
 
   .search-count {
     justify-self: start;
-  }
-
-  .search-shortcut {
-    display: none;
-  }
-}
-
-@media (hover: none) and (pointer: coarse) {
-  .search-shortcut {
-    display: none;
   }
 }
 

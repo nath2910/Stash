@@ -18,6 +18,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class ParcelTrackingUpdateService {
 
+  private static final int PARCEL_STATUS_LABEL_MAX_LENGTH = 255;
+
   private final ParcelEventRepository parcelEventRepository;
 
   public ParcelTrackingUpdateService(ParcelEventRepository parcelEventRepository) {
@@ -42,8 +44,12 @@ public class ParcelTrackingUpdateService {
     if (snapshot.status() != null) {
       ParcelStatus currentStatus = parcel.getStatus();
       ParcelStatus incomingStatus = resolveIncomingStatus(snapshot);
-      if (shouldApplyStatus(currentStatus, incomingStatus)) {
+      boolean replaceEmailHintDelivered = shouldReplaceEmailHintDelivered(parcel, incomingStatus);
+      if (shouldApplyStatus(currentStatus, incomingStatus) || replaceEmailHintDelivered) {
         parcel.setStatus(incomingStatus);
+        if (replaceEmailHintDelivered) {
+          parcel.setDeliveredAt(null);
+        }
         appliedStatus = true;
       }
     } else if (parcel.getStatus() == null
@@ -56,7 +62,7 @@ public class ParcelTrackingUpdateService {
     if ((appliedStatus || parcel.getStatusLabel() == null || parcel.getStatusLabel().isBlank())
         && resolvedLabel != null
         && !resolvedLabel.isBlank()) {
-      parcel.setStatusLabel(resolvedLabel);
+      parcel.setStatusLabel(limitStatusLabel(resolvedLabel));
     }
     if (snapshot.estimatedDeliveryAt() != null) {
       parcel.setEstimatedDeliveryAt(snapshot.estimatedDeliveryAt());
@@ -65,9 +71,12 @@ public class ParcelTrackingUpdateService {
       parcel.setDeliveredAt(snapshot.deliveredAt());
     }
 
-    Map<String, Object> rawPayload = snapshot.rawPayload() == null
+    Map<String, Object> rawPayload = parcel.getRawCurrentPayload() == null
         ? new HashMap<>()
-        : new HashMap<>(snapshot.rawPayload());
+        : new HashMap<>(parcel.getRawCurrentPayload());
+    if (snapshot.rawPayload() != null) {
+      rawPayload.putAll(snapshot.rawPayload());
+    }
     putIfPresent(rawPayload, "tracking_url", snapshot.trackingUrl());
     putIfPresent(rawPayload, "origin_raw_location", snapshot.originAddress());
     putIfPresent(rawPayload, "destination_raw_location", snapshot.destinationAddress());
@@ -105,7 +114,7 @@ public class ParcelTrackingUpdateService {
       parcel.setStatus(ParcelStatus.REGISTERED);
     }
     if (label != null && !label.isBlank()) {
-      parcel.setStatusLabel(label);
+      parcel.setStatusLabel(limitStatusLabel(label));
     } else if (parcel.getStatusLabel() == null || parcel.getStatusLabel().isBlank()) {
       parcel.setStatusLabel("Suivi enregistre");
     }
@@ -264,6 +273,17 @@ public class ParcelTrackingUpdateService {
     return statusPriority(incomingStatus) >= statusPriority(currentStatus);
   }
 
+  private boolean shouldReplaceEmailHintDelivered(Parcel parcel, ParcelStatus incomingStatus) {
+    if (parcel == null || incomingStatus == null || incomingStatus == ParcelStatus.DELIVERED) {
+      return false;
+    }
+    if (parcel.getStatus() != ParcelStatus.DELIVERED) {
+      return false;
+    }
+    String currentLabel = safe(parcel.getStatusLabel()).toLowerCase();
+    return currentLabel.contains("selon email colissimo");
+  }
+
   private int statusPriority(ParcelStatus status) {
     if (status == null) {
       return 0;
@@ -276,5 +296,18 @@ public class ParcelTrackingUpdateService {
       case EXCEPTION -> 4;
       case DELIVERED -> 5;
     };
+  }
+
+  private String limitStatusLabel(String value) {
+    if (value == null) {
+      return null;
+    }
+    String trimmed = value.trim();
+    if (trimmed.isEmpty()) {
+      return null;
+    }
+    return trimmed.length() <= PARCEL_STATUS_LABEL_MAX_LENGTH
+        ? trimmed
+        : trimmed.substring(0, PARCEL_STATUS_LABEL_MAX_LENGTH);
   }
 }

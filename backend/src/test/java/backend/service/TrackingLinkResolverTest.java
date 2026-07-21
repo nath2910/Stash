@@ -6,23 +6,35 @@ import org.junit.jupiter.api.Test;
 class TrackingLinkResolverTest {
 
   @Test
-  void detectsCarrierFromTrustedTrackingUrl() {
+  void detectsColissimoFromTrustedTrackingUrl() {
     Assertions.assertEquals(
-        "chronopost",
+        "colissimo",
         TrackingLinkResolver.detectCarrierSlug(
-            "https://www.chronopost.fr/tracking-no-cms/suivi-page?listeNumerosLT=XY123456789FR"
+            "https://www.laposte.fr/outils/suivre-vos-envois?code=6A04296519970"
         )
     );
   }
 
   @Test
-  void keepsTrustedTrackingUrlWhenCarrierIsMissing() {
+  void keepsTrustedColissimoTrackingUrl() {
     Assertions.assertEquals(
-        "https://www.chronopost.fr/tracking-no-cms/suivi-page?listeNumerosLT=XY123456789FR",
+        "https://www.laposte.fr/outils/suivre-vos-envois?code=6A04296519970",
         TrackingLinkResolver.preferredTrackingUrl(
-            "https://www.chronopost.fr/tracking-no-cms/suivi-page?listeNumerosLT=XY123456789FR",
-            null,
-            "XY123456789FR"
+            "https://www.laposte.fr/outils/suivre-vos-envois?code=6A04296519970",
+            "colissimo",
+            "6A04296519970"
+        )
+    );
+  }
+
+  @Test
+  void fallsBackToOfficialColissimoUrlWhenRawUrlIsUntrusted() {
+    Assertions.assertEquals(
+        "https://www.laposte.fr/outils/suivre-vos-envois?code=6A04296519970",
+        TrackingLinkResolver.preferredTrackingUrl(
+            "https://example.com/track/6A04296519970",
+            "colissimo",
+            "6A04296519970"
         )
     );
   }

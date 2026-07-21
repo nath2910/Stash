@@ -2011,8 +2011,14 @@ function errorMessage(errorObject, fallback) {
   background: transparent;
 }
 
+.admin-page.is-embedded .admin-shell {
+  width: 100%;
+  max-width: none;
+  padding: 0;
+}
+
 .admin-shell {
-  width: min(1360px, 100%);
+  width: min(1440px, 100%);
   margin: 0 auto;
   padding: clamp(16px, 2.2vw, 32px) clamp(12px, 2vw, 24px) 40px;
 }
@@ -2032,8 +2038,9 @@ function errorMessage(errorObject, fallback) {
 }
 
 .admin-header {
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
   justify-content: space-between;
   gap: 20px;
   padding: 18px 20px;
@@ -2059,7 +2066,7 @@ function errorMessage(errorObject, fallback) {
 
 .header-actions {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: flex-end;
   gap: 10px;
   flex-wrap: wrap;
@@ -2234,9 +2241,9 @@ function errorMessage(errorObject, fallback) {
 
 .command-center {
   display: grid;
-  grid-template-columns: minmax(0, 1.18fr) minmax(17rem, 0.82fr);
-  gap: 14px;
-  margin-bottom: 14px;
+  grid-template-columns: minmax(0, 1.28fr) minmax(20rem, 0.92fr);
+  gap: 16px;
+  margin-bottom: 16px;
 }
 
 .next-action-card {
@@ -3050,10 +3057,10 @@ function errorMessage(errorObject, fallback) {
   margin-top: 18px;
 }
 
-@media (max-width: 980px) {
+@media (max-width: 1180px) {
   .admin-header {
     align-items: flex-start;
-    flex-direction: column;
+    grid-template-columns: 1fr;
   }
 
   .command-center {

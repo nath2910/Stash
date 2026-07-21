@@ -45,6 +45,7 @@ public class ChronopostTrackingClient implements CarrierTrackingClient {
           + "(KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36";
   private static final DateTimeFormatter EVENT_DATE_TIME = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
   private static final Pattern UPU_TRACKING = Pattern.compile("^[A-Z]{2}\\d{9}[A-Z]{2}$", Pattern.CASE_INSENSITIVE);
+  private static final Pattern LA_POSTE_15_CHAR_PATTERN = Pattern.compile("^\\d{14}[A-Z]$", Pattern.CASE_INSENSITIVE);
   private static final Set<String> NON_CHRONOPOST_UPU_SUFFIXES = Set.of("FR", "CN", "US", "GB");
   private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
 
@@ -74,11 +75,14 @@ public class ChronopostTrackingClient implements CarrierTrackingClient {
       return true;
     }
     String trackingNumber = normalizedTracking(parcel);
-    if (!UPU_TRACKING.matcher(trackingNumber).matches()) {
+    if (trackingNumber.isBlank()) {
       return false;
     }
-    String suffix = trackingNumber.substring(trackingNumber.length() - 2).toUpperCase(Locale.ROOT);
-    return !NON_CHRONOPOST_UPU_SUFFIXES.contains(suffix);
+    if (UPU_TRACKING.matcher(trackingNumber).matches()) {
+      return true;
+    }
+    return LA_POSTE_15_CHAR_PATTERN.matcher(trackingNumber).matches()
+        || TrackingCarrierRules.isValidForCarrier(trackingNumber, "chronopost");
   }
 
   @Override
@@ -95,6 +99,7 @@ public class ChronopostTrackingClient implements CarrierTrackingClient {
               .path("/suivi-colis")
               .queryParam("listeNumerosLT", parcel.getTrackingNumber().trim())
               .queryParam("langue", "fr")
+              .queryParamIfPresent("zipCode", Optional.ofNullable(destinationPostalCode(parcel)))
               .build())
           .header(HttpHeaders.USER_AGENT, BROWSER_USER_AGENT)
           .header(HttpHeaders.ACCEPT, "application/json, text/javascript, */*; q=0.01")
@@ -119,13 +124,7 @@ public class ChronopostTrackingClient implements CarrierTrackingClient {
     }
 
     if (response == null || response.isEmpty() || response.get("error") != null) {
-      log.debug("Chronopost cookie fallback empty for parcel {} ({}), trying local browser fallback",
-          parcel.getId(), parcel.getTrackingNumber());
-      response = fetchWithLocalBrowser(parcel).orElse(null);
-    }
-
-    if (response == null || response.isEmpty() || response.get("error") != null) {
-      log.debug("Chronopost returned empty or errored payload for parcel {} ({}) after fallback",
+      log.debug("Chronopost returned empty or errored payload for parcel {} ({}) after lightweight fallbacks",
           parcel.getId(), parcel.getTrackingNumber());
       return Optional.empty();
     }
@@ -158,6 +157,7 @@ public class ChronopostTrackingClient implements CarrierTrackingClient {
     putIfPresent(rawPayload, "top", topHtml);
     putIfPresent(rawPayload, "tab", tabHtml);
     rawPayload.put("tracking_url", trackingPageUrl(parcel));
+    putIfPresent(rawPayload, "destination_postal_code", destinationPostalCode(parcel));
 
     return new TrackingSnapshot(
         PROVIDER,
@@ -304,9 +304,14 @@ public class ChronopostTrackingClient implements CarrierTrackingClient {
   }
 
   private static String trackingPageUrl(Parcel parcel) {
-    return BASE_URL + "/suivi-page?listeNumerosLT="
+    String url = BASE_URL + "/suivi-page?listeNumerosLT="
         + URLEncoder.encode(parcel.getTrackingNumber().trim(), StandardCharsets.UTF_8)
         + "&langue=fr_FR";
+    String postalCode = destinationPostalCode(parcel);
+    if (postalCode != null) {
+      url += "&zipCode=" + URLEncoder.encode(postalCode, StandardCharsets.UTF_8);
+    }
+    return url;
   }
 
   private Optional<Map<String, Object>> fetchWithCookieSession(Parcel parcel) {
@@ -327,7 +332,9 @@ public class ChronopostTrackingClient implements CarrierTrackingClient {
 
       String ajaxBody = Jsoup.connect(BASE_URL + "/suivi-colis?listeNumerosLT="
               + URLEncoder.encode(parcel.getTrackingNumber().trim(), StandardCharsets.UTF_8)
-              + "&langue=fr")
+              + "&langue=fr"
+              + (destinationPostalCode(parcel) == null ? "" : "&zipCode="
+              + URLEncoder.encode(destinationPostalCode(parcel), StandardCharsets.UTF_8)))
           .userAgent(BROWSER_USER_AGENT)
           .header("Accept", "application/json, text/javascript, */*; q=0.01")
           .header("Accept-Language", "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7")
@@ -434,6 +441,26 @@ public class ChronopostTrackingClient implements CarrierTrackingClient {
     }
     Object rawUrl = parcel.getRawCurrentPayload().get("tracking_url");
     return rawUrl == null ? null : String.valueOf(rawUrl);
+  }
+
+  private static String destinationPostalCode(Parcel parcel) {
+    if (parcel == null || parcel.getRawCurrentPayload() == null) {
+      return null;
+    }
+    Object directValue = parcel.getRawCurrentPayload().get("destination_postal_code");
+    if (directValue != null) {
+      String text = String.valueOf(directValue).trim();
+      if (text.matches("\\d{5}")) {
+        return text;
+      }
+    }
+    String rawUrl = rawTrackingUrl(parcel);
+    if (rawUrl == null || rawUrl.isBlank()) {
+      return null;
+    }
+    java.util.regex.Matcher matcher = Pattern.compile("[?&]zipCode=(\\d{5})(?:[&#]|$)", Pattern.CASE_INSENSITIVE)
+        .matcher(rawUrl);
+    return matcher.find() ? matcher.group(1) : null;
   }
 
   private static String stringValue(Object value) {

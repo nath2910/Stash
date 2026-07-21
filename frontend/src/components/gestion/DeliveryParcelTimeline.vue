@@ -2,40 +2,42 @@
   <aside
     class="min-w-0 rounded-[24px] border border-slate-200 bg-[#fbfaf7] p-4 shadow-[0_12px_30px_rgba(15,23,42,0.055)] sm:p-5"
   >
-    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-      <div class="min-w-0">
+    <div class="delivery-timeline-head">
+      <div class="delivery-timeline-copy">
         <h3 class="text-base font-semibold text-slate-900">Detail livraison</h3>
-        <p class="mt-1 break-all text-xs text-slate-500 sm:truncate">
+        <p class="delivery-timeline-number">
           {{ parcel ? parcel.normalizedTrackingNumber || parcel.trackingNumber : 'Aucun colis' }}
         </p>
       </div>
-      <div v-if="parcel" class="flex w-full shrink-0 flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
+      <div v-if="parcel" class="delivery-timeline-actions">
         <span
-          class="inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold"
-          :class="statusMeta(parcel.status).class"
+          class="delivery-timeline-status inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold"
+          :class="statusMeta(parcel).class"
         >
-          {{ statusMeta(parcel.status).label }}
+          {{ statusMeta(parcel).label }}
         </span>
-        <a
-          v-if="parcel.trackingUrl"
-          :href="parcel.trackingUrl"
-          target="_blank"
-          rel="noreferrer"
-          class="inline-flex h-9 flex-1 items-center justify-center gap-2 rounded-full border border-teal-600/20 bg-teal-700 px-3 text-xs font-semibold text-white transition hover:bg-teal-600 sm:flex-none"
-        >
-          <ExternalLink class="h-3.5 w-3.5" />
-          <span>Transporteur</span>
-        </a>
-        <button
-          type="button"
-          class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-red-300/40 bg-red-50 text-red-700 transition hover:border-red-400 hover:bg-red-100 disabled:cursor-wait disabled:opacity-60"
-          title="Supprimer ce suivi"
-          :disabled="refreshing || deleting"
-          @click="$emit('delete', parcel.id)"
-        >
-          <RefreshCw v-if="deleting" class="h-4 w-4 animate-spin" />
-          <Trash2 v-else class="h-4 w-4" />
-        </button>
+        <div class="delivery-timeline-buttons">
+          <a
+            v-if="parcel.trackingUrl"
+            :href="parcel.trackingUrl"
+            target="_blank"
+            rel="noreferrer"
+            class="delivery-timeline-link inline-flex h-9 items-center justify-center gap-2 rounded-full border border-teal-600/20 bg-teal-700 px-3 text-xs font-semibold text-white transition hover:bg-teal-600"
+          >
+            <ExternalLink class="h-3.5 w-3.5" />
+            <span>Transporteur</span>
+          </a>
+          <button
+            type="button"
+            class="delivery-timeline-delete inline-flex h-9 w-9 items-center justify-center rounded-full border border-red-300/40 bg-red-50 text-red-700 transition hover:border-red-400 hover:bg-red-100 disabled:cursor-wait disabled:opacity-60"
+            title="Supprimer ce suivi"
+            :disabled="refreshing || deleting"
+            @click="$emit('delete', parcel.id)"
+          >
+            <RefreshCw v-if="deleting" class="h-4 w-4 animate-spin" />
+            <Trash2 v-else class="h-4 w-4" />
+          </button>
+        </div>
       </div>
     </div>
 
@@ -74,30 +76,6 @@
         {{ trackingHealth.message }}
       </p>
 
-      <form
-        v-if="parcel.completionRequired"
-        class="mt-3 flex flex-col gap-2 sm:flex-row"
-        @submit.prevent="submitPostalCode"
-      >
-        <input
-          v-model.trim="postalCodeInput"
-          inputmode="numeric"
-          maxlength="5"
-          autocomplete="postal-code"
-          class="h-10 flex-1 rounded-full border border-amber-300 bg-white px-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
-          placeholder="Code postal destinataire"
-        />
-        <button
-          type="submit"
-          class="inline-flex h-10 items-center justify-center rounded-full border border-amber-400/50 bg-amber-500 px-4 text-sm font-semibold text-white transition hover:bg-amber-600 disabled:cursor-wait disabled:opacity-60"
-          :disabled="completing || !postalCodeInput"
-        >
-          {{ completing ? 'Activation...' : 'Activer le suivi' }}
-        </button>
-      </form>
-      <p v-if="completionError" class="mt-2 text-xs text-red-700">
-        {{ completionError }}
-      </p>
     </div>
 
     <div v-if="parcel" class="mt-3 rounded-2xl border border-slate-200 bg-white p-3">
@@ -166,7 +144,7 @@
           <div class="rounded-2xl border border-slate-200 bg-white p-3">
             <div class="flex flex-wrap items-center justify-between gap-2">
               <p class="text-sm font-semibold text-slate-800">
-                {{ event.description || statusMeta(event.status).label }}
+                {{ event.description || statusMeta(event).label }}
               </p>
               <span class="text-xs text-slate-500">{{ formatDateTime(event.eventTime) }}</span>
             </div>
@@ -192,7 +170,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed } from 'vue'
 import { ExternalLink, RefreshCw, Trash2 } from 'lucide-vue-next'
 import {
   carrierLabel,
@@ -214,19 +192,9 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  completing: {
-    type: Boolean,
-    default: false,
-  },
-  completionError: {
-    type: String,
-    default: '',
-  },
 })
 
-const emit = defineEmits(['refresh', 'delete', 'complete'])
-
-const postalCodeInput = ref('')
+defineEmits(['refresh', 'delete'])
 
 const events = computed(() => (Array.isArray(props.parcel?.events) ? props.parcel.events : []))
 const trackingHealth = computed(() => getDeliveryTrackingHealth(props.parcel))
@@ -280,7 +248,7 @@ const progressHeadline = computed(() => {
   if (props.parcel.status === 'EXCEPTION') {
     return 'Incident detecte sur le parcours'
   }
-  return getDeliveryStatusMeta(props.parcel.status).label
+  return getDeliveryStatusMeta(props.parcel).label
 })
 
 const detailItems = computed(() => {
@@ -289,6 +257,11 @@ const detailItems = computed(() => {
 
   const lastUpdate = parcel.lastEventAt || parcel.updatedAt || parcel.firstSeenAt
   return [
+    {
+      label: 'Statut detaille',
+      value: parcel.statusLabel,
+      show: Boolean(parcel.statusLabel),
+    },
     {
       label: 'Transporteur',
       value: carrierLabel(parcel.carrierSlug),
@@ -307,27 +280,65 @@ const detailItems = computed(() => {
   ].filter((item) => item.show && item.value)
 })
 
-const statusMeta = (status) => {
-  const meta = getDeliveryStatusMeta(status)
+const statusMeta = (input) => {
+  const meta = getDeliveryStatusMeta(input)
   return { label: meta.label, class: meta.lightBadgeClass }
 }
 
 const formatDateTime = formatDeliveryDateTime
-
-watch(
-  () => props.parcel?.id,
-  () => {
-    postalCodeInput.value = ''
-  },
-)
-
-const submitPostalCode = () => {
-  if (!props.parcel?.id || !postalCodeInput.value) return
-  emit('complete', { id: props.parcel.id, postalCode: postalCodeInput.value })
-}
 </script>
 
 <style scoped>
+.delivery-timeline-head {
+  display: grid;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.delivery-timeline-copy {
+  min-width: 0;
+}
+
+.delivery-timeline-number {
+  margin-top: 0.25rem;
+  color: #64748b;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.delivery-timeline-actions {
+  display: grid;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.delivery-timeline-status {
+  width: fit-content;
+  max-width: 100%;
+}
+
+.delivery-timeline-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.delivery-timeline-link {
+  min-width: 0;
+  max-width: 100%;
+  padding-inline: 0.85rem;
+}
+
+.delivery-timeline-link span {
+  overflow-wrap: anywhere;
+}
+
+.delivery-timeline-delete {
+  flex: 0 0 auto;
+}
+
 .delivery-timeline-scroll {
   scrollbar-width: thin;
   scrollbar-color: rgba(148, 163, 184, 0.9) rgba(226, 232, 240, 0.9);
@@ -364,6 +375,21 @@ const submitPostalCode = () => {
 
   100% {
     transform: translateX(240%);
+  }
+}
+
+@media (min-width: 560px) {
+  .delivery-timeline-head {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+  }
+
+  .delivery-timeline-actions {
+    justify-items: end;
+  }
+
+  .delivery-timeline-buttons {
+    justify-content: flex-end;
   }
 }
 </style>

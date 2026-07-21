@@ -33,6 +33,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 
 @Service
@@ -43,10 +44,8 @@ public class GmailMailScannerService {
   private static final int GMAIL_PAGE_SIZE = 100;
   private static final int GMAIL_PAGE_SCAN_LIMIT = 10;
   private static final String BASE_QUERY =
-      "(suivi OR tracking OR colis OR livraison OR expedition OR expedie "
-          + "OR \"numero de suivi\" OR \"tracking number\" OR shipment OR shipped OR delivery "
-          + "OR package OR parcel OR colissimo OR laposte OR \"la poste\" OR chronopost "
-          + "OR \"mondial relay\" OR dhl OR ups OR fedex OR dpd OR gls)";
+      "(colissimo OR laposte OR \"la poste\" OR \"notif-colissimo-laposte\") "
+          + "(suivi OR colis OR livraison OR \"suivi de livraison\" OR \"numero de suivi\")";
   private static final Pattern PLAIN_TEXT_LINK = Pattern.compile("https?://[^\\s<>()\"']+", Pattern.CASE_INSENSITIVE);
 
   private final int maxResults;
@@ -62,7 +61,7 @@ public class GmailMailScannerService {
 
   public GmailMailScannerService(
       @Value("${app.delivery.gmail-max-results:${app.delivery.scan-batch-size:50}}") int maxResults,
-      @Value("${app.delivery.gmail-lookback-days:14}") int lookbackDays,
+      @Value("${app.delivery.gmail-lookback-days:15}") int lookbackDays,
       @Value("${spring.security.oauth2.client.registration.google.client-id:}") String googleClientId,
       @Value("${spring.security.oauth2.client.registration.google.client-secret:}") String googleClientSecret,
       MailAccountRepository mailAccountRepository,
@@ -98,7 +97,13 @@ public class GmailMailScannerService {
     }
 
     try {
-      MailScanSummary summary = runScan(account);
+      String accessToken = ensureAccessToken(account);
+      GmailMessageBatch messageBatch = collectMessageBatch(account, accessToken);
+      MailScanSummary summary = runScan(account, accessToken, messageBatch.messageIds());
+      String nextHistoryId = resolveNextHistoryId(accessToken, messageBatch.latestHistoryId());
+      if (nextHistoryId != null) {
+        account.setScanCursor(nextHistoryId);
+      }
       markSuccess(account);
       return summary;
     } catch (Exception ex) {
@@ -111,52 +116,43 @@ public class GmailMailScannerService {
     }
   }
 
-  private MailScanSummary runScan(MailAccount account) {
-    String accessToken = ensureAccessToken(account);
-    List<String> messageIds = listRecentMessageIds(account.getId(), accessToken);
+  private MailScanSummary runScan(MailAccount account, String accessToken, List<String> messageIds) {
     MailScanAccumulator scan = new MailScanAccumulator();
     OffsetDateTime lookbackStart = lookbackStart();
 
     for (String messageId : messageIds) {
       boolean alreadySeen = seenMailMessageRepository.existsByMailAccount_IdAndProviderMessageId(account.getId(), messageId);
+      if (alreadySeen) {
+        continue;
+      }
 
       Map<String, Object> metadata = fetchMessage(accessToken, messageId, "metadata");
       String from = headerValue(metadata, "From");
       String subject = headerValue(metadata, "Subject");
       OffsetDateTime receivedAt = receivedAt(metadata);
       if (receivedAt.isBefore(lookbackStart)) {
-        if (!alreadySeen) {
-          markSeen(account, messageId, receivedAt);
-        }
+        markSeen(account, messageId, receivedAt);
         continue;
       }
 
       Map<String, Object> full = fetchMessage(accessToken, messageId, "full");
       EmailScanContent content = extractContentForParsing(full);
-      if (!alreadySeen) {
-        scan.scannedMessages++;
-      }
+      scan.scannedMessages++;
 
-      if (!trackingParserService.shouldInspectMessage(from, subject, content.visibleText())) {
-        if (!alreadySeen) {
-          markSeen(account, messageId, receivedAt);
-        }
+      if (!trackingParserService.shouldInspectColissimoMessage(from, subject, content.visibleText())) {
+        markSeen(account, messageId, receivedAt);
         continue;
       }
 
-      if (!alreadySeen) {
-        scan.deliveryMessages++;
-      }
-      TrackingDetectionResult detection = trackingParserService.detect(
+      scan.deliveryMessages++;
+      TrackingDetectionResult detection = trackingParserService.detectColissimo(
           from,
           subject,
           content.visibleText(),
           content.links()
       );
-      if (!alreadySeen) {
-        scan.rejectedCount += detection.rejectedCount();
-        scan.duplicateCount += detection.duplicateCount();
-      }
+      scan.rejectedCount += detection.rejectedCount();
+      scan.duplicateCount += detection.duplicateCount();
 
       for (TrackingCandidate candidate : detection.autoImportCandidates()) {
         DeliveryTrackingService.MailCandidateImportResult result = deliveryTrackingService.importDetectedFromMail(
@@ -168,19 +164,13 @@ public class GmailMailScannerService {
             from,
             receivedAt
         );
-        if (!alreadySeen) {
-          if (result.imported()) {
-            scan.importedCount++;
-            addParcel(scan.importedParcels, result.parcel());
-          } else {
-            scan.duplicateCount++;
-            addParcel(scan.duplicateParcels, result.parcel());
-          }
+        if (result.imported()) {
+          scan.importedCount++;
+          addParcel(scan.importedParcels, result.parcel());
+        } else {
+          scan.duplicateCount++;
+          addParcel(scan.duplicateParcels, result.parcel());
         }
-      }
-
-      if (alreadySeen) {
-        continue;
       }
 
       for (TrackingCandidate candidate : detection.reviewCandidates()) {
@@ -200,6 +190,20 @@ public class GmailMailScannerService {
     }
 
     return scan.toSummary();
+  }
+
+  private GmailMessageBatch collectMessageBatch(MailAccount account, String accessToken) {
+    if (account.getLastScanAt() == null) {
+      return listRecentMessageIds(accessToken);
+    }
+    String startHistoryId = normalizeHistoryId(account.getScanCursor());
+    if (startHistoryId != null) {
+      GmailMessageBatch incrementalBatch = listIncrementalMessageIds(accessToken, startHistoryId);
+      if (incrementalBatch != null) {
+        return incrementalBatch;
+      }
+    }
+    return listRecentMessageIds(accessToken);
   }
 
   private String ensureAccessToken(MailAccount account) {
@@ -237,7 +241,7 @@ public class GmailMailScannerService {
   }
 
   @SuppressWarnings("unchecked")
-  private List<String> listRecentMessageIds(Long mailAccountId, String accessToken) {
+  private GmailMessageBatch listRecentMessageIds(String accessToken) {
     List<String> ids = new ArrayList<>();
     int targetCount = Math.max(1, maxResults);
     String pageToken = null;
@@ -288,7 +292,69 @@ public class GmailMailScannerService {
         break;
       }
     }
-    return ids;
+    return new GmailMessageBatch(ids, null, false);
+  }
+
+  @SuppressWarnings("unchecked")
+  private GmailMessageBatch listIncrementalMessageIds(String accessToken, String startHistoryId) {
+    List<String> ids = new ArrayList<>();
+    int targetCount = Math.max(1, maxResults);
+    String pageToken = null;
+    String latestHistoryId = startHistoryId;
+    int scannedPages = 0;
+
+    try {
+      while (ids.size() < targetCount && scannedPages < GMAIL_PAGE_SCAN_LIMIT) {
+        final String currentPageToken = pageToken;
+        Map<String, Object> response = restClient.get()
+            .uri(uriBuilder -> {
+              var builder = uriBuilder
+                  .path("/gmail/v1/users/me/history")
+                  .queryParam("startHistoryId", startHistoryId)
+                  .queryParam("historyTypes", "messageAdded")
+                  .queryParam("maxResults", GMAIL_PAGE_SIZE);
+              if (currentPageToken != null && !currentPageToken.isBlank()) {
+                builder.queryParam("pageToken", currentPageToken);
+              }
+              return builder.build();
+            })
+            .headers(headers -> headers.setBearerAuth(accessToken))
+            .retrieve()
+            .body(new ParameterizedTypeReference<>() {});
+
+        latestHistoryId = firstNonBlank(
+            stringValue(response == null ? null : response.get("historyId")),
+            latestHistoryId
+        );
+
+        Object history = response == null ? null : response.get("history");
+        if (history instanceof List<?> list) {
+          for (Object item : list) {
+            if (!(item instanceof Map<?, ?> map)) {
+              continue;
+            }
+            collectHistoryMessageIds(map.get("messagesAdded"), ids, targetCount);
+            collectHistoryMessageIds(map.get("messages"), ids, targetCount);
+            if (ids.size() >= targetCount) {
+              break;
+            }
+          }
+        }
+
+        pageToken = stringValue(response == null ? null : response.get("nextPageToken"));
+        scannedPages++;
+        if (pageToken == null) {
+          break;
+        }
+      }
+      return new GmailMessageBatch(ids, latestHistoryId, true);
+    } catch (HttpClientErrorException ex) {
+      if (ex.getStatusCode().value() == 400 || ex.getStatusCode().value() == 404) {
+        log.info("Gmail history cursor reset for account scan after expired historyId {}", startHistoryId);
+        return null;
+      }
+      throw ex;
+    }
   }
 
   private Map<String, Object> fetchMessage(String accessToken, String messageId, String format) {
@@ -482,6 +548,63 @@ public class GmailMailScannerService {
     return "newer_than:" + lookbackDays + "d " + BASE_QUERY;
   }
 
+  private String resolveNextHistoryId(String accessToken, String fallbackHistoryId) {
+    String currentHistoryId = fetchCurrentHistoryId(accessToken);
+    return firstNonBlank(currentHistoryId, normalizeHistoryId(fallbackHistoryId));
+  }
+
+  private String fetchCurrentHistoryId(String accessToken) {
+    Map<String, Object> profile = restClient.get()
+        .uri("/gmail/v1/users/me/profile")
+        .headers(headers -> headers.setBearerAuth(accessToken))
+        .retrieve()
+        .body(new ParameterizedTypeReference<>() {});
+    return normalizeHistoryId(stringValue(profile == null ? null : profile.get("historyId")));
+  }
+
+  private void collectHistoryMessageIds(Object rawHistoryChunk, List<String> ids, int targetCount) {
+    if (!(rawHistoryChunk instanceof List<?> list)) {
+      return;
+    }
+    for (Object item : list) {
+      if (!(item instanceof Map<?, ?> map)) {
+        continue;
+      }
+      Object message = map.get("message");
+      if (!(message instanceof Map<?, ?> messageMap)) {
+        continue;
+      }
+      String messageId = stringValue(messageMap.get("id"));
+      if (messageId == null || ids.contains(messageId)) {
+        continue;
+      }
+      ids.add(messageId);
+      if (ids.size() >= targetCount) {
+        return;
+      }
+    }
+  }
+
+  private String normalizeHistoryId(String value) {
+    String normalized = stringValue(value);
+    if (normalized == null || !normalized.matches("\\d+")) {
+      return null;
+    }
+    return normalized;
+  }
+
+  private String firstNonBlank(String... values) {
+    if (values == null) {
+      return null;
+    }
+    for (String value : values) {
+      if (value != null && !value.isBlank()) {
+        return value;
+      }
+    }
+    return null;
+  }
+
   private OffsetDateTime lookbackStart() {
     return OffsetDateTime.now(ZoneOffset.UTC).minusDays(lookbackDays);
   }
@@ -515,6 +638,13 @@ public class GmailMailScannerService {
     static MailScanSummary empty() {
       return new MailScanSummary(0, 0, 0, 0, 0, 0, List.of(), List.of(), List.of());
     }
+  }
+
+  private record GmailMessageBatch(
+      List<String> messageIds,
+      String latestHistoryId,
+      boolean incremental
+  ) {
   }
 
   private static class MailScanAccumulator {

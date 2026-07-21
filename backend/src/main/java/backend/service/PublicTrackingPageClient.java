@@ -18,9 +18,6 @@ public class PublicTrackingPageClient implements CarrierTrackingClient {
 
   private static final String PROVIDER = "PUBLIC_TRACKING_PAGE";
   private static final Set<String> SUPPORTED_CARRIERS = Set.of(
-      "colissimo",
-      "laposte",
-      "la-poste",
       "chronopost",
       "mondial-relay",
       "mondialrelay",
@@ -28,7 +25,9 @@ public class PublicTrackingPageClient implements CarrierTrackingClient {
       "fedex",
       "dhl",
       "dpd",
-      "gls"
+      "gls",
+      "landmark-global",
+      "landmarkglobal"
   );
 
   private final RestClient restClient;

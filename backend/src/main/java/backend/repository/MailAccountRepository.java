@@ -17,7 +17,11 @@ public interface MailAccountRepository extends JpaRepository<MailAccount, Long> 
 
   List<MailAccount> findByUser_IdOrderByCreatedAtDesc(Long userId);
 
+  Optional<MailAccount> findTopByUser_IdOrderByCreatedAtDesc(Long userId);
+
   Optional<MailAccount> findByIdAndUser_Id(Long id, Long userId);
+
+  List<MailAccount> findByUser_IdAndIdNotOrderByCreatedAtDesc(Long userId, Long id);
 
   @Query("""
       select m
@@ -39,6 +43,25 @@ public interface MailAccountRepository extends JpaRepository<MailAccount, Long> 
       order by m.nextScanAt asc, m.id asc
       """)
   List<MailAccount> findDueForScan(
+      @Param("status") MailAccountStatus status,
+      @Param("now") OffsetDateTime now,
+      Pageable pageable
+  );
+
+  @Query("""
+      select m
+      from MailAccount m
+      where m.status = :status
+        and m.nextScanAt <= :now
+        and not exists (
+          select 1
+          from MailAccount newer
+          where newer.user.id = m.user.id
+            and newer.id > m.id
+        )
+      order by m.nextScanAt asc, m.id asc
+      """)
+  List<MailAccount> findPrimaryDueForScan(
       @Param("status") MailAccountStatus status,
       @Param("now") OffsetDateTime now,
       Pageable pageable

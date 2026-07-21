@@ -119,7 +119,7 @@
                   {{ carrierLabel(parcel.carrierSlug) }}
                 </span>
                 <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-600">
-                  {{ getDeliveryStatusMeta(parcel.status).shortLabel }}
+                  {{ getDeliveryStatusMeta(parcel).shortLabel }}
                 </span>
                 <span v-if="parcel.estimatedDeliveryAt">
                   ETA {{ formatDeliveryDate(parcel.estimatedDeliveryAt) }}
@@ -140,9 +140,9 @@
               </span>
               <span
                 class="rounded-full border px-2.5 py-1 text-[11px] font-semibold"
-                :class="statusMeta(parcel.status).class"
+                :class="statusMeta(parcel).class"
               >
-                {{ statusMeta(parcel.status).label }}
+                {{ statusMeta(parcel).label }}
               </span>
               <span v-if="eventCount(parcel)" class="text-xs text-slate-400"
                 >{{ eventCount(parcel) }} evt.</span
@@ -223,8 +223,8 @@ const allVisibleSelected = computed(
     props.parcels.every((parcel) => props.selectedIds.includes(parcel.id)),
 )
 
-const statusMeta = (status) => {
-  const meta = getDeliveryStatusMeta(status)
+const statusMeta = (parcel) => {
+  const meta = getDeliveryStatusMeta(parcel)
   return { label: meta.label, class: meta.lightBadgeClass }
 }
 

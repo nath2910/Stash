@@ -190,4 +190,119 @@ class ParcelTrackingUpdateServiceTest {
     Assertions.assertEquals("Ce suivi n'est plus disponible", parcel.getStatusLabel());
     Assertions.assertNotNull(parcel.getDeliveredAt());
   }
+
+  @Test
+  void keepsExistingTrackingContextWhenApplyingFreshSnapshot() {
+    ParcelEventRepository eventRepository = Mockito.mock(ParcelEventRepository.class);
+    ParcelTrackingUpdateService service = new ParcelTrackingUpdateService(eventRepository);
+    Parcel parcel = new Parcel();
+    parcel.setId(47L);
+    parcel.setStatus(ParcelStatus.REGISTERED);
+    parcel.setRawCurrentPayload(new java.util.HashMap<>(Map.of(
+        "tracking_url", "https://www.chronopost.fr/tracking-no-cms/suivi-page?listeNumerosLT=05308083313940F&langue=fr_FR&zipCode=29900",
+        "destination_postal_code", "29900",
+        "source_context_snippet", "Lien Chronopost avec code postal"
+    )));
+
+    TrackingSnapshot snapshot = new TrackingSnapshot(
+        "CHRONOPOST_DIRECT",
+        "05308083313940F",
+        "chronopost",
+        ParcelStatus.DELIVERED,
+        "Livraison effectuee",
+        null,
+        OffsetDateTime.parse("2026-06-29T10:16:00Z"),
+        "https://www.chronopost.fr/tracking-no-cms/suivi-page?listeNumerosLT=05308083313940F&langue=fr_FR&zipCode=29900",
+        null,
+        null,
+        "Chronopost",
+        null,
+        Map.of("tab", "<table></table>"),
+        List.of()
+    );
+
+    service.applySnapshot(parcel, snapshot);
+
+    Assertions.assertEquals("29900", parcel.getRawCurrentPayload().get("destination_postal_code"));
+    Assertions.assertEquals(
+        "Lien Chronopost avec code postal",
+        parcel.getRawCurrentPayload().get("source_context_snippet")
+    );
+    Assertions.assertTrue(String.valueOf(parcel.getRawCurrentPayload().get("tracking_url")).contains("zipCode=29900"));
+  }
+
+  @Test
+  void truncatesOverlongCarrierStatusLabelToFitParcelColumn() {
+    ParcelEventRepository eventRepository = Mockito.mock(ParcelEventRepository.class);
+    ParcelTrackingUpdateService service = new ParcelTrackingUpdateService(eventRepository);
+    Parcel parcel = new Parcel();
+    parcel.setId(48L);
+    parcel.setStatus(ParcelStatus.IN_TRANSIT);
+
+    String longLabel =
+        "Votre Colissimo vous attend dans votre point de retrait. "
+            + "Le delai de retrait est de 5 jours en consigne Pickup et 14 jours en relais commercant "
+            + "(en jours calendaires). Pour le retirer, n'oubliez pas votre piece d'identite "
+            + "originale ou votre code de retrait en consigne.";
+
+    TrackingSnapshot snapshot = new TrackingSnapshot(
+        "LA_POSTE_BROWSER_PAGE",
+        "6Y11138575506",
+        "colissimo",
+        ParcelStatus.IN_TRANSIT,
+        longLabel,
+        null,
+        null,
+        "https://www.laposte.fr/outils/suivre-vos-envois?code=6Y11138575506",
+        null,
+        null,
+        "Colissimo",
+        null,
+        Map.of("source", "test"),
+        List.of()
+    );
+
+    service.applySnapshot(parcel, snapshot);
+
+    Assertions.assertNotNull(parcel.getStatusLabel());
+    Assertions.assertEquals(255, parcel.getStatusLabel().length());
+    Assertions.assertTrue(longLabel.startsWith(parcel.getStatusLabel()));
+  }
+
+  @Test
+  void carrierSnapshotCanOverrideDeliveredStatusThatCameOnlyFromMailHint() {
+    ParcelEventRepository eventRepository = Mockito.mock(ParcelEventRepository.class);
+    ParcelTrackingUpdateService service = new ParcelTrackingUpdateService(eventRepository);
+    Parcel parcel = new Parcel();
+    parcel.setId(49L);
+    parcel.setStatus(ParcelStatus.DELIVERED);
+    parcel.setDeliveredAt(OffsetDateTime.parse("2026-07-21T10:00:00Z"));
+    parcel.setStatusLabel("Livre selon email Colissimo");
+
+    TrackingSnapshot snapshot = new TrackingSnapshot(
+        "LA_POSTE_BROWSER_PAGE",
+        "6Y11138575506",
+        "colissimo",
+        ParcelStatus.IN_TRANSIT,
+        "Votre Colissimo vous attend dans votre point de retrait.",
+        null,
+        null,
+        "https://www.laposte.fr/outils/suivre-vos-envois?code=6Y11138575506",
+        null,
+        null,
+        "Colissimo",
+        null,
+        Map.of("source", "test"),
+        List.of()
+    );
+
+    service.applySnapshot(parcel, snapshot);
+
+    Assertions.assertEquals(ParcelStatus.IN_TRANSIT, parcel.getStatus());
+    Assertions.assertNull(parcel.getDeliveredAt());
+    Assertions.assertEquals(
+        "Votre Colissimo vous attend dans votre point de retrait.",
+        parcel.getStatusLabel()
+    );
+  }
 }

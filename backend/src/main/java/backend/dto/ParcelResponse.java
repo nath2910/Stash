@@ -34,11 +34,6 @@ public record ParcelResponse(
 ) {
   public static ParcelResponse fromEntity(Parcel parcel, List<ParcelEvent> events) {
     Map<String, Object> payload = parcel.getRawCurrentPayload();
-    boolean completionRequired = requiresMondialRelayPostalCode(parcel, payload);
-    ParcelStatus responseStatus = completionRequired ? ParcelStatus.INCOMPLETE : parcel.getStatus();
-    String completionHint = completionRequired
-        ? "Renseigne le code postal du destinataire pour activer le suivi Mondial Relay."
-        : null;
     return new ParcelResponse(
         parcel.getId(),
         parcel.getTrackingNumber(),
@@ -46,14 +41,14 @@ public record ParcelResponse(
         parcel.getCarrierSlug(),
         parcel.getAggregator(),
         parcel.getAggregatorTrackingId(),
-        responseStatus,
-        completionRequired ? "Code postal requis" : parcel.getStatusLabel(),
+        parcel.getStatus(),
+        parcel.getStatusLabel(),
         parcel.getEstimatedDeliveryAt(),
         parcel.getDeliveredAt(),
         parcel.getFirstSeenAt(),
         parcel.getLastEventAt(),
         parcel.getUpdatedAt(),
-        completionRequired ? null : TrackingLinkResolver.preferredTrackingUrl(
+        TrackingLinkResolver.preferredTrackingUrl(
             firstNonBlank(
                 stringValue(payload, "courier_tracking_link"),
                 stringValue(payload, "tracking_url"),
@@ -63,8 +58,8 @@ public record ParcelResponse(
             parcel.getCarrierSlug(),
             parcel.getTrackingNumber()
         ),
-        completionRequired,
-        completionHint,
+        false,
+        null,
         firstNonBlank(stringValue(payload, "origin_raw_location"), address(payload, "origin")),
         firstNonBlank(stringValue(payload, "destination_raw_location"), address(payload, "destination")),
         stringValue(payload, "shipment_type"),
@@ -110,43 +105,6 @@ public record ParcelResponse(
       }
     }
     return null;
-  }
-
-  private static boolean requiresMondialRelayPostalCode(Parcel parcel, Map<String, Object> payload) {
-    if (parcel == null) {
-      return false;
-    }
-    if (!"mondial-relay".equals(normalizeCarrier(parcel.getCarrierSlug()))) {
-      return false;
-    }
-    if (parcel.getStatus() == ParcelStatus.DELIVERED || parcel.getStatus() == ParcelStatus.EXCEPTION) {
-      return false;
-    }
-    String postalCode = firstNonBlank(
-        stringValue(payload, "mondial_relay_postal_code"),
-        stringValue(payload, "destination_postal_code")
-    );
-    if (postalCode != null && postalCode.matches("\\d{5}")) {
-      return false;
-    }
-    String trackingUrl = firstNonBlank(
-        stringValue(payload, "courier_tracking_link"),
-        stringValue(payload, "tracking_url"),
-        stringValue(payload, "url"),
-        stringValue(payload, "tracking_link")
-    );
-    return trackingUrl == null || !trackingUrl.toLowerCase().matches(".*[?&]codepostal=\\d{5}.*");
-  }
-
-  private static String normalizeCarrier(String carrierSlug) {
-    if (carrierSlug == null || carrierSlug.isBlank()) {
-      return null;
-    }
-    String normalized = carrierSlug.trim().toLowerCase();
-    return switch (normalized) {
-      case "mondialrelay", "mondial relay" -> "mondial-relay";
-      default -> normalized;
-    };
   }
 
 }

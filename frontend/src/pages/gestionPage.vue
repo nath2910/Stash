@@ -1019,7 +1019,7 @@ const gestionHero = computed(() => {
     eyebrow: 'Inventaire centralise',
     title: 'Gestion',
     subtitle: "Ajoute, modifie, filtre et suis tes items dans un espace coherent avec l'accueil.",
-    pills: [`${totalPaires.value} items`, `${nbEnStock.value} en stock`, 'Actions rapides'],
+    pills: [`${totalPaires.value} items`, `${nbEnStock.value} en stock`],
   }
 })
 
@@ -2006,6 +2006,7 @@ watch(
 
 .gestion-hero-pills span {
   display: inline-flex;
+  min-width: 0;
   max-width: 100%;
   min-height: 2rem;
   align-items: center;
@@ -2016,7 +2017,8 @@ watch(
   padding: 0 0.78rem;
   font-size: 0.78rem;
   font-weight: 900;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .gestion-tab-shell {

@@ -216,7 +216,7 @@
             <div>
               <p class="text-sm font-semibold text-teal-900">{{ primaryActionLabel }}</p>
               <p class="mt-1 text-xs text-teal-700">
-                {{ hasMailAccounts ? 'Gerer tes comptes Gmail et le scan automatique' : 'Lier Gmail pour importer automatiquement les suivis' }}
+                {{ hasMailAccounts ? 'Gerer le compte Gmail et le scan Colissimo' : 'Lier Gmail pour importer automatiquement les suivis Colissimo' }}
               </p>
             </div>
             <MailPlus class="h-4 w-4 text-teal-700" />
@@ -292,11 +292,8 @@
             :parcel="selectedParcel"
             :refreshing="refreshingParcelId === selectedParcel?.id"
             :deleting="deletingParcelIds.includes(selectedParcel?.id)"
-            :completing="completingParcelId === selectedParcel?.id"
-            :completion-error="parcelCompletionError"
             @refresh="refreshParcel"
             @delete="deleteParcel"
-            @complete="completeParcel"
           />
 
           <div ref="mailAccountsSectionRef">
@@ -435,7 +432,6 @@ const scanningAccountId = ref(null)
 const scanningAll = ref(false)
 const refreshingAllParcels = ref(false)
 const refreshingParcelId = ref(null)
-const completingParcelId = ref(null)
 const deletingParcelId = ref(null)
 const deletingParcelIds = ref([])
 const bulkDeletingParcels = ref(false)
@@ -448,7 +444,6 @@ const searchTerm = ref('')
 const autoScanAfterCallbackStarted = ref(false)
 const manualSuccessToken = ref(0)
 const manualModalOpen = ref(false)
-const parcelCompletionError = ref('')
 const searchInput = ref(null)
 const manualFormRef = ref(null)
 const mailAccountsSectionRef = ref(null)
@@ -505,13 +500,13 @@ const deletingDeliveredCleanupParcel = computed(
 )
 const selectionMode = computed(() => selectedParcelIds.value.length > 0 || bulkDeletingParcels.value)
 const primaryActionLabel = computed(() =>
-  hasMailAccounts.value ? 'Sources Gmail' : 'Connecter Gmail',
+  hasMailAccounts.value ? 'Compte Gmail' : 'Connecter Gmail',
 )
 const refreshActionLabel = computed(() =>
   refreshingAllParcels.value ? 'Mise a jour...' : 'Actualiser tout',
 )
 const refreshActionDetail = computed(() =>
-  'Rafraichit tous les colis en interrogeant directement leurs pages de suivi',
+  'Rafraichit les colis en interrogeant directement leur suivi Colissimo / La Poste',
 )
 const activityState = computed(() => {
   if (refreshingAllParcels.value) {
@@ -524,14 +519,14 @@ const activityState = computed(() => {
   if (scanningAll.value) {
     return {
       title: 'Scan Gmail en cours',
-      detail: 'Lecture des boites mail, detection des vrais numeros de suivi et mise a jour de la liste.',
+      detail: 'Lecture du Gmail, detection des suivis Colissimo et mise a jour de la liste.',
       badge: 'Scan global',
     }
   }
   if (scanningAccountId.value !== null) {
     return {
       title: 'Scan du compte Gmail en cours',
-      detail: 'Analyse d une source mail et verification des suivis detectes.',
+      detail: 'Analyse du compte Gmail et verification des suivis Colissimo detectes.',
       badge: 'Scan source',
     }
   }
@@ -545,14 +540,14 @@ const activityState = computed(() => {
   if (accountsLoading.value || parcelsLoading.value || candidatesLoading.value) {
     return {
       title: 'Synchronisation de l onglet livraison',
-      detail: 'Mise a jour des colis, comptes Gmail et candidats a verifier.',
+      detail: 'Mise a jour des colis, du compte Gmail et des candidats a verifier.',
       badge: 'Refresh',
     }
   }
   if (creatingManualParcel.value) {
     return {
       title: 'Ajout du suivi en cours',
-      detail: 'Enregistrement du numero puis tentative de detection transporteur.',
+      detail: 'Enregistrement du numero puis lancement du suivi Colissimo.',
       badge: 'Ajout',
     }
   }
@@ -571,15 +566,15 @@ const activeMailAccounts = computed(() =>
 const hasMailAccounts = computed(() => mailAccounts.value.length > 0)
 const automationLabel = computed(() => {
   if (!hasMailAccounts.value) {
-    return 'Connecte Gmail pour relire tes emails transporteur et recuperer automatiquement les suivis.'
+    return 'Connecte Gmail pour relire les emails Colissimo recents et recuperer automatiquement les suivis.'
   }
   if (scanningAll.value) {
-    return 'Lecture Gmail en cours. Seuls les vrais numeros de suivi sont gardes.'
+    return 'Lecture Gmail en cours. Seuls les suivis Colissimo des 15 derniers jours sont gardes.'
   }
   if (refreshingAllParcels.value) {
-    return 'Mise a jour en cours des statuts via les pages de suivi transporteur.'
+    return 'Mise a jour en cours des statuts via le suivi Colissimo / La Poste.'
   }
-  return `${activeMailAccounts.value.length || mailAccounts.value.length} source(s) Gmail relues pour detecter de nouveaux suivis.`
+  return '1 compte Gmail relu pour detecter de nouveaux suivis Colissimo.'
 })
 
 const activeParcelCount = computed(
@@ -590,9 +585,6 @@ const deliveredParcelCount = computed(
 )
 const exceptionParcelCount = computed(
   () => parcels.value.filter((parcel) => parcel.status === 'EXCEPTION').length,
-)
-const incompleteParcelCount = computed(
-  () => parcels.value.filter((parcel) => parcel.status === 'INCOMPLETE').length,
 )
 const candidateReviewCount = computed(() => trackingCandidates.value.length)
 const inTransitCount = computed(
@@ -640,7 +632,6 @@ const metrics = computed(() => [
 const statusFilters = computed(() => [
   { value: 'all', label: 'Tous les colis', count: parcels.value.length, icon: PackageSearch },
   { value: 'active', label: 'En cours', count: activeParcelCount.value, icon: Clock3 },
-  { value: 'INCOMPLETE', label: 'A completer', count: incompleteParcelCount.value, icon: AlertTriangle },
   { value: 'IN_TRANSIT', label: 'En transit', count: inTransitCount.value, icon: Truck },
   { value: 'DELIVERED', label: 'Livres', count: deliveredParcelCount.value, icon: CheckCircle2 },
   {
@@ -925,20 +916,17 @@ const createManualParcel = async (payload) => {
     await loadParcels()
     lastSuccessfulSyncAt.value = new Date().toISOString()
     const latestParcel = createdParcels[createdParcels.length - 1]
-    const incompleteCount = createdParcels.filter((parcel) => parcel?.status === 'INCOMPLETE').length
     if (latestParcel?.id) {
       selectedParcelId.value = latestParcel.id
     }
     manualSuccessToken.value += 1
     manualModalOpen.value = false
     showFeedbackToast({
-      kind: failedNumbers.length || incompleteCount ? 'warning' : 'success',
-      title: failedNumbers.length ? 'Ajout partiel' : incompleteCount ? 'Suivi a completer' : 'Suivi ajoute',
+      kind: failedNumbers.length ? 'warning' : 'success',
+      title: failedNumbers.length ? 'Ajout partiel' : 'Suivi ajoute',
       message: failedNumbers.length
         ? `${createdParcels.length} suivi(s) ajoute(s), ${failedNumbers.length} refuse(s).`
-        : incompleteCount
-          ? `${incompleteCount} suivi(s) Mondial Relay attendent encore un code postal.`
-          : `${createdParcels.length} suivi(s) ajoute(s) au tableau de livraison.`,
+        : `${createdParcels.length} suivi(s) ajoute(s) au tableau de livraison.`,
     })
   } catch (error) {
     manualParcelError.value = requestErrorMessage(
@@ -955,7 +943,6 @@ const refreshParcel = async (parcelId) => {
   if (!parcelId) return
   refreshingParcelId.value = parcelId
   parcelsError.value = ''
-  parcelCompletionError.value = ''
   try {
     const { data } = await DeliveryTrackingService.refreshParcel(parcelId)
     if (data?.id) {
@@ -974,37 +961,6 @@ const refreshParcel = async (parcelId) => {
     )
   } finally {
     refreshingParcelId.value = null
-  }
-}
-
-const completeParcel = async ({ id, postalCode }) => {
-  if (!id) return
-  completingParcelId.value = id
-  parcelCompletionError.value = ''
-  parcelsError.value = ''
-  try {
-    const { data } = await DeliveryTrackingService.completeParcel(id, { postalCode })
-    if (data?.id) {
-      parcels.value = parcels.value.map((parcel) => (parcel.id === data.id ? data : parcel))
-      selectedParcelId.value = data.id
-      lastSuccessfulSyncAt.value = new Date().toISOString()
-    } else {
-      await loadParcels()
-      lastSuccessfulSyncAt.value = new Date().toISOString()
-    }
-    showFeedbackToast({
-      kind: 'success',
-      title: 'Suivi active',
-      message: 'Le code postal a ete enregistre et le suivi Mondial Relay a ete relance.',
-    })
-  } catch (error) {
-    parcelCompletionError.value = requestErrorMessage(
-      error,
-      'Code postal impossible a enregistrer',
-      "Le serveur n'a pas reussi a activer ce suivi a temps. Reessaie dans quelques secondes.",
-    )
-  } finally {
-    completingParcelId.value = null
   }
 }
 
@@ -1132,7 +1088,6 @@ const deleteAccount = async (accountId) => {
 
 const selectParcel = (parcelId) => {
   selectedParcelId.value = parcelId
-  parcelCompletionError.value = ''
 }
 
 const startParcelSelection = () => {

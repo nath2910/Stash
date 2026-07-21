@@ -1,8 +1,7 @@
 package backend.service;
 
-import backend.dto.ParcelCompletionRequest;
-import backend.dto.ParcelResponse;
 import backend.dto.ParcelCreateRequest;
+import backend.dto.ParcelResponse;
 import backend.dto.TrackingCandidateResponse;
 import backend.entity.MailAccount;
 import backend.entity.MailTrackingCandidate;
@@ -22,11 +21,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Pattern;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -34,13 +30,10 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class DeliveryTrackingService {
 
-  private static final String UNKNOWN_CARRIER = "unknown";
+  private static final String COLISSIMO = "colissimo";
+  private static final String RAW_STATUS_AVAILABLE_FOR_PICKUP = "AVAILABLE_FOR_PICKUP";
   private static final String SUPPORTED_TRACKING_MESSAGE =
-      "Ce numero ne correspond pas aux formats connus Chronopost, Colissimo ou Mondial Relay.";
-  private static final String MONDIAL_RELAY_COMPLETION_LABEL =
-      "Code postal destinataire requis pour activer le suivi Mondial Relay";
-  private static final Pattern POSTAL_CODE_PATTERN = Pattern.compile("^\\d{5}$");
-  private static final Logger log = LoggerFactory.getLogger(DeliveryTrackingService.class);
+      "Ce numero ne correspond pas a un format Colissimo / La Poste reconnu.";
 
   private final ParcelRepository parcelRepository;
   private final ParcelEventRepository parcelEventRepository;
@@ -67,14 +60,17 @@ public class DeliveryTrackingService {
 
   @Transactional(readOnly = true)
   public List<ParcelResponse> listForUser(Long userId) {
-    List<Parcel> parcels = parcelRepository.findByUser_IdOrderByUpdatedAtDesc(userId);
-    if (parcels.isEmpty()) return List.of();
+    List<Parcel> parcels = parcelRepository.findByUser_IdOrderByUpdatedAtDesc(userId).stream()
+        .filter(this::isManagedColissimoParcel)
+        .toList();
+    if (parcels.isEmpty()) {
+      return List.of();
+    }
 
     List<Long> parcelIds = parcels.stream().map(Parcel::getId).toList();
     Map<Long, List<ParcelEvent>> eventsByParcelId = new HashMap<>();
     for (ParcelEvent event : parcelEventRepository.findByParcel_IdInOrderByParcel_IdAscEventTimeDesc(parcelIds)) {
-      Long parcelId = event.getParcel().getId();
-      eventsByParcelId.computeIfAbsent(parcelId, ignored -> new ArrayList<>()).add(event);
+      eventsByParcelId.computeIfAbsent(event.getParcel().getId(), ignored -> new ArrayList<>()).add(event);
     }
 
     return parcels.stream()
@@ -84,22 +80,18 @@ public class DeliveryTrackingService {
 
   @Transactional(readOnly = true)
   public ParcelResponse getForUser(Long userId, Long parcelId) {
-    Parcel parcel = parcelRepository.findByIdAndUser_Id(parcelId, userId)
-        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Colis introuvable"));
+    Parcel parcel = managedParcel(userId, parcelId);
     return ParcelResponse.fromEntity(parcel, parcelEventRepository.findByParcel_IdOrderByEventTimeDesc(parcelId));
   }
 
   @Transactional
   public List<ParcelResponse> refreshAllForUser(Long userId) {
-    List<Parcel> existingParcels = parcelRepository.findByUser_IdOrderByUpdatedAtDesc(userId);
-    if (existingParcels.isEmpty()) {
-      return List.of();
-    }
+    List<Parcel> parcels = parcelRepository.findByUser_IdOrderByUpdatedAtDesc(userId).stream()
+        .filter(this::isManagedColissimoParcel)
+        .filter(this::shouldRefreshParcel)
+        .toList();
 
-    for (Parcel parcel : existingParcels) {
-      if (requiresManualCompletion(parcel)) {
-        continue;
-      }
+    for (Parcel parcel : parcels) {
       trackingAggregatorService.refreshTracking(parcel);
     }
 
@@ -111,6 +103,7 @@ public class DeliveryTrackingService {
     return mailTrackingCandidateRepository
         .findByUser_IdAndStatusOrderByReceivedAtDescCreatedAtDesc(userId, TrackingCandidateStatus.NEEDS_REVIEW)
         .stream()
+        .filter(candidate -> isColissimoCarrier(candidate.getCarrierSlug()))
         .map(TrackingCandidateResponse::fromEntity)
         .toList();
   }
@@ -124,76 +117,36 @@ public class DeliveryTrackingService {
 
     String normalizedTrackingNumber = trackingParserService.normalizeTrackingNumber(rawTrackingNumber);
     String carrierSlug = resolveManualCarrier(request == null ? null : request.carrierSlug(), normalizedTrackingNumber);
-    if (carrierSlug == null || carrierSlug.isBlank() || UNKNOWN_CARRIER.equals(carrierSlug)) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, SUPPORTED_TRACKING_MESSAGE);
-    }
-    log.info("Delivery manual tracking normalized={} carrier={}", normalizedTrackingNumber, carrierSlug);
     var existingParcel = parcelRepository.findByUser_IdAndNormalizedTrackingNumberAndCarrierSlug(
         userId,
         normalizedTrackingNumber,
         carrierSlug
     );
-    TrackingCandidate manualCandidate = manualCandidate(rawTrackingNumber, normalizedTrackingNumber, carrierSlug, request);
-    Parcel parcel = existingParcel.orElseGet(() -> createParcel(
-            userId,
-            null,
-            manualCandidate,
-            carrierSlug,
-            null
-        )
+
+    TrackingCandidate manualCandidate = new TrackingCandidate(
+        COLISSIMO,
+        rawTrackingNumber.trim(),
+        normalizedTrackingNumber,
+        100,
+        TrackingParserService.TrackingConfidence.HIGH,
+        TrackingLinkResolver.fallbackTrackingUrl(COLISSIMO, normalizedTrackingNumber),
+        null,
+        null,
+        null,
+        "manual parcel"
     );
 
+    Parcel parcel = existingParcel.orElseGet(() -> createParcel(userId, null, manualCandidate, null));
     if (existingParcel.isPresent()) {
-      String normalizedPostalCode = normalizePostalCode(request == null ? null : request.postalCode());
-      if (requiresManualCompletion(parcel) && normalizedPostalCode != null) {
-        return completeParcel(userId, parcel.getId(), new ParcelCompletionRequest(normalizedPostalCode));
-      }
-      if (!requiresManualCompletion(parcel)) {
-        trackingAggregatorService.refreshTracking(parcel);
-      }
+      trackingAggregatorService.refreshTracking(parcel);
     }
+
     return ParcelResponse.fromEntity(parcel, parcelEventRepository.findByParcel_IdOrderByEventTimeDesc(parcel.getId()));
   }
 
   @Transactional
-  public ParcelResponse completeParcel(Long userId, Long parcelId, ParcelCompletionRequest request) {
-    Parcel parcel = parcelRepository.findByIdAndUser_Id(parcelId, userId)
-        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Colis introuvable"));
-
-    if (!"mondial-relay".equals(TrackingCarrierRules.normalizeCarrierSlug(parcel.getCarrierSlug()))) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Seuls les suivis Mondial Relay peuvent etre completes ici.");
-    }
-
-    String postalCode = normalizePostalCode(request == null ? null : request.postalCode());
-    if (postalCode == null) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Renseigne un code postal francais sur 5 chiffres.");
-    }
-
-    Map<String, Object> payload = new HashMap<>(parcel.getRawCurrentPayload() == null ? Map.of() : parcel.getRawCurrentPayload());
-    payload.put("mondial_relay_postal_code", postalCode);
-    payload.put("destination_postal_code", postalCode);
-    payload.put("tracking_url", buildMondialRelayTrackingUrl(parcel.getNormalizedTrackingNumber(), postalCode));
-    parcel.setRawCurrentPayload(payload);
-    if (parcel.getStatus() == null || parcel.getStatus() == ParcelStatus.INCOMPLETE) {
-      parcel.setStatus(ParcelStatus.PENDING);
-    }
-    parcel.setStatusLabel("Suivi Mondial Relay complete, rafraichissement en cours");
-
-    Parcel saved = parcelRepository.save(parcel);
-    Parcel refreshed = trackingAggregatorService.refreshTracking(saved);
-    return ParcelResponse.fromEntity(
-        refreshed,
-        parcelEventRepository.findByParcel_IdOrderByEventTimeDesc(refreshed.getId())
-    );
-  }
-
-  @Transactional
   public ParcelResponse refreshForUser(Long userId, Long parcelId) {
-    Parcel parcel = parcelRepository.findByIdAndUser_Id(parcelId, userId)
-        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Colis introuvable"));
-    if (requiresManualCompletion(parcel)) {
-      return ParcelResponse.fromEntity(parcel, parcelEventRepository.findByParcel_IdOrderByEventTimeDesc(parcelId));
-    }
+    Parcel parcel = managedParcel(userId, parcelId);
     Parcel refreshed = trackingAggregatorService.refreshTracking(parcel);
     return ParcelResponse.fromEntity(
         refreshed,
@@ -203,8 +156,7 @@ public class DeliveryTrackingService {
 
   @Transactional
   public void deleteForUser(Long userId, Long parcelId) {
-    Parcel parcel = parcelRepository.findByIdAndUser_Id(parcelId, userId)
-        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Colis introuvable"));
+    Parcel parcel = managedParcel(userId, parcelId);
     parcelRepository.delete(parcel);
   }
 
@@ -212,9 +164,12 @@ public class DeliveryTrackingService {
   public ParcelResponse confirmCandidate(Long userId, Long candidateId) {
     MailTrackingCandidate storedCandidate = mailTrackingCandidateRepository.findByIdAndUser_Id(candidateId, userId)
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Candidat introuvable"));
+    if (!isColissimoCarrier(storedCandidate.getCarrierSlug())) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Seuls les suivis Colissimo sont geres.");
+    }
 
     TrackingCandidate candidate = new TrackingCandidate(
-        storedCandidate.getCarrierSlug(),
+        COLISSIMO,
         storedCandidate.getTrackingNumber(),
         storedCandidate.getNormalizedTrackingNumber(),
         storedCandidate.getConfidenceScore(),
@@ -226,11 +181,10 @@ public class DeliveryTrackingService {
         storedCandidate.getReason()
     );
 
-    String carrierSlug = normalizeCarrier(candidate.carrierSlug(), candidate.normalizedTrackingNumber());
     boolean alreadyExists = parcelRepository.findByUser_IdAndNormalizedTrackingNumberAndCarrierSlug(
         userId,
         candidate.normalizedTrackingNumber(),
-        carrierSlug
+        COLISSIMO
     ).isPresent();
     Parcel parcel = upsertFromMail(userId, storedCandidate.getMailAccount(), candidate, storedCandidate.getProviderMessageId());
     applyMailStatusHint(parcel, candidate, storedCandidate.getReceivedAt());
@@ -256,13 +210,13 @@ public class DeliveryTrackingService {
       TrackingCandidate candidate,
       String sourceProviderMessageId
   ) {
-    String carrierSlug = normalizeCarrier(candidate.carrierSlug(), candidate.normalizedTrackingNumber());
+    TrackingCandidate colissimoCandidate = requireColissimoCandidate(candidate);
     return parcelRepository.findByUser_IdAndNormalizedTrackingNumberAndCarrierSlug(
             userId,
-            candidate.normalizedTrackingNumber(),
-            carrierSlug
+            colissimoCandidate.normalizedTrackingNumber(),
+            COLISSIMO
         )
-        .orElseGet(() -> createParcel(userId, mailAccount, candidate, carrierSlug, sourceProviderMessageId));
+        .orElseGet(() -> createParcel(userId, mailAccount, colissimoCandidate, sourceProviderMessageId));
   }
 
   @Transactional
@@ -275,18 +229,18 @@ public class DeliveryTrackingService {
       String sourceSender,
       OffsetDateTime receivedAt
   ) {
-    String carrierSlug = normalizeCarrier(candidate.carrierSlug(), candidate.normalizedTrackingNumber());
+    TrackingCandidate colissimoCandidate = requireColissimoCandidate(candidate);
     boolean alreadyExists = parcelRepository.findByUser_IdAndNormalizedTrackingNumberAndCarrierSlug(
         userId,
-        candidate.normalizedTrackingNumber(),
-        carrierSlug
+        colissimoCandidate.normalizedTrackingNumber(),
+        COLISSIMO
     ).isPresent();
-    Parcel parcel = upsertFromMail(userId, mailAccount, candidate, sourceProviderMessageId);
-    applyMailStatusHint(parcel, candidate, receivedAt);
+    Parcel parcel = upsertFromMail(userId, mailAccount, colissimoCandidate, sourceProviderMessageId);
+    applyMailStatusHint(parcel, colissimoCandidate, receivedAt);
     saveMailCandidate(
         userId,
         mailAccount,
-        candidate,
+        colissimoCandidate,
         sourceProviderMessageId,
         sourceSubject,
         sourceSender,
@@ -307,10 +261,11 @@ public class DeliveryTrackingService {
       String sourceSender,
       OffsetDateTime receivedAt
   ) {
+    TrackingCandidate colissimoCandidate = requireColissimoCandidate(candidate);
     MailTrackingCandidate stored = saveMailCandidate(
         userId,
         mailAccount,
-        candidate,
+        colissimoCandidate,
         sourceProviderMessageId,
         sourceSubject,
         sourceSender,
@@ -321,11 +276,19 @@ public class DeliveryTrackingService {
     return TrackingCandidateResponse.fromEntity(stored);
   }
 
+  private Parcel managedParcel(Long userId, Long parcelId) {
+    Parcel parcel = parcelRepository.findByIdAndUser_Id(parcelId, userId)
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Colis introuvable"));
+    if (!isManagedColissimoParcel(parcel)) {
+      throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Colis introuvable");
+    }
+    return parcel;
+  }
+
   private Parcel createParcel(
       Long userId,
       MailAccount mailAccount,
       TrackingCandidate candidate,
-      String carrierSlug,
       String sourceProviderMessageId
   ) {
     User user = findUser(userId);
@@ -335,13 +298,13 @@ public class DeliveryTrackingService {
     parcel.setMailAccount(mailAccount);
     parcel.setTrackingNumber(candidate.trackingNumber());
     parcel.setNormalizedTrackingNumber(candidate.normalizedTrackingNumber());
-    parcel.setCarrierSlug(carrierSlug);
+    parcel.setCarrierSlug(COLISSIMO);
     parcel.setAggregator(DirectCarrierTrackingService.PROVIDER);
-    boolean requiresCompletion = requiresManualCompletion(carrierSlug, candidate.trackingUrl());
+
     ParcelStatus hintedStatus = rawStatusToParcelStatus(candidate.rawStatus());
-    parcel.setStatus(requiresCompletion ? ParcelStatus.INCOMPLETE : hintedStatus == null ? ParcelStatus.PENDING : hintedStatus);
-    parcel.setStatusLabel(requiresCompletion ? MONDIAL_RELAY_COMPLETION_LABEL : mailStatusLabel(candidate.rawStatus()));
-    if (!requiresCompletion && hintedStatus == ParcelStatus.DELIVERED) {
+    parcel.setStatus(hintedStatus == null ? ParcelStatus.PENDING : hintedStatus);
+    parcel.setStatusLabel(mailStatusLabel(candidate.rawStatus()));
+    if (hintedStatus == ParcelStatus.DELIVERED) {
       parcel.setDeliveredAt(OffsetDateTime.now(ZoneOffset.UTC));
     }
     parcel.setSourceProviderMessageId(sourceProviderMessageId);
@@ -350,17 +313,13 @@ public class DeliveryTrackingService {
 
     try {
       Parcel saved = parcelRepository.saveAndFlush(parcel);
-      if (!requiresCompletion) {
-        trackingAggregatorService.registerTracking(saved);
-        var reloaded = parcelRepository.findById(saved.getId());
-        return reloaded == null ? saved : reloaded.orElse(saved);
-      }
-      return saved;
+      trackingAggregatorService.registerTracking(saved);
+      return parcelRepository.findById(saved.getId()).orElse(saved);
     } catch (DataIntegrityViolationException ex) {
       return parcelRepository.findByUser_IdAndNormalizedTrackingNumberAndCarrierSlug(
               userId,
               candidate.normalizedTrackingNumber(),
-              carrierSlug
+              COLISSIMO
           )
           .orElseThrow(() -> ex);
     }
@@ -378,8 +337,7 @@ public class DeliveryTrackingService {
       Parcel parcel
   ) {
     User user = findUser(userId);
-    String carrierSlug = normalizeCarrier(candidate.carrierSlug(), candidate.normalizedTrackingNumber());
-    String dedupeKey = candidateDedupeKey(mailAccount, sourceProviderMessageId, candidate, carrierSlug);
+    String dedupeKey = candidateDedupeKey(mailAccount, sourceProviderMessageId, candidate);
 
     MailTrackingCandidate stored = mailTrackingCandidateRepository.findByUser_IdAndDedupeKey(userId, dedupeKey)
         .orElseGet(MailTrackingCandidate::new);
@@ -393,7 +351,7 @@ public class DeliveryTrackingService {
     stored.setReceivedAt(receivedAt);
     stored.setTrackingNumber(limit(candidate.trackingNumber(), 80));
     stored.setNormalizedTrackingNumber(limit(candidate.normalizedTrackingNumber(), 80));
-    stored.setCarrierSlug(limit(carrierSlug, 80));
+    stored.setCarrierSlug(COLISSIMO);
     stored.setTrackingUrl(candidate.trackingUrl());
     stored.setMerchantName(limit(candidate.merchantName(), 255));
     stored.setRawStatus(limit(candidate.rawStatus(), 120));
@@ -413,14 +371,11 @@ public class DeliveryTrackingService {
 
   private Map<String, Object> mailCandidatePayload(TrackingCandidate candidate) {
     Map<String, Object> payload = new HashMap<>();
-    putIfPresent(payload, "tracking_url", candidate.trackingUrl());
-    if (requiresManualCompletion(candidate.carrierSlug(), candidate.trackingUrl())) {
-      payload.put("tracking_completion_required", "MONDIAL_RELAY_POSTAL_CODE");
-    } else {
-      String postalCode = extractMondialRelayPostalCode(candidate.trackingUrl());
-      putIfPresent(payload, "mondial_relay_postal_code", postalCode);
-      putIfPresent(payload, "destination_postal_code", postalCode);
-    }
+    putIfPresent(payload, "tracking_url", TrackingLinkResolver.preferredTrackingUrl(
+        candidate.trackingUrl(),
+        COLISSIMO,
+        candidate.normalizedTrackingNumber()
+    ));
     putIfPresent(payload, "source_context_snippet", candidate.contextSnippet());
     putIfPresent(payload, "source_merchant_name", candidate.merchantName());
     putIfPresent(payload, "source_raw_status", candidate.rawStatus());
@@ -439,9 +394,6 @@ public class DeliveryTrackingService {
 
   private void applyMailStatusHint(Parcel parcel, TrackingCandidate candidate, OffsetDateTime receivedAt) {
     if (parcel == null || candidate == null) {
-      return;
-    }
-    if (requiresManualCompletion(parcel)) {
       return;
     }
     ParcelStatus hintedStatus = rawStatusToParcelStatus(candidate.rawStatus());
@@ -471,7 +423,7 @@ public class DeliveryTrackingService {
     return switch (rawStatus.trim().toUpperCase()) {
       case "DELIVERED" -> ParcelStatus.DELIVERED;
       case "OUT_FOR_DELIVERY" -> ParcelStatus.OUT_FOR_DELIVERY;
-      case "IN_TRANSIT", "SHIPPED" -> ParcelStatus.IN_TRANSIT;
+      case RAW_STATUS_AVAILABLE_FOR_PICKUP, "IN_TRANSIT", "SHIPPED" -> ParcelStatus.IN_TRANSIT;
       default -> null;
     };
   }
@@ -479,13 +431,15 @@ public class DeliveryTrackingService {
   private String mailStatusLabel(String rawStatus) {
     ParcelStatus status = rawStatusToParcelStatus(rawStatus);
     if (status == null) {
-      return "Suivi detecte";
+      return "Suivi Colissimo detecte";
     }
     return switch (status) {
-      case DELIVERED -> "Livre selon email transporteur";
-      case OUT_FOR_DELIVERY -> "En cours de livraison selon email transporteur";
-      case IN_TRANSIT -> "En transit selon email transporteur";
-      default -> "Suivi detecte";
+      case DELIVERED -> "Livre selon email Colissimo";
+      case OUT_FOR_DELIVERY -> "En cours de livraison selon email Colissimo";
+      case IN_TRANSIT -> RAW_STATUS_AVAILABLE_FOR_PICKUP.equalsIgnoreCase(rawStatus)
+          ? "Disponible en relais Pickup"
+          : "En transit selon email Colissimo";
+      default -> "Suivi Colissimo detecte";
     };
   }
 
@@ -506,14 +460,13 @@ public class DeliveryTrackingService {
   private String candidateDedupeKey(
       MailAccount mailAccount,
       String sourceProviderMessageId,
-      TrackingCandidate candidate,
-      String carrierSlug
+      TrackingCandidate candidate
   ) {
     String accountPart = mailAccount == null || mailAccount.getId() == null ? "manual" : String.valueOf(mailAccount.getId());
     String messagePart = sourceProviderMessageId == null || sourceProviderMessageId.isBlank()
         ? "no-message"
         : sourceProviderMessageId.trim();
-    return accountPart + "|" + messagePart + "|" + candidate.normalizedTrackingNumber() + "|" + carrierSlug;
+    return accountPart + "|" + messagePart + "|" + candidate.normalizedTrackingNumber() + "|" + COLISSIMO;
   }
 
   private void putIfPresent(Map<String, Object> payload, String key, String value) {
@@ -533,112 +486,40 @@ public class DeliveryTrackingService {
     return trimmed.length() <= maxLength ? trimmed : trimmed.substring(0, maxLength);
   }
 
-  private String normalizeCarrier(String carrierSlug, String normalizedTrackingNumber) {
-    if (carrierSlug == null || carrierSlug.isBlank()) {
-      String inferredCarrier = trackingParserService.inferCarrierSlug(normalizedTrackingNumber);
-      return inferredCarrier == null ? UNKNOWN_CARRIER : inferredCarrier;
+  private TrackingCandidate requireColissimoCandidate(TrackingCandidate candidate) {
+    if (candidate == null || !isColissimoCarrier(candidate.carrierSlug())) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Seuls les suivis Colissimo sont geres.");
     }
-    String normalizedCarrier = carrierSlug.trim().toLowerCase();
-    return switch (normalizedCarrier) {
-      case "la poste", "la-poste", "laposte" -> "laposte";
-      case "mondialrelay", "mondial relay" -> "mondial-relay";
-      case "amazon", "amazon logistics" -> "amazon-logistics";
-      default -> normalizedCarrier;
-    };
+    return candidate;
   }
 
   private String resolveManualCarrier(String requestedCarrier, String normalizedTrackingNumber) {
     String normalizedCarrier = TrackingCarrierRules.normalizeCarrierSlug(requestedCarrier);
-    if (normalizedCarrier != null) {
-      if (TrackingCarrierRules.isSupportedCarrier(normalizedCarrier)
-          && !TrackingCarrierRules.isValidForCarrier(normalizedTrackingNumber, normalizedCarrier)) {
-        throw new ResponseStatusException(
-            HttpStatus.BAD_REQUEST,
-            invalidCarrierFormatMessage(normalizedCarrier)
-        );
-      }
-      return normalizeCarrier(normalizedCarrier, normalizedTrackingNumber);
+    if (normalizedCarrier != null && !COLISSIMO.equals(normalizedCarrier)) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Seuls les suivis Colissimo sont autorises.");
     }
-
-    String supportedCarrier = TrackingCarrierRules.inferSupportedCarrier(normalizedTrackingNumber);
-    if (supportedCarrier != null) {
-      return supportedCarrier;
+    if (!TrackingCarrierRules.isValidForCarrier(normalizedTrackingNumber, COLISSIMO)) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, SUPPORTED_TRACKING_MESSAGE);
     }
-    return null;
+    return COLISSIMO;
   }
 
-  private String invalidCarrierFormatMessage(String carrierSlug) {
-    return switch (TrackingCarrierRules.normalizeCarrierSlug(carrierSlug)) {
-      case "chronopost" -> "Ce numero ne correspond pas a un format Chronopost reconnu.";
-      case "colissimo" -> "Ce numero ne correspond pas a un format Colissimo / La Poste reconnu.";
-      case "mondial-relay" -> "Ce numero ne correspond pas a un format Mondial Relay reconnu.";
-      default -> SUPPORTED_TRACKING_MESSAGE;
+  private boolean isManagedColissimoParcel(Parcel parcel) {
+    return parcel != null && isColissimoCarrier(parcel.getCarrierSlug());
+  }
+
+  private boolean shouldRefreshParcel(Parcel parcel) {
+    if (parcel == null || !isManagedColissimoParcel(parcel)) {
+      return false;
+    }
+    return switch (parcel.getStatus()) {
+      case DELIVERED, INCOMPLETE -> false;
+      default -> true;
     };
   }
 
-  private TrackingCandidate manualCandidate(
-      String rawTrackingNumber,
-      String normalizedTrackingNumber,
-      String carrierSlug,
-      ParcelCreateRequest request
-  ) {
-    String normalizedPostalCode = normalizePostalCode(request == null ? null : request.postalCode());
-    String trackingUrl = requiresManualCompletion(carrierSlug, null) && normalizedPostalCode != null
-        ? buildMondialRelayTrackingUrl(normalizedTrackingNumber, normalizedPostalCode)
-        : null;
-    return new TrackingCandidate(
-        carrierSlug,
-        rawTrackingNumber.trim(),
-        normalizedTrackingNumber,
-        100,
-        TrackingParserService.TrackingConfidence.HIGH,
-        trackingUrl,
-        null,
-        null,
-        null,
-        "manual parcel"
-    );
-  }
-
-  private boolean requiresManualCompletion(Parcel parcel) {
-    if (parcel == null) {
-      return false;
-    }
-    String trackingUrl = null;
-    if (parcel.getRawCurrentPayload() != null) {
-      Object value = parcel.getRawCurrentPayload().get("tracking_url");
-      trackingUrl = value == null ? null : String.valueOf(value);
-    }
-    return requiresManualCompletion(parcel.getCarrierSlug(), trackingUrl);
-  }
-
-  private boolean requiresManualCompletion(String carrierSlug, String trackingUrl) {
-    return "mondial-relay".equals(TrackingCarrierRules.normalizeCarrierSlug(carrierSlug))
-        && extractMondialRelayPostalCode(trackingUrl) == null;
-  }
-
-  private String normalizePostalCode(String postalCode) {
-    if (postalCode == null) {
-      return null;
-    }
-    String normalized = postalCode.replaceAll("\\D", "");
-    return POSTAL_CODE_PATTERN.matcher(normalized).matches() ? normalized : null;
-  }
-
-  private String extractMondialRelayPostalCode(String trackingUrl) {
-    if (trackingUrl == null || trackingUrl.isBlank()) {
-      return null;
-    }
-    java.util.regex.Matcher matcher = Pattern.compile("[?&]codepostal=(\\d{5})(?:[&#]|$)", Pattern.CASE_INSENSITIVE)
-        .matcher(trackingUrl);
-    return matcher.find() ? matcher.group(1) : null;
-  }
-
-  private String buildMondialRelayTrackingUrl(String trackingNumber, String postalCode) {
-    return "https://www.mondialrelay.fr/suivi-de-colis/?numeroExpedition="
-        + java.net.URLEncoder.encode(trackingNumber.trim(), java.nio.charset.StandardCharsets.UTF_8)
-        + "&codePostal="
-        + java.net.URLEncoder.encode(postalCode.trim(), java.nio.charset.StandardCharsets.UTF_8);
+  private boolean isColissimoCarrier(String carrierSlug) {
+    return COLISSIMO.equals(TrackingCarrierRules.normalizeCarrierSlug(carrierSlug));
   }
 
   public record MailCandidateImportResult(Parcel parcel, boolean imported) {

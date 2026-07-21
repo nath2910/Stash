@@ -21,11 +21,16 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import jakarta.annotation.PostConstruct;
+import org.springframework.core.env.Environment;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 
 @Service
 @Order(100)
@@ -43,42 +48,49 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
   private final String baseUrl;
   private final RestClient restClient;
   private final ObjectMapper objectMapper;
+  private final Environment environment;
 
   public LaPosteTrackingClient(
       @Value("${app.delivery.laposte-api-key:}") String apiKey,
       @Value("${app.delivery.laposte-tracking-base-url:https://api.laposte.fr/suivi/v2/idships}") String baseUrl,
-      ObjectMapper objectMapper
+      ObjectMapper objectMapper,
+      Environment environment
   ) {
     this.apiKey = apiKey;
     this.baseUrl = trimTrailingSlash(baseUrl);
     this.objectMapper = objectMapper;
+    this.environment = environment;
     this.restClient = RestClient.builder().build();
+  }
+
+  @PostConstruct
+  void validateProductionConfig() {
+    for (String profile : environment.getActiveProfiles()) {
+      if ("prod".equalsIgnoreCase(profile) && !isConfigured()) {
+        throw new IllegalStateException(
+            "LAPOSTE_API_KEY or a supported local browser runtime is required in prod for Colissimo tracking"
+        );
+      }
+    }
   }
 
   @Override
   public boolean supports(Parcel parcel) {
-    String carrier = normalizedCarrier(parcel);
-    if (carrier.equals("chronopost")) {
-      return false;
-    }
-    if (carrier.equals("colissimo") || carrier.equals("laposte") || carrier.equals("la-poste")) {
-      return true;
-    }
-    if ("chronopost".equals(TrackingLinkResolver.detectCarrierSlug(rawTrackingUrl(parcel)))) {
-      return false;
-    }
-    String tracking = normalizedTracking(parcel);
-    return TrackingCarrierRules.isValidForCarrier(tracking, "colissimo");
+    return TrackingCarrierRules.isValidForCarrier(normalizedTracking(parcel), "colissimo");
   }
 
   @Override
   public boolean isConfigured() {
-    return true;
+    return (apiKey != null && !apiKey.isBlank()) || BrowserTrackingScriptRunner.isAvailable(BROWSER_SCRIPT);
   }
 
   @Override
   public Optional<TrackingSnapshot> fetchTracking(Parcel parcel) {
-    if (isConfigured()) {
+    boolean apiConfigured = apiKey != null && !apiKey.isBlank();
+    if (!apiConfigured && !BrowserTrackingScriptRunner.isAvailable(BROWSER_SCRIPT)) {
+      return Optional.empty();
+    }
+    if (apiConfigured) {
       try {
         Map<String, Object> response = restClient.get()
             .uri(trackingUri(parcel))
@@ -91,10 +103,9 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
           return Optional.of(toSnapshot(parcel, response));
         }
       } catch (Exception ignored) {
-        // Browser fallback below.
+        // Fall back to the browser script below.
       }
     }
-
     return fetchFromBrowserPage(parcel);
   }
 
@@ -229,15 +240,7 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
   }
 
   private String canonicalCarrier(String existingCarrier, String product) {
-    String carrier = existingCarrier == null ? "" : existingCarrier.toLowerCase(Locale.ROOT);
-    String rawProduct = product == null ? "" : product.toLowerCase(Locale.ROOT);
-    if (carrier.contains("chronopost") || rawProduct.contains("chrono")) {
-      return "chronopost";
-    }
-    if (carrier.contains("poste") || carrier.contains("colissimo") || rawProduct.contains("colissimo")) {
-      return carrier.isBlank() || carrier.equals("unknown") ? "colissimo" : carrier;
-    }
-    return carrier.isBlank() || carrier.equals("unknown") ? "colissimo" : carrier;
+    return "colissimo";
   }
 
   private String fallbackTrackingUrl(Parcel parcel) {
@@ -246,17 +249,15 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
 
   private String fallbackTrackingUrl(Parcel parcel, String product) {
     String trustedUrl = rawTrackingUrl(parcel);
-    if (TrackingLinkResolver.isTrustedTrackingUrl(trustedUrl, canonicalCarrier(parcel == null ? null : parcel.getCarrierSlug(), product))) {
+    if (TrackingLinkResolver.isTrustedTrackingUrl(trustedUrl, "colissimo")) {
       return trustedUrl.trim();
     }
-    String carrier = canonicalCarrier(parcel == null ? null : parcel.getCarrierSlug(), product);
-    return TrackingLinkResolver.fallbackTrackingUrl(carrier, parcel.getTrackingNumber());
+    return TrackingLinkResolver.fallbackTrackingUrl("colissimo", parcel.getTrackingNumber());
   }
 
   private static String browserFallbackTrackingUrl(Parcel parcel) {
     String trustedUrl = rawTrackingUrlStatic(parcel);
-    if (TrackingLinkResolver.isTrustedTrackingUrl(trustedUrl, "colissimo")
-        || TrackingLinkResolver.isTrustedTrackingUrl(trustedUrl, "laposte")) {
+    if (TrackingLinkResolver.isTrustedTrackingUrl(trustedUrl, "colissimo")) {
       return trustedUrl.trim();
     }
     String trackingNumber = parcel == null ? null : TrackingBrowserPageSupport.firstNonBlank(
@@ -269,8 +270,45 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
   private Optional<TrackingSnapshot> fetchFromBrowserPage(Parcel parcel) {
     return BrowserTrackingScriptRunner.run(BROWSER_SCRIPT, browserFallbackTrackingUrl(parcel))
         .filter(payload -> !PublicTrackingPageClient.looksLikeBotChallenge(payload.html()))
-        .map(payload -> toBrowserSnapshot(parcel, payload))
+        .map(payload -> toBrowserStructuredSnapshot(parcel, payload).orElseGet(() -> toBrowserSnapshot(parcel, payload)))
         .filter(snapshot -> snapshot.status() != ParcelStatus.UNKNOWN || snapshot.statusLabel() != null);
+  }
+
+  private Optional<TrackingSnapshot> toBrowserStructuredSnapshot(
+      Parcel parcel,
+      BrowserTrackingScriptRunner.BrowserPagePayload payload
+  ) {
+    return extractBrowserResponse(payload)
+        .filter(this::isSuccess)
+        .map(response -> {
+          TrackingSnapshot snapshot = toSnapshot(parcel, response);
+          Map<String, Object> rawPayload = new HashMap<>();
+          if (snapshot.rawPayload() != null) {
+            rawPayload.putAll(snapshot.rawPayload());
+          }
+          rawPayload.put("mode", "browser_tracking_page");
+          putIfPresent(rawPayload, "page_title", payload.title());
+          putIfPresent(rawPayload, "page_text_excerpt", excerpt(payload.text(), 4000));
+          putIfPresent(rawPayload, "page_html_excerpt", excerpt(payload.html(), 8000));
+          putIfPresent(rawPayload, "source", payload.source());
+
+          return new TrackingSnapshot(
+              BROWSER_PROVIDER,
+              snapshot.providerTrackingId(),
+              snapshot.carrierSlug(),
+              snapshot.status(),
+              snapshot.statusLabel(),
+              snapshot.estimatedDeliveryAt(),
+              snapshot.deliveredAt(),
+              TrackingBrowserPageSupport.firstNonBlank(payload.currentUrl(), snapshot.trackingUrl()),
+              snapshot.originAddress(),
+              snapshot.destinationAddress(),
+              snapshot.shipmentType(),
+              snapshot.signedBy(),
+              rawPayload,
+              snapshot.events()
+          );
+        });
   }
 
   static TrackingSnapshot toBrowserSnapshot(Parcel parcel, BrowserTrackingScriptRunner.BrowserPagePayload payload) {
@@ -314,6 +352,39 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
         rawPayload,
         events
     );
+  }
+
+  private Optional<Map<String, Object>> extractBrowserResponse(BrowserTrackingScriptRunner.BrowserPagePayload payload) {
+    if (payload == null || payload.html() == null || payload.html().isBlank()) {
+      return Optional.empty();
+    }
+
+    Document document = Jsoup.parse(payload.html());
+    Element responseElement = document.selectFirst("script[data-role=laposte-tracking-response]");
+    if (responseElement == null) {
+      return Optional.empty();
+    }
+
+    String rawJson = firstNonBlank(responseElement.data(), responseElement.html(), responseElement.text());
+    if (rawJson == null || rawJson.isBlank()) {
+      return Optional.empty();
+    }
+
+    try {
+      List<?> list = objectMapper.readValue(rawJson, List.class);
+      if (!list.isEmpty() && list.get(0) instanceof Map<?, ?> responseMap) {
+        return Optional.of(objectMapper.convertValue(responseMap, MAP_TYPE));
+      }
+    } catch (Exception ignored) {
+      // Fall through to direct object parsing.
+    }
+
+    try {
+      Map<?, ?> map = objectMapper.readValue(rawJson, Map.class);
+      return Optional.of(objectMapper.convertValue(map, MAP_TYPE));
+    } catch (Exception ignored) {
+      return Optional.empty();
+    }
   }
 
   @SuppressWarnings("unchecked")
@@ -464,33 +535,14 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
   }
 
   private static String canonicalBrowserCarrier(Parcel parcel, BrowserTrackingScriptRunner.BrowserPagePayload payload) {
-    String extractedProduct = extractBrowserProduct(payload);
-    if (extractedProduct.contains("chrono")) {
-      return "chronopost";
-    }
-    String carrier = parcel == null || parcel.getCarrierSlug() == null
-        ? ""
-        : parcel.getCarrierSlug().trim().toLowerCase(Locale.ROOT);
-    if (carrier.contains("chrono")) {
-      return "chronopost";
-    }
-    if (carrier.contains("poste")) {
-      return "laposte";
-    }
     return "colissimo";
   }
 
   private static String extractBrowserProduct(BrowserTrackingScriptRunner.BrowserPagePayload payload) {
     String html = payload == null || payload.html() == null ? "" : payload.html().toLowerCase(Locale.ROOT);
     String text = payload == null || payload.text() == null ? "" : payload.text().toLowerCase(Locale.ROOT);
-    if (html.contains("data-product=\"chronopost\"") || html.contains("\"product\":\"chronopost\"")) {
-      return "chronopost";
-    }
     if (html.contains("data-product=\"colissimo\"") || html.contains("\"product\":\"colissimo\"")) {
       return "colissimo";
-    }
-    if (text.contains("produit: chronopost")) {
-      return "chronopost";
     }
     if (text.contains("produit: colissimo")) {
       return "colissimo";

@@ -16,6 +16,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
@@ -178,6 +179,10 @@ public class GmailOAuthService {
     account.setProviderAccountId(providerAccountId);
     account.setEmailAddress(normalizedEmail);
     account.setScopes(firstNonBlank(stringValue(tokenResponse.get("scope")), GMAIL_READONLY_SCOPE));
+    String historyId = stringValue(profile.get("historyId"));
+    if (historyId != null) {
+      account.setScanCursor(historyId);
+    }
     if (refreshToken != null && !refreshToken.isBlank()) {
       account.setEncryptedRefreshToken(tokenEncryptionService.encrypt(refreshToken));
     }
@@ -186,7 +191,9 @@ public class GmailOAuthService {
     account.setStatus(MailAccountStatus.ACTIVE);
     account.setErrorCount(0);
     account.setNextScanAt(OffsetDateTime.now(ZoneOffset.UTC));
-    return mailAccountRepository.save(account);
+    MailAccount saved = mailAccountRepository.save(account);
+    removeSecondaryAccounts(user.getId(), saved.getId());
+    return saved;
   }
 
   public URI buildFrontendRedirect(boolean success) {
@@ -282,6 +289,19 @@ public class GmailOAuthService {
       }
     }
     return OffsetDateTime.now(ZoneOffset.UTC).plusSeconds(Math.max(60, expiresIn - 60));
+  }
+
+  private void removeSecondaryAccounts(Long userId, Long keepAccountId) {
+    if (userId == null || keepAccountId == null) {
+      return;
+    }
+    List<MailAccount> secondaryAccounts = mailAccountRepository.findByUser_IdAndIdNotOrderByCreatedAtDesc(
+        userId,
+        keepAccountId
+    );
+    if (!secondaryAccounts.isEmpty()) {
+      mailAccountRepository.deleteAll(secondaryAccounts);
+    }
   }
 
   private byte[] hmac(byte[] value) {

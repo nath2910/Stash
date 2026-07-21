@@ -49,6 +49,9 @@ public class ParcelTrackingRefreshScheduler {
     );
 
     for (Parcel parcel : parcels) {
+      if (!TrackingCarrierRules.isSupportedCarrier(parcel.getCarrierSlug())) {
+        continue;
+      }
       try {
         trackingAggregatorService.refreshTracking(parcel);
       } catch (Exception ex) {

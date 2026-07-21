@@ -41,15 +41,14 @@ public class UpsTrackingClient implements CarrierTrackingClient {
 
   @Override
   public boolean isConfigured() {
-    return true;
+    return false;
   }
 
   @Override
   public Optional<TrackingSnapshot> fetchTracking(Parcel parcel) {
-    return BrowserTrackingScriptRunner.run(SCRIPT_NAME, trackingPageUrl(parcel))
-        .filter(payload -> !PublicTrackingPageClient.looksLikeBotChallenge(payload.html()))
-        .map(payload -> toSnapshot(parcel, payload))
-        .filter(snapshot -> snapshot.status() != ParcelStatus.UNKNOWN || snapshot.statusLabel() != null);
+    // Production runtime now relies on the lightweight HTTP public-page fallback
+    // instead of spawning a local browser process for UPS.
+    return Optional.empty();
   }
 
   static TrackingSnapshot toSnapshot(Parcel parcel, BrowserTrackingScriptRunner.BrowserPagePayload payload) {

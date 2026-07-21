@@ -6,9 +6,7 @@ import backend.entity.ParcelStatus;
 import backend.repository.ParcelRepository;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.util.Locale;
 import java.util.concurrent.ThreadLocalRandom;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,20 +16,14 @@ import org.springframework.transaction.annotation.Transactional;
 public class DeliveryTrackingAggregatorService implements TrackingAggregatorService {
 
   private final DirectCarrierTrackingService directCarrierTrackingService;
-  private final AfterShipTrackingClient afterShipTrackingClient;
   private final ParcelRepository parcelRepository;
-  private final String trackingProvider;
 
   public DeliveryTrackingAggregatorService(
       DirectCarrierTrackingService directCarrierTrackingService,
-      AfterShipTrackingClient afterShipTrackingClient,
-      ParcelRepository parcelRepository,
-      @Value("${app.delivery.tracking-provider:DIRECT}") String trackingProvider
+      ParcelRepository parcelRepository
   ) {
     this.directCarrierTrackingService = directCarrierTrackingService;
-    this.afterShipTrackingClient = afterShipTrackingClient;
     this.parcelRepository = parcelRepository;
-    this.trackingProvider = trackingProvider == null ? "DIRECT" : trackingProvider.trim().toUpperCase(Locale.ROOT);
   }
 
   @Override
@@ -49,12 +41,7 @@ public class DeliveryTrackingAggregatorService implements TrackingAggregatorServ
 
     boolean success = true;
     try {
-      Parcel refreshed = switch (trackingProvider) {
-        case "AFTERSHIP" -> afterShipTrackingClient.refreshTracking(parcel);
-        case "AUTO", "DIRECT_THEN_AFTERSHIP" -> refreshAuto(parcel);
-        default -> directCarrierTrackingService.refreshTracking(parcel);
-      };
-      return scheduleNextRefresh(refreshed, true);
+      return scheduleNextRefresh(directCarrierTrackingService.refreshTracking(parcel), true);
     } catch (Exception ex) {
       success = false;
       throw ex;
@@ -67,17 +54,7 @@ public class DeliveryTrackingAggregatorService implements TrackingAggregatorServ
 
   @Override
   public TrackingWebhookResponse handleWebhook(String payload, String signatureHeader, String sharedSecretHeader) {
-    return afterShipTrackingClient.handleWebhook(payload, signatureHeader, sharedSecretHeader);
-  }
-
-  private Parcel refreshAuto(Parcel parcel) {
-    if (directCarrierTrackingService.supports(parcel)) {
-      return directCarrierTrackingService.refreshTracking(parcel);
-    }
-    if (afterShipTrackingClient.isConfigured()) {
-      return afterShipTrackingClient.refreshTracking(parcel);
-    }
-    return directCarrierTrackingService.refreshTracking(parcel);
+    return new TrackingWebhookResponse(false, false, "Webhook desactive en mode Colissimo");
   }
 
   private Parcel scheduleNextRefresh(Parcel parcel, boolean success) {
