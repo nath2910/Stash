@@ -250,7 +250,7 @@
     <!-- Footer -->
     <footer
       v-if="!route.meta.fullBleed && !isAuthRoute"
-      class="fixed left-0 right-0 bottom-4 flex justify-center transition-opacity duration-500 ease-out pointer-events-none"
+      class="layout-footer fixed left-0 right-0 bottom-4 flex justify-center transition-opacity duration-500 ease-out pointer-events-none"
       :class="footerVisible ? 'opacity-100' : 'opacity-0'"
     >
       <div
@@ -1102,10 +1102,26 @@ body.layout-light-document-scroll::-webkit-scrollbar {
     padding-top: calc(18px + env(safe-area-inset-top, 0px));
   }
 
+  .layout-footer {
+    position: static !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    margin-top: 0.5rem;
+    padding:
+      0 max(12px, env(safe-area-inset-left))
+      calc(0.9rem + env(safe-area-inset-bottom, 0px))
+      max(12px, env(safe-area-inset-right));
+    opacity: 1 !important;
+    pointer-events: auto;
+  }
+
   .layout-footer-pill {
+    width: 100%;
     gap: 0.75rem;
     overflow-x: auto;
     padding: 0.65rem 0.9rem;
+    border-radius: 20px;
     scrollbar-width: none;
     font-size: 0.75rem;
   }

@@ -3462,6 +3462,12 @@ watch(
     text-size-adjust: 100%;
   }
 
+  .gestion-page-light :deep(input),
+  .gestion-page-light :deep(select),
+  .gestion-page-light :deep(textarea) {
+    font-size: 16px !important;
+  }
+
   .filter-control,
   .date-range-inputs :deep(.cd-input),
   .inventory-control-row :deep(.gestion-search-input) {
