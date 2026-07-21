@@ -22,6 +22,8 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import jakarta.annotation.PostConstruct;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.env.Environment;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -36,6 +38,7 @@ import org.jsoup.nodes.Element;
 @Order(100)
 public class LaPosteTrackingClient implements CarrierTrackingClient {
 
+  private static final Logger log = LoggerFactory.getLogger(LaPosteTrackingClient.class);
   private static final String PROVIDER = "LA_POSTE_OKAPI";
   private static final String BROWSER_PROVIDER = "LA_POSTE_BROWSER_PAGE";
   private static final String BROWSER_SCRIPT = "laposte-browser-scrape.mjs";
@@ -67,9 +70,11 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
   void validateProductionConfig() {
     for (String profile : environment.getActiveProfiles()) {
       if ("prod".equalsIgnoreCase(profile) && !isConfigured()) {
-        throw new IllegalStateException(
-            "LAPOSTE_API_KEY or a supported local browser runtime is required in prod for Colissimo tracking"
+        log.warn(
+            "Colissimo tracking source is not configured in prod: set LAPOSTE_API_KEY or provide a supported local "
+                + "browser runtime to enable live La Poste refreshes"
         );
+        return;
       }
     }
   }

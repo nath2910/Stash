@@ -1,11 +1,7 @@
 package backend.service;
 
 import java.util.Locale;
-import java.util.Set;
-
 public final class TrackingLinkResolver {
-
-  private static final Set<String> TRUSTED_DOMAINS = Set.of("laposte.fr", "colissimo.fr", "suivi.laposte.fr");
 
   private TrackingLinkResolver() {
   }
@@ -29,7 +25,7 @@ public final class TrackingLinkResolver {
     if (!normalizedUrl.startsWith("http")) {
       return false;
     }
-    return TRUSTED_DOMAINS.stream().anyMatch(normalizedUrl::contains);
+    return TrackingCarrierRules.trustedDomains(carrierSlug).stream().anyMatch(normalizedUrl::contains);
   }
 
   public static String fallbackTrackingUrl(String carrierSlug, String trackingNumber) {

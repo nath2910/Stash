@@ -82,7 +82,9 @@ try {
 
   const payload = await page.evaluate(() => ({
     title: document.title || '',
+    text: document.body?.innerText || '',
     body: document.body?.innerHTML || '',
+    currentUrl: window.location.href,
   }))
 
   if (!payload.body || payload.title.toLowerCase().includes('just a moment')) {
@@ -91,9 +93,11 @@ try {
 
   process.stdout.write(
     JSON.stringify({
-      top: payload.body,
-      tab: payload.body,
       source: 'local_browser',
+      title: payload.title,
+      text: payload.text,
+      html: payload.body,
+      currentUrl: payload.currentUrl,
     }),
   )
 } finally {

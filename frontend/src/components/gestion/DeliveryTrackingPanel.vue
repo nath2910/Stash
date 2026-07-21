@@ -216,7 +216,7 @@
             <div>
               <p class="text-sm font-semibold text-teal-900">{{ primaryActionLabel }}</p>
               <p class="mt-1 text-xs text-teal-700">
-                {{ hasMailAccounts ? 'Gerer le compte Gmail et le scan Colissimo' : 'Lier Gmail pour importer automatiquement les suivis Colissimo' }}
+                {{ hasMailAccounts ? 'Gerer le compte Gmail et le scan Colissimo / Chronopost' : 'Lier Gmail pour importer automatiquement les suivis Colissimo / Chronopost' }}
               </p>
             </div>
             <MailPlus class="h-4 w-4 text-teal-700" />
@@ -506,7 +506,7 @@ const refreshActionLabel = computed(() =>
   refreshingAllParcels.value ? 'Mise a jour...' : 'Actualiser tout',
 )
 const refreshActionDetail = computed(() =>
-  'Rafraichit les colis en interrogeant directement leur suivi Colissimo / La Poste',
+  'Rafraichit les colis en interrogeant directement leur suivi Colissimo / La Poste ou Chronopost',
 )
 const activityState = computed(() => {
   if (refreshingAllParcels.value) {
@@ -519,14 +519,14 @@ const activityState = computed(() => {
   if (scanningAll.value) {
     return {
       title: 'Scan Gmail en cours',
-      detail: 'Lecture du Gmail, detection des suivis Colissimo et mise a jour de la liste.',
+      detail: 'Lecture du Gmail, detection des suivis Colissimo / Chronopost et mise a jour de la liste.',
       badge: 'Scan global',
     }
   }
   if (scanningAccountId.value !== null) {
     return {
       title: 'Scan du compte Gmail en cours',
-      detail: 'Analyse du compte Gmail et verification des suivis Colissimo detectes.',
+      detail: 'Analyse du compte Gmail et verification des suivis Colissimo / Chronopost detectes.',
       badge: 'Scan source',
     }
   }
@@ -547,7 +547,7 @@ const activityState = computed(() => {
   if (creatingManualParcel.value) {
     return {
       title: 'Ajout du suivi en cours',
-      detail: 'Enregistrement du numero puis lancement du suivi Colissimo.',
+      detail: 'Enregistrement du numero puis lancement du suivi transporteur.',
       badge: 'Ajout',
     }
   }
@@ -566,15 +566,15 @@ const activeMailAccounts = computed(() =>
 const hasMailAccounts = computed(() => mailAccounts.value.length > 0)
 const automationLabel = computed(() => {
   if (!hasMailAccounts.value) {
-    return 'Connecte Gmail pour relire les emails Colissimo recents et recuperer automatiquement les suivis.'
+    return 'Connecte Gmail pour relire les emails Colissimo et Chronopost recents et recuperer automatiquement les suivis.'
   }
   if (scanningAll.value) {
-    return 'Lecture Gmail en cours. Seuls les suivis Colissimo des 15 derniers jours sont gardes.'
+    return 'Lecture Gmail en cours. Seuls les suivis Colissimo et Chronopost des 15 derniers jours sont gardes.'
   }
   if (refreshingAllParcels.value) {
-    return 'Mise a jour en cours des statuts via le suivi Colissimo / La Poste.'
+    return 'Mise a jour en cours des statuts via le suivi Colissimo / La Poste et Chronopost.'
   }
-  return '1 compte Gmail relu pour detecter de nouveaux suivis Colissimo.'
+  return '1 compte Gmail relu pour detecter de nouveaux suivis Colissimo / Chronopost.'
 })
 
 const activeParcelCount = computed(

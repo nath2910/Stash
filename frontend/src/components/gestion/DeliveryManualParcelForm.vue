@@ -46,9 +46,10 @@
           class="h-10 w-full min-w-0 rounded-full border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
         >
           <option value="colissimo">Colissimo / La Poste</option>
+          <option value="chronopost">Chronopost</option>
         </select>
         <p class="text-[11px] leading-relaxed text-slate-500">
-          Pour le moment, l ajout manuel est limite a Colissimo / La Poste.
+          L ajout manuel prend en charge Colissimo / La Poste et Chronopost.
         </p>
       </label>
 

@@ -9,6 +9,8 @@ import java.util.regex.Pattern;
 
 final class TrackingCarrierRules {
 
+  private static final String COLISSIMO = "colissimo";
+  private static final String CHRONOPOST = "chronopost";
   private static final Pattern COLISSIMO_UPU_PATTERN =
       Pattern.compile("^(?!X[A-Z])[A-Z]{2}\\d{9}FR$", Pattern.CASE_INSENSITIVE);
   private static final Pattern LA_POSTE_2C_PATTERN =
@@ -18,7 +20,13 @@ final class TrackingCarrierRules {
   private static final Pattern COLISSIMO_15_DIGITS_PATTERN = Pattern.compile("^\\d{15}$");
   private static final Pattern COLISSIMO_15_CHARS_PATTERN =
       Pattern.compile("^\\d{14}[A-Z]$", Pattern.CASE_INSENSITIVE);
-  private static final Set<String> TRUSTED_DOMAINS = Set.of("laposte.fr", "colissimo.fr", "suivi.laposte.fr");
+  private static final Pattern CHRONOPOST_UPU_PATTERN =
+      Pattern.compile("^[A-Z]{2}\\d{9}[A-Z]{2}$", Pattern.CASE_INSENSITIVE);
+  private static final Pattern CHRONOPOST_15_CHARS_PATTERN =
+      Pattern.compile("^\\d{14}[A-Z]$", Pattern.CASE_INSENSITIVE);
+  private static final Set<String> COLISSIMO_TRUSTED_DOMAINS =
+      Set.of("laposte.fr", "colissimo.fr", "suivi.laposte.fr");
+  private static final Set<String> CHRONOPOST_TRUSTED_DOMAINS = Set.of("chronopost.fr");
 
   private TrackingCarrierRules() {
   }
@@ -28,44 +36,68 @@ final class TrackingCarrierRules {
       return null;
     }
     return switch (carrierSlug.trim().toLowerCase(Locale.ROOT)) {
-      case "colissimo", "laposte", "la poste", "la-poste" -> "colissimo";
+      case "colissimo", "laposte", "la poste", "la-poste" -> COLISSIMO;
+      case "chronopost", "chrono post", "chrono-post" -> CHRONOPOST;
       default -> carrierSlug.trim().toLowerCase(Locale.ROOT);
     };
   }
 
   static boolean isSupportedCarrier(String carrierSlug) {
-    return "colissimo".equals(normalizeCarrierSlug(carrierSlug));
+    String normalized = normalizeCarrierSlug(carrierSlug);
+    return COLISSIMO.equals(normalized) || CHRONOPOST.equals(normalized);
   }
 
   static boolean isValidForCarrier(String trackingNumber, String carrierSlug) {
-    if (!isSupportedCarrier(carrierSlug)) {
+    String normalizedCarrier = normalizeCarrierSlug(carrierSlug);
+    if (!isSupportedCarrier(normalizedCarrier)) {
       return false;
     }
     String normalized = normalizeTrackingNumber(trackingNumber);
-    return matchesColissimoFormat(normalized);
+    return switch (normalizedCarrier) {
+      case COLISSIMO -> matchesColissimoFormat(normalized);
+      case CHRONOPOST -> matchesChronopostFormat(normalized);
+      default -> false;
+    };
   }
 
   static boolean matchesSupportedCarrierFormat(String trackingNumber) {
-    return matchesColissimoFormat(normalizeTrackingNumber(trackingNumber));
+    return !matchSupportedCarriers(trackingNumber).isEmpty();
   }
 
   static List<String> matchSupportedCarriers(String trackingNumber) {
-    return matchesSupportedCarrierFormat(trackingNumber) ? List.of("colissimo") : List.of();
+    String normalized = normalizeTrackingNumber(trackingNumber);
+    List<String> carriers = new java.util.ArrayList<>();
+    if (matchesColissimoFormat(normalized)) {
+      carriers.add(COLISSIMO);
+    }
+    if (matchesChronopostFormat(normalized)) {
+      carriers.add(CHRONOPOST);
+    }
+    return carriers;
   }
 
   static String inferSupportedCarrier(String trackingNumber) {
-    return matchesSupportedCarrierFormat(trackingNumber) ? "colissimo" : null;
+    List<String> carriers = matchSupportedCarriers(trackingNumber);
+    return carriers.size() == 1 ? carriers.get(0) : null;
   }
 
   static String officialTrackingUrl(String carrierSlug, String trackingNumber) {
-    if (!isSupportedCarrier(carrierSlug)) {
+    String normalizedCarrier = normalizeCarrierSlug(carrierSlug);
+    if (!isSupportedCarrier(normalizedCarrier)) {
       return null;
     }
     String normalized = normalizeTrackingNumber(trackingNumber);
-    if (!matchesColissimoFormat(normalized)) {
-      return null;
-    }
-    return "https://www.laposte.fr/outils/suivre-vos-envois?code=" + encode(normalized);
+    return switch (normalizedCarrier) {
+      case COLISSIMO -> matchesColissimoFormat(normalized)
+          ? "https://www.laposte.fr/outils/suivre-vos-envois?code=" + encode(normalized)
+          : null;
+      case CHRONOPOST -> matchesChronopostFormat(normalized)
+          ? "https://www.chronopost.fr/tracking-no-cms/suivi-page?listeNumerosLT="
+              + encode(normalized)
+              + "&langue=fr_FR"
+          : null;
+      default -> null;
+    };
   }
 
   static String detectCarrierSlugFromUrl(String rawUrl) {
@@ -76,11 +108,21 @@ final class TrackingCarrierRules {
     if (!normalizedUrl.startsWith("http")) {
       return null;
     }
-    return TRUSTED_DOMAINS.stream().anyMatch(normalizedUrl::contains) ? "colissimo" : null;
+    if (COLISSIMO_TRUSTED_DOMAINS.stream().anyMatch(normalizedUrl::contains)) {
+      return COLISSIMO;
+    }
+    if (CHRONOPOST_TRUSTED_DOMAINS.stream().anyMatch(normalizedUrl::contains)) {
+      return CHRONOPOST;
+    }
+    return null;
   }
 
   static Set<String> trustedDomains(String carrierSlug) {
-    return isSupportedCarrier(carrierSlug) ? TRUSTED_DOMAINS : Set.of();
+    return switch (normalizeCarrierSlug(carrierSlug)) {
+      case COLISSIMO -> COLISSIMO_TRUSTED_DOMAINS;
+      case CHRONOPOST -> CHRONOPOST_TRUSTED_DOMAINS;
+      default -> Set.of();
+    };
   }
 
   private static boolean matchesColissimoFormat(String trackingNumber) {
@@ -93,6 +135,14 @@ final class TrackingCarrierRules {
         || COLISSIMO_14_DIGITS_PATTERN.matcher(trackingNumber).matches()
         || COLISSIMO_15_DIGITS_PATTERN.matcher(trackingNumber).matches()
         || COLISSIMO_15_CHARS_PATTERN.matcher(trackingNumber).matches();
+  }
+
+  private static boolean matchesChronopostFormat(String trackingNumber) {
+    if (trackingNumber == null || trackingNumber.isBlank()) {
+      return false;
+    }
+    return CHRONOPOST_UPU_PATTERN.matcher(trackingNumber).matches()
+        || CHRONOPOST_15_CHARS_PATTERN.matcher(trackingNumber).matches();
   }
 
   private static String normalizeTrackingNumber(String value) {

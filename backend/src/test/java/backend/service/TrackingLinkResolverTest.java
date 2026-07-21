@@ -28,6 +28,28 @@ class TrackingLinkResolverTest {
   }
 
   @Test
+  void detectsChronopostFromTrustedTrackingUrl() {
+    Assertions.assertEquals(
+        "chronopost",
+        TrackingLinkResolver.detectCarrierSlug(
+            "https://www.chronopost.fr/tracking-no-cms/suivi-page?listeNumerosLT=XR646836167TS&langue=fr_FR"
+        )
+    );
+  }
+
+  @Test
+  void keepsTrustedChronopostTrackingUrl() {
+    Assertions.assertEquals(
+        "https://www.chronopost.fr/tracking-no-cms/suivi-page?listeNumerosLT=XR646836167TS&langue=fr_FR",
+        TrackingLinkResolver.preferredTrackingUrl(
+            "https://www.chronopost.fr/tracking-no-cms/suivi-page?listeNumerosLT=XR646836167TS&langue=fr_FR",
+            "chronopost",
+            "XR646836167TS"
+        )
+    );
+  }
+
+  @Test
   void fallsBackToOfficialColissimoUrlWhenRawUrlIsUntrusted() {
     Assertions.assertEquals(
         "https://www.laposte.fr/outils/suivre-vos-envois?code=6A04296519970",
@@ -35,6 +57,18 @@ class TrackingLinkResolverTest {
             "https://example.com/track/6A04296519970",
             "colissimo",
             "6A04296519970"
+        )
+    );
+  }
+
+  @Test
+  void fallsBackToOfficialChronopostUrlWhenRawUrlIsUntrusted() {
+    Assertions.assertEquals(
+        "https://www.chronopost.fr/tracking-no-cms/suivi-page?listeNumerosLT=XR646836167TS&langue=fr_FR",
+        TrackingLinkResolver.preferredTrackingUrl(
+            "https://example.com/track/XR646836167TS",
+            "chronopost",
+            "XR646836167TS"
         )
     );
   }

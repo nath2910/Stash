@@ -15,6 +15,7 @@ class DirectCarrierTrackingServiceTest {
   @Test
   void appliesLaPosteSnapshotWhenConfigured() {
     LaPosteTrackingClient laPosteTrackingClient = Mockito.mock(LaPosteTrackingClient.class);
+    ChronopostTrackingClient chronopostTrackingClient = Mockito.mock(ChronopostTrackingClient.class);
     ParcelTrackingUpdateService updateService = Mockito.mock(ParcelTrackingUpdateService.class);
     ParcelRepository parcelRepository = Mockito.mock(ParcelRepository.class);
     Parcel parcel = parcel(12L);
@@ -41,6 +42,7 @@ class DirectCarrierTrackingServiceTest {
 
     DirectCarrierTrackingService service = new DirectCarrierTrackingService(
         laPosteTrackingClient,
+        chronopostTrackingClient,
         updateService,
         parcelRepository
     );
@@ -58,6 +60,7 @@ class DirectCarrierTrackingServiceTest {
   @Test
   void marksParcelWhenLaPosteSourceIsUnavailable() {
     LaPosteTrackingClient laPosteTrackingClient = Mockito.mock(LaPosteTrackingClient.class);
+    ChronopostTrackingClient chronopostTrackingClient = Mockito.mock(ChronopostTrackingClient.class);
     ParcelTrackingUpdateService updateService = Mockito.mock(ParcelTrackingUpdateService.class);
     ParcelRepository parcelRepository = Mockito.mock(ParcelRepository.class);
     Parcel parcel = parcel(13L);
@@ -68,6 +71,7 @@ class DirectCarrierTrackingServiceTest {
 
     DirectCarrierTrackingService service = new DirectCarrierTrackingService(
         laPosteTrackingClient,
+        chronopostTrackingClient,
         updateService,
         parcelRepository
     );
@@ -84,16 +88,20 @@ class DirectCarrierTrackingServiceTest {
   @Test
   void refusesNonColissimoParcels() {
     LaPosteTrackingClient laPosteTrackingClient = Mockito.mock(LaPosteTrackingClient.class);
+    ChronopostTrackingClient chronopostTrackingClient = Mockito.mock(ChronopostTrackingClient.class);
     ParcelTrackingUpdateService updateService = Mockito.mock(ParcelTrackingUpdateService.class);
     ParcelRepository parcelRepository = Mockito.mock(ParcelRepository.class);
     Parcel parcel = parcel(14L);
     parcel.setCarrierSlug("chronopost");
 
     Mockito.when(laPosteTrackingClient.supports(parcel)).thenReturn(false);
+    Mockito.when(chronopostTrackingClient.supports(parcel)).thenReturn(true);
+    Mockito.when(chronopostTrackingClient.isConfigured()).thenReturn(false);
     Mockito.when(parcelRepository.save(parcel)).thenReturn(parcel);
 
     DirectCarrierTrackingService service = new DirectCarrierTrackingService(
         laPosteTrackingClient,
+        chronopostTrackingClient,
         updateService,
         parcelRepository
     );
@@ -103,7 +111,7 @@ class DirectCarrierTrackingServiceTest {
     Mockito.verify(updateService).markLocalFallback(
         Mockito.eq(parcel),
         Mockito.eq(DirectCarrierTrackingService.PROVIDER),
-        Mockito.eq("Suivi reserve aux colis Colissimo")
+        Mockito.eq("Source Chronopost indisponible")
     );
   }
 

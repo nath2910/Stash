@@ -30,6 +30,10 @@ public class TrackingParserService {
       Pattern.compile("\\b\\d{14}[A-Z]\\b", Pattern.CASE_INSENSITIVE);
   private static final Pattern COLISSIMO_NUMERIC_INLINE =
       Pattern.compile("\\b\\d(?:[\\d\\s\\-]{11,16})\\d\\b");
+  private static final Pattern CHRONOPOST_UPU_INLINE =
+      Pattern.compile("\\b[A-Z]{2}[\\s\\-]?\\d{9}[\\s\\-]?[A-Z]{2}\\b", Pattern.CASE_INSENSITIVE);
+  private static final Pattern CHRONOPOST_15_CHARS_INLINE =
+      Pattern.compile("\\b\\d{14}[A-Z]\\b", Pattern.CASE_INSENSITIVE);
   private static final Pattern NUMERIC_PATTERN = Pattern.compile("^\\d+$");
 
   private static final Set<String> COLISSIMO_SIGNAL_KEYWORDS = Set.of(
@@ -50,6 +54,25 @@ public class TrackingParserService {
       "votre colis",
       "courrier suivi",
       "suivre votre colis"
+  );
+
+  private static final Set<String> CHRONOPOST_SIGNAL_KEYWORDS = Set.of(
+      "chronopost",
+      "mychronopost",
+      "predict",
+      "chronopost.fr"
+  );
+
+  private static final Set<String> CHRONOPOST_DELIVERY_KEYWORDS = Set.of(
+      "suivi",
+      "suivi colis",
+      "suivi de livraison",
+      "colis",
+      "livraison",
+      "numero de colis",
+      "numero de suivi",
+      "votre colis",
+      "point de proximite"
   );
 
   private static final Set<String> STRONG_TRACKING_CONTEXT = Set.of(
@@ -98,6 +121,8 @@ public class TrackingParserService {
       "colis a ete livre",
       "est livre dans votre boite",
       "livre dans votre boite",
+      "livraison effectuee",
+      "livre",
       "boite aux lettres",
       "retire par le destinataire",
       "colis retire",
@@ -107,6 +132,7 @@ public class TrackingParserService {
 
   private static final Set<String> OUT_FOR_DELIVERY_KEYWORDS = Set.of(
       "en cours de livraison",
+      "envoi en cours de livraison",
       "livraison ce jour",
       "livraison aujourd hui",
       "sera livre aujourd hui",
@@ -116,6 +142,9 @@ public class TrackingParserService {
   private static final Set<String> IN_TRANSIT_STATUS_KEYWORDS = Set.of(
       "en transit",
       "pris en charge",
+      "pris en charge par chronopost",
+      "en preparation chez l expediteur",
+      "en cours d acheminement",
       "acheminement",
       "expedie",
       "site de distribution",
@@ -125,15 +154,16 @@ public class TrackingParserService {
   );
 
   public boolean looksLikeCarrierMessage(String from, String subject) {
-    return shouldInspectColissimoMessage(from, subject, "");
+    return shouldInspectMessage(from, subject, "");
   }
 
   public boolean shouldInspectMessage(String from, String subject) {
-    return shouldInspectColissimoMessage(from, subject, "");
+    return shouldInspectMessage(from, subject, "");
   }
 
   public boolean shouldInspectMessage(String from, String subject, String body) {
-    return shouldInspectColissimoMessage(from, subject, body);
+    return shouldInspectColissimoMessage(from, subject, body)
+        || shouldInspectChronopostMessage(from, subject, body);
   }
 
   public boolean shouldInspectColissimoMessage(String from, String subject, String body) {
@@ -144,16 +174,27 @@ public class TrackingParserService {
     return containsAny(haystack, COLISSIMO_SIGNAL_KEYWORDS) && containsAny(haystack, COLISSIMO_DELIVERY_KEYWORDS);
   }
 
+  public boolean shouldInspectChronopostMessage(String from, String subject, String body) {
+    String haystack = normalizeText(String.join(" ", safe(from), safe(subject), safe(body)));
+    if (haystack.isBlank()) {
+      return false;
+    }
+    return containsAny(haystack, CHRONOPOST_SIGNAL_KEYWORDS) && containsAny(haystack, CHRONOPOST_DELIVERY_KEYWORDS);
+  }
+
   public List<TrackingCandidate> parse(String from, String subject, String body) {
-    return detectColissimo(from, subject, body, extractLinks(body)).autoImportCandidates();
+    TrackingDetectionResult detection = detect(from, subject, body, extractLinks(body));
+    return detection.autoImportCandidates();
   }
 
   public TrackingDetectionResult detect(String from, String subject, String body) {
-    return detectColissimo(from, subject, body, extractLinks(body));
+    return detect(from, subject, body, extractLinks(body));
   }
 
   public TrackingDetectionResult detect(String from, String subject, String body, List<String> links) {
-    return detectColissimo(from, subject, body, links);
+    TrackingDetectionResult colissimo = detectColissimo(from, subject, body, links);
+    TrackingDetectionResult chronopost = detectChronopost(from, subject, body, links);
+    return mergeDetectionResults(colissimo, chronopost);
   }
 
   public TrackingDetectionResult detectColissimo(String from, String subject, String body) {
@@ -191,7 +232,7 @@ public class TrackingParserService {
           ? contextSnippet(visibleText, occurrence.start(), occurrence.end(), CONTEXT_RADIUS)
           : decodeUrl(occurrence.link());
       String normalizedContext = normalizeText(context);
-      int score = scoreCandidate(normalized, normalizedContext, normalizeText(subject), safeLinks, occurrence);
+      int score = scoreCandidate("colissimo", normalized, normalizedContext, normalizeText(subject), safeLinks, occurrence);
       if (score < REVIEW_THRESHOLD) {
         rejectedCount++;
         continue;
@@ -203,11 +244,88 @@ public class TrackingParserService {
           normalized,
           score,
           confidence(score),
-          bestTrackingUrl(normalized, safeLinks),
+          bestTrackingUrl("colissimo", normalized, safeLinks),
           context,
           displayName(from),
           rawStatus(visibleText),
           "colissimo"
+      );
+
+      TrackingCandidate existing = bestByTrackingNumber.get(normalized);
+      if (existing == null || candidate.confidenceScore() > existing.confidenceScore()) {
+        if (existing != null) {
+          duplicateCount++;
+        }
+        bestByTrackingNumber.put(normalized, candidate);
+      } else {
+        duplicateCount++;
+      }
+    }
+
+    List<TrackingCandidate> autoImport = bestByTrackingNumber.values().stream()
+        .filter(candidate -> candidate.confidenceLevel() == TrackingConfidence.HIGH)
+        .sorted(Comparator.comparing(TrackingCandidate::confidenceScore).reversed())
+        .toList();
+    List<TrackingCandidate> review = bestByTrackingNumber.values().stream()
+        .filter(candidate -> candidate.confidenceLevel() == TrackingConfidence.MEDIUM)
+        .sorted(Comparator.comparing(TrackingCandidate::confidenceScore).reversed())
+        .toList();
+
+    return new TrackingDetectionResult(autoImport, review, rejectedCount, duplicateCount);
+  }
+
+  public TrackingDetectionResult detectChronopost(String from, String subject, String body) {
+    return detectChronopost(from, subject, body, extractLinks(body));
+  }
+
+  public TrackingDetectionResult detectChronopost(String from, String subject, String body, List<String> links) {
+    if (!shouldInspectChronopostMessage(from, subject, body)) {
+      return new TrackingDetectionResult(List.of(), List.of(), 0, 0);
+    }
+
+    String visibleText = safe(body);
+    List<String> safeLinks = links == null ? List.of() : links.stream()
+        .filter(link -> link != null && !link.isBlank())
+        .map(String::trim)
+        .distinct()
+        .toList();
+
+    Map<String, TrackingCandidate> bestByTrackingNumber = new LinkedHashMap<>();
+    int rejectedCount = 0;
+    int duplicateCount = 0;
+
+    for (Occurrence occurrence : extractChronopostOccurrences(visibleText, safeLinks)) {
+      String normalized = normalizeTrackingNumber(occurrence.raw());
+      if (!TrackingCarrierRules.isValidForCarrier(normalized, "chronopost")) {
+        rejectedCount++;
+        continue;
+      }
+      if (looksLikeDate(normalized)) {
+        rejectedCount++;
+        continue;
+      }
+
+      String context = occurrence.source() == CandidateSource.VISIBLE
+          ? contextSnippet(visibleText, occurrence.start(), occurrence.end(), CONTEXT_RADIUS)
+          : decodeUrl(occurrence.link());
+      String normalizedContext = normalizeText(context);
+      int score = scoreCandidate("chronopost", normalized, normalizedContext, normalizeText(subject), safeLinks, occurrence);
+      if (score < REVIEW_THRESHOLD) {
+        rejectedCount++;
+        continue;
+      }
+
+      TrackingCandidate candidate = new TrackingCandidate(
+          "chronopost",
+          occurrence.raw().trim(),
+          normalized,
+          score,
+          confidence(score),
+          bestTrackingUrl("chronopost", normalized, safeLinks),
+          context,
+          displayName(from),
+          rawStatus(visibleText),
+          "chronopost"
       );
 
       TrackingCandidate existing = bestByTrackingNumber.get(normalized);
@@ -241,14 +359,16 @@ public class TrackingParserService {
 
   public boolean isValidTrackingNumber(String value) {
     String normalized = normalizeTrackingNumber(value);
-    return TrackingCarrierRules.isValidForCarrier(normalized, "colissimo") && !looksLikeDate(normalized);
+    return TrackingCarrierRules.matchesSupportedCarrierFormat(normalized) && !looksLikeDate(normalized);
   }
 
   public String inferCarrierSlug(String trackingNumber) {
-    return isValidTrackingNumber(trackingNumber) ? "colissimo" : null;
+    String normalized = normalizeTrackingNumber(trackingNumber);
+    return looksLikeDate(normalized) ? null : TrackingCarrierRules.inferSupportedCarrier(normalized);
   }
 
   private int scoreCandidate(
+      String carrierSlug,
       String normalizedTracking,
       String normalizedContext,
       String normalizedSubject,
@@ -264,7 +384,7 @@ public class TrackingParserService {
     } else if (containsAny(normalizedSubject, STRONG_TRACKING_CONTEXT)) {
       score += 15;
     }
-    if (linkContainsTracking(links, normalizedTracking)) {
+    if (linkContainsTracking(carrierSlug, links, normalizedTracking)) {
       score += 20;
     }
     if (occurrence.source() == CandidateSource.LINK) {
@@ -299,6 +419,22 @@ public class TrackingParserService {
     return occurrences;
   }
 
+  private List<Occurrence> extractChronopostOccurrences(String visibleText, List<String> links) {
+    List<Occurrence> occurrences = new ArrayList<>();
+    addOccurrences(occurrences, visibleText, CHRONOPOST_UPU_INLINE);
+    addOccurrences(occurrences, visibleText, CHRONOPOST_15_CHARS_INLINE);
+
+    for (String link : links) {
+      if (!TrackingLinkResolver.isTrustedTrackingUrl(link, "chronopost")) {
+        continue;
+      }
+      String decoded = decodeUrl(link);
+      addLinkOccurrences(occurrences, decoded, link, CHRONOPOST_UPU_INLINE);
+      addLinkOccurrences(occurrences, decoded, link, CHRONOPOST_15_CHARS_INLINE);
+    }
+    return occurrences;
+  }
+
   private void addOccurrences(List<Occurrence> occurrences, String text, Pattern pattern) {
     Matcher matcher = pattern.matcher(safe(text));
     while (matcher.find()) {
@@ -323,8 +459,12 @@ public class TrackingParserService {
   }
 
   private boolean linkContainsTracking(List<String> links, String normalizedTracking) {
+    return linkContainsTracking("colissimo", links, normalizedTracking);
+  }
+
+  private boolean linkContainsTracking(String carrierSlug, List<String> links, String normalizedTracking) {
     for (String link : links) {
-      if (!TrackingLinkResolver.isTrustedTrackingUrl(link, "colissimo")) {
+      if (!TrackingLinkResolver.isTrustedTrackingUrl(link, carrierSlug)) {
         continue;
       }
       if (normalizeTrackingNumber(decodeUrl(link)).contains(normalizedTracking)) {
@@ -335,13 +475,17 @@ public class TrackingParserService {
   }
 
   private String bestTrackingUrl(String normalizedTracking, List<String> links) {
+    return bestTrackingUrl("colissimo", normalizedTracking, links);
+  }
+
+  private String bestTrackingUrl(String carrierSlug, String normalizedTracking, List<String> links) {
     for (String link : links) {
-      if (TrackingLinkResolver.isTrustedTrackingUrl(link, "colissimo")
+      if (TrackingLinkResolver.isTrustedTrackingUrl(link, carrierSlug)
           && normalizeTrackingNumber(decodeUrl(link)).contains(normalizedTracking)) {
         return link.trim();
       }
     }
-    return TrackingLinkResolver.fallbackTrackingUrl("colissimo", normalizedTracking);
+    return TrackingLinkResolver.fallbackTrackingUrl(carrierSlug, normalizedTracking);
   }
 
   private String contextSnippet(String visibleText, int start, int end, int radius) {
@@ -379,6 +523,24 @@ public class TrackingParserService {
       return "IN_TRANSIT";
     }
     return null;
+  }
+
+  private TrackingDetectionResult mergeDetectionResults(TrackingDetectionResult first, TrackingDetectionResult second) {
+    List<TrackingCandidate> autoImport = new ArrayList<>();
+    List<TrackingCandidate> review = new ArrayList<>();
+    if (first != null) {
+      autoImport.addAll(first.autoImportCandidates());
+      review.addAll(first.reviewCandidates());
+    }
+    if (second != null) {
+      autoImport.addAll(second.autoImportCandidates());
+      review.addAll(second.reviewCandidates());
+    }
+    autoImport.sort(Comparator.comparing(TrackingCandidate::confidenceScore).reversed());
+    review.sort(Comparator.comparing(TrackingCandidate::confidenceScore).reversed());
+    int rejectedCount = (first == null ? 0 : first.rejectedCount()) + (second == null ? 0 : second.rejectedCount());
+    int duplicateCount = (first == null ? 0 : first.duplicateCount()) + (second == null ? 0 : second.duplicateCount());
+    return new TrackingDetectionResult(autoImport, review, rejectedCount, duplicateCount);
   }
 
   private boolean looksLikeDate(String normalized) {

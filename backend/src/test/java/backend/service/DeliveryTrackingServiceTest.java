@@ -71,7 +71,7 @@ class DeliveryTrackingServiceTest {
   }
 
   @Test
-  void createManualAcceptsOnlyColissimoFormats() {
+  void createManualAcceptsColissimoFormats() {
     User user = Mockito.mock(User.class);
     Mockito.when(userRepository.findById(1L)).thenReturn(Optional.of(user));
     Mockito.when(parcelRepository.findByUser_IdAndNormalizedTrackingNumberAndCarrierSlug(
@@ -93,17 +93,39 @@ class DeliveryTrackingServiceTest {
   }
 
   @Test
-  void createManualRejectsNonColissimoCarrier() {
-    ResponseStatusException exception = Assertions.assertThrows(
-        ResponseStatusException.class,
-        () -> service.createManual(1L, new ParcelCreateRequest("LA123456789FR", "chronopost", null))
-    );
+  void createManualAcceptsChronopostFormats() {
+    User user = Mockito.mock(User.class);
+    Mockito.when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+    Mockito.when(parcelRepository.findByUser_IdAndNormalizedTrackingNumberAndCarrierSlug(
+        1L,
+        "XR646836167TS",
+        "chronopost"
+    )).thenReturn(Optional.empty());
+    Mockito.when(parcelRepository.saveAndFlush(Mockito.any(Parcel.class))).thenAnswer(invocation -> {
+      Parcel parcel = invocation.getArgument(0);
+      parcel.setId(31L);
+      return parcel;
+    });
 
-    Assertions.assertEquals("Seuls les suivis Colissimo sont autorises.", exception.getReason());
+    var response = service.createManual(1L, new ParcelCreateRequest("XR646836167TS", "chronopost", null));
+
+    Assertions.assertEquals("XR646836167TS", response.normalizedTrackingNumber());
+    Assertions.assertEquals("chronopost", response.carrierSlug());
+    Mockito.verify(trackingAggregatorService).registerTracking(Mockito.any(Parcel.class));
   }
 
   @Test
-  void refreshAllRefreshesOnlyActiveColissimoParcels() {
+  void createManualRejectsUnsupportedCarrier() {
+    ResponseStatusException exception = Assertions.assertThrows(
+        ResponseStatusException.class,
+        () -> service.createManual(1L, new ParcelCreateRequest("LA123456789FR", "ups", null))
+    );
+
+    Assertions.assertEquals("Choisis un transporteur pris en charge.", exception.getReason());
+  }
+
+  @Test
+  void refreshAllRefreshesOnlyActiveManagedParcels() {
     Parcel first = new Parcel();
     first.setId(51L);
     first.setCarrierSlug("colissimo");
@@ -120,17 +142,24 @@ class DeliveryTrackingServiceTest {
     otherCarrier.setStatus(ParcelStatus.IN_TRANSIT);
     otherCarrier.setRawCurrentPayload(new HashMap<>());
 
+    Parcel unsupported = new Parcel();
+    unsupported.setId(54L);
+    unsupported.setCarrierSlug("ups");
+    unsupported.setStatus(ParcelStatus.IN_TRANSIT);
+
     Mockito.when(parcelRepository.findByUser_IdOrderByUpdatedAtDesc(1L))
-        .thenReturn(List.of(first, delivered, otherCarrier));
+        .thenReturn(List.of(first, delivered, otherCarrier, unsupported));
     Mockito.when(trackingAggregatorService.refreshTracking(first)).thenReturn(first);
-    Mockito.when(parcelEventRepository.findByParcel_IdInOrderByParcel_IdAscEventTimeDesc(List.of(51L, 52L)))
+    Mockito.when(trackingAggregatorService.refreshTracking(otherCarrier)).thenReturn(otherCarrier);
+    Mockito.when(parcelEventRepository.findByParcel_IdInOrderByParcel_IdAscEventTimeDesc(List.of(51L, 52L, 53L)))
         .thenReturn(List.of());
 
     service.refreshAllForUser(1L);
 
     Mockito.verify(trackingAggregatorService).refreshTracking(first);
+    Mockito.verify(trackingAggregatorService).refreshTracking(otherCarrier);
     Mockito.verify(trackingAggregatorService, Mockito.never()).refreshTracking(delivered);
-    Mockito.verify(trackingAggregatorService, Mockito.never()).refreshTracking(otherCarrier);
+    Mockito.verify(trackingAggregatorService, Mockito.never()).refreshTracking(unsupported);
   }
 
   @Test
@@ -231,5 +260,55 @@ class DeliveryTrackingServiceTest {
 
     Assertions.assertEquals(ParcelStatus.IN_TRANSIT, existing.getStatus());
     Assertions.assertEquals("Disponible en relais Pickup", existing.getStatusLabel());
+  }
+
+  @Test
+  void importDetectedFromChronopostMailUsesChronopostCarrierAndLabel() {
+    Parcel existing = new Parcel();
+    existing.setId(63L);
+    existing.setStatus(ParcelStatus.REGISTERED);
+    existing.setTrackingNumber("XR646836167TS");
+    existing.setNormalizedTrackingNumber("XR646836167TS");
+    existing.setCarrierSlug("chronopost");
+    User user = Mockito.mock(User.class);
+
+    Mockito.when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+    Mockito.when(parcelRepository.findByUser_IdAndNormalizedTrackingNumberAndCarrierSlug(
+        1L,
+        "XR646836167TS",
+        "chronopost"
+    )).thenReturn(Optional.of(existing));
+    Mockito.when(parcelRepository.save(Mockito.any(Parcel.class))).thenAnswer(invocation -> invocation.getArgument(0));
+    Mockito.when(mailTrackingCandidateRepository.findByUser_IdAndDedupeKey(
+        Mockito.eq(1L),
+        Mockito.anyString()
+    )).thenReturn(Optional.empty());
+    Mockito.when(mailTrackingCandidateRepository.saveAndFlush(Mockito.any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+    TrackingCandidate candidate = new TrackingCandidate(
+        "chronopost",
+        "XR646836167TS",
+        "XR646836167TS",
+        88,
+        TrackingParserService.TrackingConfidence.HIGH,
+        "https://www.chronopost.fr/tracking-no-cms/suivi-page?listeNumerosLT=XR646836167TS&langue=fr_FR",
+        null,
+        "Chronopost",
+        "IN_TRANSIT",
+        "chronopost"
+    );
+
+    service.importDetectedFromMail(
+        1L,
+        new MailAccount(),
+        candidate,
+        "gmail-message-3",
+        "Votre colis Chronopost est en acheminement",
+        "noreply@chronopost.fr",
+        java.time.OffsetDateTime.parse("2026-07-21T09:30:00Z")
+    );
+
+    Assertions.assertEquals(ParcelStatus.IN_TRANSIT, existing.getStatus());
+    Assertions.assertEquals("En transit selon email Chronopost", existing.getStatusLabel());
   }
 }

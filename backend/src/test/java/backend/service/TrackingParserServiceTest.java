@@ -87,7 +87,7 @@ class TrackingParserServiceTest {
 
   @Test
   void ignoresUnsupportedOrAmbiguousFormats() {
-    Assertions.assertNull(parser.inferCarrierSlug("XY123456789FR"));
+    Assertions.assertEquals("chronopost", parser.inferCarrierSlug("XY123456789FR"));
     Assertions.assertNull(parser.inferCarrierSlug("12345678"));
     Assertions.assertFalse(parser.isValidTrackingNumber("12345678"));
   }
@@ -124,5 +124,23 @@ class TrackingParserServiceTest {
     Assertions.assertEquals(1, result.autoImportCandidates().size());
     Assertions.assertEquals("6Y11138575506", result.autoImportCandidates().get(0).normalizedTrackingNumber());
     Assertions.assertEquals("AVAILABLE_FOR_PICKUP", result.autoImportCandidates().get(0).rawStatus());
+  }
+
+  @Test
+  void detectsChronopostMailAndKeepsChronopostCarrier() {
+    TrackingDetectionResult result = parser.detectChronopost(
+        "Chronopost <noreply@chronopost.fr>",
+        "Suivi Chronopost",
+        """
+            Votre colis Chronopost est en cours d'acheminement.
+            Numero de colis : XR646836167TS
+            Suivre mon colis : https://www.chronopost.fr/tracking-no-cms/suivi-page?listeNumerosLT=XR646836167TS&langue=fr_FR
+            """
+    );
+
+    Assertions.assertEquals(1, result.autoImportCandidates().size());
+    Assertions.assertEquals("chronopost", result.autoImportCandidates().get(0).carrierSlug());
+    Assertions.assertEquals("XR646836167TS", result.autoImportCandidates().get(0).normalizedTrackingNumber());
+    Assertions.assertEquals("IN_TRANSIT", result.autoImportCandidates().get(0).rawStatus());
   }
 }

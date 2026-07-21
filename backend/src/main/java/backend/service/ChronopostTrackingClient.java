@@ -6,8 +6,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -39,7 +37,7 @@ public class ChronopostTrackingClient implements CarrierTrackingClient {
   private static final Logger log = LoggerFactory.getLogger(ChronopostTrackingClient.class);
   private static final String PROVIDER = "CHRONOPOST_DIRECT";
   private static final String BASE_URL = "https://www.chronopost.fr/tracking-no-cms";
-  private static final long LOCAL_BROWSER_TIMEOUT_SECONDS = 20;
+  private static final String BROWSER_SCRIPT = "chronopost-browser-scrape.mjs";
   private static final String BROWSER_USER_AGENT =
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
           + "(KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36";
@@ -126,6 +124,10 @@ public class ChronopostTrackingClient implements CarrierTrackingClient {
     if (response == null || response.isEmpty() || response.get("error") != null) {
       log.debug("Chronopost returned empty or errored payload for parcel {} ({}) after lightweight fallbacks",
           parcel.getId(), parcel.getTrackingNumber());
+      response = fetchWithLocalBrowser(parcel).orElse(null);
+    }
+
+    if (response == null || response.isEmpty() || response.get("error") != null) {
       return Optional.empty();
     }
 
@@ -361,52 +363,23 @@ public class ChronopostTrackingClient implements CarrierTrackingClient {
   }
 
   private Optional<Map<String, Object>> fetchWithLocalBrowser(Parcel parcel) {
-    Path scriptPath = resolveBrowserScriptPath();
-    if (scriptPath == null) {
+    if (!BrowserTrackingScriptRunner.isAvailable(BROWSER_SCRIPT)) {
       return Optional.empty();
     }
-
-    Process process = null;
     try {
-      process = new ProcessBuilder(
-          "node",
-          scriptPath.toString(),
-          trackingPageUrl(parcel)
-      ).redirectErrorStream(true).start();
-
-      boolean finished = process.waitFor(LOCAL_BROWSER_TIMEOUT_SECONDS, java.util.concurrent.TimeUnit.SECONDS);
-      if (!finished) {
-        process.destroyForcibly();
-        throw new IllegalStateException("Chronopost local browser fallback timed out");
-      }
-
-      String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8).trim();
-      if (process.exitValue() != 0) {
-        throw new IllegalStateException(output.isBlank() ? "Chronopost local browser fallback failed" : output);
-      }
-      return Optional.of(parseAjaxPayload(output));
+      return BrowserTrackingScriptRunner.run(BROWSER_SCRIPT, trackingPageUrl(parcel))
+          .filter(payload -> !PublicTrackingPageClient.looksLikeBotChallenge(payload.html()))
+          .map(payload -> Map.<String, Object>of(
+              "top", safe(payload.html()),
+              "tab", safe(payload.html()),
+              "tracking_url", firstNonBlank(payload.currentUrl(), trackingPageUrl(parcel)),
+              "source", payload.source()
+          ));
     } catch (Exception ex) {
       log.warn("Chronopost local browser fallback failed for parcel {} ({})",
           parcel.getId(), parcel.getTrackingNumber(), ex);
       return Optional.empty();
-    } finally {
-      if (process != null) {
-        process.destroy();
-      }
     }
-  }
-
-  private Path resolveBrowserScriptPath() {
-    List<Path> candidates = List.of(
-        Path.of("").toAbsolutePath().resolve("../frontend/scripts/chronopost-browser-scrape.mjs").normalize(),
-        Path.of("").toAbsolutePath().resolve("frontend/scripts/chronopost-browser-scrape.mjs").normalize()
-    );
-    for (Path candidate : candidates) {
-      if (Files.exists(candidate)) {
-        return candidate;
-      }
-    }
-    return null;
   }
 
   private Map<String, Object> parseAjaxPayload(String body) throws Exception {
