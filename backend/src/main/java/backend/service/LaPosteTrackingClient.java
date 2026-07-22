@@ -166,7 +166,10 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
         canonicalCarrier(parcel.getCarrierSlug(), stringValue(shipment.get("product"))),
         status,
         statusLabel,
-        parseDateTime(stringValue(shipment.get("estimatedDeliveryDate"))),
+        parseDateTime(firstNonBlank(
+            stringValue(shipment.get("estimatedDeliveryDate")),
+            stringValue(shipment.get("estimDate"))
+        )),
         deliveredAt,
         firstNonBlank(stringValue(shipment.get("url")), fallbackTrackingUrl(parcel, stringValue(shipment.get("product")))),
         origin,
