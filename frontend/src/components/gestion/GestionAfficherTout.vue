@@ -11,11 +11,11 @@
       </button>
     </div>
 
-    <div v-if="!isDesktop && snkVentes.length" class="space-y-3 lg:hidden">
+    <div v-if="!isDesktop && snkVentes.length" class="gestion-mobile-list space-y-3 lg:hidden">
       <article
         v-for="vente in snkVentes"
         :key="vente.id"
-        class="gestion-list-row rounded-2xl border border-gray-700 bg-gray-900/60 p-3"
+        class="gestion-list-row gestion-mobile-card rounded-2xl border border-gray-700 bg-gray-900/60 p-3"
         role="button"
         tabindex="0"
         @click="emit('edit', vente)"
@@ -24,10 +24,10 @@
       >
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0 space-y-1">
-            <p class="truncate text-sm font-semibold text-gray-100">
+            <p class="gestion-mobile-title text-sm font-semibold text-gray-100">
               {{ vente.nomItem || vente.nom_item }}
             </p>
-            <p v-if="vente.description" class="line-clamp-2 text-xs text-gray-400">
+            <p v-if="vente.description" class="gestion-mobile-description line-clamp-2 text-xs text-gray-400">
               {{ vente.description }}
             </p>
           </div>
@@ -74,9 +74,9 @@
             </span>
             <span
               v-if="subcategoryLabel(vente)"
-              class="inline-flex max-w-[11rem] items-center rounded-full border border-gray-700 bg-gray-950/60 px-2 py-0.5 text-[11px] font-medium text-gray-300"
+              class="gestion-mobile-pill inline-flex max-w-[11rem] items-center rounded-full border border-gray-700 bg-gray-950/60 px-2 py-0.5 text-[11px] font-medium text-gray-300"
             >
-              <span class="truncate">{{ subcategoryLabel(vente) }}</span>
+              <span class="gestion-mobile-pill-text">{{ subcategoryLabel(vente) }}</span>
             </span>
           </div>
           <span
@@ -417,6 +417,9 @@ onBeforeUnmount(() => {
 <style scoped>
 .gestion-list {
   color: #0f172a;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .gestion-list p,
@@ -470,6 +473,9 @@ onBeforeUnmount(() => {
 }
 
 .gestion-list article {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   border-color: rgba(125, 211, 252, 0.34);
   background:
     linear-gradient(135deg, rgba(236, 253, 245, 0.5), transparent 42%),
@@ -499,7 +505,11 @@ onBeforeUnmount(() => {
   position: sticky;
   top: 0;
   z-index: 8;
+  width: 100%;
+  min-width: 0;
   min-height: 44px;
+  gap: 0.55rem;
+  flex-wrap: wrap;
   border: 1px solid rgba(125, 211, 252, 0.34);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.96);
@@ -515,11 +525,47 @@ onBeforeUnmount(() => {
 
 .gestion-selection-toggle {
   min-height: 2rem;
+  min-width: 0;
+  max-width: 100%;
   border-radius: 999px;
   padding: 0 0.65rem;
   cursor: pointer;
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+.gestion-mobile-list,
+.gestion-mobile-card {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.gestion-mobile-title,
+.gestion-mobile-description {
+  overflow-wrap: anywhere;
+}
+
+.gestion-mobile-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  line-height: 1.25;
+}
+
+.gestion-mobile-pill {
+  min-width: 0;
+  max-width: min(100%, 11rem);
+}
+
+.gestion-mobile-pill-text {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .gestion-list button {

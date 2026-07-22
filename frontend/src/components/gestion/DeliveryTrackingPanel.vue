@@ -237,7 +237,7 @@
             />
           </label>
           <div
-            class="delivery-filter-strip -mx-1 flex w-auto gap-2 overflow-x-auto px-1 pb-1 lg:mx-0 lg:w-auto lg:flex-wrap lg:overflow-visible lg:px-0 lg:pb-0"
+            class="delivery-filter-strip flex w-full max-w-full flex-wrap gap-2 overflow-visible lg:w-auto lg:flex-wrap lg:overflow-visible"
           >
             <button
               v-for="quick in quickFilters"

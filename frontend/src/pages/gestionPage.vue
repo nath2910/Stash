@@ -1884,8 +1884,9 @@ watch(
   --gestion-shadow: 0 24px 60px rgba(15, 23, 42, 0.07), 0 10px 32px rgba(14, 165, 233, 0.06);
   background: transparent;
   width: 100%;
-  max-width: 100vw;
-  overflow-x: clip;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
@@ -1893,6 +1894,12 @@ watch(
 .gestion-page-stack {
   gap: clamp(1rem, 1.7vw, 1.45rem);
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.gestion-page-stack > * {
   min-width: 0;
   max-width: 100%;
 }
@@ -2914,7 +2921,10 @@ watch(
 }
 
 .inventory-list-panel {
-  overflow: visible;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .inventory-sticky-tools {
@@ -2942,6 +2952,9 @@ watch(
 }
 
 .inventory-list-scroll {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   scroll-behavior: smooth;
   will-change: scroll-position;
 }
@@ -3252,7 +3265,11 @@ watch(
 }
 
 .inventory-list-body {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   padding-top: 0.8rem;
+  overflow-x: hidden;
 }
 
 @media (max-width: 920px) {
@@ -3335,6 +3352,12 @@ watch(
 }
 
 @media (max-width: 640px) {
+  .gestion-page-light,
+  .gestion-page-stack,
+  .gestion-page-stack > * {
+    overflow-x: hidden;
+  }
+
   .gestion-hero-panel > div:first-child {
     align-items: stretch;
   }

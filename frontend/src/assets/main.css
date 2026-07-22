@@ -286,7 +286,11 @@
 
   .app-page-stack {
     display: grid;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
     gap: clamp(1rem, 1.8vw, 2rem);
+    overflow-x: hidden;
     padding-block: clamp(1rem, 2.2vw, 2.2rem);
   }
 
