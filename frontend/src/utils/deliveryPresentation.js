@@ -253,15 +253,14 @@ export const getDeliveryTrackingHealth = (parcel) => {
 
   if (aggregator === 'DIRECT_CARRIER') {
     if (
-      statusLabel.includes('api officielle la poste non configuree')
-      || statusLabel.includes('no supported browser executable found')
+      statusLabel.includes('no supported browser executable found')
       || statusLabel.includes('browser tracking script failed')
     ) {
       return {
         tone: 'warning',
         title: 'Source La Poste indisponible',
         message:
-          "Le suivi Colissimo n'a pas pu etre relu automatiquement. Verifie la cle API La Poste ou le navigateur local utilise par le scraper.",
+          "Le suivi Colissimo n'a pas pu etre relu automatiquement. Verifie le navigateur local utilise par le scraper.",
       }
     }
     if (statusLabel.includes('non trouve')) {

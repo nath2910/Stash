@@ -8,16 +8,13 @@
           'is-delivery-context': activeGestionTab === 'delivery',
         }"
       >
-        <div class="flex flex-wrap items-end justify-between gap-4">
+        <div class="flex flex-wrap items-end gap-4">
           <div class="space-y-2">
             <p class="gestion-eyebrow">{{ gestionHero.eyebrow }}</p>
             <h1 class="gestion-title">{{ gestionHero.title }}</h1>
             <p class="gestion-subtitle">
               {{ gestionHero.subtitle }}
             </p>
-          </div>
-          <div class="gestion-hero-pills">
-            <span v-for="pill in gestionHero.pills" :key="pill">{{ pill }}</span>
           </div>
         </div>
       </header>
@@ -1002,7 +999,6 @@ const gestionHero = computed(() => {
       eyebrow: 'Dossier legal',
       title: 'Declaration URSSAF et documents',
       subtitle: 'Un ecran de travail pour copier le CA a declarer, corriger les blocages et sortir les registres.',
-      pills: ['Montant pret', 'Champs URSSAF', 'PDF / CSV', 'Archive'],
     }
   }
 
@@ -1011,7 +1007,6 @@ const gestionHero = computed(() => {
       eyebrow: 'Suivi operationnel',
       title: 'Suivi livraison',
       subtitle: 'Centralise les colis, les mails de transporteurs et les actions a faire sur les livraisons.',
-      pills: ['Colis', 'Mails', 'Suivi'],
     }
   }
 
@@ -1019,7 +1014,6 @@ const gestionHero = computed(() => {
     eyebrow: 'Inventaire centralise',
     title: 'Gestion',
     subtitle: "Ajoute, modifie, filtre et suis tes items dans un espace coherent avec l'accueil.",
-    pills: [`${totalPaires.value} items`, `${nbEnStock.value} en stock`],
   }
 })
 
@@ -1958,14 +1952,6 @@ watch(
   line-height: 1.42;
 }
 
-.gestion-hero-panel.is-admin-context .gestion-hero-pills span {
-  min-height: 1.85rem;
-  border-color: rgba(15, 118, 110, 0.2);
-  background: rgba(236, 253, 245, 0.86);
-  color: #115e59;
-  font-size: 0.74rem;
-}
-
 .gestion-hero-panel.is-delivery-context {
   border-color: rgba(14, 116, 144, 0.24);
 }
@@ -2002,30 +1988,6 @@ watch(
   color: var(--gestion-muted);
   font-size: clamp(0.92rem, 1.4vw, 1.06rem);
   font-weight: 650;
-}
-
-.gestion-hero-pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.55rem;
-  justify-content: flex-end;
-}
-
-.gestion-hero-pills span {
-  display: inline-flex;
-  min-width: 0;
-  max-width: 100%;
-  min-height: 2rem;
-  align-items: center;
-  border: 1px solid rgba(100, 116, 139, 0.2);
-  border-radius: 999px;
-  background: rgba(248, 250, 252, 0.88);
-  color: #334155;
-  padding: 0 0.78rem;
-  font-size: 0.78rem;
-  font-weight: 900;
-  white-space: normal;
-  overflow-wrap: anywhere;
 }
 
 .gestion-tab-shell {
@@ -2261,10 +2223,6 @@ watch(
 @media (max-width: 640px) {
   .gestion-hero-panel {
     border-radius: 18px;
-  }
-
-  .gestion-hero-pills {
-    justify-content: flex-start;
   }
 
   .gestion-tab-nav {
@@ -3362,20 +3320,6 @@ watch(
     align-items: stretch;
   }
 
-  .gestion-hero-pills {
-    display: grid;
-    width: 100%;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    justify-content: stretch;
-  }
-
-  .gestion-hero-pills span {
-    justify-content: center;
-    padding: 0.55rem 0.7rem;
-    text-align: center;
-    white-space: normal;
-  }
-
   .gestion-tab-nav {
     display: grid;
     grid-template-columns: 1fr;
@@ -3450,10 +3394,6 @@ watch(
   .gestion-subtitle {
     max-width: 100%;
     overflow-wrap: anywhere;
-  }
-
-  .gestion-hero-pills {
-    grid-template-columns: 1fr;
   }
 
   .gestion-tab-button {

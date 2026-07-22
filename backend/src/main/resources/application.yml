@@ -102,8 +102,6 @@ app:
     tracking-provider: ${APP_DELIVERY_TRACKING_PROVIDER:DIRECT}
     tracking-refresh-fixed-delay-ms: ${APP_DELIVERY_TRACKING_REFRESH_FIXED_DELAY_MS:900000}
     tracking-refresh-batch-size: ${APP_DELIVERY_TRACKING_REFRESH_BATCH_SIZE:50}
-    laposte-api-key: ${LAPOSTE_API_KEY:}
-    laposte-tracking-base-url: ${LAPOSTE_TRACKING_BASE_URL:https://api.laposte.fr/suivi/v2/idships}
     mondial-relay-enseigne: ${MONDIAL_RELAY_ENSEIGNE:${MONDIAL_RELAY_CUSTOMER_ID:}}
     mondial-relay-private-key: ${MONDIAL_RELAY_PRIVATE_KEY:${MONDIAL_RELAY_PASSWORD:}}
     mondial-relay-endpoint: ${MONDIAL_RELAY_ENDPOINT:https://www.mondialrelay.fr/WebService/WebService.asmx}

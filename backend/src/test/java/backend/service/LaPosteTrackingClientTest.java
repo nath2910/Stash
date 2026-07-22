@@ -17,8 +17,6 @@ class LaPosteTrackingClientTest {
     environment.setActiveProfiles("prod");
 
     LaPosteTrackingClient client = new LaPosteTrackingClient(
-        "",
-        "https://api.laposte.fr/suivi/v2/idships",
         new ObjectMapper(),
         environment
     );
@@ -31,8 +29,6 @@ class LaPosteTrackingClientTest {
     MockEnvironment environment = new MockEnvironment();
     ObjectMapper objectMapper = new ObjectMapper();
     LaPosteTrackingClient client = new LaPosteTrackingClient(
-        "",
-        "https://api.laposte.fr/suivi/v2/idships",
         objectMapper,
         environment
     );

@@ -4,9 +4,6 @@ import backend.entity.Parcel;
 import backend.entity.ParcelStatus;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.net.URI;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -25,11 +22,8 @@ import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.env.Environment;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClient;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -47,23 +41,15 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
   private static final Pattern DELIVERY_LINE_PATTERN = Pattern.compile("(?im)^livraison\\s*:\\s*(.+)$");
   private static final Pattern ISO_TIMESTAMP_PATTERN = Pattern.compile("\\b\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(?::\\d{2})?(?:Z|[+-]\\d{2}:\\d{2})\\b");
 
-  private final String apiKey;
-  private final String baseUrl;
-  private final RestClient restClient;
   private final ObjectMapper objectMapper;
   private final Environment environment;
 
   public LaPosteTrackingClient(
-      @Value("${app.delivery.laposte-api-key:}") String apiKey,
-      @Value("${app.delivery.laposte-tracking-base-url:https://api.laposte.fr/suivi/v2/idships}") String baseUrl,
       ObjectMapper objectMapper,
       Environment environment
   ) {
-    this.apiKey = apiKey;
-    this.baseUrl = trimTrailingSlash(baseUrl);
     this.objectMapper = objectMapper;
     this.environment = environment;
-    this.restClient = RestClient.builder().build();
   }
 
   @PostConstruct
@@ -71,8 +57,8 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
     for (String profile : environment.getActiveProfiles()) {
       if ("prod".equalsIgnoreCase(profile) && !isConfigured()) {
         log.warn(
-            "Colissimo tracking source is not configured in prod: set LAPOSTE_API_KEY or provide a supported local "
-                + "browser runtime to enable live La Poste refreshes"
+            "Colissimo tracking source is not configured in prod: provide a supported local browser runtime to "
+                + "enable live La Poste refreshes"
         );
         return;
       }
@@ -86,30 +72,13 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
 
   @Override
   public boolean isConfigured() {
-    return (apiKey != null && !apiKey.isBlank()) || BrowserTrackingScriptRunner.isAvailable(BROWSER_SCRIPT);
+    return BrowserTrackingScriptRunner.isAvailable(BROWSER_SCRIPT);
   }
 
   @Override
   public Optional<TrackingSnapshot> fetchTracking(Parcel parcel) {
-    boolean apiConfigured = apiKey != null && !apiKey.isBlank();
-    if (!apiConfigured && !BrowserTrackingScriptRunner.isAvailable(BROWSER_SCRIPT)) {
+    if (!BrowserTrackingScriptRunner.isAvailable(BROWSER_SCRIPT)) {
       return Optional.empty();
-    }
-    if (apiConfigured) {
-      try {
-        Map<String, Object> response = restClient.get()
-            .uri(trackingUri(parcel))
-            .header("Accept", "application/json")
-            .header("X-Okapi-Key", apiKey)
-            .retrieve()
-            .body(new ParameterizedTypeReference<>() {});
-
-        if (response != null && isSuccess(response)) {
-          return Optional.of(toSnapshot(parcel, response));
-        }
-      } catch (Exception ignored) {
-        // Fall back to the browser script below.
-      }
     }
     return fetchFromBrowserPage(parcel);
   }
@@ -179,11 +148,6 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
         rawPayload,
         events
     );
-  }
-
-  private URI trackingUri(Parcel parcel) {
-    String tracking = URLEncoder.encode(parcel.getTrackingNumber().trim(), StandardCharsets.UTF_8);
-    return URI.create(baseUrl + "/" + tracking + "?lang=fr_FR");
   }
 
   private boolean isSuccess(Map<String, Object> response) {
@@ -479,13 +443,6 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
       }
     }
     return null;
-  }
-
-  private String trimTrailingSlash(String value) {
-    if (value == null || value.isBlank()) {
-      return "https://api.laposte.fr/suivi/v2/idships";
-    }
-    return value.endsWith("/") ? value.substring(0, value.length() - 1) : value;
   }
 
   private static ParcelStatus normalizeStatusStatic(String value) {
