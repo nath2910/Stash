@@ -119,6 +119,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useBillingStore } from '@/store/billingStore'
+import { describeBillingError } from '@/utils/billingErrors'
 
 const router = useRouter()
 const billing = useBillingStore()
@@ -179,8 +180,10 @@ const openPortal = async () => {
     }
     window.location.assign(portalUrl.value)
   } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : 'Erreur lors de l ouverture du portail Stripe.'
-    portalError.value = msg
+    portalError.value = describeBillingError(
+      e,
+      'Erreur lors de l ouverture du portail Stripe.',
+    )
   } finally {
     portalBusy.value = false
   }
@@ -196,6 +199,6 @@ const goToUpgrade = () => {
 }
 
 onMounted(async () => {
-  await billing.fetchStatus(true, true)
+  await billing.fetchStatus(true, false)
 })
 </script>

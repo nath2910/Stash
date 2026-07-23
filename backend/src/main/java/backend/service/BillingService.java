@@ -161,7 +161,10 @@ public class BillingService {
   public String refreshStatus(User user) {
     if (!isConfigured()) return user.getSubscriptionStatus();
     try {
-      String customerId = ensureCustomer(user);
+      String customerId = user.getStripeCustomerId();
+      if (customerId == null || customerId.isBlank()) {
+        return user.getSubscriptionStatus();
+      }
       SubscriptionListParams params = SubscriptionListParams.builder()
           .setCustomer(customerId)
           .setLimit(1L)

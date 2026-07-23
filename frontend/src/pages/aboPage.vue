@@ -180,6 +180,7 @@ import { useRoute, useRouter } from 'vue-router'
 import BillingService from '@/services/BillingService'
 import { useAuthStore } from '@/store/authStore'
 import { useBillingStore } from '@/store/billingStore'
+import { describeBillingError } from '@/utils/billingErrors'
 
 const route = useRoute()
 const router = useRouter()
@@ -349,10 +350,7 @@ const startCheckout = async () => {
 
     throw new Error('URL de paiement manquante')
   } catch (e: unknown) {
-    error.value =
-      e && typeof e === 'object' && 'message' in e
-        ? String((e as { message?: unknown }).message || 'Impossible de lancer le paiement pour le moment')
-        : 'Impossible de lancer le paiement pour le moment'
+    error.value = describeBillingError(e, 'Impossible de lancer le paiement pour le moment.')
   } finally {
     loading.value = false
   }
