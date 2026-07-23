@@ -18,13 +18,13 @@ class PublicTrackingPageClientTest {
   }
 
   @Test
-  void noLongerProvidesUsefulFallbackForLegacyNonColissimoRoutes() {
+  void stillSupportsConfiguredGenericCarrierFallbacks() {
     PublicTrackingPageClient client = new PublicTrackingPageClient();
     Parcel parcel = new Parcel();
     parcel.setCarrierSlug("chronopost");
     parcel.setTrackingNumber("XY123456789FR");
     parcel.setNormalizedTrackingNumber("XY123456789FR");
 
-    Assertions.assertFalse(client.supports(parcel));
+    Assertions.assertTrue(client.supports(parcel));
   }
 }
