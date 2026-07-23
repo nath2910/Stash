@@ -6,6 +6,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -17,12 +18,6 @@ final class BrowserTrackingScriptRunner {
   private static final Logger log = LoggerFactory.getLogger(BrowserTrackingScriptRunner.class);
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
   private static final long SCRIPT_TIMEOUT_SECONDS = 60;
-  private static final List<Path> BROWSER_EXECUTABLE_CANDIDATES = List.of(
-      Path.of("C:/Program Files/Microsoft/Edge/Application/msedge.exe"),
-      Path.of("C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"),
-      Path.of("C:/Program Files/Google/Chrome/Application/chrome.exe"),
-      Path.of("C:/Program Files (x86)/Google/Chrome/Application/chrome.exe")
-  );
 
   private BrowserTrackingScriptRunner() {
   }
@@ -46,6 +41,7 @@ final class BrowserTrackingScriptRunner {
 
     try {
       Process process = new ProcessBuilder("node", scriptPath.toString(), trackingUrl)
+          .directory(scriptPath.getParent().toFile())
           .redirectErrorStream(true)
           .start();
 
@@ -76,11 +72,7 @@ final class BrowserTrackingScriptRunner {
   }
 
   private static Path resolveScriptPath(String scriptFileName) {
-    List<Path> candidates = List.of(
-        Path.of("").toAbsolutePath().resolve("../frontend/scripts/" + scriptFileName).normalize(),
-        Path.of("").toAbsolutePath().resolve("frontend/scripts/" + scriptFileName).normalize()
-    );
-    for (Path candidate : candidates) {
+    for (Path candidate : scriptPathCandidates(scriptFileName)) {
       if (Files.exists(candidate)) {
         return candidate;
       }
@@ -99,7 +91,32 @@ final class BrowserTrackingScriptRunner {
         // Fall back to built-in candidates.
       }
     }
-    return BROWSER_EXECUTABLE_CANDIDATES.stream().anyMatch(Files::exists);
+    return browserExecutableCandidates().stream().anyMatch(Files::exists);
+  }
+
+  static List<Path> scriptPathCandidates(String scriptFileName) {
+    Path cwd = Path.of("").toAbsolutePath();
+    return List.of(
+        cwd.resolve("tracking-scripts/" + scriptFileName).normalize(),
+        cwd.resolve("../tracking-scripts/" + scriptFileName).normalize(),
+        cwd.resolve("backend/tracking-scripts/" + scriptFileName).normalize(),
+        cwd.resolve("../frontend/scripts/" + scriptFileName).normalize(),
+        cwd.resolve("frontend/scripts/" + scriptFileName).normalize()
+    );
+  }
+
+  static List<Path> browserExecutableCandidates() {
+    List<Path> candidates = new ArrayList<>();
+    candidates.add(Path.of("C:/Program Files/Microsoft/Edge/Application/msedge.exe"));
+    candidates.add(Path.of("C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"));
+    candidates.add(Path.of("C:/Program Files/Google/Chrome/Application/chrome.exe"));
+    candidates.add(Path.of("C:/Program Files (x86)/Google/Chrome/Application/chrome.exe"));
+    candidates.add(Path.of("/usr/bin/chromium"));
+    candidates.add(Path.of("/usr/bin/chromium-browser"));
+    candidates.add(Path.of("/usr/bin/google-chrome"));
+    candidates.add(Path.of("/usr/bin/google-chrome-stable"));
+    candidates.add(Path.of("/snap/bin/chromium"));
+    return candidates;
   }
 
   private static void readProcessOutput(Process process, StringBuilder outputBuffer) {

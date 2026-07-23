@@ -86,6 +86,35 @@ class DirectCarrierTrackingServiceTest {
   }
 
   @Test
+  void marksParcelWhenLaPosteReturnsNoSnapshot() {
+    LaPosteTrackingClient laPosteTrackingClient = Mockito.mock(LaPosteTrackingClient.class);
+    ChronopostTrackingClient chronopostTrackingClient = Mockito.mock(ChronopostTrackingClient.class);
+    ParcelTrackingUpdateService updateService = Mockito.mock(ParcelTrackingUpdateService.class);
+    ParcelRepository parcelRepository = Mockito.mock(ParcelRepository.class);
+    Parcel parcel = parcel(15L);
+
+    Mockito.when(laPosteTrackingClient.supports(parcel)).thenReturn(true);
+    Mockito.when(laPosteTrackingClient.isConfigured()).thenReturn(true);
+    Mockito.when(laPosteTrackingClient.fetchTracking(parcel)).thenReturn(Optional.empty());
+    Mockito.when(parcelRepository.save(parcel)).thenReturn(parcel);
+
+    DirectCarrierTrackingService service = new DirectCarrierTrackingService(
+        laPosteTrackingClient,
+        chronopostTrackingClient,
+        updateService,
+        parcelRepository
+    );
+
+    service.refreshTracking(parcel);
+
+    Mockito.verify(updateService).markLocalFallback(
+        Mockito.eq(parcel),
+        Mockito.eq(DirectCarrierTrackingService.PROVIDER),
+        Mockito.eq("Statut Colissimo indisponible")
+    );
+  }
+
+  @Test
   void refusesNonColissimoParcels() {
     LaPosteTrackingClient laPosteTrackingClient = Mockito.mock(LaPosteTrackingClient.class);
     ChronopostTrackingClient chronopostTrackingClient = Mockito.mock(ChronopostTrackingClient.class);

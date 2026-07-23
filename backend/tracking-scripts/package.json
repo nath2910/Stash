@@ -1,0 +1,11 @@
+{
+  "name": "snk-tracking-scripts",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "puppeteer-core": "^24.43.1"
+  }
+}

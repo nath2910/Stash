@@ -305,4 +305,22 @@ class ParcelTrackingUpdateServiceTest {
         parcel.getStatusLabel()
     );
   }
+
+  @Test
+  void localFallbackKeepsDeliveredStatusButMarksLaposteSourceUnavailable() {
+    ParcelEventRepository eventRepository = Mockito.mock(ParcelEventRepository.class);
+    ParcelTrackingUpdateService service = new ParcelTrackingUpdateService(eventRepository);
+    Parcel parcel = new Parcel();
+    parcel.setId(50L);
+    parcel.setStatus(ParcelStatus.DELIVERED);
+    parcel.setDeliveredAt(OffsetDateTime.parse("2026-07-21T10:00:00Z"));
+    parcel.setStatusLabel("Livre selon email Colissimo");
+
+    service.markLocalFallback(parcel, "DIRECT_CARRIER", "Source La Poste indisponible");
+
+    Assertions.assertEquals(ParcelStatus.DELIVERED, parcel.getStatus());
+    Assertions.assertEquals("DIRECT_CARRIER", parcel.getAggregator());
+    Assertions.assertEquals("Source La Poste indisponible", parcel.getStatusLabel());
+    Assertions.assertEquals(OffsetDateTime.parse("2026-07-21T10:00:00Z"), parcel.getDeliveredAt());
+  }
 }

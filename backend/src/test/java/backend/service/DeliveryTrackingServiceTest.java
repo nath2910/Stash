@@ -210,6 +210,7 @@ class DeliveryTrackingServiceTest {
 
     Assertions.assertEquals(ParcelStatus.DELIVERED, existing.getStatus());
     Assertions.assertEquals("Livre selon email Colissimo", existing.getStatusLabel());
+    Mockito.verify(trackingAggregatorService, Mockito.never()).registerTracking(Mockito.any(Parcel.class));
   }
 
   @Test
