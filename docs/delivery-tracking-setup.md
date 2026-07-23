@@ -31,8 +31,6 @@ APP_DELIVERY_TRACKING_PROVIDER=DIRECT
 APP_DELIVERY_TRACKING_REFRESH_FIXED_DELAY_MS=900000
 APP_DELIVERY_TRACKING_REFRESH_BATCH_SIZE=50
 
-LAPOSTE_API_KEY=
-
 MONDIAL_RELAY_ENSEIGNE=
 MONDIAL_RELAY_PRIVATE_KEY=
 
@@ -170,26 +168,23 @@ Il cible d'abord :
 
 ### La Poste / Colissimo / Chronopost
 
-1. Va sur Okapi La Poste.
-2. Active l'API `Suivi`.
-3. Recupere la cle Okapi.
-4. Mets-la dans `backend/.env` :
+Le suivi direct Colissimo n'utilise plus de cle API La Poste.
 
-```env
-LAPOSTE_API_KEY=ta_cle_okapi
-```
+En revanche, il a besoin d'un runtime backend qui contient :
+- `node` ;
+- `chromium` ou `chrome` ;
+- le dossier `tracking-scripts/` du backend.
 
-Le backend appelle par defaut :
+Le repo embarque deja ca dans l'image [backend/Dockerfile](/C:/Users/nt/OneDrive/sneakers/SNK V5/backend/Dockerfile:1).
 
-```text
-https://api.laposte.fr/suivi/v2/idships/{tracking}?lang=fr_FR
-```
+Point important :
+- un deploiement Java buildpack classique qui lance juste Maven puis `java -jar` ne suffit pas pour Colissimo ;
+- dans ce cas, la prod demarre bien, mais le statut retombe sur `Source La Poste indisponible` ;
+- le detail exact peut maintenant remonter du backend, par exemple `Chrome ou Chromium absent du runtime backend` ou `scripts de tracking absents du runtime backend`.
 
-avec le header :
+Chronopost tente d'abord son endpoint HTTP direct. Colissimo, lui, passe encore par un navigateur headless pour contourner les protections de La Poste.
 
-```text
-X-Okapi-Key: ...
-```
+Si tu deploies hors Docker, il faut reproduire ces prerequis manuellement sur la machine cible.
 
 ### Mondial Relay
 
@@ -322,7 +317,10 @@ Suivi direct France non disponible
 
 Verifie :
 - `APP_DELIVERY_TRACKING_PROVIDER=DIRECT` ;
-- `LAPOSTE_API_KEY` pour La Poste / Colissimo / Chronopost ;
+- que la prod utilise bien l'image `backend/Dockerfile` ou un runtime equivalent ;
+- que `node` est present ;
+- que `chromium` ou `chrome` est present ;
+- que le dossier `tracking-scripts/` est bien embarque au runtime backend ;
 - `MONDIAL_RELAY_ENSEIGNE` et `MONDIAL_RELAY_PRIVATE_KEY` pour Mondial Relay ;
 - le bouton refresh sur la timeline.
 
@@ -330,8 +328,6 @@ Verifie :
 
 - Gmail API scopes : https://developers.google.com/workspace/gmail/api/auth/scopes
 - OAuth 2.0 web server apps : https://developers.google.com/identity/protocols/oauth2/web-server
-- Okapi La Poste : https://developer.laposte.fr/
-- API Suivi La Poste : https://developer.laposte.fr/products/suivi/latest
 - WebService Mondial Relay `WSI2_TracingColisDetaille` : https://www.mondialrelay.fr/WebService/WebService.asmx?op=WSI2_TracingColisDetaille
 - AfterShip Tracking webhook signature : https://www.aftership.com/docs/tracking/webhook/webhook-signature
 - AfterShip Tracking API quick start : https://www.aftership.com/docs/tracking/quickstart/api-quick-start

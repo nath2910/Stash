@@ -67,6 +67,7 @@ class DirectCarrierTrackingServiceTest {
 
     Mockito.when(laPosteTrackingClient.supports(parcel)).thenReturn(true);
     Mockito.when(laPosteTrackingClient.isConfigured()).thenReturn(false);
+    Mockito.when(laPosteTrackingClient.unavailableReason()).thenReturn("Chrome ou Chromium absent du runtime backend");
     Mockito.when(parcelRepository.save(parcel)).thenReturn(parcel);
 
     DirectCarrierTrackingService service = new DirectCarrierTrackingService(
@@ -81,7 +82,7 @@ class DirectCarrierTrackingServiceTest {
     Mockito.verify(updateService).markLocalFallback(
         Mockito.eq(parcel),
         Mockito.eq(DirectCarrierTrackingService.PROVIDER),
-        Mockito.eq("Source La Poste indisponible")
+        Mockito.eq("Source La Poste indisponible: Chrome ou Chromium absent du runtime backend")
     );
   }
 

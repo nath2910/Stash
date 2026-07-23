@@ -31,6 +31,13 @@ class BrowserTrackingScriptRunnerTest {
     );
   }
 
+  @Test
+  void unavailableReasonMentionsMissingTrackingScripts() {
+    String reason = BrowserTrackingScriptRunner.unavailableReason("missing-script.mjs");
+
+    Assertions.assertEquals("scripts de tracking absents du runtime backend", reason);
+  }
+
   private String normalize(Path path) {
     return String.valueOf(path).replace('\\', '/');
   }

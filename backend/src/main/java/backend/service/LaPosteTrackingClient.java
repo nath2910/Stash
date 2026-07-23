@@ -56,9 +56,10 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
   void validateProductionConfig() {
     for (String profile : environment.getActiveProfiles()) {
       if ("prod".equalsIgnoreCase(profile) && !isConfigured()) {
+        String reason = unavailableReason();
         log.warn(
-            "Colissimo tracking source is not configured in prod: provide a supported local browser runtime to "
-                + "enable live La Poste refreshes"
+            "Colissimo tracking source is not configured in prod: {}",
+            reason == null ? "provide a supported local browser runtime to enable live La Poste refreshes" : reason
         );
         return;
       }
@@ -73,6 +74,10 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
   @Override
   public boolean isConfigured() {
     return BrowserTrackingScriptRunner.isAvailable(BROWSER_SCRIPT);
+  }
+
+  String unavailableReason() {
+    return BrowserTrackingScriptRunner.unavailableReason(BROWSER_SCRIPT);
   }
 
   @Override

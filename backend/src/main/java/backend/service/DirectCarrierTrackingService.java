@@ -47,7 +47,7 @@ public class DirectCarrierTrackingService {
     }
     CarrierTrackingClient client = resolvedClient.get();
     if (!client.isConfigured()) {
-      parcelTrackingUpdateService.markLocalFallback(parcel, PROVIDER, unavailableSourceMessage(parcel));
+      parcelTrackingUpdateService.markLocalFallback(parcel, PROVIDER, unavailableSourceMessage(parcel, client));
       return parcelRepository.save(parcel);
     }
 
@@ -71,12 +71,17 @@ public class DirectCarrierTrackingService {
     return carrierTrackingClients.stream().filter(client -> client.supports(parcel)).findFirst();
   }
 
-  private String unavailableSourceMessage(Parcel parcel) {
-    return switch (normalizedCarrier(parcel)) {
+  private String unavailableSourceMessage(Parcel parcel, CarrierTrackingClient client) {
+    String baseMessage = switch (normalizedCarrier(parcel)) {
       case "chronopost" -> "Source Chronopost indisponible";
       case "colissimo" -> "Source La Poste indisponible";
       default -> "Source transporteur indisponible";
     };
+    String detail = unavailableSourceDetail(client);
+    if (detail == null || detail.isBlank()) {
+      return baseMessage;
+    }
+    return baseMessage + ": " + detail;
   }
 
   private String unavailableStatusMessage(Parcel parcel) {
@@ -89,5 +94,12 @@ public class DirectCarrierTrackingService {
 
   private String normalizedCarrier(Parcel parcel) {
     return parcel == null ? null : TrackingCarrierRules.normalizeCarrierSlug(parcel.getCarrierSlug());
+  }
+
+  private String unavailableSourceDetail(CarrierTrackingClient client) {
+    if (client instanceof LaPosteTrackingClient laPosteTrackingClient) {
+      return laPosteTrackingClient.unavailableReason();
+    }
+    return null;
   }
 }

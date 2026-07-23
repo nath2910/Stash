@@ -23,10 +23,12 @@ final class BrowserTrackingScriptRunner {
   }
 
   static boolean isAvailable(String scriptFileName) {
-    if (scriptFileName == null || scriptFileName.isBlank()) {
-      return false;
-    }
-    return resolveScriptPath(scriptFileName) != null && hasSupportedBrowserExecutable();
+    return availability(scriptFileName).available();
+  }
+
+  static String unavailableReason(String scriptFileName) {
+    Availability availability = availability(scriptFileName);
+    return availability.available() ? null : availability.reason();
   }
 
   static Optional<BrowserPagePayload> run(String scriptFileName, String trackingUrl) {
@@ -80,18 +82,36 @@ final class BrowserTrackingScriptRunner {
     return null;
   }
 
-  private static boolean hasSupportedBrowserExecutable() {
+  static Availability availability(String scriptFileName) {
+    if (scriptFileName == null || scriptFileName.isBlank()) {
+      return new Availability(false, "nom de script de tracking vide", null, null);
+    }
+
+    Path scriptPath = resolveScriptPath(scriptFileName);
+    if (scriptPath == null) {
+      return new Availability(false, "scripts de tracking absents du runtime backend", null, null);
+    }
+
+    Path browserExecutable = resolveBrowserExecutable();
+    if (browserExecutable == null) {
+      return new Availability(false, "Chrome ou Chromium absent du runtime backend", scriptPath, null);
+    }
+
+    return new Availability(true, null, scriptPath, browserExecutable);
+  }
+
+  private static Path resolveBrowserExecutable() {
     String configuredPath = System.getenv("PUPPETEER_EXECUTABLE_PATH");
     if (configuredPath != null && !configuredPath.isBlank()) {
       try {
         if (Files.exists(Path.of(configuredPath))) {
-          return true;
+          return Path.of(configuredPath);
         }
       } catch (Exception ignored) {
         // Fall back to built-in candidates.
       }
     }
-    return browserExecutableCandidates().stream().anyMatch(Files::exists);
+    return browserExecutableCandidates().stream().filter(Files::exists).findFirst().orElse(null);
   }
 
   static List<Path> scriptPathCandidates(String scriptFileName) {
@@ -146,6 +166,14 @@ final class BrowserTrackingScriptRunner {
       String text,
       String html,
       String currentUrl
+  ) {
+  }
+
+  record Availability(
+      boolean available,
+      String reason,
+      Path scriptPath,
+      Path browserExecutable
   ) {
   }
 }
