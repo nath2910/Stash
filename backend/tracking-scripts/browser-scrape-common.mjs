@@ -1,4 +1,5 @@
 import fs from 'node:fs'
+import path from 'node:path'
 import puppeteer from 'puppeteer-core'
 
 const executableCandidates = [
@@ -7,15 +8,97 @@ const executableCandidates = [
   'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
   'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
   'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+  'C:\\Program Files\\Chromium\\Application\\chrome.exe',
+  'C:\\Program Files\\Chromium\\chrome.exe',
+  '/opt/google/chrome/chrome',
   '/usr/bin/chromium',
   '/usr/bin/chromium-browser',
+  '/usr/lib/chromium/chromium',
+  '/usr/lib/chromium-browser/chromium-browser',
   '/usr/bin/google-chrome',
   '/usr/bin/google-chrome-stable',
+  '/usr/bin/microsoft-edge',
+  '/usr/bin/microsoft-edge-stable',
+  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+  '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
   '/snap/bin/chromium',
 ].filter(Boolean)
 
-function resolveExecutablePath() {
-  const executablePath = executableCandidates.find((candidate) => fs.existsSync(candidate))
+const browserCommandCandidates = [
+  'msedge.exe',
+  'msedge',
+  'chrome.exe',
+  'chrome',
+  'chromium.exe',
+  'chromium',
+  'chromium-browser',
+  'google-chrome',
+  'google-chrome-stable',
+  'microsoft-edge',
+  'microsoft-edge-stable',
+]
+
+function stripQuotes(value) {
+  if (typeof value !== 'string') {
+    return ''
+  }
+  const normalized = value.trim()
+  if (normalized.startsWith('"') && normalized.endsWith('"')) {
+    return normalized.slice(1, -1)
+  }
+  return normalized
+}
+
+function executableNameCandidates(command) {
+  const normalizedCommand = stripQuotes(command)
+  if (!normalizedCommand) {
+    return []
+  }
+  if (process.platform !== 'win32') {
+    return [normalizedCommand]
+  }
+  const pathExt = (process.env.PATHEXT || '.EXE;.CMD;.BAT;.COM')
+    .split(';')
+    .map((extension) => extension.trim().toLowerCase())
+    .filter(Boolean)
+    .map((extension) => (extension.startsWith('.') ? extension : `.${extension}`))
+  const candidates = new Set([normalizedCommand])
+  if (!/\.(exe|cmd|bat|com)$/i.test(normalizedCommand)) {
+    for (const extension of pathExt) {
+      candidates.add(`${normalizedCommand}${extension}`)
+    }
+  }
+  return [...candidates]
+}
+
+function pathExecutableCandidates(commands = browserCommandCandidates) {
+  const pathValue = process.env.PATH || ''
+  if (!pathValue) {
+    return []
+  }
+  const candidates = new Set()
+  for (const entry of pathValue.split(path.delimiter)) {
+    const directory = stripQuotes(entry)
+    if (!directory) {
+      continue
+    }
+    for (const command of commands) {
+      for (const executableName of executableNameCandidates(command)) {
+        candidates.add(path.join(directory, executableName))
+      }
+    }
+  }
+  return [...candidates]
+}
+
+export function resolveExecutablePath() {
+  const configuredExecutable = stripQuotes(process.env.PUPPETEER_EXECUTABLE_PATH)
+  const candidatePool = [
+    configuredExecutable,
+    ...executableCandidates,
+    ...pathExecutableCandidates(configuredExecutable ? [configuredExecutable, ...browserCommandCandidates] : browserCommandCandidates),
+  ].filter(Boolean)
+  const executablePath = candidatePool.find((candidate) => fs.existsSync(candidate))
   if (!executablePath) {
     throw new Error('No supported browser executable found')
   }

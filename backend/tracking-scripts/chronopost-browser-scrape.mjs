@@ -1,5 +1,5 @@
-import fs from 'node:fs'
 import puppeteer from 'puppeteer-core'
+import { resolveExecutablePath } from './browser-scrape-common.mjs'
 
 const trackingUrl = process.argv[2]
 
@@ -8,28 +8,8 @@ if (!trackingUrl) {
   process.exit(1)
 }
 
-const executableCandidates = [
-  process.env.PUPPETEER_EXECUTABLE_PATH,
-  'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
-  'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
-  'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-  'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-  '/usr/bin/chromium',
-  '/usr/bin/chromium-browser',
-  '/usr/bin/google-chrome',
-  '/usr/bin/google-chrome-stable',
-  '/snap/bin/chromium',
-].filter(Boolean)
-
-const executablePath = executableCandidates.find((candidate) => fs.existsSync(candidate))
-
-if (!executablePath) {
-  console.error('No supported browser executable found')
-  process.exit(1)
-}
-
 const browser = await puppeteer.launch({
-  executablePath,
+  executablePath: resolveExecutablePath(),
   headless: true,
   args: [
     '--disable-blink-features=AutomationControlled',
