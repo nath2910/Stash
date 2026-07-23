@@ -86,6 +86,7 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
   private TrackingSnapshot toSnapshot(Parcel parcel, Map<String, Object> response) {
     Map<String, Object> shipment = mapValue(response.get("shipment"));
     List<TrackingEventSnapshot> events = new ArrayList<>();
+    List<String> timelineLabels = new ArrayList<>();
     Object rawEvents = shipment.get("event");
     if (rawEvents instanceof List<?> list) {
       for (Object item : list) {
@@ -106,13 +107,33 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
         ));
       }
     }
+    Object rawTimeline = shipment.get("timeline");
+    if (rawTimeline instanceof List<?> list) {
+      for (Object item : list) {
+        Map<String, Object> rawStep = mapValue(item);
+        if (rawStep.isEmpty()) {
+          continue;
+        }
+        String label = firstNonBlank(
+            stringValue(rawStep.get("shortLabel")),
+            stringValue(rawStep.get("longLabel")),
+            stringValue(rawStep.get("label"))
+        );
+        if (label != null) {
+          timelineLabels.add(label);
+        }
+      }
+    }
 
     TrackingEventSnapshot latest = latestEvent(events);
     OffsetDateTime deliveredAt = parseDateTime(stringValue(shipment.get("deliveryDate")));
+    String shortLabel = stringValue(shipment.get("shortLabel"));
+    String longLabel = stringValue(shipment.get("longLabel"));
     ResolvedStatus resolvedStatus = resolveStatus(
         events,
-        stringValue(shipment.get("shortLabel")),
-        stringValue(shipment.get("longLabel")),
+        shortLabel,
+        longLabel,
+        timelineLabels,
         deliveredAt
     );
     String statusLabel = resolvedStatus.label();
@@ -176,6 +197,7 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
       List<TrackingEventSnapshot> events,
       String shortLabel,
       String longLabel,
+      List<String> timelineLabels,
       OffsetDateTime deliveredAt
   ) {
     List<ResolvedStatus> candidates = new ArrayList<>();
@@ -195,6 +217,13 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
     if (longLabel != null && !longLabel.isBlank()) {
       candidates.add(new ResolvedStatus(normalizeStatusStatic(longLabel), longLabel));
     }
+    if (timelineLabels != null) {
+      for (String timelineLabel : timelineLabels) {
+        if (timelineLabel != null && !timelineLabel.isBlank()) {
+          candidates.add(new ResolvedStatus(normalizeStatusStatic(timelineLabel), timelineLabel));
+        }
+      }
+    }
 
     ResolvedStatus resolved = candidates.stream()
         .filter(candidate -> candidate.status() != null && candidate.status() != ParcelStatus.UNKNOWN)
@@ -204,11 +233,12 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
           String fallbackLabel = firstNonBlankStatic(
               latest == null ? null : latest.description(),
               shortLabel,
-              longLabel
+              longLabel,
+              latestNonBlank(timelineLabels)
           );
           return new ResolvedStatus(normalizeStatusStatic(fallbackLabel), fallbackLabel);
         });
-    return preferSummaryLabel(resolved, shortLabel, longLabel);
+    return preferSummaryLabel(resolved, shortLabel, longLabel, latestNonBlank(timelineLabels));
   }
 
   private String canonicalCarrier(String existingCarrier, String product) {
@@ -475,7 +505,12 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
     };
   }
 
-  private static ResolvedStatus preferSummaryLabel(ResolvedStatus resolved, String primaryLabel, String secondaryLabel) {
+  private static ResolvedStatus preferSummaryLabel(
+      ResolvedStatus resolved,
+      String primaryLabel,
+      String secondaryLabel,
+      String timelineLabel
+  ) {
     if (resolved == null || resolved.status() == null) {
       return resolved;
     }
@@ -485,7 +520,23 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
     if (secondaryLabel != null && normalizeStatusStatic(secondaryLabel) == resolved.status()) {
       return new ResolvedStatus(resolved.status(), secondaryLabel);
     }
+    if (timelineLabel != null && normalizeStatusStatic(timelineLabel) == resolved.status()) {
+      return new ResolvedStatus(resolved.status(), timelineLabel);
+    }
     return resolved;
+  }
+
+  private static String latestNonBlank(List<String> values) {
+    if (values == null || values.isEmpty()) {
+      return null;
+    }
+    for (int index = values.size() - 1; index >= 0; index--) {
+      String value = values.get(index);
+      if (value != null && !value.isBlank()) {
+        return value;
+      }
+    }
+    return null;
   }
 
   record ResolvedStatus(ParcelStatus status, String label) {
