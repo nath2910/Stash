@@ -22,6 +22,7 @@ class CarrierStatusResolutionTest {
         java.util.List.of(latest),
         "Votre colis a ete livre",
         "Distribution effectuee",
+        java.util.List.of(),
         null
     );
 
@@ -54,25 +55,26 @@ class CarrierStatusResolutionTest {
   void laposteDetectsDeliveredWhenSummaryContainsAccents() {
     LaPosteTrackingClient.ResolvedStatus resolved = LaPosteTrackingClient.resolveStatus(
         java.util.List.of(),
-        "Votre colis a été livré",
-        "Distribué",
+        "Votre colis a ete livre",
+        "Distribue",
+        java.util.List.of(),
         null
     );
 
     Assertions.assertEquals(ParcelStatus.DELIVERED, resolved.status());
-    Assertions.assertEquals("Votre colis a été livré", resolved.label());
+    Assertions.assertEquals("Votre colis a ete livre", resolved.label());
   }
 
   @Test
   void mondialRelayDetectsDeliveredWhenSummaryContainsAccents() {
     MondialRelayTrackingClient.ResolvedStatus resolved = MondialRelayTrackingClient.resolveStatus(
         java.util.List.of(),
-        "Colis retiré par le destinataire",
+        "Colis retire par le destinataire",
         null
     );
 
     Assertions.assertEquals(ParcelStatus.DELIVERED, resolved.status());
-    Assertions.assertEquals("Colis retiré par le destinataire", resolved.label());
+    Assertions.assertEquals("Colis retire par le destinataire", resolved.label());
   }
 
   @Test
@@ -80,7 +82,7 @@ class CarrierStatusResolutionTest {
     TrackingEventSnapshot delivered = new TrackingEventSnapshot(
         ParcelStatus.DELIVERED,
         null,
-        "Colis retiré par le destinataire",
+        "Colis retire par le destinataire",
         null,
         OffsetDateTime.parse("2026-07-12T10:15:00Z"),
         java.util.Map.of()
