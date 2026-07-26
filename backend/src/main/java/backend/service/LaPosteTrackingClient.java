@@ -26,6 +26,7 @@ import org.springframework.core.env.Environment;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -111,17 +112,32 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
 
   @Override
   public Optional<TrackingSnapshot> fetchTracking(Parcel parcel) {
-    Optional<TrackingSnapshot> directSnapshot = fetchFromUnifiedEndpoint(parcel);
-    if (directSnapshot.isPresent()) {
-      return directSnapshot;
+    FetchAttempt directAttempt = fetchFromUnifiedEndpoint(parcel);
+    if (directAttempt.snapshot().isPresent()) {
+      return directAttempt.snapshot();
     }
-    return fetchFromBrowserPage(parcel);
+
+    FetchAttempt browserAttempt = fetchFromBrowserPage(parcel);
+    if (browserAttempt.snapshot().isPresent()) {
+      return browserAttempt.snapshot();
+    }
+
+    if ("remote_access_denied".equals(directAttempt.failureCode())) {
+      return Optional.of(buildInfrastructureFallbackSnapshot(
+          parcel,
+          "La Poste bloque actuellement les requetes serveur en production. Consulte le lien transporteur pour voir le suivi detaille.",
+          directAttempt,
+          browserAttempt
+      ));
+    }
+
+    return Optional.empty();
   }
 
-  private Optional<TrackingSnapshot> fetchFromUnifiedEndpoint(Parcel parcel) {
+  private FetchAttempt fetchFromUnifiedEndpoint(Parcel parcel) {
     String trackingNumber = normalizedTracking(parcel);
     if (trackingNumber.isBlank()) {
-      return Optional.empty();
+      return FetchAttempt.empty("missing_tracking_number", "numero de suivi vide");
     }
 
     try {
@@ -148,7 +164,7 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
             parcel == null ? null : parcel.getTrackingNumber(),
             excerpt(body, 320)
         );
-        return Optional.empty();
+        return FetchAttempt.empty("unreadable_payload", "payload HTTP La Poste illisible");
       }
 
       Map<String, Object> response = parsedResponse.get();
@@ -159,10 +175,20 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
             parcel == null ? null : parcel.getTrackingNumber(),
             excerpt(body, 320)
         );
-        return Optional.empty();
+        return FetchAttempt.empty("non_success_payload", "payload HTTP La Poste non exploitable");
       }
 
-      return Optional.of(toSnapshot(parcel, response));
+      return FetchAttempt.success(toSnapshot(parcel, response));
+    } catch (HttpClientErrorException.Forbidden ex) {
+      String body = ex.getResponseBodyAsString();
+      String failureCode = looksLikeRemoteAccessDenied(body) ? "remote_access_denied" : "http_forbidden";
+      log.warn(
+          "La Poste unified tracking endpoint failed for parcel {} ({})",
+          parcel == null ? null : parcel.getId(),
+          parcel == null ? null : parcel.getTrackingNumber(),
+          ex
+      );
+      return FetchAttempt.empty(failureCode, excerpt(body, 240));
     } catch (Exception ex) {
       log.warn(
           "La Poste unified tracking endpoint failed for parcel {} ({})",
@@ -170,7 +196,7 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
           parcel == null ? null : parcel.getTrackingNumber(),
           ex
       );
-      return Optional.empty();
+      return FetchAttempt.empty("http_failure", ex.getClass().getSimpleName());
     }
   }
 
@@ -368,15 +394,18 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
     return TrackingLinkResolver.fallbackTrackingUrl(carrier, trackingNumber);
   }
 
-  private Optional<TrackingSnapshot> fetchFromBrowserPage(Parcel parcel) {
+  private FetchAttempt fetchFromBrowserPage(Parcel parcel) {
     if (!BrowserTrackingScriptRunner.isAvailable(BROWSER_SCRIPT)) {
-      return Optional.empty();
+      return FetchAttempt.empty(
+          "browser_unavailable",
+          BrowserTrackingScriptRunner.unavailableReason(BROWSER_SCRIPT)
+      );
     }
 
     Optional<BrowserTrackingScriptRunner.BrowserPagePayload> payloadResult =
         BrowserTrackingScriptRunner.run(BROWSER_SCRIPT, browserFallbackTrackingUrl(parcel));
     if (payloadResult.isEmpty()) {
-      return Optional.empty();
+      return FetchAttempt.empty("browser_failed", "script navigateur vide ou en echec");
     }
 
     BrowserTrackingScriptRunner.BrowserPagePayload payload = payloadResult.get();
@@ -387,17 +416,17 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
           parcel == null ? null : parcel.getTrackingNumber(),
           payload.currentUrl()
       );
-      return Optional.empty();
+      return FetchAttempt.empty("browser_bot_challenge", excerpt(payload.currentUrl(), 240));
     }
 
     Optional<TrackingSnapshot> structuredSnapshot = toBrowserStructuredSnapshot(parcel, payload);
     if (structuredSnapshot.isPresent()) {
-      return structuredSnapshot;
+      return FetchAttempt.success(structuredSnapshot.get());
     }
 
     TrackingSnapshot fallbackSnapshot = toBrowserSnapshot(parcel, payload);
     if (fallbackSnapshot.status() != ParcelStatus.UNKNOWN || fallbackSnapshot.statusLabel() != null) {
-      return Optional.of(fallbackSnapshot);
+      return FetchAttempt.success(fallbackSnapshot);
     }
 
     log.warn(
@@ -408,7 +437,41 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
         excerpt(payload.currentUrl(), 300),
         excerpt(payload.text(), 320)
     );
-    return Optional.empty();
+    return FetchAttempt.empty("browser_no_status", excerpt(payload.currentUrl(), 240));
+  }
+
+  private TrackingSnapshot buildInfrastructureFallbackSnapshot(
+      Parcel parcel,
+      String label,
+      FetchAttempt directAttempt,
+      FetchAttempt browserAttempt
+  ) {
+    Map<String, Object> rawPayload = new HashMap<>();
+    rawPayload.put("mode", "carrier_unavailable_fallback");
+    rawPayload.put("tracking_health_code", "laposte_prod_access_denied");
+    rawPayload.put("tracking_health_message", label);
+    putIfPresent(rawPayload, "tracking_url", fallbackTrackingUrl(parcel));
+    putIfPresent(rawPayload, "transport_failure_code", directAttempt.failureCode());
+    putIfPresent(rawPayload, "transport_failure_detail", directAttempt.failureDetail());
+    putIfPresent(rawPayload, "browser_failure_code", browserAttempt.failureCode());
+    putIfPresent(rawPayload, "browser_failure_detail", browserAttempt.failureDetail());
+
+    return new TrackingSnapshot(
+        firstNonBlank(parcel == null ? null : parcel.getAggregator(), DirectCarrierTrackingService.PROVIDER),
+        firstNonBlank(parcel == null ? null : parcel.getAggregatorTrackingId(), normalizedTracking(parcel)),
+        resolvedCarrier(parcel),
+        parcel == null || parcel.getStatus() == null ? ParcelStatus.REGISTERED : parcel.getStatus(),
+        label,
+        parcel == null ? null : parcel.getEstimatedDeliveryAt(),
+        parcel == null ? null : parcel.getDeliveredAt(),
+        fallbackTrackingUrl(parcel),
+        null,
+        null,
+        "Colissimo / La Poste",
+        null,
+        rawPayload,
+        List.of()
+    );
   }
 
   private Optional<TrackingSnapshot> toBrowserStructuredSnapshot(
@@ -818,5 +881,27 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
   private static String browserShipmentType(Parcel parcel, BrowserTrackingScriptRunner.BrowserPagePayload payload) {
     String carrier = canonicalBrowserCarrier(parcel, payload);
     return "chronopost".equals(carrier) ? "Chronopost" : "Colissimo / La Poste";
+  }
+
+  private static boolean looksLikeRemoteAccessDenied(String value) {
+    String normalized = value == null ? "" : value.toLowerCase(Locale.ROOT);
+    return normalized.contains("access denied")
+        || normalized.contains("you don't have permission")
+        || normalized.contains("you dont have permission")
+        || normalized.contains("errors.edgesuite.net");
+  }
+
+  private record FetchAttempt(
+      Optional<TrackingSnapshot> snapshot,
+      String failureCode,
+      String failureDetail
+  ) {
+    private static FetchAttempt success(TrackingSnapshot snapshot) {
+      return new FetchAttempt(Optional.ofNullable(snapshot), null, null);
+    }
+
+    private static FetchAttempt empty(String failureCode, String failureDetail) {
+      return new FetchAttempt(Optional.empty(), failureCode, failureDetail);
+    }
   }
 }

@@ -253,6 +253,19 @@ export const getDeliveryTrackingHealth = (parcel) => {
 
   if (aggregator === 'DIRECT_CARRIER') {
     if (
+      statusLabel.includes('bloque actuellement les requetes serveur')
+      || statusLabel.includes('consulte le lien transporteur')
+      || statusLabel.includes('access denied')
+      || statusLabel.includes("you don't have permission")
+    ) {
+      return {
+        tone: 'info',
+        title: 'Suivi live La Poste bloque en production',
+        message:
+          "La Poste refuse actuellement les requetes serveur depuis l'infrastructure de production. Ouvre le lien Transporteur pour voir le suivi detaille directement chez La Poste.",
+      }
+    }
+    if (
       statusLabel.includes('no supported browser executable found')
       || statusLabel.includes('browser tracking script failed')
     ) {

@@ -55,7 +55,7 @@
     </div>
 
     <div
-      v-if="parcel && trackingHealth && trackingHealth.tone === 'warning'"
+      v-if="parcel && trackingHealth"
       class="mt-3 rounded-2xl border px-3 py-3"
       :class="
         trackingHealth.tone === 'warning'
