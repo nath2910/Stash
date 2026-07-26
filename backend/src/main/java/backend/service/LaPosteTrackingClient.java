@@ -23,7 +23,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.env.Environment;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -36,11 +38,16 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
   private static final String PROVIDER = "LA_POSTE_OKAPI";
   private static final String BROWSER_PROVIDER = "LA_POSTE_BROWSER_PAGE";
   private static final String BROWSER_SCRIPT = "laposte-browser-scrape.mjs";
+  private static final String BASE_URL = "https://www.laposte.fr";
+  private static final String BROWSER_USER_AGENT =
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+          + "(KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36";
   private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
   private static final Pattern DELIVERY_DATE_JSON_PATTERN = Pattern.compile("\"deliveryDate\"\\s*:\\s*\"([^\"]+)\"");
   private static final Pattern DELIVERY_LINE_PATTERN = Pattern.compile("(?im)^livraison\\s*:\\s*(.+)$");
   private static final Pattern ISO_TIMESTAMP_PATTERN = Pattern.compile("\\b\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(?::\\d{2})?(?:Z|[+-]\\d{2}:\\d{2})\\b");
 
+  private final RestClient restClient;
   private final ObjectMapper objectMapper;
   private final Environment environment;
 
@@ -48,6 +55,15 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
       ObjectMapper objectMapper,
       Environment environment
   ) {
+    this(RestClient.builder().baseUrl(BASE_URL).build(), objectMapper, environment);
+  }
+
+  LaPosteTrackingClient(
+      RestClient restClient,
+      ObjectMapper objectMapper,
+      Environment environment
+  ) {
+    this.restClient = restClient;
     this.objectMapper = objectMapper;
     this.environment = environment;
   }
@@ -55,11 +71,11 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
   @PostConstruct
   void validateProductionConfig() {
     for (String profile : environment.getActiveProfiles()) {
-      if ("prod".equalsIgnoreCase(profile) && !isConfigured()) {
-        String reason = unavailableReason();
-        log.warn(
-            "La Poste tracking source is not configured in prod: {}",
-            reason == null ? "provide a supported local browser runtime to enable live La Poste refreshes" : reason
+      if ("prod".equalsIgnoreCase(profile) && !BrowserTrackingScriptRunner.isAvailable(BROWSER_SCRIPT)) {
+        String reason = BrowserTrackingScriptRunner.unavailableReason(BROWSER_SCRIPT);
+        log.info(
+            "La Poste browser fallback is unavailable in prod, direct HTTP tracking remains enabled: {}",
+            reason == null ? "no browser runtime detected" : reason
         );
         return;
       }
@@ -84,19 +100,56 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
 
   @Override
   public boolean isConfigured() {
-    return BrowserTrackingScriptRunner.isAvailable(BROWSER_SCRIPT);
+    return true;
   }
 
   String unavailableReason() {
-    return BrowserTrackingScriptRunner.unavailableReason(BROWSER_SCRIPT);
+    return null;
   }
 
   @Override
   public Optional<TrackingSnapshot> fetchTracking(Parcel parcel) {
-    if (!BrowserTrackingScriptRunner.isAvailable(BROWSER_SCRIPT)) {
-      return Optional.empty();
+    Optional<TrackingSnapshot> directSnapshot = fetchFromUnifiedEndpoint(parcel);
+    if (directSnapshot.isPresent()) {
+      return directSnapshot;
     }
     return fetchFromBrowserPage(parcel);
+  }
+
+  private Optional<TrackingSnapshot> fetchFromUnifiedEndpoint(Parcel parcel) {
+    String trackingNumber = normalizedTracking(parcel);
+    if (trackingNumber.isBlank()) {
+      return Optional.empty();
+    }
+
+    try {
+      String body = restClient.get()
+          .uri(uriBuilder -> uriBuilder
+              .path("/ssu/sun/back/suivi-unifie/{trackingNumber}")
+              .queryParam("lang", "fr")
+              .build(trackingNumber))
+          .header(HttpHeaders.USER_AGENT, BROWSER_USER_AGENT)
+          .header(HttpHeaders.ACCEPT, "application/json, text/plain, */*")
+          .header(HttpHeaders.ACCEPT_LANGUAGE, "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7")
+          .header(HttpHeaders.CACHE_CONTROL, "no-cache")
+          .header("Pragma", "no-cache")
+          .header("Origin", BASE_URL)
+          .header(HttpHeaders.REFERER, fallbackTrackingUrl(parcel))
+          .retrieve()
+          .body(String.class);
+
+      return parseTrackingResponse(body)
+          .filter(this::isSuccess)
+          .map(response -> toSnapshot(parcel, response));
+    } catch (Exception ex) {
+      log.warn(
+          "La Poste unified tracking endpoint failed for parcel {} ({})",
+          parcel == null ? null : parcel.getId(),
+          parcel == null ? null : parcel.getTrackingNumber(),
+          ex
+      );
+      return Optional.empty();
+    }
   }
 
   private TrackingSnapshot toSnapshot(Parcel parcel, Map<String, Object> response) {
@@ -294,10 +347,46 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
   }
 
   private Optional<TrackingSnapshot> fetchFromBrowserPage(Parcel parcel) {
-    return BrowserTrackingScriptRunner.run(BROWSER_SCRIPT, browserFallbackTrackingUrl(parcel))
-        .filter(payload -> !PublicTrackingPageClient.looksLikeBotChallenge(payload.html()))
-        .map(payload -> toBrowserStructuredSnapshot(parcel, payload).orElseGet(() -> toBrowserSnapshot(parcel, payload)))
-        .filter(snapshot -> snapshot.status() != ParcelStatus.UNKNOWN || snapshot.statusLabel() != null);
+    if (!BrowserTrackingScriptRunner.isAvailable(BROWSER_SCRIPT)) {
+      return Optional.empty();
+    }
+
+    Optional<BrowserTrackingScriptRunner.BrowserPagePayload> payloadResult =
+        BrowserTrackingScriptRunner.run(BROWSER_SCRIPT, browserFallbackTrackingUrl(parcel));
+    if (payloadResult.isEmpty()) {
+      return Optional.empty();
+    }
+
+    BrowserTrackingScriptRunner.BrowserPagePayload payload = payloadResult.get();
+    if (PublicTrackingPageClient.looksLikeBotChallenge(payload.html())) {
+      log.warn(
+          "La Poste browser tracking hit a bot challenge for parcel {} ({}) at {}",
+          parcel == null ? null : parcel.getId(),
+          parcel == null ? null : parcel.getTrackingNumber(),
+          payload.currentUrl()
+      );
+      return Optional.empty();
+    }
+
+    Optional<TrackingSnapshot> structuredSnapshot = toBrowserStructuredSnapshot(parcel, payload);
+    if (structuredSnapshot.isPresent()) {
+      return structuredSnapshot;
+    }
+
+    TrackingSnapshot fallbackSnapshot = toBrowserSnapshot(parcel, payload);
+    if (fallbackSnapshot.status() != ParcelStatus.UNKNOWN || fallbackSnapshot.statusLabel() != null) {
+      return Optional.of(fallbackSnapshot);
+    }
+
+    log.warn(
+        "La Poste browser fallback returned no usable status for parcel {} ({}), title='{}', url='{}', text='{}'",
+        parcel == null ? null : parcel.getId(),
+        parcel == null ? null : parcel.getTrackingNumber(),
+        excerpt(payload.title(), 160),
+        excerpt(payload.currentUrl(), 300),
+        excerpt(payload.text(), 320)
+    );
+    return Optional.empty();
   }
 
   private Optional<TrackingSnapshot> toBrowserStructuredSnapshot(
@@ -392,6 +481,10 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
     }
 
     String rawJson = firstNonBlank(responseElement.data(), responseElement.html(), responseElement.text());
+    return parseTrackingResponse(rawJson);
+  }
+
+  private Optional<Map<String, Object>> parseTrackingResponse(String rawJson) {
     if (rawJson == null || rawJson.isBlank()) {
       return Optional.empty();
     }
