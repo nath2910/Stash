@@ -140,9 +140,29 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
           .retrieve()
           .body(String.class);
 
-      return parseTrackingResponse(body)
-          .filter(this::isSuccess)
-          .map(response -> toSnapshot(parcel, response));
+      Optional<Map<String, Object>> parsedResponse = parseTrackingResponse(body);
+      if (parsedResponse.isEmpty()) {
+        log.warn(
+            "La Poste unified tracking endpoint returned an unreadable payload for parcel {} ({}): {}",
+            parcel == null ? null : parcel.getId(),
+            parcel == null ? null : parcel.getTrackingNumber(),
+            excerpt(body, 320)
+        );
+        return Optional.empty();
+      }
+
+      Map<String, Object> response = parsedResponse.get();
+      if (!isSuccess(response)) {
+        log.warn(
+            "La Poste unified tracking endpoint returned a non-success payload for parcel {} ({}): {}",
+            parcel == null ? null : parcel.getId(),
+            parcel == null ? null : parcel.getTrackingNumber(),
+            excerpt(body, 320)
+        );
+        return Optional.empty();
+      }
+
+      return Optional.of(toSnapshot(parcel, response));
     } catch (Exception ex) {
       log.warn(
           "La Poste unified tracking endpoint failed for parcel {} ({})",

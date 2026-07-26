@@ -22,6 +22,7 @@ final class BrowserTrackingScriptRunner {
   private static final Logger log = LoggerFactory.getLogger(BrowserTrackingScriptRunner.class);
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
   private static final long SCRIPT_TIMEOUT_SECONDS = 60;
+  private static final long EXECUTABLE_PROBE_TIMEOUT_SECONDS = 8;
 
   private BrowserTrackingScriptRunner() {
   }
@@ -118,6 +119,7 @@ final class BrowserTrackingScriptRunner {
     }
     return browserExecutableCandidates().stream()
         .filter(Files::exists)
+        .filter(BrowserTrackingScriptRunner::isUsableBrowserExecutable)
         .findFirst()
         .orElseGet(BrowserTrackingScriptRunner::resolveBrowserExecutableFromPath);
   }
@@ -211,7 +213,7 @@ final class BrowserTrackingScriptRunner {
       return null;
     }
     Path configuredExecutable = Path.of(normalizedPath);
-    if (Files.exists(configuredExecutable)) {
+    if (Files.exists(configuredExecutable) && isUsableBrowserExecutable(configuredExecutable)) {
       return configuredExecutable;
     }
     if (!normalizedPath.contains("/") && !normalizedPath.contains("\\")) {
@@ -228,7 +230,11 @@ final class BrowserTrackingScriptRunner {
     List<Path> candidates = preferredCommand == null || preferredCommand.isBlank()
         ? pathExecutableCandidates(System.getenv("PATH"), System.getenv("PATHEXT"))
         : pathExecutableCandidatesForCommand(preferredCommand, System.getenv("PATH"), System.getenv("PATHEXT"));
-    return candidates.stream().filter(Files::exists).findFirst().orElse(null);
+    return candidates.stream()
+        .filter(Files::exists)
+        .filter(BrowserTrackingScriptRunner::isUsableBrowserExecutable)
+        .findFirst()
+        .orElse(null);
   }
 
   private static List<Path> pathExecutableCandidatesForCommand(
@@ -324,6 +330,47 @@ final class BrowserTrackingScriptRunner {
       return normalized.substring(1, normalized.length() - 1);
     }
     return normalized;
+  }
+
+  static boolean isUsableBrowserExecutable(Path executablePath) {
+    if (executablePath == null || !Files.exists(executablePath)) {
+      return false;
+    }
+
+    try {
+      Process process = new ProcessBuilder(executablePath.toString(), "--version")
+          .redirectErrorStream(true)
+          .start();
+
+      StringBuilder outputBuffer = new StringBuilder();
+      Thread outputReader = new Thread(() -> readProcessOutput(process, outputBuffer));
+      outputReader.setDaemon(true);
+      outputReader.start();
+
+      boolean finished = process.waitFor(EXECUTABLE_PROBE_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+      if (!finished) {
+        process.destroyForcibly();
+        return false;
+      }
+
+      outputReader.join(1000);
+      return isUsableBrowserProbeResult(process.exitValue(), outputBuffer.toString());
+    } catch (Exception ignored) {
+      return false;
+    }
+  }
+
+  static boolean isUsableBrowserProbeResult(int exitCode, String output) {
+    if (exitCode != 0) {
+      return false;
+    }
+    String normalized = output == null ? "" : output.toLowerCase(Locale.ROOT);
+    if (normalized.isBlank()) {
+      return false;
+    }
+    return !normalized.contains("requires the chromium snap to be installed")
+        && !normalized.contains("snap install chromium")
+        && !normalized.contains("command not found");
   }
 
   private static void readProcessOutput(Process process, StringBuilder outputBuffer) {

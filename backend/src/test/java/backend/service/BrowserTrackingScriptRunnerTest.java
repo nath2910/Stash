@@ -68,6 +68,30 @@ class BrowserTrackingScriptRunnerTest {
     Assertions.assertEquals("scripts de tracking absents du runtime backend", reason);
   }
 
+  @Test
+  void rejectsSnapShimBrowserProbeOutput() {
+    Assertions.assertFalse(
+        BrowserTrackingScriptRunner.isUsableBrowserProbeResult(
+            1,
+            """
+            Command '/usr/bin/chromium-browser' requires the chromium snap to be installed.
+            Please install it with:
+            snap install chromium
+            """
+        )
+    );
+  }
+
+  @Test
+  void acceptsRealBrowserProbeOutput() {
+    Assertions.assertTrue(
+        BrowserTrackingScriptRunner.isUsableBrowserProbeResult(
+            0,
+            "Chromium 138.0.7204.183"
+        )
+    );
+  }
+
   private String normalize(Path path) {
     return String.valueOf(path).replace('\\', '/');
   }
