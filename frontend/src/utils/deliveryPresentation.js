@@ -124,6 +124,12 @@ const RELAY_READY_PHRASES = [
 ]
 
 const PICKED_UP_PHRASES = ['colis retire', 'retire par le destinataire']
+const PRODUCTION_BLOCKED_PHRASES = [
+  'bloque actuellement les requetes serveur',
+  'consulte le lien transporteur',
+  'access denied',
+  "you don't have permission",
+]
 
 const normalizeStatusLabel = (value) =>
   String(value || '')
@@ -150,6 +156,18 @@ export const getDeliveryStatusMeta = (input, statusLabelOverride = '') => {
   const { status, statusLabel } = resolveStatusInput(input, statusLabelOverride)
   const base = STATUS_META[status] || defaultStatusMeta
   const normalizedLabel = normalizeStatusLabel(statusLabel)
+
+  if (status === 'REGISTERED' && hasAnyPhrase(normalizedLabel, PRODUCTION_BLOCKED_PHRASES)) {
+    return {
+      ...base,
+      label: 'Suivi externe',
+      shortLabel: 'Externe',
+      badgeClass: 'border-sky-400/50 bg-sky-500/10 text-sky-200',
+      lightBadgeClass: 'border-sky-300/50 bg-sky-500/10 text-sky-800',
+      accentClass: 'text-sky-700',
+      stage: 'pending',
+    }
+  }
 
   if (status === 'DELIVERED' && normalizedLabel.includes('boite aux lettres')) {
     return { ...base, label: 'Livre boite', shortLabel: 'Livre' }
