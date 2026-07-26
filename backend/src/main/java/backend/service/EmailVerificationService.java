@@ -64,23 +64,19 @@ public class EmailVerificationService {
       return;
     }
 
-    try {
-      ensureMailConfigured();
+    ensureMailConfigured();
 
-      tokenRepository.deleteByUserIdAndUsedAtIsNull(user.getId());
+    tokenRepository.deleteByUserIdAndUsedAtIsNull(user.getId());
 
-      String token = generateToken();
-      EmailVerificationToken verificationToken = new EmailVerificationToken();
-      verificationToken.setUser(user);
-      verificationToken.setToken(token);
-      verificationToken.setExpiresAt(Instant.now().plus(Duration.ofMinutes(expirationMinutes)));
-      tokenRepository.save(verificationToken);
+    String token = generateToken();
+    EmailVerificationToken verificationToken = new EmailVerificationToken();
+    verificationToken.setUser(user);
+    verificationToken.setToken(token);
+    verificationToken.setExpiresAt(Instant.now().plus(Duration.ofMinutes(expirationMinutes)));
+    tokenRepository.save(verificationToken);
 
-      String link = buildVerifyLink(token);
-      sendVerificationEmail(user.getEmail(), link);
-    } catch (Exception ex) {
-      logger.warn("Email verification send failed for user {}", user.getId(), ex);
-    }
+    String link = buildVerifyLink(token, user.getEmail());
+    sendVerificationEmail(user.getEmail(), link);
   }
 
   public void requestVerification(String email) {
@@ -196,6 +192,13 @@ public class EmailVerificationService {
   private void ensureMailConfigured() {
     String host = environment.getProperty("spring.mail.host");
     if (host == null || host.isBlank()) {
+      logger.warn("Email verification blocked: spring.mail.host is missing");
+      throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Service email non configure");
+    }
+
+    String from = resolveFromAddress();
+    if (from == null || from.isBlank()) {
+      logger.warn("Email verification blocked: sender address is missing");
       throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Service email non configure");
     }
   }
@@ -207,14 +210,18 @@ public class EmailVerificationService {
     return environment.getProperty("spring.mail.username");
   }
 
-  private String buildVerifyLink(String token) {
+  private String buildVerifyLink(String token, String email) {
     if (verifyEmailUrl.contains("{token}")) {
-      return verifyEmailUrl.replace("{token}", token);
+      return UriComponentsBuilder
+          .fromUriString(verifyEmailUrl.replace("{token}", token))
+          .queryParam("email", email)
+          .toUriString();
     }
 
     return UriComponentsBuilder
         .fromUriString(verifyEmailUrl)
         .queryParam("token", token)
+        .queryParam("email", email)
         .toUriString();
   }
 

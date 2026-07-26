@@ -5,6 +5,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import backend.dto.LoginRequest;
 import backend.dto.RegisterRequest;
@@ -19,6 +21,7 @@ import backend.repository.SnkVenteRepository;
 
 @Service
 public class UserService {
+    private static final Logger logger = LoggerFactory.getLogger(UserService.class);
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -68,14 +71,22 @@ public class UserService {
         user.setLastName(lastName);
         user.setPassword(hashedPassword);
 
+        User savedUser;
         try {
-            User savedUser = userRepository.save(user);
-            emailVerificationService.sendVerification(savedUser);
-            return savedUser;
+            savedUser = userRepository.save(user);
         } catch (DataIntegrityViolationException ex) {
             // Si une contrainte d'unicite est levee (course condition ou compte deja existant)
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email deja utilise");
         }
+
+        try {
+            emailVerificationService.sendVerification(savedUser);
+        } catch (RuntimeException ex) {
+            rollbackPendingRegistration(savedUser.getId());
+            throw ex;
+        }
+
+        return savedUser;
     }
 
     public User login(LoginRequest request) {
@@ -140,5 +151,23 @@ public class UserService {
         userStatsLayoutRepository.deleteByUserId(userId);
         snkVenteRepository.deleteByUser_Id(userId);
         userRepository.deleteById(userId);
+    }
+
+    private void rollbackPendingRegistration(Long userId) {
+        if (userId == null) {
+            return;
+        }
+
+        try {
+            emailVerificationTokenRepository.deleteByUserId(userId);
+        } catch (RuntimeException ex) {
+            logger.warn("Unable to cleanup email verification tokens for user {}", userId, ex);
+        }
+
+        try {
+            userRepository.deleteById(userId);
+        } catch (RuntimeException ex) {
+            logger.warn("Unable to rollback failed registration for user {}", userId, ex);
+        }
     }
 }

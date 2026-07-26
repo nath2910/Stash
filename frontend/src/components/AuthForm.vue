@@ -529,33 +529,27 @@ const submitSignup = async () => {
 
   loading.value = true
   try {
-    await AuthService.register({
+    const response = await AuthService.register({
       email: signupForm.value.email,
       firstName: signupForm.value.firstName,
       lastName: signupForm.value.lastName,
       password: signupForm.value.password,
     })
 
-    setNotice('success', 'Compte cree', "Un email de verification vient de t'etre envoye.")
-    router.replace({ name: 'verify-email', query: { email: signupForm.value.email } })
+    const apiMessage = String(response?.message || '').trim()
+    const reusedExistingAccount = apiMessage.toLowerCase().includes('compte deja')
+
+    setNotice(
+      'success',
+      reusedExistingAccount ? 'Compte deja existant' : 'Compte cree',
+      apiMessage || "Un email de verification vient de t'etre envoye.",
+    )
+    router.replace({
+      name: 'verify-email',
+      query: { email: signupForm.value.email, existing: reusedExistingAccount ? '1' : undefined },
+    })
   } catch (err) {
     console.error(err)
-
-    // Cas frequent : compte deja cree (conflit 409) -> on renvoie vers la verification
-    if (err?.response?.status === 409 && signupForm.value.email) {
-      setNotice(
-        'success',
-        'Compte deja existant',
-        "Si l'email n'est pas encore confirme, un nouveau lien vient d'etre envoye.",
-      )
-      try {
-        await AuthService.resendVerification({ email: signupForm.value.email })
-      } catch (resendErr) {
-        console.warn('Resend verification failed', resendErr)
-      }
-      router.replace({ name: 'verify-email', query: { email: signupForm.value.email, existing: '1' } })
-      return
-    }
 
     const nextNotice = authErrorNotice(
       err,
