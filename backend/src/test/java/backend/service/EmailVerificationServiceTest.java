@@ -1,8 +1,11 @@
 package backend.service;
 
+import backend.entity.EmailVerificationToken;
+import backend.entity.User;
 import backend.entity.User;
 import backend.repository.EmailVerificationTokenRepository;
 import backend.repository.UserRepository;
+import java.time.Instant;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -82,5 +85,83 @@ class EmailVerificationServiceTest {
     Assertions.assertEquals("Service email non configure", exception.getReason());
     Mockito.verifyNoInteractions(mailSender);
     Mockito.verify(tokenRepository, Mockito.never()).save(Mockito.any());
+  }
+
+  @Test
+  void verifyTokenMarksUserAndTokenAsVerified() {
+    EmailVerificationTokenRepository tokenRepository = Mockito.mock(EmailVerificationTokenRepository.class);
+    UserRepository userRepository = Mockito.mock(UserRepository.class);
+    JavaMailSender mailSender = Mockito.mock(JavaMailSender.class);
+    MockEnvironment environment = new MockEnvironment()
+        .withProperty("spring.mail.host", "smtp.example.com")
+        .withProperty("spring.mail.username", "noreply@example.com");
+
+    EmailVerificationService service = new EmailVerificationService(
+        tokenRepository,
+        userRepository,
+        mailSender,
+        environment,
+        60,
+        "https://mystash.fr/verify-email",
+        ""
+    );
+
+    User user = new User();
+    user.setEmail("test@example.com");
+    user.setProvider("LOCAL");
+    user.setEmailVerified(false);
+
+    EmailVerificationToken token = new EmailVerificationToken();
+    token.setToken("valid-token");
+    token.setUser(user);
+    token.setExpiresAt(Instant.now().plusSeconds(3600));
+
+    Mockito.when(tokenRepository.findByToken("valid-token")).thenReturn(java.util.Optional.of(token));
+
+    User verifiedUser = service.verifyToken("valid-token");
+
+    Assertions.assertSame(user, verifiedUser);
+    Assertions.assertTrue(user.isEmailVerified());
+    Assertions.assertNotNull(token.getUsedAt());
+    Mockito.verify(userRepository).save(user);
+    Mockito.verify(tokenRepository, Mockito.atLeastOnce()).save(token);
+    Mockito.verify(mailSender).send(Mockito.any(org.springframework.mail.SimpleMailMessage.class));
+  }
+
+  @Test
+  void verifyTokenRejectsExpiredTokenWithBadRequest() {
+    EmailVerificationTokenRepository tokenRepository = Mockito.mock(EmailVerificationTokenRepository.class);
+    UserRepository userRepository = Mockito.mock(UserRepository.class);
+    JavaMailSender mailSender = Mockito.mock(JavaMailSender.class);
+    MockEnvironment environment = new MockEnvironment();
+
+    EmailVerificationService service = new EmailVerificationService(
+        tokenRepository,
+        userRepository,
+        mailSender,
+        environment,
+        60,
+        "https://mystash.fr/verify-email",
+        ""
+    );
+
+    User user = new User();
+    user.setEmail("test@example.com");
+
+    EmailVerificationToken token = new EmailVerificationToken();
+    token.setToken("expired-token");
+    token.setUser(user);
+    token.setExpiresAt(Instant.now().minusSeconds(60));
+
+    Mockito.when(tokenRepository.findByToken("expired-token")).thenReturn(java.util.Optional.of(token));
+
+    ResponseStatusException exception = Assertions.assertThrows(
+        ResponseStatusException.class,
+        () -> service.verifyToken("expired-token")
+    );
+
+    Assertions.assertEquals(400, exception.getStatusCode().value());
+    Assertions.assertEquals("Lien invalide ou expire", exception.getReason());
+    Mockito.verify(userRepository, Mockito.never()).save(Mockito.any());
   }
 }

@@ -1,5 +1,6 @@
 package backend.service;
 
+import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -24,9 +25,10 @@ final class TrackingCarrierRules {
       Pattern.compile("^[A-Z]{2}\\d{9}[A-Z]{2}$", Pattern.CASE_INSENSITIVE);
   private static final Pattern CHRONOPOST_15_CHARS_PATTERN =
       Pattern.compile("^\\d{14}[A-Z]$", Pattern.CASE_INSENSITIVE);
-  private static final Set<String> COLISSIMO_TRUSTED_DOMAINS =
-      Set.of("laposte.fr", "colissimo.fr", "suivi.laposte.fr");
+  private static final Set<String> COLISSIMO_TRUSTED_DOMAINS = Set.of("colissimo.fr", "suivi.laposte.fr");
   private static final Set<String> CHRONOPOST_TRUSTED_DOMAINS = Set.of("chronopost.fr");
+  private static final String SHARED_LAPOSTE_DOMAIN = "laposte.fr";
+  private static final String SHARED_LAPOSTE_TRACKING_PATH = "/outils/suivre-vos-envois";
 
   private TrackingCarrierRules() {
   }
@@ -92,27 +94,25 @@ final class TrackingCarrierRules {
           ? "https://www.laposte.fr/outils/suivre-vos-envois?code=" + encode(normalized)
           : null;
       case CHRONOPOST -> matchesChronopostFormat(normalized)
-          ? "https://www.chronopost.fr/tracking-no-cms/suivi-page?listeNumerosLT="
-              + encode(normalized)
-              + "&langue=fr_FR"
+          ? "https://www.laposte.fr/outils/suivre-vos-envois?code=" + encode(normalized)
           : null;
       default -> null;
     };
   }
 
   static String detectCarrierSlugFromUrl(String rawUrl) {
-    if (rawUrl == null || rawUrl.isBlank()) {
+    ParsedTrackingUrl parsedUrl = parseTrackingUrl(rawUrl);
+    if (parsedUrl == null) {
       return null;
     }
-    String normalizedUrl = rawUrl.trim().toLowerCase(Locale.ROOT);
-    if (!normalizedUrl.startsWith("http")) {
-      return null;
+    if (matchesAnyDomain(parsedUrl.host(), CHRONOPOST_TRUSTED_DOMAINS)) {
+      return CHRONOPOST;
     }
-    if (COLISSIMO_TRUSTED_DOMAINS.stream().anyMatch(normalizedUrl::contains)) {
+    if (matchesAnyDomain(parsedUrl.host(), COLISSIMO_TRUSTED_DOMAINS)) {
       return COLISSIMO;
     }
-    if (CHRONOPOST_TRUSTED_DOMAINS.stream().anyMatch(normalizedUrl::contains)) {
-      return CHRONOPOST;
+    if (isSharedLaPosteTrackingUrl(parsedUrl)) {
+      return inferSupportedCarrier(parsedUrl.queryParam("code"));
     }
     return null;
   }
@@ -122,6 +122,26 @@ final class TrackingCarrierRules {
       case COLISSIMO -> COLISSIMO_TRUSTED_DOMAINS;
       case CHRONOPOST -> CHRONOPOST_TRUSTED_DOMAINS;
       default -> Set.of();
+    };
+  }
+
+  static boolean isTrustedTrackingUrl(String rawUrl, String carrierSlug) {
+    String normalizedCarrier = normalizeCarrierSlug(carrierSlug);
+    if (!isSupportedCarrier(normalizedCarrier)) {
+      return false;
+    }
+
+    ParsedTrackingUrl parsedUrl = parseTrackingUrl(rawUrl);
+    if (parsedUrl == null) {
+      return false;
+    }
+
+    return switch (normalizedCarrier) {
+      case COLISSIMO -> matchesAnyDomain(parsedUrl.host(), COLISSIMO_TRUSTED_DOMAINS)
+          || (isSharedLaPosteTrackingUrl(parsedUrl) && matchesColissimoFormat(parsedUrl.queryParam("code")));
+      case CHRONOPOST -> matchesAnyDomain(parsedUrl.host(), CHRONOPOST_TRUSTED_DOMAINS)
+          || (isSharedLaPosteTrackingUrl(parsedUrl) && matchesChronopostFormat(parsedUrl.queryParam("code")));
+      default -> false;
     };
   }
 
@@ -151,7 +171,72 @@ final class TrackingCarrierRules {
         : value.replaceAll("[\\s\\-_.]", "").toUpperCase(Locale.ROOT);
   }
 
+  private static ParsedTrackingUrl parseTrackingUrl(String rawUrl) {
+    if (rawUrl == null || rawUrl.isBlank()) {
+      return null;
+    }
+    try {
+      URI uri = URI.create(rawUrl.trim());
+      String scheme = uri.getScheme();
+      String host = uri.getHost();
+      if (scheme == null || host == null || !scheme.toLowerCase(Locale.ROOT).startsWith("http")) {
+        return null;
+      }
+      return new ParsedTrackingUrl(uri, host.toLowerCase(Locale.ROOT), normalizePath(uri.getPath()));
+    } catch (Exception ignored) {
+      return null;
+    }
+  }
+
+  private static boolean isSharedLaPosteTrackingUrl(ParsedTrackingUrl parsedUrl) {
+    return parsedUrl != null
+        && matchesDomain(parsedUrl.host(), SHARED_LAPOSTE_DOMAIN)
+        && SHARED_LAPOSTE_TRACKING_PATH.equals(parsedUrl.path());
+  }
+
+  private static boolean matchesAnyDomain(String host, Set<String> domains) {
+    if (host == null || domains == null || domains.isEmpty()) {
+      return false;
+    }
+    for (String domain : domains) {
+      if (matchesDomain(host, domain)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static boolean matchesDomain(String host, String domain) {
+    if (host == null || domain == null || domain.isBlank()) {
+      return false;
+    }
+    return host.equals(domain) || host.endsWith("." + domain);
+  }
+
+  private static String normalizePath(String path) {
+    if (path == null || path.isBlank()) {
+      return "/";
+    }
+    return path.endsWith("/") && path.length() > 1 ? path.substring(0, path.length() - 1) : path;
+  }
+
   private static String encode(String trackingNumber) {
     return URLEncoder.encode(trackingNumber.trim(), StandardCharsets.UTF_8);
+  }
+
+  private record ParsedTrackingUrl(URI uri, String host, String path) {
+
+    String queryParam(String name) {
+      if (name == null || name.isBlank() || uri.getQuery() == null || uri.getQuery().isBlank()) {
+        return "";
+      }
+      for (String segment : uri.getQuery().split("&")) {
+        String[] parts = segment.split("=", 2);
+        if (parts.length == 2 && name.equalsIgnoreCase(parts[0])) {
+          return normalizeTrackingNumber(parts[1]);
+        }
+      }
+      return "";
+    }
   }
 }

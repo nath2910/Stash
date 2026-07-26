@@ -176,4 +176,52 @@ class LaPosteTrackingClientTest {
         snapshot.deliveredAt()
     );
   }
+
+  @Test
+  void keepsChronopostCarrierWhenLaposteUnifiedResponseContainsChronopostProduct() throws Exception {
+    MockEnvironment environment = new MockEnvironment();
+    ObjectMapper objectMapper = new ObjectMapper();
+    LaPosteTrackingClient client = new LaPosteTrackingClient(
+        objectMapper,
+        environment
+    );
+
+    Parcel parcel = new Parcel();
+    parcel.setTrackingNumber("XR646836167TS");
+    parcel.setNormalizedTrackingNumber("XR646836167TS");
+    parcel.setCarrierSlug("chronopost");
+
+    Map<String, Object> response = objectMapper.readValue(
+        """
+            {
+              "returnCode": 200,
+              "shipment": {
+                "idShip": "XR646836167TS",
+                "product": "chronopost",
+                "deliveryDate": "2026-07-20T14:25:00+02:00",
+                "event": [
+                  {
+                    "code": "DI1",
+                    "label": "Votre colis a ete livre",
+                    "date": "2026-07-20T14:25:00+02:00"
+                  }
+                ],
+                "url": "https://www.laposte.fr/outils/suivre-vos-envois?code=XR646836167TS"
+              }
+            }
+            """,
+        new TypeReference<>() {}
+    );
+
+    var method = LaPosteTrackingClient.class.getDeclaredMethod("toSnapshot", Parcel.class, Map.class);
+    method.setAccessible(true);
+    TrackingSnapshot snapshot = (TrackingSnapshot) method.invoke(client, parcel, response);
+
+    Assertions.assertEquals("chronopost", snapshot.carrierSlug());
+    Assertions.assertEquals(ParcelStatus.DELIVERED, snapshot.status());
+    Assertions.assertEquals(
+        "https://www.laposte.fr/outils/suivre-vos-envois?code=XR646836167TS",
+        snapshot.trackingUrl()
+    );
+  }
 }

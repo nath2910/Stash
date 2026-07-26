@@ -66,17 +66,20 @@ public class DirectCarrierTrackingService {
       return laPosteTrackingClient.supports(parcel) ? Optional.of(laPosteTrackingClient) : Optional.empty();
     }
     if ("chronopost".equals(carrier)) {
+      if (laPosteTrackingClient.supports(parcel)) {
+        return Optional.of(laPosteTrackingClient);
+      }
       return chronopostTrackingClient.supports(parcel) ? Optional.of(chronopostTrackingClient) : Optional.empty();
     }
     return carrierTrackingClients.stream().filter(client -> client.supports(parcel)).findFirst();
   }
 
   private String unavailableSourceMessage(Parcel parcel, CarrierTrackingClient client) {
-    String baseMessage = switch (normalizedCarrier(parcel)) {
-      case "chronopost" -> "Source Chronopost indisponible";
-      case "colissimo" -> "Source La Poste indisponible";
-      default -> "Source transporteur indisponible";
-    };
+    String baseMessage = client instanceof LaPosteTrackingClient
+        ? "Source La Poste indisponible"
+        : client instanceof ChronopostTrackingClient
+            ? "Source Chronopost indisponible"
+            : "Source transporteur indisponible";
     String detail = unavailableSourceDetail(client);
     if (detail == null || detail.isBlank()) {
       return baseMessage;

@@ -145,6 +145,39 @@ class DirectCarrierTrackingServiceTest {
     );
   }
 
+  @Test
+  void routesChronopostParcelsToLaPosteFirst() {
+    LaPosteTrackingClient laPosteTrackingClient = Mockito.mock(LaPosteTrackingClient.class);
+    ChronopostTrackingClient chronopostTrackingClient = Mockito.mock(ChronopostTrackingClient.class);
+    ParcelTrackingUpdateService updateService = Mockito.mock(ParcelTrackingUpdateService.class);
+    ParcelRepository parcelRepository = Mockito.mock(ParcelRepository.class);
+    Parcel parcel = parcel(16L);
+    parcel.setCarrierSlug("chronopost");
+    parcel.setTrackingNumber("XR646836167TS");
+    parcel.setNormalizedTrackingNumber("XR646836167TS");
+
+    Mockito.when(laPosteTrackingClient.supports(parcel)).thenReturn(true);
+    Mockito.when(laPosteTrackingClient.isConfigured()).thenReturn(false);
+    Mockito.when(laPosteTrackingClient.unavailableReason()).thenReturn("Chrome ou Chromium absent du runtime backend");
+    Mockito.when(parcelRepository.save(parcel)).thenReturn(parcel);
+
+    DirectCarrierTrackingService service = new DirectCarrierTrackingService(
+        laPosteTrackingClient,
+        chronopostTrackingClient,
+        updateService,
+        parcelRepository
+    );
+
+    service.refreshTracking(parcel);
+
+    Mockito.verify(updateService).markLocalFallback(
+        Mockito.eq(parcel),
+        Mockito.eq(DirectCarrierTrackingService.PROVIDER),
+        Mockito.eq("Source La Poste indisponible: Chrome ou Chromium absent du runtime backend")
+    );
+    Mockito.verifyNoInteractions(chronopostTrackingClient);
+  }
+
   private Parcel parcel(Long id) {
     Parcel parcel = new Parcel();
     parcel.setId(id);

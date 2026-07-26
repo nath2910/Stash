@@ -104,4 +104,41 @@ class BrowserTrackingFallbackClientsTest {
     );
     Assertions.assertNotNull(snapshot.deliveredAt());
   }
+
+  @Test
+  void laposteBrowserSnapshotKeepsChronopostCarrierWhenUnifiedPageReturnsChronopostProduct() {
+    Parcel parcel = new Parcel();
+    parcel.setCarrierSlug("chronopost");
+    parcel.setTrackingNumber("XR646836167TS");
+    parcel.setNormalizedTrackingNumber("XR646836167TS");
+
+    TrackingSnapshot snapshot = LaPosteTrackingClient.toBrowserSnapshot(
+        parcel,
+        new BrowserTrackingScriptRunner.BrowserPagePayload(
+            "local_browser",
+            "Suivi de ma lettre ou mon colis - La Poste",
+            """
+                Numero de suivi: XR646836167TS
+                Produit: chronopost
+                Statut: Votre colis a ete livre
+                Livraison: 2026-07-20T14:25:00+02:00
+                2026-07-20T14:25:00+02:00 Votre colis a ete livre
+                """,
+            """
+                <div class="tracking-provider" data-provider="laposte" data-product="chronopost">
+                  <div class="tracking-status">Votre colis a ete livre</div>
+                  <div class="tracking-event">2026-07-20T14:25:00+02:00 Votre colis a ete livre</div>
+                  <script type="application/json" data-role="laposte-tracking-response">
+                    {"shipment":{"product":"chronopost","deliveryDate":"2026-07-20T14:25:00+02:00"}}
+                  </script>
+                </div>
+                """,
+            "https://www.laposte.fr/outils/suivre-vos-envois?code=XR646836167TS"
+        )
+    );
+
+    Assertions.assertEquals(ParcelStatus.DELIVERED, snapshot.status());
+    Assertions.assertEquals("chronopost", snapshot.carrierSlug());
+    Assertions.assertEquals("Chronopost", snapshot.shipmentType());
+  }
 }

@@ -33,10 +33,25 @@ class TrackingCarrierRulesTest {
         TrackingCarrierRules.officialTrackingUrl("colissimo", "LA123456789FR")
     );
     Assertions.assertEquals(
-        "https://www.chronopost.fr/tracking-no-cms/suivi-page?listeNumerosLT=XR646836167TS&langue=fr_FR",
+        "https://www.laposte.fr/outils/suivre-vos-envois?code=XR646836167TS",
         TrackingCarrierRules.officialTrackingUrl("chronopost", "XR646836167TS")
     );
     Assertions.assertEquals(List.of("colissimo", "chronopost"), TrackingCarrierRules.matchSupportedCarriers("LA123456789FR"));
     Assertions.assertEquals(List.of("colissimo", "chronopost"), TrackingCarrierRules.matchSupportedCarriers("05308083313940F"));
+  }
+
+  @Test
+  void sharedLaposteTrackingUrlDetectsCarrierOnlyWhenCodeIsUnambiguous() {
+    Assertions.assertEquals(
+        "chronopost",
+        TrackingCarrierRules.detectCarrierSlugFromUrl(
+            "https://www.laposte.fr/outils/suivre-vos-envois?code=XR646836167TS"
+        )
+    );
+    Assertions.assertNull(
+        TrackingCarrierRules.detectCarrierSlugFromUrl(
+            "https://www.laposte.fr/outils/suivre-vos-envois?code=05308083313940F"
+        )
+    );
   }
 }

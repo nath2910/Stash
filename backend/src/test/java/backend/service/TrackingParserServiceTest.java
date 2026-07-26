@@ -143,4 +143,20 @@ class TrackingParserServiceTest {
     Assertions.assertEquals("XR646836167TS", result.autoImportCandidates().get(0).normalizedTrackingNumber());
     Assertions.assertEquals("IN_TRANSIT", result.autoImportCandidates().get(0).rawStatus());
   }
+
+  @Test
+  void acceptsUnifiedLaposteTrackingLinkForChronopost() {
+    TrackingDetectionResult result = parser.detectChronopost(
+        "Chronopost <noreply@chronopost.fr>",
+        "Suivi Chronopost",
+        "Suivre mon colis : https://www.laposte.fr/outils/suivre-vos-envois?code=XR646836167TS"
+    );
+
+    Assertions.assertEquals(1, result.autoImportCandidates().size());
+    Assertions.assertEquals(
+        "https://www.laposte.fr/outils/suivre-vos-envois?code=XR646836167TS",
+        result.autoImportCandidates().get(0).trackingUrl()
+    );
+    Assertions.assertEquals("chronopost", result.autoImportCandidates().get(0).carrierSlug());
+  }
 }

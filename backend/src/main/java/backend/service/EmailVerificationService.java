@@ -12,6 +12,7 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
 import org.slf4j.Logger;
@@ -91,6 +92,7 @@ public class EmailVerificationService {
     sendVerification(userOpt.get());
   }
 
+  @Transactional
   public User verifyToken(String token) {
     if (token == null || token.isBlank()) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Token manquant");

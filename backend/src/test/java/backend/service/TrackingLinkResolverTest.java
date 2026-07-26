@@ -32,7 +32,7 @@ class TrackingLinkResolverTest {
     Assertions.assertEquals(
         "chronopost",
         TrackingLinkResolver.detectCarrierSlug(
-            "https://www.chronopost.fr/tracking-no-cms/suivi-page?listeNumerosLT=XR646836167TS&langue=fr_FR"
+            "https://www.laposte.fr/outils/suivre-vos-envois?code=XR646836167TS"
         )
     );
   }
@@ -40,9 +40,9 @@ class TrackingLinkResolverTest {
   @Test
   void keepsTrustedChronopostTrackingUrl() {
     Assertions.assertEquals(
-        "https://www.chronopost.fr/tracking-no-cms/suivi-page?listeNumerosLT=XR646836167TS&langue=fr_FR",
+        "https://www.laposte.fr/outils/suivre-vos-envois?code=XR646836167TS",
         TrackingLinkResolver.preferredTrackingUrl(
-            "https://www.chronopost.fr/tracking-no-cms/suivi-page?listeNumerosLT=XR646836167TS&langue=fr_FR",
+            "https://www.laposte.fr/outils/suivre-vos-envois?code=XR646836167TS",
             "chronopost",
             "XR646836167TS"
         )
@@ -64,7 +64,7 @@ class TrackingLinkResolverTest {
   @Test
   void fallsBackToOfficialChronopostUrlWhenRawUrlIsUntrusted() {
     Assertions.assertEquals(
-        "https://www.chronopost.fr/tracking-no-cms/suivi-page?listeNumerosLT=XR646836167TS&langue=fr_FR",
+        "https://www.laposte.fr/outils/suivre-vos-envois?code=XR646836167TS",
         TrackingLinkResolver.preferredTrackingUrl(
             "https://example.com/track/XR646836167TS",
             "chronopost",

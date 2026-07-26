@@ -8,7 +8,7 @@
           <div
             class="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-300"
           >
-            <span v-if="status === 'success'" class="text-2xl">✓</span>
+            <span v-if="status === 'success'" class="text-2xl">OK</span>
             <span v-else-if="status === 'error'" class="text-2xl">!</span>
             <div v-else class="spinner-ring"></div>
           </div>
@@ -33,7 +33,7 @@
           <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
             <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Etape 2</p>
             <p class="mt-2 font-medium text-slate-200">Clique sur le lien de validation</p>
-            <p class="mt-1 text-xs text-slate-400">Pense a vérifiér les spams.</p>
+            <p class="mt-1 text-xs text-slate-400">Pense a verifier les spams.</p>
           </div>
         </div>
 
@@ -76,7 +76,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AuthService from '@/services/AuthService'
 import { useAuthStore } from '@/store/authStore'
@@ -87,31 +87,34 @@ const auth = useAuthStore()
 
 const status = ref('pending')
 const errorMessage = ref('')
+const errorKind = ref('')
 const resendLoading = ref(false)
 const resendMessage = ref('')
 
 const token = computed(() => (route.query.token || route.params.token || '').toString())
-// L'email est optionnel ici; il sert seulement au bouton de renvoi.
 const email = computed(() => (route.query.email || '').toString())
-
 const emailLabel = computed(() => (email.value ? email.value : 'ton adresse'))
 
 const title = computed(() => {
   if (status.value === 'success') return 'Email confirme'
-  if (status.value === 'error') return 'Lien invalide'
+  if (status.value === 'error') {
+    return errorKind.value === 'invalid-link' ? 'Lien invalide' : 'Erreur de verification'
+  }
   if (token.value) return 'Verification en cours'
   return 'En attente de confirmation'
 })
 
 const description = computed(() => {
   if (status.value === 'success') {
-    return "Top. Ton compte est pret, tu peux te connecter tout de suite."
+    return 'Top. Ton compte est pret, tu peux te connecter tout de suite.'
   }
   if (status.value === 'error') {
-    return "Ce lien n'est plus valide. Recommence l'inscription ou demande un nouvel email."
+    return errorKind.value === 'invalid-link'
+      ? "Ce lien n'est plus valide. Recommence l'inscription ou demande un nouvel email."
+      : "La verification a echoue a cause d'un probleme serveur. Reessaie plus tard ou demande un nouvel email."
   }
   if (token.value) {
-    return "On vérifié ton lien de confirmation. Cela prend quelques secondes."
+    return 'On verifie ton lien de confirmation. Cela prend quelques secondes.'
   }
   return "On t'a envoye un email avec un lien de confirmation. Clique dessus pour activer ton compte."
 })
@@ -124,6 +127,7 @@ const verify = async () => {
 
   status.value = 'loading'
   errorMessage.value = ''
+  errorKind.value = ''
 
   try {
     const payload = await AuthService.verifyEmail({ token: token.value })
@@ -135,8 +139,9 @@ const verify = async () => {
   } catch (err) {
     console.error(err)
     status.value = 'error'
+    errorKind.value = err.response?.status === 400 ? 'invalid-link' : 'server-error'
     errorMessage.value =
-      err.response?.data?.message || err.message || "Impossible de vérifiér l'email."
+      err.response?.data?.message || err.message || "Impossible de verifier l'email."
   }
 }
 
@@ -144,8 +149,10 @@ const resendEmail = async () => {
   if (!email.value) {
     return
   }
+
   resendLoading.value = true
   resendMessage.value = ''
+
   try {
     await AuthService.resendVerification({ email: email.value })
     resendMessage.value = 'Email de verification renvoye.'
@@ -188,7 +195,6 @@ const onStorage = (event) => {
 onMounted(() => {
   window.addEventListener('storage', onStorage)
   verify()
-  // Si l'autre onglet a deja mis le token avant l'event storage
   handleLoginFromStorage()
 })
 

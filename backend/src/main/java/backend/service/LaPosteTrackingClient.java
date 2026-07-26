@@ -58,7 +58,7 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
       if ("prod".equalsIgnoreCase(profile) && !isConfigured()) {
         String reason = unavailableReason();
         log.warn(
-            "Colissimo tracking source is not configured in prod: {}",
+            "La Poste tracking source is not configured in prod: {}",
             reason == null ? "provide a supported local browser runtime to enable live La Poste refreshes" : reason
         );
         return;
@@ -68,7 +68,18 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
 
   @Override
   public boolean supports(Parcel parcel) {
-    return TrackingCarrierRules.isValidForCarrier(normalizedTracking(parcel), "colissimo");
+    String trackingNumber = normalizedTracking(parcel);
+    if (trackingNumber.isBlank()) {
+      return false;
+    }
+
+    String carrier = resolvedCarrier(parcel);
+    if (TrackingCarrierRules.isSupportedCarrier(carrier)) {
+      return TrackingCarrierRules.isValidForCarrier(trackingNumber, carrier);
+    }
+
+    String inferredCarrier = TrackingCarrierRules.inferSupportedCarrier(trackingNumber);
+    return TrackingCarrierRules.isSupportedCarrier(inferredCarrier);
   }
 
   @Override
@@ -247,7 +258,7 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
   }
 
   private String canonicalCarrier(String existingCarrier, String product) {
-    return "colissimo";
+    return canonicalCarrierStatic(existingCarrier, product);
   }
 
   private String fallbackTrackingUrl(Parcel parcel) {
@@ -255,23 +266,31 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
   }
 
   private String fallbackTrackingUrl(Parcel parcel, String product) {
+    String carrier = canonicalCarrier(parcel == null ? null : parcel.getCarrierSlug(), product);
     String trustedUrl = rawTrackingUrl(parcel);
-    if (TrackingLinkResolver.isTrustedTrackingUrl(trustedUrl, "colissimo")) {
+    if (TrackingLinkResolver.isTrustedTrackingUrl(trustedUrl, carrier)) {
       return trustedUrl.trim();
     }
-    return TrackingLinkResolver.fallbackTrackingUrl("colissimo", parcel.getTrackingNumber());
+    return TrackingLinkResolver.fallbackTrackingUrl(
+        carrier,
+        parcel == null ? null : TrackingBrowserPageSupport.firstNonBlank(
+            parcel.getTrackingNumber(),
+            parcel.getNormalizedTrackingNumber()
+        )
+    );
   }
 
   private static String browserFallbackTrackingUrl(Parcel parcel) {
+    String carrier = browserResolvedCarrier(parcel);
     String trustedUrl = rawTrackingUrlStatic(parcel);
-    if (TrackingLinkResolver.isTrustedTrackingUrl(trustedUrl, "colissimo")) {
+    if (TrackingLinkResolver.isTrustedTrackingUrl(trustedUrl, carrier)) {
       return trustedUrl.trim();
     }
     String trackingNumber = parcel == null ? null : TrackingBrowserPageSupport.firstNonBlank(
         parcel.getTrackingNumber(),
         parcel.getNormalizedTrackingNumber()
     );
-    return TrackingLinkResolver.fallbackTrackingUrl("colissimo", trackingNumber);
+    return TrackingLinkResolver.fallbackTrackingUrl(carrier, trackingNumber);
   }
 
   private Optional<TrackingSnapshot> fetchFromBrowserPage(Parcel parcel) {
@@ -354,7 +373,7 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
         TrackingBrowserPageSupport.firstNonBlank(payload.currentUrl(), browserFallbackTrackingUrl(parcel)),
         null,
         null,
-        "Colissimo / La Poste",
+        browserShipmentType(parcel, payload),
         null,
         rawPayload,
         events
@@ -439,7 +458,7 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
   }
 
   private String normalizedCarrier(Parcel parcel) {
-    return parcel.getCarrierSlug() == null ? "" : parcel.getCarrierSlug().trim().toLowerCase(Locale.ROOT);
+    return parcel == null ? "" : resolvedCarrier(parcel);
   }
 
   private String rawTrackingUrl(Parcel parcel) {
@@ -556,12 +575,18 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
   }
 
   private static String canonicalBrowserCarrier(Parcel parcel, BrowserTrackingScriptRunner.BrowserPagePayload payload) {
-    return "colissimo";
+    return canonicalCarrierStatic(browserResolvedCarrier(parcel), extractBrowserProduct(payload));
   }
 
   private static String extractBrowserProduct(BrowserTrackingScriptRunner.BrowserPagePayload payload) {
     String html = payload == null || payload.html() == null ? "" : payload.html().toLowerCase(Locale.ROOT);
     String text = payload == null || payload.text() == null ? "" : payload.text().toLowerCase(Locale.ROOT);
+    if (html.contains("data-product=\"chronopost\"") || html.contains("\"product\":\"chronopost\"")) {
+      return "chronopost";
+    }
+    if (text.contains("produit: chronopost")) {
+      return "chronopost";
+    }
     if (html.contains("data-product=\"colissimo\"") || html.contains("\"product\":\"colissimo\"")) {
       return "colissimo";
     }
@@ -628,5 +653,55 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
     if (value != null && !value.isBlank()) {
       target.put(key, value);
     }
+  }
+
+  private String resolvedCarrier(Parcel parcel) {
+    String normalized = TrackingCarrierRules.normalizeCarrierSlug(parcel == null ? null : parcel.getCarrierSlug());
+    if (TrackingCarrierRules.isSupportedCarrier(normalized)) {
+      return normalized;
+    }
+    return browserResolvedCarrier(parcel);
+  }
+
+  private static String browserResolvedCarrier(Parcel parcel) {
+    String normalized = TrackingCarrierRules.normalizeCarrierSlug(parcel == null ? null : parcel.getCarrierSlug());
+    if (TrackingCarrierRules.isSupportedCarrier(normalized)) {
+      return normalized;
+    }
+
+    String detectedFromUrl = TrackingLinkResolver.detectCarrierSlug(rawTrackingUrlStatic(parcel));
+    if (TrackingCarrierRules.isSupportedCarrier(detectedFromUrl)) {
+      return detectedFromUrl;
+    }
+
+    String trackingNumber = parcel == null ? null : TrackingBrowserPageSupport.firstNonBlank(
+        parcel.getNormalizedTrackingNumber(),
+        parcel.getTrackingNumber()
+    );
+    String inferred = TrackingCarrierRules.inferSupportedCarrier(trackingNumber);
+    return TrackingCarrierRules.isSupportedCarrier(inferred) ? inferred : "colissimo";
+  }
+
+  private static String canonicalCarrierStatic(String existingCarrier, String product) {
+    String normalizedProduct = TrackingCarrierRules.normalizeCarrierSlug(product);
+    if (TrackingCarrierRules.isSupportedCarrier(normalizedProduct)) {
+      return normalizedProduct;
+    }
+
+    String normalizedExisting = TrackingCarrierRules.normalizeCarrierSlug(existingCarrier);
+    if (TrackingCarrierRules.isSupportedCarrier(normalizedExisting)) {
+      return normalizedExisting;
+    }
+
+    String productText = product == null ? "" : product.toLowerCase(Locale.ROOT);
+    if (productText.contains("chronopost")) {
+      return "chronopost";
+    }
+    return "colissimo";
+  }
+
+  private static String browserShipmentType(Parcel parcel, BrowserTrackingScriptRunner.BrowserPagePayload payload) {
+    String carrier = canonicalBrowserCarrier(parcel, payload);
+    return "chronopost".equals(carrier) ? "Chronopost" : "Colissimo / La Poste";
   }
 }

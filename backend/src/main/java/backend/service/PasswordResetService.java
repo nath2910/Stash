@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -93,6 +94,7 @@ public class PasswordResetService {
     logger.info("Password reset email queued for {}", user.getEmail());
   }
 
+  @Transactional
   public void resetPassword(ResetPasswordRequest request) {
     if (request == null || request.getToken() == null || request.getToken().isBlank()) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Token manquant");
