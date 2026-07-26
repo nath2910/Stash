@@ -153,6 +153,60 @@ class DeliveryTrackingServiceTest {
   }
 
   @Test
+  void createManualKeepsParcelWhenLiveTrackingRefreshFails() {
+    User user = Mockito.mock(User.class);
+    Parcel savedParcel = new Parcel();
+    savedParcel.setId(92L);
+    savedParcel.setTrackingNumber("6Y11138575506");
+    savedParcel.setNormalizedTrackingNumber("6Y11138575506");
+    savedParcel.setCarrierSlug("colissimo");
+
+    Mockito.when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+    Mockito.when(parcelRepository.findByUser_IdAndNormalizedTrackingNumberAndCarrierSlug(
+        1L,
+        "6Y11138575506",
+        "colissimo"
+    )).thenReturn(Optional.empty());
+    Mockito.when(parcelRepository.saveAndFlush(Mockito.any(Parcel.class))).thenReturn(savedParcel);
+    Mockito.doThrow(new IllegalStateException("tracking failed"))
+        .when(trackingAggregatorService).registerTracking(savedParcel);
+    Mockito.when(parcelRepository.findById(92L)).thenReturn(Optional.of(savedParcel));
+    Mockito.when(parcelRepository.save(Mockito.any(Parcel.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+    var response = service.createManual(1L, new ParcelCreateRequest("6Y11138575506", "colissimo", null));
+
+    Assertions.assertEquals(92L, response.id());
+    Assertions.assertEquals(ParcelStatus.REGISTERED, response.status());
+    Assertions.assertEquals("Statut Colissimo indisponible", response.statusLabel());
+  }
+
+  @Test
+  void createManualReturnsExistingParcelWhenRefreshFails() {
+    Parcel existing = new Parcel();
+    existing.setId(93L);
+    existing.setTrackingNumber("XR646836167TS");
+    existing.setNormalizedTrackingNumber("XR646836167TS");
+    existing.setCarrierSlug("chronopost");
+    existing.setStatus(ParcelStatus.PENDING);
+
+    Mockito.when(parcelRepository.findByUser_IdAndNormalizedTrackingNumberAndCarrierSlug(
+        1L,
+        "XR646836167TS",
+        "chronopost"
+    )).thenReturn(Optional.of(existing));
+    Mockito.when(parcelRepository.findById(93L)).thenReturn(Optional.of(existing));
+    Mockito.doThrow(new IllegalStateException("tracking failed"))
+        .when(trackingAggregatorService).refreshTracking(existing);
+    Mockito.when(parcelRepository.save(Mockito.any(Parcel.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+    var response = service.createManual(1L, new ParcelCreateRequest("XR646836167TS", "chronopost", null));
+
+    Assertions.assertEquals(93L, response.id());
+    Assertions.assertEquals(ParcelStatus.REGISTERED, response.status());
+    Assertions.assertEquals("Statut Chronopost indisponible", response.statusLabel());
+  }
+
+  @Test
   void refreshAllRefreshesOnlyActiveManagedParcels() {
     Parcel first = new Parcel();
     first.setId(51L);

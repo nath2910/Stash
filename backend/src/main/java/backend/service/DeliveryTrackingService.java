@@ -37,6 +37,7 @@ public class DeliveryTrackingService {
   private static final String COLISSIMO = "colissimo";
   private static final String CHRONOPOST = "chronopost";
   private static final String RAW_STATUS_AVAILABLE_FOR_PICKUP = "AVAILABLE_FOR_PICKUP";
+  private static final String MANUAL_TRACKING_REFRESH_FAILED_REASON = "manual_create";
   private static final String SUPPORTED_TRACKING_MESSAGE =
       "Ce numero ne correspond pas a un format Colissimo ou Chronopost reconnu.";
 
@@ -147,9 +148,16 @@ public class DeliveryTrackingService {
         carrierSlug + "_manual"
     );
 
+    log.info(
+        "Manual parcel creation requested by user {} for {} ({})",
+        userId,
+        normalizedTrackingNumber,
+        carrierSlug
+    );
+
     Parcel parcel = existingParcel.orElseGet(() -> createParcel(userId, null, manualCandidate, null));
     if (existingParcel.isPresent()) {
-      trackingAggregatorService.refreshTracking(parcel);
+      parcel = refreshTrackingSafely(userId, parcel, "manual_refresh_existing");
     }
 
     return ParcelResponse.fromEntity(parcel, parcelEventRepository.findByParcel_IdOrderByEventTimeDesc(parcel.getId()));
@@ -325,8 +333,7 @@ public class DeliveryTrackingService {
 
     try {
       Parcel saved = parcelRepository.saveAndFlush(parcel);
-      trackingAggregatorService.registerTracking(saved);
-      return parcelRepository.findById(saved.getId()).orElse(saved);
+      return registerTrackingSafely(userId, saved, MANUAL_TRACKING_REFRESH_FAILED_REASON);
     } catch (DataIntegrityViolationException ex) {
       clearPersistenceContextAfterFailedFlush();
       return parcelRepository.findByUser_IdAndNormalizedTrackingNumberAndCarrierSlug(
@@ -336,6 +343,65 @@ public class DeliveryTrackingService {
           )
           .orElseThrow(() -> ex);
     }
+  }
+
+  private Parcel registerTrackingSafely(Long userId, Parcel parcel, String context) {
+    if (parcel == null || parcel.getId() == null) {
+      return parcel;
+    }
+    try {
+      trackingAggregatorService.registerTracking(parcel);
+      return parcelRepository.findById(parcel.getId()).orElse(parcel);
+    } catch (Exception ex) {
+      log.warn(
+          "Live tracking refresh failed during {} for user {} parcel {} ({})",
+          context,
+          userId,
+          parcel.getId(),
+          parcel.getTrackingNumber(),
+          ex
+      );
+      return persistLocalTrackingFallback(parcel);
+    }
+  }
+
+  private Parcel refreshTrackingSafely(Long userId, Parcel parcel, String context) {
+    if (parcel == null || parcel.getId() == null) {
+      return parcel;
+    }
+    try {
+      return trackingAggregatorService.refreshTracking(parcel);
+    } catch (Exception ex) {
+      log.warn(
+          "Live tracking refresh failed during {} for user {} parcel {} ({})",
+          context,
+          userId,
+          parcel.getId(),
+          parcel.getTrackingNumber(),
+          ex
+      );
+      return persistLocalTrackingFallback(parcel);
+    }
+  }
+
+  private Parcel persistLocalTrackingFallback(Parcel parcel) {
+    Parcel managed = parcel == null || parcel.getId() == null
+        ? parcel
+        : parcelRepository.findById(parcel.getId()).orElse(parcel);
+    if (managed == null) {
+      return null;
+    }
+    if (managed.getStatus() == null
+        || managed.getStatus() == ParcelStatus.PENDING
+        || managed.getStatus() == ParcelStatus.INCOMPLETE) {
+      managed.setStatus(ParcelStatus.REGISTERED);
+    }
+    if (managed.getStatusLabel() == null
+        || managed.getStatusLabel().isBlank()
+        || managed.getStatusLabel().toLowerCase().contains("selon email")) {
+      managed.setStatusLabel(unavailableTrackingLabel(managed.getCarrierSlug()));
+    }
+    return managed.getId() == null ? managed : parcelRepository.save(managed);
   }
 
   private MailTrackingCandidate saveMailCandidate(
@@ -598,5 +664,16 @@ public class DeliveryTrackingService {
     } catch (Exception ignored) {
       // Best-effort cleanup after a failed flush.
     }
+  }
+
+  private String unavailableTrackingLabel(String carrierSlug) {
+    String normalizedCarrier = normalizeSupportedCarrier(carrierSlug);
+    if (CHRONOPOST.equals(normalizedCarrier)) {
+      return "Statut Chronopost indisponible";
+    }
+    if (COLISSIMO.equals(normalizedCarrier)) {
+      return "Statut Colissimo indisponible";
+    }
+    return "Statut transporteur indisponible";
   }
 }
