@@ -21,6 +21,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -30,6 +32,7 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class DeliveryTrackingService {
 
+  private static final Logger log = LoggerFactory.getLogger(DeliveryTrackingService.class);
   private static final String COLISSIMO = "colissimo";
   private static final String CHRONOPOST = "chronopost";
   private static final String RAW_STATUS_AVAILABLE_FOR_PICKUP = "AVAILABLE_FOR_PICKUP";
@@ -61,10 +64,12 @@ public class DeliveryTrackingService {
 
   @Transactional(readOnly = true)
   public List<ParcelResponse> listForUser(Long userId) {
+    long startedAt = System.currentTimeMillis();
     List<Parcel> parcels = parcelRepository.findByUser_IdOrderByUpdatedAtDesc(userId).stream()
         .filter(this::isManagedCarrierParcel)
         .toList();
     if (parcels.isEmpty()) {
+      logSlowParcelList(userId, 0, startedAt);
       return List.of();
     }
 
@@ -74,9 +79,11 @@ public class DeliveryTrackingService {
       eventsByParcelId.computeIfAbsent(event.getParcel().getId(), ignored -> new ArrayList<>()).add(event);
     }
 
-    return parcels.stream()
+    List<ParcelResponse> responses = parcels.stream()
         .map(parcel -> ParcelResponse.fromEntity(parcel, eventsByParcelId.getOrDefault(parcel.getId(), List.of())))
         .toList();
+    logSlowParcelList(userId, responses.size(), startedAt);
+    return responses;
   }
 
   @Transactional(readOnly = true)
@@ -561,5 +568,18 @@ public class DeliveryTrackingService {
   }
 
   public record MailCandidateImportResult(Parcel parcel, boolean imported) {
+  }
+
+  private void logSlowParcelList(Long userId, int parcelCount, long startedAt) {
+    long durationMs = System.currentTimeMillis() - startedAt;
+    if (durationMs < 3000) {
+      return;
+    }
+    log.warn(
+        "Delivery parcel listing was slow for user {}: {} parcel(s) loaded in {} ms",
+        userId,
+        parcelCount,
+        durationMs
+    );
   }
 }

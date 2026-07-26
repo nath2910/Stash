@@ -4,12 +4,15 @@ import backend.entity.Parcel;
 import backend.repository.ParcelRepository;
 import java.util.List;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class DirectCarrierTrackingService {
 
+  private static final Logger log = LoggerFactory.getLogger(DirectCarrierTrackingService.class);
   public static final String PROVIDER = "DIRECT_CARRIER";
 
   private final LaPosteTrackingClient laPosteTrackingClient;
@@ -40,22 +43,27 @@ public class DirectCarrierTrackingService {
     if (parcel == null || parcel.getId() == null) {
       return parcel;
     }
+    long startedAt = System.currentTimeMillis();
     Optional<CarrierTrackingClient> resolvedClient = resolveClient(parcel);
     if (resolvedClient.isEmpty()) {
       parcelTrackingUpdateService.markLocalFallback(parcel, PROVIDER, "Transporteur non gere pour le suivi direct");
+      logSlowRefresh(parcel, "none", startedAt, "unsupported");
       return parcelRepository.save(parcel);
     }
     CarrierTrackingClient client = resolvedClient.get();
     if (!client.isConfigured()) {
       parcelTrackingUpdateService.markLocalFallback(parcel, PROVIDER, unavailableSourceMessage(parcel, client));
+      logSlowRefresh(parcel, clientName(client), startedAt, "not_configured");
       return parcelRepository.save(parcel);
     }
 
     Optional<TrackingSnapshot> snapshot = client.fetchTracking(parcel);
     if (snapshot.isPresent()) {
       parcelTrackingUpdateService.applySnapshot(parcel, snapshot.get());
+      logSlowRefresh(parcel, clientName(client), startedAt, "snapshot");
     } else {
       parcelTrackingUpdateService.markLocalFallback(parcel, PROVIDER, unavailableStatusMessage(parcel));
+      logSlowRefresh(parcel, clientName(client), startedAt, "empty");
     }
     return parcelRepository.save(parcel);
   }
@@ -104,5 +112,25 @@ public class DirectCarrierTrackingService {
       return laPosteTrackingClient.unavailableReason();
     }
     return null;
+  }
+
+  private void logSlowRefresh(Parcel parcel, String clientName, long startedAt, String outcome) {
+    long durationMs = System.currentTimeMillis() - startedAt;
+    if (durationMs < 5000) {
+      return;
+    }
+    log.warn(
+        "Delivery tracking refresh was slow for parcel {} ({}), carrier {}, client {}, outcome {}, duration {} ms",
+        parcel.getId(),
+        parcel.getTrackingNumber(),
+        normalizedCarrier(parcel),
+        clientName,
+        outcome,
+        durationMs
+    );
+  }
+
+  private String clientName(CarrierTrackingClient client) {
+    return client == null ? "none" : client.getClass().getSimpleName();
   }
 }
