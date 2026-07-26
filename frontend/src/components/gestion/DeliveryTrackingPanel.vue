@@ -690,6 +690,46 @@ const requestErrorMessage = (error, fallbackMessage, timeoutMessage) => {
   return fallbackMessage
 }
 
+const replaceParcelInList = (nextParcel) => {
+  if (!nextParcel?.id) {
+    return false
+  }
+  const exists = parcels.value.some((parcel) => parcel.id === nextParcel.id)
+  parcels.value = exists
+    ? parcels.value.map((parcel) => (parcel.id === nextParcel.id ? nextParcel : parcel))
+    : [nextParcel, ...parcels.value]
+  return true
+}
+
+const refreshParcelsWithConcurrency = async (parcelIds, concurrency = 2) => {
+  const ids = Array.from(new Set((parcelIds || []).filter(Boolean)))
+  if (!ids.length) {
+    return []
+  }
+
+  const results = new Array(ids.length)
+  let cursor = 0
+
+  const worker = async () => {
+    while (cursor < ids.length) {
+      const currentIndex = cursor
+      cursor += 1
+      const parcelId = ids[currentIndex]
+
+      try {
+        const { data } = await DeliveryTrackingService.refreshParcel(parcelId)
+        results[currentIndex] = { ok: true, parcelId, data }
+      } catch (error) {
+        results[currentIndex] = { ok: false, parcelId, error }
+      }
+    }
+  }
+
+  const workerCount = Math.max(1, Math.min(concurrency, ids.length))
+  await Promise.all(Array.from({ length: workerCount }, () => worker()))
+  return results
+}
+
 const loadMailAccounts = async () => {
   accountsLoading.value = true
   accountsError.value = ''
@@ -769,7 +809,11 @@ const handleRefreshAction = async () => {
 }
 
 const refreshAllParcelStatuses = async () => {
-  if (!parcels.value.length) {
+  const parcelIds = parcels.value
+    .filter((parcel) => parcel?.id && isActiveParcelStatus(parcel?.status))
+    .map((parcel) => parcel.id)
+
+  if (!parcelIds.length) {
     await refreshAll()
     return
   }
@@ -777,16 +821,62 @@ const refreshAllParcelStatuses = async () => {
   refreshingAllParcels.value = true
   parcelsError.value = ''
   try {
-    const { data } = await DeliveryTrackingService.refreshAllParcels()
-    parcels.value = Array.isArray(data) ? data : []
+    const results = await refreshParcelsWithConcurrency(parcelIds, 2)
+    let refreshedCount = 0
+    let failedCount = 0
+    let reloadRequired = false
+    let firstError = null
+
+    for (const result of results) {
+      if (!result) {
+        continue
+      }
+      if (!result.ok) {
+        failedCount += 1
+        firstError ||= result.error
+        continue
+      }
+      if (replaceParcelInList(result.data)) {
+        refreshedCount += 1
+      } else {
+        reloadRequired = true
+      }
+    }
+
+    if (reloadRequired) {
+      await loadParcels()
+      refreshedCount = parcels.value.filter((parcel) => parcel?.id && parcelIds.includes(parcel.id)).length
+    }
+
     if (selectedParcelId.value && !parcels.value.some((parcel) => parcel.id === selectedParcelId.value)) {
       selectedParcelId.value = parcels.value[0]?.id ?? null
     }
-    lastSuccessfulSyncAt.value = new Date().toISOString()
+    if (refreshedCount > 0 || reloadRequired) {
+      lastSuccessfulSyncAt.value = new Date().toISOString()
+    }
+
+    if (failedCount && !refreshedCount) {
+      parcelsError.value = requestErrorMessage(
+        firstError,
+        'Mise a jour globale des suivis impossible',
+        'Au moins un suivi met trop de temps a repondre en production.',
+      )
+      return
+    }
+
+    if (failedCount) {
+      showFeedbackToast({
+        kind: 'warning',
+        title: 'Mise a jour partielle',
+        message: `${refreshedCount} colis mis a jour, ${failedCount} en attente ou en echec.`,
+      })
+      return
+    }
+
     showFeedbackToast({
       kind: 'success',
       title: 'Suivis mis a jour',
-      message: `${parcels.value.length} colis rafraichi(s).`,
+      message: `${refreshedCount} colis rafraichi(s).`,
     })
   } catch (error) {
     parcelsError.value = requestErrorMessage(
