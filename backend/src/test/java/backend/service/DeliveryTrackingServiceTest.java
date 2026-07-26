@@ -10,6 +10,7 @@ import backend.repository.ParcelEventRepository;
 import backend.repository.ParcelRepository;
 import backend.repository.UserRepository;
 import backend.service.TrackingParserService.TrackingCandidate;
+import jakarta.persistence.EntityManager;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
@@ -27,6 +28,7 @@ class DeliveryTrackingServiceTest {
   private MailTrackingCandidateRepository mailTrackingCandidateRepository;
   private UserRepository userRepository;
   private TrackingAggregatorService trackingAggregatorService;
+  private EntityManager entityManager;
   private DeliveryTrackingService service;
 
   @BeforeEach
@@ -37,13 +39,15 @@ class DeliveryTrackingServiceTest {
     mailTrackingCandidateRepository = Mockito.mock(MailTrackingCandidateRepository.class);
     userRepository = Mockito.mock(UserRepository.class);
     trackingAggregatorService = Mockito.mock(TrackingAggregatorService.class);
+    entityManager = Mockito.mock(EntityManager.class);
     service = new DeliveryTrackingService(
         parcelRepository,
         parcelEventRepository,
         mailTrackingCandidateRepository,
         userRepository,
         trackingAggregatorService,
-        new TrackingParserService()
+        new TrackingParserService(),
+        entityManager
     );
   }
 
@@ -122,6 +126,30 @@ class DeliveryTrackingServiceTest {
     );
 
     Assertions.assertEquals("Choisis un transporteur pris en charge.", exception.getReason());
+  }
+
+  @Test
+  void createManualRecoversFromConcurrentDuplicateInsert() {
+    User user = Mockito.mock(User.class);
+    Parcel existing = new Parcel();
+    existing.setId(91L);
+    existing.setTrackingNumber("6Y11138575506");
+    existing.setNormalizedTrackingNumber("6Y11138575506");
+    existing.setCarrierSlug("colissimo");
+
+    Mockito.when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+    Mockito.when(parcelRepository.findByUser_IdAndNormalizedTrackingNumberAndCarrierSlug(
+        1L,
+        "6Y11138575506",
+        "colissimo"
+    )).thenReturn(Optional.empty(), Optional.of(existing));
+    Mockito.when(parcelRepository.saveAndFlush(Mockito.any(Parcel.class)))
+        .thenThrow(new org.springframework.dao.DataIntegrityViolationException("duplicate"));
+
+    var response = service.createManual(1L, new ParcelCreateRequest("6Y11138575506", "colissimo", null));
+
+    Assertions.assertEquals(91L, response.id());
+    Mockito.verify(entityManager).clear();
   }
 
   @Test

@@ -15,6 +15,7 @@ import backend.repository.ParcelEventRepository;
 import backend.repository.ParcelRepository;
 import backend.repository.UserRepository;
 import backend.service.TrackingParserService.TrackingCandidate;
+import jakarta.persistence.EntityManager;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -45,6 +46,7 @@ public class DeliveryTrackingService {
   private final UserRepository userRepository;
   private final TrackingAggregatorService trackingAggregatorService;
   private final TrackingParserService trackingParserService;
+  private final EntityManager entityManager;
 
   public DeliveryTrackingService(
       ParcelRepository parcelRepository,
@@ -52,7 +54,8 @@ public class DeliveryTrackingService {
       MailTrackingCandidateRepository mailTrackingCandidateRepository,
       UserRepository userRepository,
       TrackingAggregatorService trackingAggregatorService,
-      TrackingParserService trackingParserService
+      TrackingParserService trackingParserService,
+      EntityManager entityManager
   ) {
     this.parcelRepository = parcelRepository;
     this.parcelEventRepository = parcelEventRepository;
@@ -60,6 +63,7 @@ public class DeliveryTrackingService {
     this.userRepository = userRepository;
     this.trackingAggregatorService = trackingAggregatorService;
     this.trackingParserService = trackingParserService;
+    this.entityManager = entityManager;
   }
 
   @Transactional(readOnly = true)
@@ -324,6 +328,7 @@ public class DeliveryTrackingService {
       trackingAggregatorService.registerTracking(saved);
       return parcelRepository.findById(saved.getId()).orElse(saved);
     } catch (DataIntegrityViolationException ex) {
+      clearPersistenceContextAfterFailedFlush();
       return parcelRepository.findByUser_IdAndNormalizedTrackingNumberAndCarrierSlug(
               userId,
               candidate.normalizedTrackingNumber(),
@@ -372,6 +377,7 @@ public class DeliveryTrackingService {
     try {
       return mailTrackingCandidateRepository.saveAndFlush(stored);
     } catch (DataIntegrityViolationException ex) {
+      clearPersistenceContextAfterFailedFlush();
       return mailTrackingCandidateRepository.findByUser_IdAndDedupeKey(userId, dedupeKey)
           .orElseThrow(() -> ex);
     }
@@ -581,5 +587,16 @@ public class DeliveryTrackingService {
         parcelCount,
         durationMs
     );
+  }
+
+  private void clearPersistenceContextAfterFailedFlush() {
+    if (entityManager == null) {
+      return;
+    }
+    try {
+      entityManager.clear();
+    } catch (Exception ignored) {
+      // Best-effort cleanup after a failed flush.
+    }
   }
 }
