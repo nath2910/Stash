@@ -21,6 +21,7 @@ import java.util.regex.Pattern;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpHeaders;
@@ -51,6 +52,7 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
   private final ObjectMapper objectMapper;
   private final Environment environment;
 
+  @Autowired
   public LaPosteTrackingClient(
       ObjectMapper objectMapper,
       Environment environment
