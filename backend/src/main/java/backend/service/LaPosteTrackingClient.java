@@ -37,6 +37,7 @@ import org.jsoup.nodes.Element;
 public class LaPosteTrackingClient implements CarrierTrackingClient {
 
   private static final Logger log = LoggerFactory.getLogger(LaPosteTrackingClient.class);
+  private static final String CHECKPOINT_PREFIX = "[TRACKING][CHECKPOINT]";
   private static final String PROVIDER = "LA_POSTE_OKAPI";
   private static final String BROWSER_PROVIDER = "LA_POSTE_BROWSER_PAGE";
   private static final String BROWSER_SCRIPT = "laposte-browser-scrape.mjs";
@@ -112,17 +113,78 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
 
   @Override
   public Optional<TrackingSnapshot> fetchTracking(Parcel parcel) {
+    log.info(
+        "{} step=laposte.fetch.start parcelId={} carrier={} tracking={} profiles={} browserAvailable={} browserReason={}",
+        CHECKPOINT_PREFIX,
+        parcelId(parcel),
+        resolvedCarrier(parcel),
+        normalizedTracking(parcel),
+        activeProfiles(),
+        BrowserTrackingScriptRunner.isAvailable(BROWSER_SCRIPT),
+        BrowserTrackingScriptRunner.unavailableReason(BROWSER_SCRIPT)
+    );
     FetchAttempt directAttempt = fetchFromUnifiedEndpoint(parcel);
     if (directAttempt.snapshot().isPresent()) {
+      TrackingSnapshot snapshot = directAttempt.snapshot().get();
+      log.info(
+          "{} step=laposte.fetch.direct_success parcelId={} carrier={} tracking={} provider={} status={} label={} events={}",
+          CHECKPOINT_PREFIX,
+          parcelId(parcel),
+          resolvedCarrier(parcel),
+          normalizedTracking(parcel),
+          snapshot.provider(),
+          snapshot.status(),
+          snapshot.statusLabel(),
+          snapshot.events() == null ? 0 : snapshot.events().size()
+      );
       return directAttempt.snapshot();
     }
+    log.warn(
+        "{} step=laposte.fetch.direct_empty parcelId={} carrier={} tracking={} failureCode={} failureDetail={}",
+        CHECKPOINT_PREFIX,
+        parcelId(parcel),
+        resolvedCarrier(parcel),
+        normalizedTracking(parcel),
+        directAttempt.failureCode(),
+        excerpt(directAttempt.failureDetail(), 240)
+    );
 
     FetchAttempt browserAttempt = fetchFromBrowserPage(parcel);
     if (browserAttempt.snapshot().isPresent()) {
+      TrackingSnapshot snapshot = browserAttempt.snapshot().get();
+      log.info(
+          "{} step=laposte.fetch.browser_success parcelId={} carrier={} tracking={} provider={} status={} label={} events={}",
+          CHECKPOINT_PREFIX,
+          parcelId(parcel),
+          resolvedCarrier(parcel),
+          normalizedTracking(parcel),
+          snapshot.provider(),
+          snapshot.status(),
+          snapshot.statusLabel(),
+          snapshot.events() == null ? 0 : snapshot.events().size()
+      );
       return browserAttempt.snapshot();
     }
+    log.warn(
+        "{} step=laposte.fetch.browser_empty parcelId={} carrier={} tracking={} failureCode={} failureDetail={}",
+        CHECKPOINT_PREFIX,
+        parcelId(parcel),
+        resolvedCarrier(parcel),
+        normalizedTracking(parcel),
+        browserAttempt.failureCode(),
+        excerpt(browserAttempt.failureDetail(), 240)
+    );
 
     if ("remote_access_denied".equals(directAttempt.failureCode())) {
+      log.warn(
+          "{} step=laposte.fetch.infrastructure_fallback parcelId={} carrier={} tracking={} directFailure={} browserFailure={}",
+          CHECKPOINT_PREFIX,
+          parcelId(parcel),
+          resolvedCarrier(parcel),
+          normalizedTracking(parcel),
+          directAttempt.failureCode(),
+          browserAttempt.failureCode()
+      );
       return Optional.of(buildInfrastructureFallbackSnapshot(
           parcel,
           "La Poste bloque actuellement les requetes serveur en production. Consulte le lien transporteur pour voir le suivi detaille.",
@@ -131,16 +193,40 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
       ));
     }
 
+    log.warn(
+        "{} step=laposte.fetch.no_snapshot parcelId={} carrier={} tracking={} directFailure={} browserFailure={}",
+        CHECKPOINT_PREFIX,
+        parcelId(parcel),
+        resolvedCarrier(parcel),
+        normalizedTracking(parcel),
+        directAttempt.failureCode(),
+        browserAttempt.failureCode()
+    );
     return Optional.empty();
   }
 
   private FetchAttempt fetchFromUnifiedEndpoint(Parcel parcel) {
     String trackingNumber = normalizedTracking(parcel);
     if (trackingNumber.isBlank()) {
+      log.warn(
+          "{} step=laposte.http.skip_missing_tracking parcelId={} carrier={}",
+          CHECKPOINT_PREFIX,
+          parcelId(parcel),
+          resolvedCarrier(parcel)
+      );
       return FetchAttempt.empty("missing_tracking_number", "numero de suivi vide");
     }
 
     try {
+      String trackingUrl = fallbackTrackingUrl(parcel);
+      log.info(
+          "{} step=laposte.http.request_start parcelId={} carrier={} tracking={} url={}",
+          CHECKPOINT_PREFIX,
+          parcelId(parcel),
+          resolvedCarrier(parcel),
+          trackingNumber,
+          trackingUrl
+      );
       String body = restClient.get()
           .uri(uriBuilder -> uriBuilder
               .path("/ssu/sun/back/suivi-unifie/{trackingNumber}")
@@ -152,12 +238,28 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
           .header(HttpHeaders.CACHE_CONTROL, "no-cache")
           .header("Pragma", "no-cache")
           .header("Origin", BASE_URL)
-          .header(HttpHeaders.REFERER, fallbackTrackingUrl(parcel))
+          .header(HttpHeaders.REFERER, trackingUrl)
           .retrieve()
           .body(String.class);
+      log.info(
+          "{} step=laposte.http.response_received parcelId={} carrier={} tracking={} bodyLength={}",
+          CHECKPOINT_PREFIX,
+          parcelId(parcel),
+          resolvedCarrier(parcel),
+          trackingNumber,
+          body == null ? 0 : body.length()
+      );
 
       Optional<Map<String, Object>> parsedResponse = parseTrackingResponse(body);
       if (parsedResponse.isEmpty()) {
+        log.warn(
+            "{} step=laposte.http.parse_failed parcelId={} carrier={} tracking={} bodyExcerpt={}",
+            CHECKPOINT_PREFIX,
+            parcelId(parcel),
+            resolvedCarrier(parcel),
+            trackingNumber,
+            excerpt(body, 320)
+        );
         log.warn(
             "La Poste unified tracking endpoint returned an unreadable payload for parcel {} ({}): {}",
             parcel == null ? null : parcel.getId(),
@@ -170,6 +272,15 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
       Map<String, Object> response = parsedResponse.get();
       if (!isSuccess(response)) {
         log.warn(
+            "{} step=laposte.http.non_success parcelId={} carrier={} tracking={} returnCode={} bodyExcerpt={}",
+            CHECKPOINT_PREFIX,
+            parcelId(parcel),
+            resolvedCarrier(parcel),
+            trackingNumber,
+            response.get("returnCode"),
+            excerpt(body, 320)
+        );
+        log.warn(
             "La Poste unified tracking endpoint returned a non-success payload for parcel {} ({}): {}",
             parcel == null ? null : parcel.getId(),
             parcel == null ? null : parcel.getTrackingNumber(),
@@ -178,10 +289,31 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
         return FetchAttempt.empty("non_success_payload", "payload HTTP La Poste non exploitable");
       }
 
-      return FetchAttempt.success(toSnapshot(parcel, response));
+      TrackingSnapshot snapshot = toSnapshot(parcel, response);
+      log.info(
+          "{} step=laposte.http.snapshot_built parcelId={} carrier={} tracking={} provider={} status={} label={} events={}",
+          CHECKPOINT_PREFIX,
+          parcelId(parcel),
+          snapshot.carrierSlug(),
+          trackingNumber,
+          snapshot.provider(),
+          snapshot.status(),
+          snapshot.statusLabel(),
+          snapshot.events() == null ? 0 : snapshot.events().size()
+      );
+      return FetchAttempt.success(snapshot);
     } catch (HttpClientErrorException.Forbidden ex) {
       String body = ex.getResponseBodyAsString();
       String failureCode = looksLikeRemoteAccessDenied(body) ? "remote_access_denied" : "http_forbidden";
+      log.warn(
+          "{} step=laposte.http.forbidden parcelId={} carrier={} tracking={} failureCode={} bodyExcerpt={}",
+          CHECKPOINT_PREFIX,
+          parcelId(parcel),
+          resolvedCarrier(parcel),
+          trackingNumber,
+          failureCode,
+          excerpt(body, 240)
+      );
       log.warn(
           "La Poste unified tracking endpoint failed for parcel {} ({})",
           parcel == null ? null : parcel.getId(),
@@ -190,6 +322,15 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
       );
       return FetchAttempt.empty(failureCode, excerpt(body, 240));
     } catch (Exception ex) {
+      log.warn(
+          "{} step=laposte.http.exception parcelId={} carrier={} tracking={} errorType={} message={}",
+          CHECKPOINT_PREFIX,
+          parcelId(parcel),
+          resolvedCarrier(parcel),
+          trackingNumber,
+          ex.getClass().getSimpleName(),
+          excerpt(ex.getMessage(), 240)
+      );
       log.warn(
           "La Poste unified tracking endpoint failed for parcel {} ({})",
           parcel == null ? null : parcel.getId(),
@@ -396,20 +537,65 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
 
   private FetchAttempt fetchFromBrowserPage(Parcel parcel) {
     if (!BrowserTrackingScriptRunner.isAvailable(BROWSER_SCRIPT)) {
+      log.warn(
+          "{} step=laposte.browser.unavailable parcelId={} carrier={} tracking={} reason={}",
+          CHECKPOINT_PREFIX,
+          parcelId(parcel),
+          resolvedCarrier(parcel),
+          normalizedTracking(parcel),
+          BrowserTrackingScriptRunner.unavailableReason(BROWSER_SCRIPT)
+      );
       return FetchAttempt.empty(
           "browser_unavailable",
           BrowserTrackingScriptRunner.unavailableReason(BROWSER_SCRIPT)
       );
     }
 
+    String browserUrl = browserFallbackTrackingUrl(parcel);
+    log.info(
+        "{} step=laposte.browser.request_start parcelId={} carrier={} tracking={} url={}",
+        CHECKPOINT_PREFIX,
+        parcelId(parcel),
+        resolvedCarrier(parcel),
+        normalizedTracking(parcel),
+        browserUrl
+    );
     Optional<BrowserTrackingScriptRunner.BrowserPagePayload> payloadResult =
-        BrowserTrackingScriptRunner.run(BROWSER_SCRIPT, browserFallbackTrackingUrl(parcel));
+        BrowserTrackingScriptRunner.run(BROWSER_SCRIPT, browserUrl);
     if (payloadResult.isEmpty()) {
+      log.warn(
+          "{} step=laposte.browser.empty_payload parcelId={} carrier={} tracking={} url={}",
+          CHECKPOINT_PREFIX,
+          parcelId(parcel),
+          resolvedCarrier(parcel),
+          normalizedTracking(parcel),
+          browserUrl
+      );
       return FetchAttempt.empty("browser_failed", "script navigateur vide ou en echec");
     }
 
     BrowserTrackingScriptRunner.BrowserPagePayload payload = payloadResult.get();
+    log.info(
+        "{} step=laposte.browser.payload_received parcelId={} carrier={} tracking={} currentUrl={} source={} title={} htmlLength={} textLength={}",
+        CHECKPOINT_PREFIX,
+        parcelId(parcel),
+        resolvedCarrier(parcel),
+        normalizedTracking(parcel),
+        excerpt(payload.currentUrl(), 240),
+        payload.source(),
+        excerpt(payload.title(), 180),
+        payload.html() == null ? 0 : payload.html().length(),
+        payload.text() == null ? 0 : payload.text().length()
+    );
     if (PublicTrackingPageClient.looksLikeBotChallenge(payload.html())) {
+      log.warn(
+          "{} step=laposte.browser.bot_challenge parcelId={} carrier={} tracking={} currentUrl={}",
+          CHECKPOINT_PREFIX,
+          parcelId(parcel),
+          resolvedCarrier(parcel),
+          normalizedTracking(parcel),
+          excerpt(payload.currentUrl(), 240)
+      );
       log.warn(
           "La Poste browser tracking hit a bot challenge for parcel {} ({}) at {}",
           parcel == null ? null : parcel.getId(),
@@ -421,14 +607,47 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
 
     Optional<TrackingSnapshot> structuredSnapshot = toBrowserStructuredSnapshot(parcel, payload);
     if (structuredSnapshot.isPresent()) {
-      return FetchAttempt.success(structuredSnapshot.get());
+      TrackingSnapshot snapshot = structuredSnapshot.get();
+      log.info(
+          "{} step=laposte.browser.structured_snapshot parcelId={} carrier={} tracking={} provider={} status={} label={} events={}",
+          CHECKPOINT_PREFIX,
+          parcelId(parcel),
+          snapshot.carrierSlug(),
+          normalizedTracking(parcel),
+          snapshot.provider(),
+          snapshot.status(),
+          snapshot.statusLabel(),
+          snapshot.events() == null ? 0 : snapshot.events().size()
+      );
+      return FetchAttempt.success(snapshot);
     }
 
     TrackingSnapshot fallbackSnapshot = toBrowserSnapshot(parcel, payload);
     if (fallbackSnapshot.status() != ParcelStatus.UNKNOWN || fallbackSnapshot.statusLabel() != null) {
+      log.info(
+          "{} step=laposte.browser.fallback_snapshot parcelId={} carrier={} tracking={} provider={} status={} label={} events={}",
+          CHECKPOINT_PREFIX,
+          parcelId(parcel),
+          fallbackSnapshot.carrierSlug(),
+          normalizedTracking(parcel),
+          fallbackSnapshot.provider(),
+          fallbackSnapshot.status(),
+          fallbackSnapshot.statusLabel(),
+          fallbackSnapshot.events() == null ? 0 : fallbackSnapshot.events().size()
+      );
       return FetchAttempt.success(fallbackSnapshot);
     }
 
+    log.warn(
+        "{} step=laposte.browser.no_status parcelId={} carrier={} tracking={} title={} currentUrl={} textExcerpt={}",
+        CHECKPOINT_PREFIX,
+        parcelId(parcel),
+        resolvedCarrier(parcel),
+        normalizedTracking(parcel),
+        excerpt(payload.title(), 160),
+        excerpt(payload.currentUrl(), 240),
+        excerpt(payload.text(), 320)
+    );
     log.warn(
         "La Poste browser fallback returned no usable status for parcel {} ({}), title='{}', url='{}', text='{}'",
         parcel == null ? null : parcel.getId(),
@@ -889,6 +1108,15 @@ public class LaPosteTrackingClient implements CarrierTrackingClient {
         || normalized.contains("you don't have permission")
         || normalized.contains("you dont have permission")
         || normalized.contains("errors.edgesuite.net");
+  }
+
+  private String activeProfiles() {
+    String[] profiles = environment.getActiveProfiles();
+    return profiles.length == 0 ? "default" : String.join(",", profiles);
+  }
+
+  private Long parcelId(Parcel parcel) {
+    return parcel == null ? null : parcel.getId();
   }
 
   private record FetchAttempt(

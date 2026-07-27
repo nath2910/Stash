@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class DirectCarrierTrackingService {
 
   private static final Logger log = LoggerFactory.getLogger(DirectCarrierTrackingService.class);
+  private static final String CHECKPOINT_PREFIX = "[TRACKING][CHECKPOINT]";
   public static final String PROVIDER = "DIRECT_CARRIER";
 
   private final LaPosteTrackingClient laPosteTrackingClient;
@@ -44,28 +45,101 @@ public class DirectCarrierTrackingService {
       return parcel;
     }
     long startedAt = System.currentTimeMillis();
+    log.info(
+        "{} step=refresh.start parcelId={} carrier={} tracking={} aggregator={}",
+        CHECKPOINT_PREFIX,
+        parcel.getId(),
+        normalizedCarrier(parcel),
+        parcel.getNormalizedTrackingNumber(),
+        parcel.getAggregator()
+    );
     Optional<CarrierTrackingClient> resolvedClient = resolveClient(parcel);
     if (resolvedClient.isEmpty()) {
+      log.warn(
+          "{} step=refresh.client_unresolved parcelId={} carrier={} tracking={}",
+          CHECKPOINT_PREFIX,
+          parcel.getId(),
+          normalizedCarrier(parcel),
+          parcel.getNormalizedTrackingNumber()
+      );
       parcelTrackingUpdateService.markLocalFallback(parcel, PROVIDER, "Transporteur non gere pour le suivi direct");
       logSlowRefresh(parcel, "none", startedAt, "unsupported");
       return parcelRepository.save(parcel);
     }
     CarrierTrackingClient client = resolvedClient.get();
+    log.info(
+        "{} step=refresh.client_resolved parcelId={} carrier={} tracking={} client={}",
+        CHECKPOINT_PREFIX,
+        parcel.getId(),
+        normalizedCarrier(parcel),
+        parcel.getNormalizedTrackingNumber(),
+        clientName(client)
+    );
     if (!client.isConfigured()) {
+      log.warn(
+          "{} step=refresh.client_not_configured parcelId={} carrier={} tracking={} client={} reason={}",
+          CHECKPOINT_PREFIX,
+          parcel.getId(),
+          normalizedCarrier(parcel),
+          parcel.getNormalizedTrackingNumber(),
+          clientName(client),
+          unavailableSourceDetail(client)
+      );
       parcelTrackingUpdateService.markLocalFallback(parcel, PROVIDER, unavailableSourceMessage(parcel, client));
       logSlowRefresh(parcel, clientName(client), startedAt, "not_configured");
       return parcelRepository.save(parcel);
     }
 
+    log.info(
+        "{} step=refresh.fetch_start parcelId={} carrier={} tracking={} client={}",
+        CHECKPOINT_PREFIX,
+        parcel.getId(),
+        normalizedCarrier(parcel),
+        parcel.getNormalizedTrackingNumber(),
+        clientName(client)
+    );
     Optional<TrackingSnapshot> snapshot = client.fetchTracking(parcel);
     if (snapshot.isPresent()) {
-      parcelTrackingUpdateService.applySnapshot(parcel, snapshot.get());
+      TrackingSnapshot trackingSnapshot = snapshot.get();
+      log.info(
+          "{} step=refresh.fetch_success parcelId={} carrier={} tracking={} client={} provider={} status={} label={} events={}",
+          CHECKPOINT_PREFIX,
+          parcel.getId(),
+          normalizedCarrier(parcel),
+          parcel.getNormalizedTrackingNumber(),
+          clientName(client),
+          trackingSnapshot.provider(),
+          trackingSnapshot.status(),
+          trackingSnapshot.statusLabel(),
+          trackingSnapshot.events() == null ? 0 : trackingSnapshot.events().size()
+      );
+      parcelTrackingUpdateService.applySnapshot(parcel, trackingSnapshot);
       logSlowRefresh(parcel, clientName(client), startedAt, "snapshot");
     } else {
+      log.warn(
+          "{} step=refresh.fetch_empty parcelId={} carrier={} tracking={} client={} fallbackLabel={}",
+          CHECKPOINT_PREFIX,
+          parcel.getId(),
+          normalizedCarrier(parcel),
+          parcel.getNormalizedTrackingNumber(),
+          clientName(client),
+          unavailableStatusMessage(parcel)
+      );
       parcelTrackingUpdateService.markLocalFallback(parcel, PROVIDER, unavailableStatusMessage(parcel));
       logSlowRefresh(parcel, clientName(client), startedAt, "empty");
     }
-    return parcelRepository.save(parcel);
+    Parcel savedParcel = parcelRepository.save(parcel);
+    log.info(
+        "{} step=refresh.save_complete parcelId={} carrier={} tracking={} status={} label={} aggregator={}",
+        CHECKPOINT_PREFIX,
+        savedParcel.getId(),
+        normalizedCarrier(savedParcel),
+        savedParcel.getNormalizedTrackingNumber(),
+        savedParcel.getStatus(),
+        savedParcel.getStatusLabel(),
+        savedParcel.getAggregator()
+    );
+    return savedParcel;
   }
 
   private Optional<CarrierTrackingClient> resolveClient(Parcel parcel) {
