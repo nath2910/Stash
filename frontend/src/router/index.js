@@ -38,6 +38,46 @@ function isTokenExpired(token) {
   return now >= exp * 1000 - 30_000
 }
 
+const POST_AUTH_REDIRECT_KEY = 'snk_post_auth_redirect'
+const POST_AUTH_REDIRECT_TTL_MS = 60_000
+
+function readPostAuthRedirect() {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = window.sessionStorage.getItem(POST_AUTH_REDIRECT_KEY)
+    if (!raw) return null
+    const payload = JSON.parse(raw)
+    const name = String(payload?.name || '').trim()
+    const ts = Number(payload?.ts || 0)
+    if (!name || !Number.isFinite(ts) || Date.now() - ts > POST_AUTH_REDIRECT_TTL_MS) {
+      window.sessionStorage.removeItem(POST_AUTH_REDIRECT_KEY)
+      return null
+    }
+    return { name, ts }
+  } catch {
+    try {
+      window.sessionStorage.removeItem(POST_AUTH_REDIRECT_KEY)
+    } catch {
+      // ignore cleanup failures
+    }
+    return null
+  }
+}
+
+function hasRecentPostAuthRedirect(routeName) {
+  const redirect = readPostAuthRedirect()
+  return Boolean(redirect && String(routeName || '') === redirect.name)
+}
+
+function clearPostAuthRedirect() {
+  if (typeof window === 'undefined') return
+  try {
+    window.sessionStorage.removeItem(POST_AUTH_REDIRECT_KEY)
+  } catch {
+    // ignore cleanup failures
+  }
+}
+
 let protectedChunksWarmed = false
 const protectedChunkLoaders = [GestionPage, StatsPage, AccountPage]
 
@@ -236,6 +276,9 @@ router.beforeEach(async (to) => {
   const token = auth.token.value
   const hasToken = !!token
   const isPublic = publicRoutes.has(to.name)
+  const requiresAuth = to.meta.requiresAuth === true
+  const allowInactive = to.meta.allowInactive === true
+  const bypassPostAuthGate = requiresAuth && hasRecentPostAuthRedirect(to.name)
 
   if (hasToken && isTokenExpired(token)) {
     auth.logout()
@@ -266,9 +309,10 @@ router.beforeEach(async (to) => {
   }
 
   // Si page protégée, vérifier l'abo (sauf si allowInactive)
-  const requiresAuth = to.meta.requiresAuth === true
-  const allowInactive = to.meta.allowInactive === true
   if (requiresAuth) {
+    if (bypassPostAuthGate) {
+      return true
+    }
     await billing.fetchStatus()
     if (!allowInactive && billing.status.value !== 'active') {
       return { name: 'abo', query: { returnTo: to.fullPath } }
@@ -285,6 +329,9 @@ router.beforeEach(async (to) => {
 })
 
 router.afterEach((to) => {
+  if (hasRecentPostAuthRedirect(to.name)) {
+    clearPostAuthRedirect()
+  }
   if (!publicRoutes.has(to.name) && useAuthStore().token.value) {
     warmProtectedRouteChunks()
   }

@@ -6,6 +6,8 @@ import AuthService from '@/services/AuthService.js'
 
 const router = useRouter()
 const auth = useAuthStore()
+const POST_AUTH_REDIRECT_KEY = 'snk_post_auth_redirect'
+const CALLBACK_NAVIGATION_TIMEOUT_MS = 3500
 
 function decodeUserPayload(value) {
   if (!value) return null
@@ -17,6 +19,50 @@ function decodeUserPayload(value) {
     return JSON.parse(new TextDecoder().decode(bytes))
   } catch {
     return null
+  }
+}
+
+function normalizeSubscriptionStatus(value) {
+  return String(value || '').trim().toLowerCase()
+}
+
+function resolvePostAuthTarget(user) {
+  return normalizeSubscriptionStatus(user?.subscriptionStatus) === 'active'
+    ? { name: 'home' }
+    : { name: 'abo' }
+}
+
+function persistPostAuthRedirect(target) {
+  try {
+    window.sessionStorage.setItem(
+      POST_AUTH_REDIRECT_KEY,
+      JSON.stringify({
+        name: String(target?.name || 'home'),
+        ts: Date.now(),
+      }),
+    )
+  } catch {
+    // Ignore storage failures and rely on the direct fallback below.
+  }
+}
+
+function targetPath(target) {
+  return target?.name === 'abo' ? '/abo' : '/'
+}
+
+async function navigateAfterSso(target) {
+  persistPostAuthRedirect(target)
+
+  try {
+    await Promise.race([
+      router.replace(target),
+      new Promise((_, reject) => {
+        window.setTimeout(() => reject(new Error('post_auth_navigation_timeout')), CALLBACK_NAVIGATION_TIMEOUT_MS)
+      }),
+    ])
+  } catch (error) {
+    console.warn('Navigation post-SSO forcee', error)
+    window.location.replace(targetPath(target))
   }
 }
 
@@ -42,21 +88,20 @@ onMounted(async () => {
 
   if (userPayload) {
     auth.setAuth({ user: userPayload, token })
-    router.replace({ name: 'home' })
+    await navigateAfterSso(resolvePostAuthTarget(userPayload))
     return
   }
 
   try {
     const me = await AuthService.me()
     auth.setAuth({ user: me, token })
+    await navigateAfterSso(resolvePostAuthTarget(me))
   } catch (e) {
     console.error('Erreur /auth/me apres SSO', e)
     auth.logout()
     router.replace({ name: 'auth', query: { mode: 'login' } })
     return
   }
-
-  router.replace({ name: 'home' })
 })
 </script>
 
