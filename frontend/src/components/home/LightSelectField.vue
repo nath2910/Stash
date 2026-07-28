@@ -333,4 +333,5 @@ onBeforeUnmount(() => {
   font-weight: 700;
   text-align: center;
 }
+
 </style>

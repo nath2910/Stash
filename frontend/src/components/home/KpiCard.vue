@@ -140,4 +140,5 @@ const toneClass = computed(() => `kpi-card--${props.tone}`)
     background-position: -100% 0;
   }
 }
+
 </style>

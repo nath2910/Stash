@@ -1,5 +1,6 @@
 package backend.dto;
 
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 
 public record UserMeResponse(
@@ -7,6 +8,7 @@ public record UserMeResponse(
     String email,
     String firstName,
     String lastName,
+    LocalDateTime createdAt,
     String pictureUrl,
     String provider,
     boolean emailVerified,

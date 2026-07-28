@@ -421,7 +421,7 @@ try {
   const results = []
   for (const routeConfig of routeConfigs) {
     // sequential on purpose to keep screenshots and request mocks deterministic
-    // eslint-disable-next-line no-await-in-loop
+     
     results.push(await auditRoute(browser, routeConfig))
   }
 

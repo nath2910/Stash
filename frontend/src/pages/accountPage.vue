@@ -25,7 +25,9 @@
               </div>
               <div class="min-w-0">
                 <h1 class="text-xl font-semibold text-white sm:text-2xl">Mon compte</h1>
-                <p class="mt-1 break-all text-sm text-slate-400 sm:break-normal sm:truncate">{{ currentUser.email || '-' }}</p>
+                <p class="mt-1 break-all text-sm text-slate-400 sm:break-normal sm:truncate">
+                  {{ currentUser.email || '-' }}
+                </p>
               </div>
             </div>
 
@@ -54,7 +56,7 @@
             <div class="account-profile-head">
               <div class="min-w-0">
                 <p class="account-profile-eyebrow">Administratif</p>
-                <h2>Profil légal</h2>
+                <h2>Profil legal</h2>
               </div>
               <button
                 type="button"
@@ -62,11 +64,7 @@
                 :disabled="legalProfileLoading"
                 @click="goAdminProfile"
               >
-                <RefreshCw
-                  v-if="legalProfileLoading"
-                  class="h-4 w-4 animate-spin"
-                  aria-hidden="true"
-                />
+                <RefreshCw v-if="legalProfileLoading" class="h-4 w-4 animate-spin" aria-hidden="true" />
                 <UserRoundCheck v-else class="h-4 w-4" aria-hidden="true" />
                 <span>{{ legalProfileCompleted ? 'Gerer dans admin' : 'Completer dans admin' }}</span>
               </button>
@@ -81,7 +79,7 @@
                     class="account-profile-level"
                     :class="legalProfileCompleted ? 'low' : 'medium'"
                   >
-                    {{ legalProfileCompleted ? 'Valide' : 'À compléter' }}
+                    {{ legalProfileCompleted ? 'Valide' : 'A completer' }}
                   </span>
                 </div>
                 <p>{{ legalProfileDescription }}</p>
@@ -99,13 +97,13 @@
 
           <div class="mt-6 rounded-2xl border border-red-500/20 bg-red-500/5 p-4 sm:p-5">
             <p class="text-sm text-slate-400">
-              Cette action supprime définitivement ton compte et tes données.
+              Cette action supprime definitivement ton compte et tes donnees.
             </p>
 
             <div class="mt-4 space-y-3 text-sm text-slate-200">
               <label class="flex items-start gap-2">
                 <input v-model="deleteConfirmChecked" type="checkbox" class="mt-0.5 h-4 w-4" />
-                <span>Je comprends que cette action est irréversible.</span>
+                <span>Je comprends que cette action est irreversible.</span>
               </label>
 
               <div>
@@ -116,7 +114,7 @@
                   v-model="deleteConfirmText"
                   type="text"
                   placeholder="SUPPRIMER"
-                  class="mt-2 block w-full rounded-xl border border-red-500/40 bg-slate-900/70 px-4 py-2.5 text-sm text-slate-100 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-red-400"
+                  class="mt-2 block w-full rounded-xl border border-red-500/40 bg-slate-900/70 px-4 py-2.5 text-sm text-slate-100 shadow-sm transition focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-400"
                 />
               </div>
             </div>
@@ -137,73 +135,75 @@
               {{ deleting ? 'Suppression...' : 'Supprimer mon compte' }}
             </button>
           </div>
-
         </section>
 
         <section
           class="rounded-2xl border border-slate-800/80 bg-gradient-to-b from-slate-900/95 via-slate-900/80 to-slate-950/70 p-4 shadow-2xl backdrop-blur sm:rounded-3xl sm:p-6 lg:p-7"
         >
-          <h2 class="text-lg font-semibold text-white">Sécurité</h2>
-          <p class="mt-1 text-sm text-slate-400">Modifie ton mot de passe.</p>
+          <div class="grid gap-6">
+            <div>
+              <h2 class="text-lg font-semibold text-white">Securite</h2>
+              <p class="mt-1 text-sm text-slate-400">Modifie ton mot de passe.</p>
 
-          <div
-            v-if="error"
-            class="mt-4 rounded-xl border border-red-500/70 bg-red-500/10 p-3 text-sm text-red-200"
-          >
-            {{ error }}
+              <div
+                v-if="error"
+                class="mt-4 rounded-xl border border-red-500/70 bg-red-500/10 p-3 text-sm text-red-200"
+              >
+                {{ error }}
+              </div>
+              <div
+                v-if="success"
+                class="mt-4 rounded-xl border border-emerald-500/60 bg-emerald-500/10 p-3 text-sm text-emerald-100"
+              >
+                {{ success }}
+              </div>
+
+              <form class="mt-5 space-y-4" @submit.prevent="submitChangePassword">
+                <div>
+                  <label class="block text-sm font-medium text-slate-200">Mot de passe actuel</label>
+                  <input
+                    v-model="form.currentPassword"
+                    type="password"
+                    required
+                    class="mt-2 block w-full rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-2.5 text-sm text-slate-100 shadow-sm transition focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-400"
+                  />
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-slate-200">Nouveau mot de passe</label>
+                  <input
+                    v-model="form.newPassword"
+                    type="password"
+                    required
+                    class="mt-2 block w-full rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-2.5 text-sm text-slate-100 shadow-sm transition focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-400"
+                  />
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-slate-200">
+                    Confirmer le nouveau mot de passe
+                  </label>
+                  <input
+                    v-model="form.confirmPassword"
+                    type="password"
+                    required
+                    class="mt-2 block w-full rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-2.5 text-sm text-slate-100 shadow-sm transition focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-400"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  :disabled="loading"
+                  class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-violet-500 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-400 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {{ loading ? 'Modification...' : 'Mettre a jour' }}
+                </button>
+              </form>
+            </div>
           </div>
-          <div
-            v-if="success"
-            class="mt-4 rounded-xl border border-emerald-500/60 bg-emerald-500/10 p-3 text-sm text-emerald-100"
-          >
-            {{ success }}
-          </div>
-
-          <form class="mt-5 space-y-4" @submit.prevent="submitChangePassword">
-            <div>
-              <label class="block text-sm font-medium text-slate-200">Mot de passe actuel</label>
-              <input
-                v-model="form.currentPassword"
-                type="password"
-                required
-                class="mt-2 block w-full rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-2.5 text-sm text-slate-100 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-violet-400"
-              />
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-slate-200">Nouveau mot de passe</label>
-              <input
-                v-model="form.newPassword"
-                type="password"
-                required
-                class="mt-2 block w-full rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-2.5 text-sm text-slate-100 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-violet-400"
-              />
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-slate-200">
-                Confirmer le nouveau mot de passe
-              </label>
-              <input
-                v-model="form.confirmPassword"
-                type="password"
-                required
-                class="mt-2 block w-full rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-2.5 text-sm text-slate-100 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-violet-400"
-              />
-            </div>
-
-            <button
-              type="submit"
-              :disabled="loading"
-              class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-violet-500 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-400 disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {{ loading ? 'Modification...' : 'Mettre à jour' }}
-            </button>
-          </form>
         </section>
       </div>
     </div>
-
   </div>
 </template>
 
@@ -292,7 +292,7 @@ const loadLegalProfile = async () => {
     applyLegalProfile(await LegalProfileService.getLegalProfile())
   } catch {
     legalProfile.value = normalizeLegalProfile(currentUser.value || {})
-    legalProfileError.value = 'Profil administratif chargé depuis le compte local.'
+    legalProfileError.value = 'Profil administratif charge depuis le compte local.'
   } finally {
     legalProfileLoading.value = false
   }
@@ -306,7 +306,7 @@ const submitChangePassword = async () => {
     return
   }
   if (form.value.newPassword.length < 6) {
-    error.value = 'Le nouveau mot de passe doit faire au moins 6 caractères.'
+    error.value = 'Le nouveau mot de passe doit faire au moins 6 caracteres.'
     return
   }
 
@@ -317,7 +317,7 @@ const submitChangePassword = async () => {
       newPassword: form.value.newPassword,
     })
 
-    success.value = 'Mot de passe modifié avec succès.'
+    success.value = 'Mot de passe modifie avec succes.'
     form.value.currentPassword = ''
     form.value.newPassword = ''
     form.value.confirmPassword = ''
@@ -391,8 +391,8 @@ const goAdminProfile = () => {
 .account-profile-head,
 .account-profile-title-row {
   display: flex;
-  align-items: center;
   min-width: 0;
+  align-items: center;
   gap: 0.75rem;
 }
 
@@ -417,26 +417,23 @@ const goAdminProfile = () => {
 }
 
 .account-profile-change {
-  border: 1px solid rgba(71, 85, 105, 0.82);
-  background: rgba(15, 23, 42, 0.74);
-  color: rgb(226 232 240);
-  transition:
-    border-color 140ms ease,
-    background 140ms ease,
-    color 140ms ease,
-    transform 140ms ease;
-}
-
-.account-profile-change {
   display: inline-flex;
   min-height: 38px;
   max-width: 100%;
   align-items: center;
   justify-content: center;
   gap: 0.45rem;
+  border: 1px solid rgba(71, 85, 105, 0.82);
+  background: rgba(15, 23, 42, 0.74);
+  color: rgb(226 232 240);
   padding: 0 0.85rem;
   font-size: 0.82rem;
   font-weight: 800;
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    color 140ms ease,
+    transform 140ms ease;
 }
 
 .account-profile-change:hover {
@@ -448,8 +445,8 @@ const goAdminProfile = () => {
 .account-profile-current {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: 0.85rem;
   align-items: flex-start;
+  gap: 0.85rem;
 }
 
 .account-profile-icon {
@@ -546,8 +543,8 @@ const goAdminProfile = () => {
 
 @media (max-width: 640px) {
   .account-profile-head {
-    align-items: stretch;
     flex-direction: column;
+    align-items: stretch;
   }
 
   .account-profile-change {
@@ -556,3 +553,4 @@ const goAdminProfile = () => {
 
 }
 </style>
+

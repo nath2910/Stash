@@ -300,4 +300,5 @@ const price = (item) => {
     animation: none;
   }
 }
+
 </style>

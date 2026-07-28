@@ -248,7 +248,7 @@ router.beforeEach(async (to) => {
     return { name: 'auth', query: { mode: 'login' } }
   }
 
-  if (hasToken && !auth.user.value) {
+  if (hasToken && (!auth.user.value || !auth.user.value.createdAt)) {
     try {
       const me = await AuthService.me()
       auth.setUser(me)

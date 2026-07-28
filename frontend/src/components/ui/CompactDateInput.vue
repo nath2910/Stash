@@ -5,7 +5,7 @@
       v-model="localValue"
       :time-picker="false"
       :time-config="timeConfig"
-      :dark="!light"
+      :dark="false"
       :auto-apply="true"
       :teleport="true"
       :clearable="false"
@@ -361,4 +361,5 @@ const maxDateValue = computed(() => parseYmdLocal(props.maxDate))
 .cd-picker :deep(.dp__overlay) {
   background: rgba(8, 10, 16, 0.95);
 }
+
 </style>

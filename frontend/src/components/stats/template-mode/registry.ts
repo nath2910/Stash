@@ -2,18 +2,23 @@ import { defineAsyncComponent, type Component } from 'vue'
 
 export const ANNUAL_DASHBOARD_TEMPLATE_ID = 'annual-dashboard'
 export const MONTHLY_DASHBOARD_TEMPLATE_ID = 'monthly-dashboard'
+export const QUARTERLY_DASHBOARD_TEMPLATE_ID = 'quarterly-dashboard'
 export const CATEGORY_DASHBOARD_TEMPLATE_ID = 'category-dashboard'
 
 export type TemplateId =
   | typeof ANNUAL_DASHBOARD_TEMPLATE_ID
   | typeof MONTHLY_DASHBOARD_TEMPLATE_ID
+  | typeof QUARTERLY_DASHBOARD_TEMPLATE_ID
   | typeof CATEGORY_DASHBOARD_TEMPLATE_ID
 
 export type TemplateDefinition = {
   id: TemplateId
   badge: string
   title: string
+  headline: string
   description: string
+  highlights: string[]
+  accent: 'emerald' | 'sky' | 'violet' | 'amber'
   component: Component
 }
 
@@ -22,7 +27,10 @@ export const TEMPLATE_DEFINITIONS = [
     id: ANNUAL_DASHBOARD_TEMPLATE_ID,
     badge: 'Executive',
     title: 'Pilotage annuel',
+    headline: 'Vision macro, lecture dirigeant',
     description: 'Vue dirigeant avec CA, profit, achats, stock et meilleurs produits sur une annee complete.',
+    highlights: ['CA et profit', 'Stock annuel', 'Top produits'],
+    accent: 'emerald',
     component: defineAsyncComponent(
       () => import('./annual-dashboard/AnnualDashboardTemplate.vue'),
     ),
@@ -31,16 +39,34 @@ export const TEMPLATE_DEFINITIONS = [
     id: MONTHLY_DASHBOARD_TEMPLATE_ID,
     badge: 'Sales',
     title: 'Performance mensuelle',
+    headline: 'Rythme mensuel et execution',
     description: 'Lecture mois par mois avec KPI, tendance quotidienne, achats et top ventes.',
+    highlights: ['KPI mensuels', 'Tendance jour par jour', 'Achats et ventes'],
+    accent: 'sky',
     component: defineAsyncComponent(
       () => import('./monthly-dashboard/MonthlyDashboardTemplate.vue'),
+    ),
+  },
+  {
+    id: QUARTERLY_DASHBOARD_TEMPLATE_ID,
+    badge: 'Quarterly',
+    title: 'Pilotage trimestriel',
+    headline: 'Lecture quarter et tempo mensuel',
+    description: 'Vue trimestre avec KPI agreges, suivi des 3 mois, categories profitables et contexte annuel.',
+    highlights: ['KPI trimestriels', 'Lecture 3 mois', 'Contexte annuel'],
+    accent: 'violet',
+    component: defineAsyncComponent(
+      () => import('./quarterly-dashboard/QuarterlyDashboardTemplate.vue'),
     ),
   },
   {
     id: CATEGORY_DASHBOARD_TEMPLATE_ID,
     badge: 'Inventory',
     title: 'Analyse categories',
+    headline: 'Lecture stock et mix produit',
     description: 'Focus categories avec comparaison, stock visible, ventes et top items.',
+    highlights: ['Categories', 'Mix stock / ventes', 'Top items'],
+    accent: 'amber',
     component: defineAsyncComponent(
       () => import('./category-dashboard/CategoryDashboardTemplate.vue'),
     ),

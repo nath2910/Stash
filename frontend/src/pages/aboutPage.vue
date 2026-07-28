@@ -261,4 +261,5 @@ import { RouterLink } from 'vue-router'
     transform: none;
   }
 }
+
 </style>

@@ -4,7 +4,7 @@
     :class="[
       isLightAppShell ? 'layout-home-bg layout-document-flow' : 'bg-slate-950',
       isGestionRoute ? 'layout-gestion-bg' : '',
-      isLightAppShell ? 'text-slate-900' : isStatsLight ? 'text-black' : 'text-slate-100',
+      isLightChrome ? 'text-slate-900' : isStatsLight ? 'text-black' : 'text-slate-100',
     ]"
     :style="layoutVars"
   >
@@ -18,7 +18,7 @@
             ? 'layout-app-header--hidden'
             : '',
           isStats ? 'top-2' : navBubble || mobileMenuOpen ? 'top-0 is-stuck' : 'top-4',
-          isLightAppShell || isStatsLight ? 'is-light' : 'is-dark',
+          isLightChrome || isStatsLight ? 'is-light' : 'is-dark',
         ]"
       >
         <div
@@ -32,7 +32,7 @@
               type="button"
               class="md:hidden p-2 rounded-xl transition"
               :class="
-                isLightAppShell
+                isLightChrome
                   ? 'text-gray-600 hover:text-black hover:bg-black/5'
                   : 'text-gray-300 hover:text-white hover:bg-white/5'
               "
@@ -65,11 +65,11 @@
             v-if="showHeaderNav"
             class="hidden md:flex items-center justify-center pointer-events-auto mx-auto"
             :class="
-              navBubble || isStatsLight || isLightAppShell
-                ? isStatsLight || isLightAppShell
+              navBubble || isStatsLight || isLightChrome
+                ? isStatsLight || isLightChrome
                   ? 'gap-3 px-4 py-2 rounded-full bg-white/95 border border-slate-200/90 shadow-[0_8px_20px_rgba(15,23,42,0.12)]'
                   : 'gap-3 px-4 py-2 rounded-full bg-slate-900/92 border border-white/10 shadow-[0_10px_24px_rgba(0,0,0,0.3)]'
-                : `gap-8 px-8 py-3 rounded-full bg-transparent ${isLightAppShell ? 'text-slate-900' : 'text-white'}`
+                : `gap-8 px-8 py-3 rounded-full bg-transparent ${isLightChrome ? 'text-slate-900' : 'text-white'}`
             "
           >
             <RouterLink to="/" :class="compactLink('/')">
@@ -94,7 +94,7 @@
                 @click.stop="toggleUserMenu"
                 class="h-9 w-9 rounded-full flex items-center justify-center border transition focus:outline-none"
                 :class="
-                  isStatsLight || isLightAppShell
+                  isStatsLight || isLightChrome
                     ? 'bg-white/85 border-slate-300 hover:border-emerald-500/45'
                     : 'bg-slate-900/70 border-white/10 hover:border-emerald-300/50'
                 "
@@ -103,25 +103,43 @@
               >
                 <span
                   class="text-sm font-semibold"
-                  :class="isStatsLight || isLightAppShell ? 'text-slate-900' : 'text-white'"
+                  :class="isStatsLight || isLightChrome ? 'text-slate-900' : 'text-white'"
                   >{{ initials }}</span
                 >
               </button>
 
               <div
                 v-if="menuOpen"
-                class="absolute right-0 mt-2 w-64 rounded-lg shadow-lg border z-50 bg-slate-900 text-slate-100 border-slate-700"
+                class="absolute right-0 mt-2 w-64 rounded-lg shadow-lg border z-50"
+                :class="
+                  isLightChrome || isStatsLight
+                    ? 'bg-white/98 text-slate-900 border-slate-200'
+                    : 'bg-slate-900 text-slate-100 border-slate-700'
+                "
               >
-                <div class="px-4 py-3 border-b border-slate-700">
-                  <p class="text-sm text-slate-300">
+                <div
+                  class="px-4 py-3 border-b"
+                  :class="isLightChrome || isStatsLight ? 'border-slate-200' : 'border-slate-700'"
+                >
+                  <p
+                    class="text-sm"
+                    :class="isLightChrome || isStatsLight ? 'text-slate-500' : 'text-slate-300'"
+                  >
                     {{ currentUser ? 'Connecte' : 'Non Connecte' }}
                   </p>
-                  <p v-if="currentUser" class="text-sm font-medium truncate text-slate-100">
+                  <p
+                    v-if="currentUser"
+                    class="text-sm font-medium truncate"
+                    :class="isLightChrome || isStatsLight ? 'text-slate-900' : 'text-slate-100'"
+                  >
                     Bienvenue {{ currentUser.firstName }}
                   </p>
                 </div>
 
-                <div class="py-2 layout-menu-actions is-dark">
+                <div
+                  class="py-2 layout-menu-actions"
+                  :class="isLightChrome || isStatsLight ? '' : 'is-dark'"
+                >
                   <button v-if="!currentUser" type="button" @click="goToAuth('login')">
                     Se connecter
                   </button>
@@ -138,7 +156,12 @@
                     v-if="currentUser"
                     type="button"
                     @click="logout"
-                    class="text-red-600 [&:hover]:bg-red-50 [&:active]:bg-red-100"
+                    class="text-red-600"
+                    :class="
+                      isLightChrome || isStatsLight
+                        ? '[&:hover]:bg-red-50 [&:active]:bg-red-100'
+                        : '[&:hover]:bg-red-500/10 [&:active]:bg-red-500/15'
+                    "
                   >
                     Se deconnecter
                   </button>
@@ -157,7 +180,7 @@
           <div
             class="layout-mobile-menu-panel mt-2 rounded-2xl border p-2 shadow-lg"
             :class="
-              isLightAppShell || isStatsLight
+              isLightChrome || isStatsLight
                 ? 'bg-white/92 border-slate-200/90 shadow-slate-950/10'
                 : 'bg-gray-900/70 border-white/10 shadow-slate-950/30'
             "
@@ -256,7 +279,7 @@
       <div
         class="layout-footer-pill pointer-events-auto inline-flex items-center gap-6 px-7 py-3 rounded-full border text-sm"
         :class="
-          isStatsLight || isLightAppShell
+          isStatsLight || isLightChrome
             ? 'bg-white/95 border-slate-200/90 shadow-[0_8px_20px_rgba(15,23,42,0.12)]'
             : 'bg-slate-900/92 border-white/10 shadow-[0_10px_24px_rgba(0,0,0,0.3)]'
         "
@@ -268,7 +291,7 @@
       </div>
     </footer>
 
-    <NotificationCenter
+    <AsyncNotificationCenter
       v-if="showNotificationSystem"
       class="notification-center-root"
       :open="notification.centerOpen.value"
@@ -285,7 +308,7 @@
       @open-notification="openNotificationTarget"
     />
 
-    <NotificationToastStack
+    <AsyncNotificationToastStack
       v-if="showNotificationSystem"
       :toasts="notification.toastItems.value"
       :theme="notificationTheme"
@@ -326,29 +349,48 @@
         </span>
       </button>
     </div>
+
+    <AsyncQuickIntroOverlay
+      v-if="activeQuickIntro"
+      :open="quickIntroOpen"
+      :kicker="activeQuickIntro.kicker"
+      :title="activeQuickIntro.title"
+      :description="activeQuickIntro.description"
+      :detail="activeQuickIntro.detail"
+      :points="activeQuickIntro.points"
+      @close="closeQuickIntro"
+    />
   </div>
 </template>
 
 <script setup>
-import { computed, ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { computed, defineAsyncComponent, ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/store/authStore'
+import { useBillingStore } from '@/store/billingStore'
 import { useNotificationStore } from '@/store/notificationStore'
-import { useTheme } from '@/composables/useTheme'
-import NotificationCenter from '@/components/NotificationCenter.vue'
-import NotificationToastStack from '@/components/NotificationToastStack.vue'
 import { Home, BarChart3, Boxes, Bell } from 'lucide-vue-next'
+
+const AsyncNotificationCenter = defineAsyncComponent(
+  () => import('@/components/NotificationCenter.vue'),
+)
+const AsyncNotificationToastStack = defineAsyncComponent(
+  () => import('@/components/NotificationToastStack.vue'),
+)
+const AsyncQuickIntroOverlay = defineAsyncComponent(
+  () => import('@/components/QuickIntroOverlay.vue'),
+)
 
 const route = useRoute()
 const router = useRouter()
-const { theme } = useTheme()
 
 const isStats = computed(() => route.path === '/stats')
-const isStatsLight = computed(() => isStats.value && theme.value === 'light')
+const isStatsLight = computed(() => isStats.value)
 const isGestionRoute = computed(() => route.path === '/gestion')
 const isLightAppShell = computed(() =>
   ['/', '/gestion', '/a-propos', '/confidentialite'].includes(route.path),
 )
+const isLightChrome = computed(() => isLightAppShell.value)
 const isFullBleedRoute = computed(() => route.meta.fullBleed === true)
 const layoutVars = computed(() => {
   const edgeGap = isFullBleedRoute.value ? 'clamp(10px, 2vw, 32px)' : 'clamp(14px, 2vw, 40px)'
@@ -399,11 +441,11 @@ let scrollFrame = 0
 const compactLink = (path) => {
   const active = route.path === path
   const idleClass =
-    isStatsLight.value || isLightAppShell.value
+    isStatsLight.value || isLightChrome.value
       ? 'text-slate-900/80 hover:text-black hover:bg-slate-900/8'
       : 'text-white/80 hover:text-white hover:bg-white/5'
   const activeClass =
-    isStatsLight.value || isLightAppShell.value
+    isStatsLight.value || isLightChrome.value
       ? 'bg-emerald-500/14 text-black'
       : 'bg-white/10 text-emerald-200'
   return [
@@ -416,16 +458,93 @@ const menuOpen = ref(false)
 const mobileMenuOpen = ref(false)
 
 const auth = useAuthStore()
+const billing = useBillingStore()
 const notification = useNotificationStore()
 let notificationInitTimer = null
+let notificationInitIdleHandle = null
+let quickIntroTimer = null
 const idleTimeoutMs = 10 * 60 * 1000
 const lastActivity = ref(Date.now())
 let idleTimer = null
+const quickIntroOpen = ref(false)
+const IDLE_ACTIVITY_EVENTS = ['pointerdown', 'keydown', 'visibilitychange']
+
+const QUICK_INTRO_STORAGE_PREFIX = 'snk_quick_intro_seen'
+const HOME_ONBOARD_PENDING_KEY = 'snk_onboarding_pending'
+const HOME_ONBOARD_SEEN_KEY = 'snk_onboarding_seen'
+const QUICK_INTRO_CONFIG = {
+  home: {
+    kicker: 'Quick intro',
+    title: 'L accueil centralise les actions rapides',
+    description:
+      'Tu peux ajouter une paire, retrouver un item et lire les KPI du moment sans changer de page.',
+    detail: "C est la page la plus directe pour alimenter ton stock et garder un oeil sur l activite.",
+    points: ['Recherche instantanee', 'Ajout rapide', 'KPI annuels et stock'],
+  },
+  stats: {
+    kicker: 'Quick intro',
+    title: 'Stats sert a piloter visuellement ton activite',
+    description:
+      'Le canvas te laisse composer des widgets ou appliquer un template complet pour analyser ventes, marges et stock.',
+    detail: 'Commence par un template si tu veux une lecture propre tout de suite.',
+    points: ['Templates prets a l emploi', 'Widgets modulaires', 'Periodes et profils comparables'],
+  },
+  'gestion-inventory': {
+    kicker: 'Quick intro',
+    title: 'Inventaire regroupe tes items et tes filtres',
+    description:
+      'Cette vue sert a nettoyer le stock, ouvrir une fiche, corriger des infos et lancer des actions de masse.',
+    detail: 'Les filtres et la recherche sont le point d entree principal pour naviguer vite.',
+    points: ['Liste complete du stock', 'Filtres et tris', 'Edition et suppression'],
+  },
+  'gestion-delivery': {
+    kicker: 'Quick intro',
+    title: 'Suivi livraison centralise colis et mails',
+    description:
+      'Tu suis ici les livraisons detectees, les evenements colis et les connexions de boites mail.',
+    detail: 'Pratique pour relier rapidement un suivi a un item et voir les statuts sans sortir du produit.',
+    points: ['Colis detectes', 'Statuts de transport', 'Comptes mail et candidates'],
+  },
+  'gestion-admin': {
+    kicker: 'Quick intro',
+    title: 'Administratif cadre le dossier legal',
+    description:
+      'Cet onglet sert a completer le profil, verifier les obligations et generer les documents utiles.',
+    detail: 'Le rappel profil incomplet renvoie ici tant que les informations essentielles manquent.',
+    points: ['Profil legal', 'Declarations', 'Documents et controles'],
+  },
+  account: {
+    kicker: 'Quick intro',
+    title: 'Compte gere securite et profil legal',
+    description:
+      'Tu retrouves ici les informations du compte, le mot de passe et l acces vers le module administratif.',
+    detail: 'C est la page de maintenance du compte, pas la page de pilotage.',
+    points: ['Infos utilisateur', 'Mot de passe', 'Etat du profil legal'],
+  },
+  abo: {
+    kicker: 'Quick intro',
+    title: 'Abonnement debloque le produit complet',
+    description:
+      'Cette page explique ce que Premium active et te laisse lancer le checkout en un clic.',
+    detail: 'Aucun centre de notifications ne s affiche ici pour garder le parcours de paiement propre.',
+    points: ['Activation Stripe', 'Avantages Premium', 'Conditions de gestion'],
+  },
+  'abo-view': {
+    kicker: 'Quick intro',
+    title: 'Mon abonnement sert a gerer la partie Stripe',
+    description:
+      'Tu peux verifier le statut, ouvrir le portail et garder un oeil sur la facturation sans repasser par le checkout.',
+    detail: 'La gestion de carte et des factures reste centralisee cote Stripe.',
+    points: ['Statut courant', 'Portail client', 'Facturation et annulation'],
+  },
+}
 
 const notificationHiddenRoutes = new Set(['stats', 'gestion'])
 const showNotificationSystem = computed(
   () =>
     !!auth.token?.value &&
+    !!auth.user?.value?.id &&
+    billing.status.value === 'active' &&
     !isAuthRoute.value &&
     !notificationHiddenRoutes.has(String(route.name || '')),
 )
@@ -433,7 +552,9 @@ const unreadBadge = computed(() =>
   notification.unreadCount.value > 99 ? '99+' : String(notification.unreadCount.value),
 )
 const notificationButtonExpanded = ref(false)
-const notificationTheme = computed(() => (route.path === '/' || isStatsLight.value ? 'home' : 'dark'))
+const notificationTheme = computed(() =>
+  route.path === '/' || isStatsLight.value ? 'home' : 'dark',
+)
 const notificationButtonClass = computed(() => {
   const expanded = notificationButtonExpanded.value
   if (notificationTheme.value === 'home') {
@@ -457,14 +578,34 @@ const onStatsTemplateModeChange = (event) => {
   statsTemplateModeActive.value = active
 }
 
-if (typeof window !== 'undefined') {
-  window.addEventListener('snk:stats-template-mode', onStatsTemplateModeChange)
-}
-
 const currentUser = computed(() => {
   const u = auth.user
   return u && typeof u === 'object' && 'value' in u ? u.value : u
 })
+const currentUserId = computed(() => currentUser.value?.id ?? 'guest')
+const activeQuickIntroKey = computed(() => {
+  if (!auth.token?.value || !currentUser.value?.id) return ''
+
+  switch (route.name) {
+    case 'home':
+      return shouldSuppressHomeQuickIntro() ? '' : 'home'
+    case 'stats':
+      return 'stats'
+    case 'gestion':
+      if (route.query?.tab === 'delivery') return 'gestion-delivery'
+      if (route.query?.tab === 'admin') return 'gestion-admin'
+      return 'gestion-inventory'
+    case 'account':
+      return 'account'
+    case 'abo':
+      return 'abo'
+    case 'abo-view':
+      return 'abo-view'
+    default:
+      return ''
+  }
+})
+const activeQuickIntro = computed(() => QUICK_INTRO_CONFIG[activeQuickIntroKey.value] || null)
 
 const initials = computed(() => {
   const u = currentUser.value
@@ -494,14 +635,12 @@ function startIdleWatch() {
   stopIdleWatch()
   if (!shouldTrackIdle.value) return
   markActivity()
-  const events = ['pointerdown', 'keydown', 'visibilitychange']
-  events.forEach((evt) => window.addEventListener(evt, markActivity, { passive: true }))
+  IDLE_ACTIVITY_EVENTS.forEach((evt) => window.addEventListener(evt, markActivity, { passive: true }))
   idleTimer = window.setInterval(handleIdleCheck, 30_000)
 }
 
 function stopIdleWatch() {
-  const events = ['pointerdown', 'keydown', 'visibilitychange']
-  events.forEach((evt) => window.removeEventListener(evt, markActivity))
+  IDLE_ACTIVITY_EVENTS.forEach((evt) => window.removeEventListener(evt, markActivity))
   if (idleTimer) {
     clearInterval(idleTimer)
     idleTimer = null
@@ -668,20 +807,104 @@ const clearNotificationInitTimer = () => {
     window.clearTimeout(notificationInitTimer)
     notificationInitTimer = null
   }
+  if (notificationInitIdleHandle && typeof window !== 'undefined' && 'cancelIdleCallback' in window) {
+    window.cancelIdleCallback(notificationInitIdleHandle)
+    notificationInitIdleHandle = null
+  }
+}
+
+const runWhenBrowserIdle = (callback) => {
+  if (typeof window === 'undefined') return
+  if ('requestIdleCallback' in window) {
+    notificationInitIdleHandle = window.requestIdleCallback(() => {
+      notificationInitIdleHandle = null
+      callback()
+    }, { timeout: 1200 })
+    return
+  }
+
+  notificationInitTimer = window.setTimeout(() => {
+    notificationInitTimer = null
+    callback()
+  }, 260)
 }
 
 const scheduleNotificationInit = () => {
   if (typeof window === 'undefined' || !showNotificationSystem.value) return
   clearNotificationInitTimer()
-  notificationInitTimer = window.setTimeout(() => {
+  runWhenBrowserIdle(() => {
     notification.init().catch((e) => {
       console.warn('notification init failed', e)
     })
-    notificationInitTimer = null
-  }, 180)
+  })
+}
+
+const clearQuickIntroTimer = () => {
+  if (quickIntroTimer) {
+    window.clearTimeout(quickIntroTimer)
+    quickIntroTimer = null
+  }
+}
+
+const quickIntroSeenStorageKey = (introKey) =>
+  `${QUICK_INTRO_STORAGE_PREFIX}_${currentUserId.value}_${introKey}`
+
+const hasSeenQuickIntro = (introKey) => {
+  if (!introKey || typeof window === 'undefined') return true
+  try {
+    return localStorage.getItem(quickIntroSeenStorageKey(introKey)) === '1'
+  } catch {
+    return false
+  }
+}
+
+const markQuickIntroSeen = (introKey) => {
+  if (!introKey || typeof window === 'undefined') return
+  try {
+    localStorage.setItem(quickIntroSeenStorageKey(introKey), '1')
+  } catch {
+    // ignore storage failures
+  }
+}
+
+function shouldSuppressHomeQuickIntro() {
+  if (typeof window === 'undefined') return false
+  try {
+    return (
+      localStorage.getItem(HOME_ONBOARD_PENDING_KEY) === '1' ||
+      localStorage.getItem(HOME_ONBOARD_SEEN_KEY) === '1'
+    )
+  } catch {
+    return false
+  }
+}
+
+const scheduleQuickIntro = () => {
+  clearQuickIntroTimer()
+  quickIntroOpen.value = false
+
+  const introKey = activeQuickIntroKey.value
+  if (!introKey || !activeQuickIntro.value || hasSeenQuickIntro(introKey)) {
+    return
+  }
+
+  quickIntroTimer = window.setTimeout(() => {
+    if (!activeQuickIntro.value || activeQuickIntroKey.value !== introKey) return
+    quickIntroOpen.value = true
+    quickIntroTimer = null
+  }, 260)
+}
+
+const closeQuickIntro = () => {
+  clearQuickIntroTimer()
+  if (activeQuickIntroKey.value) {
+    markQuickIntroSeen(activeQuickIntroKey.value)
+  }
+  quickIntroOpen.value = false
 }
 
 onMounted(() => {
+  window.addEventListener('snk:stats-template-mode', onStatsTemplateModeChange)
   window.addEventListener('click', onWindowClick)
   window.addEventListener('keydown', onKeyDown)
   attachScroll()
@@ -697,6 +920,7 @@ onBeforeUnmount(() => {
   detachScroll()
   stopIdleWatch()
   clearNotificationInitTimer()
+  clearQuickIntroTimer()
   notification.teardown({ clearState: true })
 })
 
@@ -741,10 +965,22 @@ watch(
 watch(
   () => showNotificationSystem.value,
   (visible) => {
-    if (visible) return
+    clearNotificationInitTimer()
+    if (visible) {
+      scheduleNotificationInit()
+      return
+    }
     notification.closeCenter()
     notificationButtonExpanded.value = false
   },
+)
+
+watch(
+  () => [route.fullPath, currentUserId.value, billing.status.value],
+  () => {
+    scheduleQuickIntro()
+  },
+  { immediate: true },
 )
 
 watch(
@@ -829,7 +1065,7 @@ html.layout-light-document-scroll #app {
 body.layout-light-document-scroll {
   overflow-x: hidden;
   overflow-y: auto;
-  background: #f7f4ee;
+  background: var(--theme-page-bg);
 }
 
 html.layout-light-document-scroll::-webkit-scrollbar,
@@ -863,11 +1099,11 @@ body.layout-light-document-scroll::-webkit-scrollbar {
 }
 
 .layout-home-bg {
-  background: #f7f4ee;
+  background: var(--theme-page-bg);
 }
 
 .app-layout-root.layout-gestion-bg {
-  background: #f7f4ee;
+  background: var(--theme-page-bg);
 }
 
 .app-layout-root.layout-home-bg .layout-main--document-flow,
@@ -876,11 +1112,12 @@ body.layout-light-document-scroll::-webkit-scrollbar {
 .app-layout-root.layout-gestion-bg .layout-main--document-flow,
 .app-layout-root.layout-gestion-bg .layout-scroll-inner--document-flow,
 .app-layout-root.layout-gestion-bg .layout-page-content--document-flow {
-  background: #f7f4ee;
+  background: var(--theme-page-bg);
 }
 
+
 .app-layout-root.layout-gestion-bg .layout-app-header.is-stuck.is-light {
-  background: rgba(247, 244, 238, 0.92);
+  background: color-mix(in srgb, var(--theme-page-bg) 92%, transparent);
 }
 
 .layout-shell-row {
@@ -911,16 +1148,16 @@ body.layout-light-document-scroll::-webkit-scrollbar {
 }
 
 .layout-app-header.is-stuck.is-light {
-  border-bottom-color: rgba(203, 213, 225, 0.72);
-  background: rgba(247, 244, 238, 0.92);
+  border-bottom-color: color-mix(in srgb, var(--theme-page-border-strong) 82%, transparent);
+  background: color-mix(in srgb, var(--theme-page-bg) 92%, transparent);
   box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
   backdrop-filter: blur(16px) saturate(130%);
 }
 
 .layout-app-header.is-stuck.is-dark {
-  border-bottom-color: rgba(148, 163, 184, 0.14);
-  background: rgba(2, 6, 23, 0.78);
-  box-shadow: 0 12px 32px rgba(2, 6, 23, 0.28);
+  border-bottom-color: var(--theme-ink-border);
+  background: var(--theme-ink-overlay);
+  box-shadow: var(--theme-ink-shadow);
   backdrop-filter: blur(16px) saturate(130%);
 }
 
@@ -982,16 +1219,16 @@ body.layout-light-document-scroll::-webkit-scrollbar {
 }
 
 .layout-home-bg .layout-scroll {
-  scrollbar-color: rgba(14, 116, 144, 0.5) rgba(248, 250, 252, 0.78);
+  scrollbar-color: var(--theme-page-scroll-thumb) var(--theme-page-scroll-track);
 }
 
 .layout-home-bg .layout-scroll::-webkit-scrollbar-track {
-  background: rgba(248, 250, 252, 0.78);
+  background: var(--theme-page-scroll-track);
 }
 
 .layout-home-bg .layout-scroll::-webkit-scrollbar-thumb {
-  border-color: rgba(248, 250, 252, 0.78);
-  background-color: rgba(14, 116, 144, 0.5);
+  border-color: var(--theme-page-scroll-track);
+  background-color: var(--theme-page-scroll-thumb);
 }
 
 .layout-home-bg .layout-scroll.layout-scroll--hidden-scrollbar {
@@ -1053,16 +1290,16 @@ body.layout-light-document-scroll::-webkit-scrollbar {
 
 .layout-menu-actions:not(.is-dark) > button:hover,
 .layout-menu-actions:not(.is-dark) > button:active {
-  background: #e2e8f0;
+  background: color-mix(in srgb, var(--theme-page-pill-bg) 88%, transparent);
 }
 
 .layout-menu-actions.is-dark > button {
-  color: #e2e8f0;
+  color: var(--theme-ink-text);
 }
 
 .layout-menu-actions.is-dark > button:hover,
 .layout-menu-actions.is-dark > button:active {
-  background: rgba(148, 163, 184, 0.18);
+  background: color-mix(in srgb, var(--theme-ink-border) 100%, transparent);
 }
 
 .layout-mobile-menu-panel {

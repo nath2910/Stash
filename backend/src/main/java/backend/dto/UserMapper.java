@@ -11,6 +11,7 @@ public final class UserMapper {
       u.getEmail(),
       u.getFirstName(),
       u.getLastName(),
+      u.getCreatedAt(),
       u.getPictureUrl(),
       u.getProvider(),
       u.isEmailVerified(),

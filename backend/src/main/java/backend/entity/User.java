@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 
 @Entity
@@ -165,6 +166,9 @@ public class User {
 
   @Column(name = "legal_profile_updated_at")
   private OffsetDateTime legalProfileUpdatedAt;
+
+  @Column(name = "created_at", insertable = false, updatable = false)
+  private LocalDateTime createdAt;
 
   public User() {}
 
@@ -353,4 +357,6 @@ public class User {
   public void setLegalProfileUpdatedAt(OffsetDateTime legalProfileUpdatedAt) {
     this.legalProfileUpdatedAt = legalProfileUpdatedAt;
   }
+
+  public LocalDateTime getCreatedAt() { return createdAt; }
 }

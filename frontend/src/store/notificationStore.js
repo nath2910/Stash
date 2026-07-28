@@ -3,8 +3,7 @@ import AdminService from '@/services/AdminService'
 import NotificationService from '@/services/NotificationService'
 import {
   ADMIN_NOTIFICATION_PREFIX,
-  buildAdministrativeReminderNotifications,
-  deriveAdministrativeSummaryParams,
+  buildIncompleteProfileReminder,
 } from '@/utils/adminNotificationBuilder'
 import { useAuthStore } from './authStore'
 
@@ -258,10 +257,13 @@ function hideReminder(notificationId, { markRead = true } = {}) {
 
 async function fetchAdministrativeReminders() {
   try {
+    const auth = useAuthStore()
     const profile = await AdminService.administrativeProfile()
-    const params = deriveAdministrativeSummaryParams(profile, new Date())
-    const summary = await AdminService.administrativeSummary(params)
-    return buildAdministrativeReminderNotifications(profile, summary, { now: new Date() })
+    const reminder = buildIncompleteProfileReminder(profile, {
+      now: new Date(),
+      accountCreatedAt: auth.user.value?.createdAt || null,
+    })
+    return reminder ? [reminder] : []
   } catch {
     return []
   }

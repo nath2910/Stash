@@ -1,0 +1,13 @@
+.git
+.github
+.agents
+.codex
+.codex-logs
+.vscode
+node_modules
+tmp
+uploads
+frontend
+backend/target
+backend/.env
+*.log

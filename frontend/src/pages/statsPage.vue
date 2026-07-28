@@ -1,5 +1,5 @@
 <template>
-  <div class="stats-page-shell" :class="{ 'stats-page-shell--light': themeMode === 'light' }">
+  <div class="stats-page-shell stats-page-shell--light">
     <Transition name="stats-range-loader">
       <div v-if="rangeRefreshing" class="stats-range-loader" role="status" aria-live="polite">
         <span class="stats-range-loader__dot"></span>
@@ -17,12 +17,9 @@
 <script setup lang="ts">
 import { useStatsRange } from '@/composables/useStatsRange'
 import { computed, defineAsyncComponent, onBeforeUnmount, ref, watch } from 'vue'
-import { useTheme } from '@/composables/useTheme'
 
 const StatsCanvas = defineAsyncComponent(() => import('@/components/stats/StatsCanvas.vue'))
 const { from, to } = useStatsRange()
-const { theme } = useTheme()
-const themeMode = computed(() => (theme.value === 'light' ? 'light' : 'dark'))
 const rangeRefreshing = ref(false)
 let rangeRefreshTimer: number | null = null
 
@@ -66,7 +63,7 @@ function formatDateLabel(value: string) {
   height: 100%;
   min-height: 0;
   overflow: hidden;
-  background: #060a12;
+  background: #f7f4ee;
 }
 
 .stats-page-shell--light {
@@ -89,12 +86,6 @@ function formatDateLabel(value: string) {
   color: #0f172a;
   box-shadow: 0 18px 36px rgba(15, 23, 42, 0.12);
   backdrop-filter: blur(12px);
-}
-
-.stats-page-shell:not(.stats-page-shell--light) .stats-range-loader {
-  border-color: rgba(148, 163, 184, 0.18);
-  background: rgba(15, 23, 42, 0.84);
-  color: #e2e8f0;
 }
 
 .stats-range-loader__dot {

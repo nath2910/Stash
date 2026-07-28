@@ -4,7 +4,7 @@
     :class="{
       'is-space-pan': spacePanActive,
       'is-route-leaving': isRouteLeaving,
-      'theme-light': themeMode === 'light',
+      'theme-light': true,
     }"
     :data-edit="editMode ? 'true' : 'false'"
     :data-pan-content="editMode ? 'true' : 'false'"
@@ -12,73 +12,108 @@
     @wheel="onRootWheel"
     @contextmenu="onCanvasContextMenu"
   >
-    <teleport to="body">
-      <div v-if="templatePickerOpen" class="template-picker-modal" role="dialog" aria-modal="true">
-        <div class="template-picker-backdrop" @click="closeTemplatePicker"></div>
-        <div class="template-picker-panel" @click.stop>
-          <div class="template-picker-head">
-            <div>
-              <div class="template-picker-kicker">Bibliotheque templates</div>
-              <h3 class="template-picker-title">Choisis une vue prete a piloter</h3>
-              <p class="template-picker-subtitle">
-                Des layouts preconfigures pour analyser ton activite sans repartir de zero.
-              </p>
-            </div>
-            <button
-              type="button"
-              class="template-picker-close"
-              aria-label="Fermer"
-              @click="closeTemplatePicker"
-            >
-              <span class="close-x" aria-hidden="true"></span>
-            </button>
-          </div>
-
-          <div v-if="templatePickerItems.length" class="template-picker-list">
-            <button
-              v-for="item in templatePickerItems"
-              :key="item.id"
-              type="button"
-              class="template-picker-card"
-              :class="{ 'is-active': item.id === activeTemplateId }"
-              :data-template="item.id"
-              @click="applyTemplate(item)"
-            >
-              <div class="template-picker-card__preview" aria-hidden="true">
-                <span class="template-picker-card__preview-kpi"></span>
-                <span class="template-picker-card__preview-chart"></span>
-                <span class="template-picker-card__preview-row"></span>
-                <span class="template-picker-card__preview-row is-short"></span>
+    <template v-if="templatePickerOpen">
+      <section class="template-picker-screen" role="dialog" aria-modal="true">
+        <div class="template-picker-stage">
+          <section class="template-picker-shell">
+            <header class="template-picker-head">
+              <div>
+                <div class="template-picker-kicker">Bibliotheque templates</div>
+                <h3 class="template-picker-title">Choisis une vue prete a piloter</h3>
+                <p class="template-picker-subtitle">
+                  Des layouts preconfigures pour analyser ton activite sans repartir de zero.
+                </p>
               </div>
-              <div class="template-picker-card__body">
-                <div class="template-picker-card__topline">
-                  <span class="template-picker-card__badge">{{ item.badge }}</span>
-                  <span v-if="item.id === activeTemplateId" class="template-picker-card__status">
-                    Actif
-                  </span>
+              <button
+                type="button"
+                class="template-picker-close"
+                aria-label="Fermer"
+                @click="closeTemplatePicker"
+              >
+                <span class="close-x" aria-hidden="true"></span>
+              </button>
+            </header>
+
+            <div ref="templatePickerScrollEl" class="template-picker-scroll">
+              <section v-if="templatePickerItems.length" class="template-picker-body">
+                <div class="template-picker-meta">
+                  <span class="template-picker-meta__dot"></span>
+                  <span class="template-picker-meta__label">{{ templatePickerItems.length }} templates disponibles</span>
                 </div>
-                <div class="template-picker-card__title">{{ item.title }}</div>
-                <p class="template-picker-card__desc">{{ item.description }}</p>
-                <span class="template-picker-card__cta">
-                  <span>Appliquer</span>
-                  <span aria-hidden="true">-></span>
-                </span>
-              </div>
-            </button>
-          </div>
+                <div class="template-picker-grid" role="listbox" aria-label="Templates stats">
+                  <button
+                    v-for="item in templatePickerItems"
+                    :key="item.id"
+                    type="button"
+                    class="template-picker-card"
+                    :class="{
+                      'is-active': item.id === activeTemplateId,
+                      'is-selected': item.id === activeTemplateId,
+                    }"
+                    :data-template-card="item.id"
+                    :data-template="item.id"
+                    :data-accent="item.accent"
+                    @click="applyTemplate(item)"
+                  >
+                    <div class="template-picker-card__head">
+                      <div class="template-picker-card__title-wrap">
+                        <div class="template-picker-card__title-row">
+                          <div class="template-picker-card__title">{{ item.title }}</div>
+                          <span v-if="item.id === activeTemplateId" class="template-picker-card__status">
+                            Actif
+                          </span>
+                        </div>
+                        <div class="template-picker-card__help">{{ item.description }}</div>
+                      </div>
+                      <span class="template-picker-card__badge">{{ item.badge }}</span>
+                    </div>
 
-          <div v-if="!templatePickerItems.length" class="template-picker-empty" role="status">
-            <div class="template-picker-empty__title">Aucun template disponible</div>
-            <p class="template-picker-empty__text">
-              La bibliotheque est vide et prete pour la prochaine version du module Templates.
-            </p>
-          </div>
+                    <div class="template-picker-card__preview" aria-hidden="true">
+                      <div class="template-picker-card__preview-frame">
+                        <span class="template-picker-card__preview-chip"></span>
+                        <div class="template-picker-card__preview-grid">
+                          <span class="template-picker-card__preview-kpi"></span>
+                          <span class="template-picker-card__preview-chart"></span>
+                          <span class="template-picker-card__preview-row"></span>
+                          <span class="template-picker-card__preview-row is-short"></span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="template-picker-card__foot">
+                      <div class="template-picker-card__views">
+                        <span
+                          v-for="highlight in item.highlights"
+                          :key="highlight"
+                          class="template-picker-card__view"
+                        >
+                          {{ highlight }}
+                        </span>
+                      </div>
+                      <span class="template-picker-card__cta">Appliquer</span>
+                    </div>
+                  </button>
+                </div>
+              </section>
+
+              <div v-else class="template-picker-empty" role="status">
+                <div class="template-picker-empty__title">Aucun template disponible</div>
+                <p class="template-picker-empty__text">
+                  La bibliotheque est vide et prete pour la prochaine version du module Templates.
+                </p>
+              </div>
+            </div>
+
+            <footer class="template-picker-foot">
+              <span>Choisis une base puis ajuste les widgets ensuite. Echap ferme la palette.</span>
+            </footer>
+          </section>
         </div>
-      </div>
-    </teleport>
+      </section>
+    </template>
 
     <!-- Canvas -->
-    <template v-if="!templateActive">
+    <template v-else-if="!templateActive">
       <div ref="viewportEl" class="viewport">
         <div v-if="editMode" class="edit-grid" aria-hidden="true"></div>
         <div
@@ -568,8 +603,7 @@
     <teleport to="body">
       <div
         v-if="shortcutHelpOpen"
-        class="shortcut-modal"
-        :class="{ 'theme-light': themeMode === 'light' }"
+        class="shortcut-modal theme-light"
         role="dialog"
         aria-modal="true"
       >
@@ -614,8 +648,7 @@
     <teleport to="body">
       <div
         v-if="profileEditorOpen"
-        class="profile-modal"
-        :class="{ 'theme-light': themeMode === 'light' }"
+        class="profile-modal theme-light"
         role="dialog"
         aria-modal="true"
       >
@@ -759,7 +792,6 @@ import {
   newWidget,
 } from './widgetRegistry'
 import { getWidgetPaletteMeta, getWidgetSelectionMeta } from './palette/widgetPaletteMeta'
-import { useTheme } from '@/composables/useTheme'
 import { useAuthStore } from '@/store/authStore'
 import StatsServices from '@/services/StatsServices'
 import {
@@ -836,8 +868,6 @@ const { from, to } = toRefs(props)
 const { user } = useAuthStore()
 const route = useRoute()
 const router = useRouter()
-const { theme } = useTheme()
-const themeMode = computed(() => (theme.value === 'light' ? 'light' : 'dark'))
 const isStatsDashboardRoute = computed(
   () => route.name === 'stats' || route.path.startsWith('/stats'),
 )
@@ -872,6 +902,7 @@ const profileDraft = ref({
   p2Color: PROFILE_COLORS.p2,
   p3Color: PROFILE_COLORS.p3,
 })
+const templatePickerScrollEl = ref<HTMLElement | null>(null)
 const templatePickerOpen = ref(false)
 const templateActive = ref(false)
 const activeTemplateId = ref<TemplateId | ''>('')
@@ -2265,7 +2296,6 @@ function widgetMemoDeps(w: Widget) {
     grouped,
     fromVal,
     toVal,
-    themeMode.value,
     liveInteraction ? interactionTick.value : 0,
   ]
 }
@@ -6297,7 +6327,7 @@ function blurCanvasFocus() {
   if (!active) return
   if (
     active.closest(
-      '.canvas-root, .widget, .template-picker-modal, .shortcut-modal, .profile-modal, .form-overlay',
+      '.canvas-root, .widget, .template-picker-screen, .shortcut-modal, .profile-modal, .form-overlay',
     )
   ) {
     active.blur()

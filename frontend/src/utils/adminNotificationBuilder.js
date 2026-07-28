@@ -7,6 +7,7 @@ import {
 
 export const ADMIN_NOTIFICATION_PREFIX = 'admin:'
 export const ADMIN_NOTIFICATION_ROUTE = '/gestion?tab=admin'
+export const PROFILE_REMINDER_DELAY_HOURS = 12
 
 export function deriveAdministrativeSummaryParams(profile = {}, todayValue = new Date()) {
   const today = todayValue instanceof Date ? todayValue : new Date()
@@ -27,34 +28,31 @@ export function deriveAdministrativeSummaryParams(profile = {}, todayValue = new
 }
 
 export function buildAdministrativeReminderNotifications(profile = {}, summary = {}, options = {}) {
-  if (!profile || typeof profile !== 'object' || !summary || typeof summary !== 'object') {
+  if (!profile || typeof profile !== 'object') {
     return []
   }
 
   const now = options.now instanceof Date ? options.now : new Date()
+  const reminders = []
+
+  const profileReminder = buildIncompleteProfileReminder(profile, options)
+  if (profileReminder) {
+    reminders.push(profileReminder)
+  }
+
+  if (options.onlyProfileReminder) {
+    return reminders
+  }
+
+  if (!summary || typeof summary !== 'object') {
+    return reminders
+  }
+
   const adminProfile = getAdministrativeProfile(profile)
   const period = getDeclarativePeriod(profile, summary.periodStart, summary.periodEnd)
   const blockingIssues = getBlockingIssues(profile, summary, period).filter(
     (issue) => issue.id !== 'no-sales' && issue.severity !== 'info',
   )
-  const reminders = []
-
-  if (profileNeedsAttention(profile, adminProfile)) {
-    reminders.push({
-      id: `${ADMIN_NOTIFICATION_PREFIX}profile:${summary.periodStart || 'current'}`,
-      type: 'ADMIN_PROFILE',
-      title: 'Profil administratif a completer',
-      message: profileReminderMessage(profile, adminProfile),
-      severity: 'WARNING',
-      ctaRoute: ADMIN_NOTIFICATION_ROUTE,
-      ctaLabel: 'Completer',
-      entityType: 'ADMIN_PROFILE',
-      milestoneKey: `ADMIN_PROFILE_${summary.periodStart || 'CURRENT'}`,
-      createdAt: stableIsoStamp(summary.periodStart || now, 8),
-      isRead: false,
-      dismissedAt: null,
-    })
-  }
 
   const deadlineReminder = buildDeadlineReminder(summary, adminProfile, period, now)
   if (deadlineReminder) {
@@ -67,6 +65,36 @@ export function buildAdministrativeReminderNotifications(profile = {}, summary =
   }
 
   return reminders.sort((a, b) => Date.parse(b.createdAt || 0) - Date.parse(a.createdAt || 0))
+}
+
+export function buildIncompleteProfileReminder(profile = {}, options = {}) {
+  if (!profile || typeof profile !== 'object') return null
+
+  const now = options.now instanceof Date ? options.now : new Date()
+  const adminProfile = getAdministrativeProfile(profile)
+  if (!profileNeedsAttention(profile, adminProfile)) return null
+
+  const eligibleAt = resolveProfileReminderEligibleAt(options.accountCreatedAt, options)
+  if (eligibleAt && now.getTime() < eligibleAt.getTime()) {
+    return null
+  }
+
+  const reminderDate = eligibleAt || now
+
+  return {
+    id: `${ADMIN_NOTIFICATION_PREFIX}profile:incomplete`,
+    type: 'ADMIN_PROFILE',
+    title: 'Profil administratif a completer',
+    message: profileReminderMessage(profile, adminProfile),
+    severity: 'WARNING',
+    ctaRoute: ADMIN_NOTIFICATION_ROUTE,
+    ctaLabel: 'Completer',
+    entityType: 'ADMIN_PROFILE',
+    milestoneKey: 'ADMIN_PROFILE_INCOMPLETE',
+    createdAt: reminderDate.toISOString(),
+    isRead: false,
+    dismissedAt: null,
+  }
 }
 
 function buildDeadlineReminder(summary, adminProfile, period, now) {
@@ -166,6 +194,15 @@ function profileReminderMessage(profile, adminProfile) {
   return 'Quelques informations administratives restent a verifier.'
 }
 
+function resolveProfileReminderEligibleAt(accountCreatedAt, options = {}) {
+  const createdAt = parseDateTime(accountCreatedAt)
+  if (!createdAt) return null
+  const delayHours = Number.isFinite(Number(options.profileReminderDelayHours))
+    ? Math.max(0, Number(options.profileReminderDelayHours))
+    : PROFILE_REMINDER_DELAY_HOURS
+  return new Date(createdAt.getTime() + delayHours * 60 * 60 * 1000)
+}
+
 function declarationDeadline(period) {
   const end = parseLocalDate(period?.end) || new Date()
   return new Date(end.getFullYear(), end.getMonth() + 2, 0)
@@ -208,4 +245,11 @@ function parseLocalDate(value) {
   const [year, month, day] = text.split('-').map(Number)
   if (!year || !month || !day) return null
   return new Date(year, month - 1, day)
+}
+
+function parseDateTime(value) {
+  if (!value) return null
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value
+  const parsed = Date.parse(String(value))
+  return Number.isFinite(parsed) ? new Date(parsed) : null
 }

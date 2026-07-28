@@ -148,6 +148,7 @@ const clockTick = ref(Date.now())
 const annualRange = computed(() => getCurrentYearRange(new Date(clockTick.value)))
 let quickAddToastTimer = null
 let clockTimer = null
+let statsFallbackTimer = null
 
 const localSummary = computed(() => calculatePeriodStats(stockItems.value, annualRange.value))
 
@@ -182,6 +183,7 @@ async function chargerVentes() {
   if (!auth.token.value) {
     stockItems.value = []
     stockLoaded.value = true
+    apiSummary.value = null
     return
   }
 
@@ -191,6 +193,7 @@ async function chargerVentes() {
     const { data } = await SnkVenteServices.getSnkVente()
     stockItems.value = Array.isArray(data) ? data : []
     stockLoaded.value = true
+    apiSummary.value = null
     notifyStockChanged()
   } catch (error) {
     console.error('Erreur chargement stock accueil', error)
@@ -218,9 +221,26 @@ async function chargerStatsAnnuelles() {
   }
 }
 
+function clearStatsFallbackTimer() {
+  if (!statsFallbackTimer) return
+  window.clearTimeout(statsFallbackTimer)
+  statsFallbackTimer = null
+}
+
+function scheduleStatsFallback() {
+  if (typeof window === 'undefined' || !auth.token.value || stockLoaded.value) return
+  clearStatsFallbackTimer()
+  statsFallbackTimer = window.setTimeout(() => {
+    statsFallbackTimer = null
+    if (!stockLoaded.value) {
+      void chargerStatsAnnuelles()
+    }
+  }, 650)
+}
+
 onMounted(() => {
   chargerVentes()
-  chargerStatsAnnuelles()
+  scheduleStatsFallback()
   scheduleClockRefresh()
   if (typeof document !== 'undefined') {
     document.addEventListener('visibilitychange', handleVisibilityChange)
@@ -247,6 +267,7 @@ onBeforeUnmount(() => {
   if (clockTimer) {
     window.clearTimeout(clockTimer)
   }
+  clearStatsFallbackTimer()
   if (typeof document !== 'undefined') {
     document.removeEventListener('visibilitychange', handleVisibilityChange)
   }
@@ -307,7 +328,6 @@ async function handleQuickUpdate({ id, payload }) {
     selectedItem.value = saved
     modalSuccessKey.value += 1
     notifyStockChanged()
-    await chargerStatsAnnuelles()
     showQuickAddToast('Modifications enregistrees !')
   } catch (error) {
     modalError.value = error?.response?.data?.message || 'Erreur lors de la modification.'
@@ -329,7 +349,6 @@ async function handleQuickAdd({ payload, quantity }) {
       await chargerVentes()
     }
     notifyStockChanged()
-    await chargerStatsAnnuelles()
     quickAddSuccessKey.value += 1
     showQuickAddToast(safeQuantity > 1 ? `${safeQuantity} items ajoutes` : 'Item ajoute')
   } catch (error) {
@@ -358,12 +377,7 @@ function focusQuickAddForm() {
 }
 
 function refreshClock() {
-  const previousYear = new Date(clockTick.value).getFullYear()
   clockTick.value = Date.now()
-  const nextYear = new Date(clockTick.value).getFullYear()
-  if (nextYear !== previousYear) {
-    void chargerStatsAnnuelles()
-  }
 }
 
 function scheduleClockRefresh() {
