@@ -1,73 +1,11 @@
 <template>
-  <section class="quarterly-dashboard" aria-label="Dashboard trimestriel" @wheel="onWheel">
+  <section
+    class="quarterly-dashboard"
+    :class="quarterlySizeClass"
+    aria-label="Dashboard trimestriel"
+    @wheel="onWheel"
+  >
     <div class="quarterly-dashboard__inner">
-      <header class="quarterly-header">
-        <div class="quarterly-header__copy">
-          <p class="quarterly-header__kicker">Template</p>
-          <h1>Dashboard trimestriel</h1>
-          <p>
-            Lecture {{ selectedQuarterLongLabel }} des ventes, du profit, des achats et du stock
-            au {{ formatDate(periodRange.to) }}.
-          </p>
-        </div>
-
-        <div class="quarterly-quarter">
-          <div class="quarterly-quarter__head">
-            <span>Trimestre selectionne</span>
-            <small>{{ periodShortLabel }}</small>
-          </div>
-
-          <div class="quarterly-quarter__control">
-            <button
-              type="button"
-              aria-label="Trimestre precedent"
-              :disabled="!canGoPreviousQuarter"
-              @click="changeQuarter(-1)"
-            >
-              <ChevronLeft aria-hidden="true" />
-            </button>
-
-            <div class="quarterly-quarter__summary">
-              <strong>{{ selectedQuarterLabel }}</strong>
-              <input
-                :value="yearDraft"
-                inputmode="numeric"
-                pattern="[0-9]*"
-                autocomplete="off"
-                aria-label="Selectionner une annee"
-                @input="onYearInput"
-                @blur="commitYear()"
-                @keydown.enter.prevent="commitYear()"
-              />
-            </div>
-
-            <button
-              type="button"
-              aria-label="Trimestre suivant"
-              :disabled="!canGoNextQuarter"
-              @click="changeQuarter(1)"
-            >
-              <ChevronRight aria-hidden="true" />
-            </button>
-          </div>
-
-          <div class="quarterly-quarter__tabs" role="tablist" aria-label="Trimestres">
-            <button
-              v-for="quarter in quarterOptions"
-              :key="quarter.value"
-              type="button"
-              class="quarterly-quarter__tab"
-              :class="{ 'is-active': selectedQuarter === quarter.value }"
-              :aria-selected="selectedQuarter === quarter.value"
-              role="tab"
-              @click="setQuarter(quarter.value)"
-            >
-              {{ quarter.label }}
-            </button>
-          </div>
-        </div>
-      </header>
-
       <div v-if="loading && !hasLoadedOnce" class="quarterly-state quarterly-state--loading" role="status">
         <div class="quarterly-state__pulse"></div>
         <h2>Chargement du dashboard</h2>
@@ -90,56 +28,128 @@
         </div>
 
         <template v-else>
-          <nav class="quarterly-page-nav" aria-label="Navigation du dashboard trimestriel">
-            <button
-              type="button"
-              class="quarterly-page-nav__arrow"
-              :disabled="activePage === 0"
-              aria-label="Page precedente"
-              @click="previousPage"
-            >
-              <ChevronLeft aria-hidden="true" />
-            </button>
-
-            <div class="quarterly-page-nav__center">
-              <span class="quarterly-page-nav__count">{{ activePage + 1 }} / {{ pages.length }}</span>
-              <strong>{{ currentPage.label }}</strong>
-              <div class="quarterly-page-nav__dots" role="tablist" aria-label="Pages">
-                <button
-                  v-for="(page, index) in pages"
-                  :key="page.key"
-                  type="button"
-                  class="quarterly-page-nav__dot"
-                  :class="{ 'is-active': activePage === index }"
-                  :aria-label="`Afficher ${page.label}`"
-                  :aria-selected="activePage === index"
-                  role="tab"
-                  @click="goToPage(index)"
-                ></button>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              class="quarterly-page-nav__arrow"
-              :disabled="activePage === pages.length - 1"
-              aria-label="Page suivante"
-              @click="nextPage"
-            >
-              <ChevronRight aria-hidden="true" />
-            </button>
-          </nav>
-
-          <section
-            class="quarterly-stage"
-            :class="{ 'is-dragging': pointerDrag.active }"
-            aria-live="polite"
-            @pointerdown="onPointerDown"
-            @pointerup="onPointerUp"
-            @pointercancel="resetPointerDrag"
-            @lostpointercapture="resetPointerDrag"
+          <DashboardLayout
+            title="Dashboard trimestriel"
+            :description="`Lecture ${selectedQuarterLongLabel} des ventes, du profit, des achats et du stock au ${formatDate(periodRange.to)}.`"
+            :period-label="periodShortLabel"
+            analytics-kicker="Pilotage revendeur"
+            analytics-title="Plan d'action trimestriel"
+            :analytics-meta="selectedQuarterLabel"
+            :kpis="kpiCards"
+            :modules="dashboardModules"
+            :show-unified-content="activePage === 1"
+            :fit-screen="true"
           >
-            <div class="quarterly-pages" :style="pageTrackStyle">
+            <template #selector>
+              <div class="quarterly-quarter">
+                <div class="quarterly-quarter__head">
+                  <span>Trimestre selectionne</span>
+                  <small>{{ periodShortLabel }}</small>
+                </div>
+
+                <div class="quarterly-quarter__control">
+                  <button
+                    type="button"
+                    aria-label="Trimestre precedent"
+                    :disabled="!canGoPreviousQuarter"
+                    @click="changeQuarter(-1)"
+                  >
+                    <ChevronLeft aria-hidden="true" />
+                  </button>
+
+                  <div class="quarterly-quarter__summary">
+                    <strong>{{ selectedQuarterLabel }}</strong>
+                    <input
+                      :value="yearDraft"
+                      inputmode="numeric"
+                      pattern="[0-9]*"
+                      autocomplete="off"
+                      aria-label="Selectionner une annee"
+                      @input="onYearInput"
+                      @blur="commitYear()"
+                      @keydown.enter.prevent="commitYear()"
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    aria-label="Trimestre suivant"
+                    :disabled="!canGoNextQuarter"
+                    @click="changeQuarter(1)"
+                  >
+                    <ChevronRight aria-hidden="true" />
+                  </button>
+                </div>
+
+                <div class="quarterly-quarter__tabs" role="tablist" aria-label="Trimestres">
+                  <button
+                    v-for="quarter in quarterOptions"
+                    :key="quarter.value"
+                    type="button"
+                    class="quarterly-quarter__tab"
+                    :class="{ 'is-active': selectedQuarter === quarter.value }"
+                    :aria-selected="selectedQuarter === quarter.value"
+                    role="tab"
+                    @click="setQuarter(quarter.value)"
+                  >
+                    {{ quarter.label }}
+                  </button>
+                </div>
+              </div>
+            </template>
+
+            <template #navigation>
+              <nav class="quarterly-page-nav" aria-label="Navigation du dashboard trimestriel">
+                <button
+                  type="button"
+                  class="quarterly-page-nav__arrow"
+                  :disabled="activePage === 0"
+                  aria-label="Page precedente"
+                  @click="previousPage"
+                >
+                  <ChevronLeft aria-hidden="true" />
+                </button>
+
+                <div class="quarterly-page-nav__center">
+                  <span class="quarterly-page-nav__count">{{ activePage + 1 }} / {{ pages.length }}</span>
+                  <strong>{{ currentPage.label }}</strong>
+                  <div class="quarterly-page-nav__dots" role="tablist" aria-label="Pages">
+                    <button
+                      v-for="(page, index) in pages"
+                      :key="page.key"
+                      type="button"
+                      class="quarterly-page-nav__dot"
+                      :class="{ 'is-active': activePage === index }"
+                      :aria-label="`Afficher ${page.label}`"
+                      :aria-selected="activePage === index"
+                      role="tab"
+                      @click="goToPage(index)"
+                    ></button>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  class="quarterly-page-nav__arrow"
+                  :disabled="activePage === pages.length - 1"
+                  aria-label="Page suivante"
+                  @click="nextPage"
+                >
+                  <ChevronRight aria-hidden="true" />
+                </button>
+              </nav>
+            </template>
+
+            <section
+              class="quarterly-stage"
+              :class="{ 'is-dragging': pointerDrag.active }"
+              aria-live="polite"
+              @pointerdown="onPointerDown"
+              @pointerup="onPointerUp"
+              @pointercancel="resetPointerDrag"
+              @lostpointercapture="resetPointerDrag"
+            >
+              <div class="quarterly-pages" :style="pageTrackStyle">
               <article
                 v-if="activePage === 0"
                 class="quarterly-page quarterly-page--flow"
@@ -272,7 +282,7 @@
                         <p>Meilleures ventes</p>
                         <h2>Benefices du trimestre</h2>
                       </div>
-                      <span>{{ topSales.length }} lignes</span>
+                      <span>{{ topSalesPreview.length }} lignes</span>
                     </div>
 
                     <div v-if="topSales.length" class="quarterly-table-scroll">
@@ -285,11 +295,10 @@
                           </tr>
                         </thead>
                         <tbody>
-                          <tr v-for="(sale, index) in topSales" :key="`${sale.nomItem}-${index}`">
+                          <tr v-for="(sale, index) in topSalesPreview" :key="`${sale.nomItem}-${index}`">
                             <td>{{ index + 1 }}</td>
                             <td>
                               <strong :title="sale.nomItem">{{ sale.nomItem }}</strong>
-                              <span>Top vente trimestrielle</span>
                             </td>
                             <td :class="profitClass(sale.benefice)">
                               {{ formatMoney(sale.benefice) }}
@@ -316,8 +325,9 @@
                   </article>
                 </section>
               </article>
-            </div>
-          </section>
+              </div>
+            </section>
+          </DashboardLayout>
         </template>
       </template>
     </div>
@@ -328,7 +338,6 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
   BadgeEuro,
-  Boxes,
   ChevronLeft,
   ChevronRight,
   CirclePercent,
@@ -345,6 +354,7 @@ import {
   normalizeTopSales,
   prevPeriod,
 } from '@/services/statsAdapters'
+import DashboardLayout from '../shared/DashboardLayout.vue'
 import QuarterlyKpiCard from './QuarterlyKpiCard.vue'
 
 type QuarterlyTemplateState = {
@@ -408,6 +418,8 @@ const currentQuarter = quarterFromMonth(today.getMonth() + 1)
 
 const selectedYear = ref(normalizeInitialYear(props.initialState))
 const selectedQuarter = ref(normalizeInitialQuarter(props.initialState))
+const viewportWidth = ref(typeof window === 'undefined' ? 1440 : window.innerWidth)
+const viewportHeight = ref(typeof window === 'undefined' ? 900 : window.innerHeight)
 const yearDraft = ref(String(selectedYear.value))
 const minDate = ref('')
 const maxDate = ref(formatYmd(today))
@@ -478,6 +490,13 @@ const periodShortLabel = computed(() => {
   return `${formatDateCompact(periodRange.value.from)} -> ${formatDateCompact(periodRange.value.to)}`
 })
 const currentPage = computed(() => pages[activePage.value] ?? pages[1])
+const quarterlySizeClass = computed(() => ({
+  'is-compact-height': viewportHeight.value <= 960,
+  'is-short-height': viewportHeight.value <= 860,
+  'is-narrow-template': viewportWidth.value <= 1280,
+  'is-wide-template': viewportWidth.value >= 1600,
+  'is-hd-template': viewportWidth.value >= 1900,
+}))
 const pageTrackStyle = computed(() => ({
   transform: 'translate3d(0, 0, 0)',
 }))
@@ -545,7 +564,13 @@ const previousTotals = computed(() => ({
   stockValue: previousSummary.value.valeurStock,
 }))
 
-const brandPreview = computed(() => brands.value.slice(0, 5))
+const detailRowLimit = computed(() => {
+  if (viewportHeight.value <= 860) return viewportWidth.value <= 1400 ? 5 : 6
+  if (viewportHeight.value <= 960) return viewportWidth.value <= 1400 ? 6 : 7
+  return viewportWidth.value <= 1400 ? 7 : 8
+})
+const topSalesPreview = computed(() => topSales.value.slice(0, detailRowLimit.value))
+const brandPreview = computed(() => brands.value.slice(0, viewportHeight.value <= 860 ? 4 : 5))
 const hasQuarterData = computed(() => {
   const totals = quarterTotals.value
   return (
@@ -597,27 +622,100 @@ const kpiCards = computed(() => [
     tone: 'primary' as const,
     icon: Wallet,
   },
-  {
-    label: 'Stock fin de trimestre',
-    value: `${formatNumber(quarterTotals.value.remainingStockCount)} articles`,
-    detail: `${formatMoney(quarterTotals.value.remainingStockValue)} au ${formatDate(periodRange.value.to)}`,
-    tone:
-      quarterTotals.value.remainingStockCount > 0 ? ('warning' as const) : ('neutral' as const),
-    icon: Boxes,
-  },
 ])
 
 const visibleBrandPreview = computed(() => brandPreview.value.slice(0, 3))
+const topQuarterSale = computed(() => topSales.value[0] ?? null)
 const quickStripItems = computed(() => [
   { label: 'Panier moyen', value: formatMoney(quarterTotals.value.averageSalePrice) },
   { label: 'Depenses achat', value: formatMoney(quarterTotals.value.purchaseSpend) },
   { label: 'Profit moyen', value: formatMoney(quarterTotals.value.averageProfit) },
   { label: 'Cash net', value: formatMoney(quarterTotals.value.cashNet) },
 ])
+const bestQuarterCategory = computed(() => categoryProfit.value[0] ?? null)
+const stockActionDetail = computed(() => {
+  const { remainingStockCount, itemsSold, remainingStockValue } = quarterTotals.value
+
+  if (remainingStockCount <= 0) {
+    return 'Aucun stock dormant detecte en fin de trimestre.'
+  }
+
+  if (itemsSold <= 0) {
+    return `${formatMoney(remainingStockValue)} immobilises sans vente sur la periode.`
+  }
+
+  if (remainingStockCount > itemsSold) {
+    const gap = remainingStockCount - itemsSold
+    return `${formatNumber(gap)} article${gap > 1 ? 's' : ''} de plus en stock que de ventes sur le trimestre.`
+  }
+
+  return `${formatMoney(remainingStockValue)} encore immobilises, avec un stock final sous le volume vendu.`
+})
+const dashboardModules = computed(() => [
+  {
+    badge: 'Cash',
+    title: quarterTotals.value.cashNet >= 0 ? 'Cash genere' : 'Cash sous pression',
+    value: formatMoney(quarterTotals.value.cashNet),
+    detail:
+      quarterTotals.value.cashNet >= 0
+        ? `${formatMoney(quarterTotals.value.cashNet)} restants apres ${formatMoney(quarterTotals.value.purchaseSpend)} d'achats.`
+        : `${formatMoney(Math.abs(quarterTotals.value.cashNet))} de plus en achats que de ventes sur le trimestre.`,
+    tone: quarterTotals.value.cashNet >= 0 ? 'positive' : 'warning',
+  },
+  {
+    badge: 'Mix',
+    title: bestQuarterCategory.value?.label ? 'Categorie forte' : 'Categorie a prioriser',
+    value: bestQuarterCategory.value?.label || 'Aucune',
+    detail: bestQuarterCategory.value?.label
+      ? `${formatMoney(bestQuarterCategory.value.value)} de profit cumule sur cette categorie.`
+      : 'Ajoute plus de categories pour faire ressortir un vrai axe de mix.',
+    tone:
+      bestQuarterCategory.value?.value && bestQuarterCategory.value.value > 0
+        ? 'positive'
+        : 'neutral',
+  },
+  {
+    badge: 'Top vente',
+    title: 'Produit le plus rentable',
+    value: topQuarterSale.value?.nomItem || 'Aucune',
+    detail: topQuarterSale.value
+      ? `${formatMoney(topQuarterSale.value.benefice)} de benefice sur la meilleure vente du trimestre.`
+      : 'Aucune vente rentable detectee sur la periode.',
+    tone: topQuarterSale.value?.benefice && topQuarterSale.value.benefice > 0 ? 'positive' : 'neutral',
+  },
+  {
+    badge: 'Stock',
+    title:
+      quarterTotals.value.remainingStockCount > quarterTotals.value.itemsSold
+        ? 'Stock a ecouler'
+        : 'Stock sous controle',
+    value: `${formatNumber(quarterTotals.value.remainingStockCount)} articles`,
+    detail: stockActionDetail.value,
+    tone:
+      quarterTotals.value.remainingStockCount > quarterTotals.value.itemsSold
+        ? 'warning'
+        : quarterTotals.value.remainingStockCount > 0
+          ? 'primary'
+          : 'neutral',
+  },
+  {
+    badge: 'Sourcing',
+    title:
+      quarterTotals.value.purchaseSpend > quarterTotals.value.revenue
+        ? 'Achats a ralentir'
+        : 'Sourcing aligne',
+    value: formatMoney(quarterTotals.value.purchaseSpend),
+    detail:
+      quarterTotals.value.purchaseSpend > quarterTotals.value.revenue
+        ? `${formatMoney(quarterTotals.value.purchaseSpend - quarterTotals.value.revenue)} de plus en achats que de CA sur la periode.`
+        : `${formatNumber(quarterTotals.value.itemsBought)} achats pour soutenir ${formatNumber(quarterTotals.value.itemsSold)} ventes.`,
+    tone: quarterTotals.value.purchaseSpend > quarterTotals.value.revenue ? 'warning' : 'primary',
+  },
+])
 
 const quarterPerformanceOption = computed(() => ({
   color: ['#4f46e5', '#d97706', '#059669'],
-  grid: { left: 8, right: 12, top: 38, bottom: 12, containLabel: true },
+  grid: { left: 4, right: 6, top: 34, bottom: 6, containLabel: true },
   tooltip: {
     trigger: 'axis',
     confine: true,
@@ -676,7 +774,7 @@ const quarterPerformanceOption = computed(() => ({
 const categoryProfitOption = computed(() => {
   const rows = [...categoryProfit.value].sort((a, b) => a.value - b.value)
   return {
-    grid: { left: 8, right: 20, top: 10, bottom: 10, containLabel: true },
+    grid: { left: 4, right: 10, top: 6, bottom: 6, containLabel: true },
     tooltip: {
       trigger: 'axis',
       confine: true,
@@ -899,6 +997,11 @@ function buildQuarterRange(year: number, quarter: number) {
   }
   if (from > to) from = to
   return { from, to }
+}
+
+function updateViewport() {
+  viewportWidth.value = window.innerWidth
+  viewportHeight.value = Math.round(window.visualViewport?.height ?? window.innerHeight)
 }
 
 function setQuarter(quarter: number) {
@@ -1174,12 +1277,17 @@ async function loadQuarterBounds() {
 }
 
 onMounted(async () => {
+  updateViewport()
   window.addEventListener('keydown', onKeyDown)
+  window.addEventListener('resize', updateViewport)
+  window.visualViewport?.addEventListener('resize', updateViewport)
   await loadQuarterBounds()
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeyDown)
+  window.removeEventListener('resize', updateViewport)
+  window.visualViewport?.removeEventListener('resize', updateViewport)
 })
 </script>
 
@@ -1636,13 +1744,13 @@ onBeforeUnmount(() => {
 
 .quarterly-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   gap: 12px;
 }
 
 .quarterly-action-overview {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr));
   gap: 10px;
 }
 
@@ -2174,9 +2282,9 @@ onBeforeUnmount(() => {
 }
 
 .quarterly-page--flow .quarterly-flow-layout {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-  align-items: start;
+  grid-template-columns: minmax(0, 1.04fr) minmax(0, 0.96fr);
+  gap: 16px;
+  align-items: stretch;
 }
 
 .quarterly-page--flow .quarterly-flow-side {
@@ -2185,7 +2293,15 @@ onBeforeUnmount(() => {
 
 .quarterly-page--flow .quarterly-panel--performance,
 .quarterly-page--flow .quarterly-panel--category-profit {
-  min-height: clamp(300px, 34vh, 430px);
+  min-height: clamp(340px, 40vh, 500px);
+}
+
+.quarterly-page--flow .quarterly-chart-wrap {
+  height: 100%;
+}
+
+.quarterly-page--flow .quarterly-chart {
+  min-height: clamp(300px, 35vh, 420px);
 }
 
 .quarterly-panel {
@@ -2307,7 +2423,7 @@ onBeforeUnmount(() => {
 
 .quarterly-quick-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
   gap: 10px;
 }
 
@@ -2609,6 +2725,229 @@ onBeforeUnmount(() => {
 
   .quarterly-quick-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+.quarterly-table-scroll {
+  height: auto;
+  max-height: none;
+  overflow: visible;
+}
+
+.quarterly-table th {
+  position: static;
+}
+
+.quarterly-dashboard {
+  overflow: visible;
+}
+
+.quarterly-dashboard__inner,
+.quarterly-stage,
+.quarterly-pages,
+.quarterly-page {
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+}
+
+.quarterly-dashboard__inner {
+  width: min(100%, 1840px);
+}
+
+.quarterly-stage,
+.quarterly-pages,
+.quarterly-page,
+.quarterly-page--flow .quarterly-flow-layout {
+  width: 100%;
+}
+
+.quarterly-pages {
+  display: block;
+}
+
+.quarterly-page {
+  flex: 0 0 100%;
+  max-width: none;
+  justify-items: stretch;
+  align-items: stretch;
+}
+
+.quarterly-page--main .quarterly-kpi-grid,
+.quarterly-quick-grid,
+.quarterly-action-grid,
+.quarterly-insights,
+.quarterly-brand-list--summary {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+}
+
+.quarterly-page--details .quarterly-table-grid {
+  display: grid;
+  width: 100%;
+  max-width: none;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+}
+
+.quarterly-page--details .quarterly-table-card {
+  width: 100%;
+  min-width: 0;
+  justify-self: stretch;
+  align-self: stretch;
+  min-height: clamp(364px, 42.5vh, 500px);
+}
+
+.quarterly-page--details .quarterly-mini-empty {
+  min-height: clamp(288px, 32.5vh, 400px);
+  height: 100%;
+}
+
+.quarterly-page--details .quarterly-chart--context {
+  height: clamp(258px, 29.5vh, 344px);
+}
+
+.quarterly-page--details .quarterly-table-scroll {
+  max-height: clamp(210px, 26.5vh, 300px);
+}
+
+.quarterly-page--flow .quarterly-flow-layout {
+  display: grid;
+  width: 100%;
+  max-width: none;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+}
+
+.quarterly-page--flow .quarterly-panel--performance,
+.quarterly-page--flow .quarterly-panel--category-profit {
+  width: 100%;
+  min-width: 0;
+  justify-self: stretch;
+  align-self: stretch;
+  min-height: clamp(360px, 42vh, 500px);
+}
+
+.quarterly-page--flow .quarterly-chart-wrap,
+.quarterly-page--flow .quarterly-mini-empty {
+  width: 100%;
+  height: 100%;
+  min-height: clamp(300px, 34vh, 400px);
+}
+
+.quarterly-page--flow .quarterly-chart {
+  width: 100%;
+  height: clamp(300px, 34vh, 400px);
+  min-height: clamp(300px, 34vh, 400px);
+}
+
+.quarterly-quick-card span,
+.quarterly-action-card span,
+.quarterly-action-card p,
+.quarterly-table td,
+.quarterly-table th {
+  white-space: normal;
+}
+
+.quarterly-action-card p,
+.quarterly-table strong {
+  overflow: visible;
+  text-overflow: clip;
+  display: block;
+  -webkit-line-clamp: unset;
+  -webkit-box-orient: initial;
+}
+
+@media (min-width: 961px) {
+  .quarterly-dashboard {
+    overflow: hidden;
+  }
+
+  .quarterly-dashboard :deep(.dashboard-layout) {
+    --dashboard-gap: clamp(0.8rem, 0.95vw, 1rem);
+    --dashboard-surface-padding: clamp(0.86rem, 1vw, 1.02rem);
+    --dashboard-kpi-min-width: 188px;
+    --dashboard-kpi-min-height: clamp(120px, 12vw, 142px);
+    --dashboard-kpi-padding: clamp(0.82rem, 0.95vw, 0.94rem);
+    --dashboard-kpi-value-size: clamp(1.72rem, 1.95vw, 2.18rem);
+    --dashboard-kpi-detail-size: 0.82rem;
+    --dashboard-module-min-width: 176px;
+    --dashboard-module-padding: clamp(0.78rem, 0.92vw, 0.92rem);
+    --dashboard-module-value-size: clamp(1.02rem, 1.28vw, 1.38rem);
+    --dashboard-module-detail-size: 0.78rem;
+  }
+
+  .quarterly-page__heading {
+    display: none;
+  }
+
+  .quarterly-dashboard.is-compact-height :deep(.dashboard-layout__inner) {
+    gap: 8px;
+    padding-top: 0.8rem;
+    padding-bottom: 0.85rem;
+  }
+
+  .quarterly-dashboard.is-compact-height :deep(.dashboard-layout__surface) {
+    padding: 0.8rem;
+  }
+
+  .quarterly-dashboard.is-compact-height :deep(.dashboard-layout__kpi-grid) {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 176px), 1fr));
+    gap: 8px;
+  }
+
+  .quarterly-dashboard.is-compact-height :deep(.dashboard-layout__kpi-card) {
+    min-height: 112px;
+    padding: 0.78rem;
+    gap: 0.42rem;
+  }
+
+  .quarterly-dashboard.is-compact-height :deep(.dashboard-layout__module-grid),
+  .quarterly-dashboard.is-compact-height .quarterly-action-grid,
+  .quarterly-dashboard.is-compact-height .quarterly-quick-grid {
+    gap: 8px;
+  }
+
+  .quarterly-dashboard.is-compact-height .quarterly-panel,
+  .quarterly-dashboard.is-compact-height .quarterly-insights,
+  .quarterly-dashboard.is-compact-height .quarterly-brand-list--summary {
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .quarterly-dashboard.is-short-height :deep(.dashboard-layout__description),
+  .quarterly-dashboard.is-short-height .quarterly-quarter__head,
+  .quarterly-dashboard.is-short-height .quarterly-page-nav__count {
+    display: none;
+  }
+
+  .quarterly-dashboard.is-short-height .quarterly-panel,
+  .quarterly-dashboard.is-short-height .quarterly-insights,
+  .quarterly-dashboard.is-short-height .quarterly-brand-list--summary {
+    padding: 7px;
+    gap: 7px;
+  }
+
+  .quarterly-dashboard.is-short-height .quarterly-action-card p {
+    display: none;
+  }
+
+  .quarterly-dashboard.is-wide-template :deep(.dashboard-layout__inner) {
+    width: min(100%, 1820px);
+  }
+
+  .quarterly-dashboard.is-hd-template :deep(.dashboard-layout__inner) {
+    width: min(100%, 1940px);
+  }
+}
+
+@media (min-width: 1600px) {
+  .quarterly-dashboard__inner {
+    width: min(100%, 2000px);
+  }
+
+  .quarterly-action-grid,
+  .quarterly-quick-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   }
 }
 

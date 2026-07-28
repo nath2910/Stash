@@ -1,5 +1,5 @@
 <template>
-  <div ref="rootEl" class="subcategory-field">
+  <div ref="rootEl" class="subcategory-field" :class="{ 'is-open': menuOpen }">
     <div class="subcategory-field-header">
       <div>
         <label :for="buttonId" class="subcategory-label">
@@ -444,6 +444,10 @@ onBeforeUnmount(() => {
   gap: 0.3rem;
 }
 
+.subcategory-field.is-open {
+  z-index: 180;
+}
+
 .subcategory-field-header {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -546,8 +550,8 @@ onBeforeUnmount(() => {
   position: absolute;
   left: 0;
   right: 0;
+  top: calc(100% + 0.5rem);
   z-index: 80;
-  margin-top: 0.5rem;
   overflow: hidden;
   border: 1px solid rgba(125, 211, 252, 0.38);
   border-radius: 14px;

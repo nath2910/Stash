@@ -4,6 +4,7 @@
     :class="{
       'is-space-pan': spacePanActive,
       'is-route-leaving': isRouteLeaving,
+      'is-template-active': templateActive,
       'theme-light': true,
     }"
     :data-edit="editMode ? 'true' : 'false'"

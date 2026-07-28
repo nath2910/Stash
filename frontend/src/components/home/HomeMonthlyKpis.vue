@@ -81,6 +81,7 @@ const estimatedSubtitle = computed(() => {
   position: relative;
   display: grid;
   gap: 1rem;
+  overflow: hidden;
   border: 1px solid rgba(203, 213, 225, 0.72);
   border-radius: 20px;
   background: #ffffff;
@@ -135,12 +136,21 @@ h2 {
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 13.5rem), 1fr));
+  align-items: stretch;
+  min-width: 0;
   gap: 0.9rem;
+}
+
+.kpi-grid > * {
+  min-width: 0;
 }
 
 .home-empty-state {
   display: flex;
   align-items: center;
+  min-width: 0;
+  overflow: hidden;
+  flex-wrap: wrap;
   gap: 0.9rem;
   border: 1px dashed rgba(14, 165, 233, 0.28);
   border-radius: 18px;

@@ -3627,6 +3627,33 @@ body.canvas-pan-cursor * {
   background: #fbfaf7;
 }
 
+.canvas-root.is-template-active,
+.canvas-root.theme-light.is-template-active {
+  height: auto;
+  min-height: 100%;
+  overflow: visible;
+  overscroll-behavior: auto;
+}
+
+.canvas-root.is-template-active .template-mode,
+.canvas-root.theme-light.is-template-active .template-mode {
+  position: relative;
+  inset: auto;
+  min-height: 100%;
+  height: auto;
+  overflow: visible;
+  overscroll-behavior: auto;
+  display: block;
+  padding-bottom: calc(32px + var(--stats-bottom-gap));
+}
+
+.canvas-root.is-template-active .template-rail,
+.canvas-root.theme-light.is-template-active .template-rail,
+.canvas-root.is-template-active .template-mode ~ .template-rail,
+.canvas-root.theme-light.is-template-active .template-mode ~ .template-rail {
+  position: fixed;
+}
+
 .template-mode,
 .canvas-root.theme-light .template-mode {
   padding-top: clamp(18px, 2.2vh, 30px);
@@ -3642,6 +3669,11 @@ body.canvas-pan-cursor * {
 }
 
 @media (max-width: 960px) {
+  .canvas-root.is-template-active .template-mode,
+  .canvas-root.theme-light.is-template-active .template-mode {
+    padding-bottom: calc(84px + var(--stats-bottom-gap));
+  }
+
   .template-mode,
   .canvas-root.theme-light .template-mode {
     padding-top: 10px;

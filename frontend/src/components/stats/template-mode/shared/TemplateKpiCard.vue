@@ -46,13 +46,17 @@ function partClasses(part: 'head' | 'label' | 'icon' | 'value' | 'detail') {
 <style scoped>
 .template-kpi {
   min-width: 0;
+  min-height: clamp(104px, 11vw, 148px);
   border: 1px solid rgba(148, 163, 184, 0.28);
   border-radius: 8px;
   background: #fbfaf7;
   box-shadow: 0 6px 16px rgba(31, 41, 55, 0.045);
   padding: clamp(14px, 1.6vw, 18px);
   display: grid;
+  align-content: start;
   gap: 10px;
+  overflow: hidden;
+  container-type: inline-size;
 }
 
 .template-kpi__head {
@@ -71,6 +75,8 @@ function partClasses(part: 'head' | 'label' | 'icon' | 'value' | 'detail') {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   white-space: normal;
+  line-height: 1.16;
+  overflow-wrap: anywhere;
 }
 
 .template-kpi__icon {
@@ -82,7 +88,7 @@ function partClasses(part: 'head' | 'label' | 'icon' | 'value' | 'detail') {
 
 .template-kpi__value {
   min-width: 0;
-  color: #111827;
+  color: #243b53;
   font-size: clamp(1.45rem, 2.6vw, 2.2rem);
   line-height: 1.05;
   font-weight: 820;
@@ -113,5 +119,58 @@ function partClasses(part: 'head' | 'label' | 'icon' | 'value' | 'detail') {
 
 .template-kpi--neutral .template-kpi__icon {
   color: #475569;
+}
+
+@container (max-width: 240px) {
+  .template-kpi {
+    min-height: 96px;
+    padding: 12px;
+    gap: 8px;
+  }
+
+  .template-kpi__label {
+    font-size: 0.68rem;
+  }
+
+  .template-kpi__icon {
+    width: 16px;
+    height: 16px;
+  }
+
+  .template-kpi__value {
+    font-size: 1.78rem;
+  }
+
+  .template-kpi__detail {
+    font-size: 0.76rem;
+    line-height: 1.28;
+  }
+}
+
+@container (max-width: 200px) {
+  .template-kpi {
+    min-height: 88px;
+    padding: 10px;
+    gap: 6px;
+  }
+
+  .template-kpi__label {
+    font-size: 0.62rem;
+    letter-spacing: 0.06em;
+  }
+
+  .template-kpi__icon {
+    width: 14px;
+    height: 14px;
+  }
+
+  .template-kpi__value {
+    font-size: 1.44rem;
+  }
+
+  .template-kpi__detail {
+    font-size: 0.72rem;
+    line-height: 1.22;
+  }
 }
 </style>

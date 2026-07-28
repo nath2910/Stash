@@ -1,50 +1,11 @@
-﻿<template>
-  <section class="monthly-dashboard" aria-label="Dashboard mensuel" @wheel="onWheel">
+<template>
+  <section
+    class="monthly-dashboard"
+    :class="monthlySizeClass"
+    aria-label="Dashboard mensuel"
+    @wheel="onWheel"
+  >
     <div class="monthly-dashboard__inner">
-      <header class="monthly-header">
-        <div class="monthly-header__copy">
-          <p class="monthly-header__kicker">Template</p>
-          <h1>Dashboard mensuel</h1>
-          <p>
-            Lecture {{ selectedMonthLabel }} des ventes, du profit, des achats et du stock au
-            {{ formatDate(periodRange.to) }}.
-          </p>
-        </div>
-
-        <div class="monthly-month">
-          <div class="monthly-month__head">
-            <span>Mois selectionne</span>
-            <small>{{ periodShortLabel }}</small>
-          </div>
-          <div class="monthly-month__control">
-            <button
-              type="button"
-              aria-label="Mois precedent"
-              :disabled="!canGoPreviousMonth"
-              @click="changeMonth(-1)"
-            >
-              <ChevronLeft aria-hidden="true" />
-            </button>
-            <input
-              :value="selectedMonthKey"
-              type="month"
-              :min="minMonthKey || undefined"
-              :max="maxMonthKey || undefined"
-              aria-label="Selectionner un mois"
-              @input="onMonthInput"
-            />
-            <button
-              type="button"
-              aria-label="Mois suivant"
-              :disabled="!canGoNextMonth"
-              @click="changeMonth(1)"
-            >
-              <ChevronRight aria-hidden="true" />
-            </button>
-          </div>
-        </div>
-      </header>
-
       <div v-if="loading && !hasLoadedOnce" class="monthly-state monthly-state--loading" role="status">
         <div class="monthly-state__pulse"></div>
         <h2>Chargement du dashboard</h2>
@@ -67,56 +28,104 @@
         </div>
 
         <template v-else>
-          <nav class="monthly-page-nav" aria-label="Navigation du dashboard mensuel">
-            <button
-              type="button"
-              class="monthly-page-nav__arrow"
-              :disabled="activePage === 0"
-              aria-label="Page precedente"
-              @click="previousPage"
-            >
-              <ChevronLeft aria-hidden="true" />
-            </button>
-
-            <div class="monthly-page-nav__center">
-              <span class="monthly-page-nav__count">{{ activePage + 1 }} / {{ pages.length }}</span>
-              <strong>{{ currentPage.label }}</strong>
-              <div class="monthly-page-nav__dots" role="tablist" aria-label="Pages">
-                <button
-                  v-for="(page, index) in pages"
-                  :key="page.key"
-                  type="button"
-                  class="monthly-page-nav__dot"
-                  :class="{ 'is-active': activePage === index }"
-                  :aria-label="`Afficher ${page.label}`"
-                  :aria-selected="activePage === index"
-                  role="tab"
-                  @click="goToPage(index)"
-                ></button>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              class="monthly-page-nav__arrow"
-              :disabled="activePage === pages.length - 1"
-              aria-label="Page suivante"
-              @click="nextPage"
-            >
-              <ChevronRight aria-hidden="true" />
-            </button>
-          </nav>
-
-          <section
-            class="monthly-stage"
-            :class="{ 'is-dragging': pointerDrag.active }"
-            aria-live="polite"
-            @pointerdown="onPointerDown"
-            @pointerup="onPointerUp"
-            @pointercancel="resetPointerDrag"
-            @lostpointercapture="resetPointerDrag"
+          <DashboardLayout
+            title="Dashboard mensuel"
+            :description="`Lecture ${selectedMonthLabel} des ventes, du profit, des achats et du stock au ${formatDate(periodRange.to)}.`"
+            :period-label="periodShortLabel"
+            analytics-kicker="Pilotage revendeur"
+            analytics-title="Plan d'action mensuel"
+            :analytics-meta="selectedMonthLabel"
+            :kpis="kpiCards"
+            :show-unified-content="false"
+            :fit-screen="true"
           >
-            <div class="monthly-pages" :style="pageTrackStyle">
+            <template #selector>
+              <div class="monthly-month">
+                <div class="monthly-month__head">
+                  <span>Mois selectionne</span>
+                  <small>{{ periodShortLabel }}</small>
+                </div>
+                <div class="monthly-month__control">
+                  <button
+                    type="button"
+                    aria-label="Mois precedent"
+                    :disabled="!canGoPreviousMonth"
+                    @click="changeMonth(-1)"
+                  >
+                    <ChevronLeft aria-hidden="true" />
+                  </button>
+                  <input
+                    :value="selectedMonthKey"
+                    type="month"
+                    :min="minMonthKey || undefined"
+                    :max="maxMonthKey || undefined"
+                    aria-label="Selectionner un mois"
+                    @input="onMonthInput"
+                  />
+                  <button
+                    type="button"
+                    aria-label="Mois suivant"
+                    :disabled="!canGoNextMonth"
+                    @click="changeMonth(1)"
+                  >
+                    <ChevronRight aria-hidden="true" />
+                  </button>
+                </div>
+              </div>
+            </template>
+
+            <template #navigation>
+              <nav class="monthly-page-nav" aria-label="Navigation du dashboard mensuel">
+                <button
+                  type="button"
+                  class="monthly-page-nav__arrow"
+                  :disabled="activePage === 0"
+                  aria-label="Page precedente"
+                  @click="previousPage"
+                >
+                  <ChevronLeft aria-hidden="true" />
+                </button>
+
+                <div class="monthly-page-nav__center">
+                  <span class="monthly-page-nav__count">{{ activePage + 1 }} / {{ pages.length }}</span>
+                  <strong>{{ currentPage.label }}</strong>
+                  <div class="monthly-page-nav__dots" role="tablist" aria-label="Pages">
+                    <button
+                      v-for="(page, index) in pages"
+                      :key="page.key"
+                      type="button"
+                      class="monthly-page-nav__dot"
+                      :class="{ 'is-active': activePage === index }"
+                      :aria-label="`Afficher ${page.label}`"
+                      :aria-selected="activePage === index"
+                      role="tab"
+                      @click="goToPage(index)"
+                    ></button>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  class="monthly-page-nav__arrow"
+                  :disabled="activePage === pages.length - 1"
+                  aria-label="Page suivante"
+                  @click="nextPage"
+                >
+                  <ChevronRight aria-hidden="true" />
+                </button>
+              </nav>
+            </template>
+
+            <section
+              class="monthly-stage"
+              :class="{ 'is-dragging': pointerDrag.active }"
+              aria-live="polite"
+              @pointerdown="onPointerDown"
+              @pointerup="onPointerUp"
+              @pointercancel="resetPointerDrag"
+              @lostpointercapture="resetPointerDrag"
+            >
+              <div class="monthly-pages" :style="pageTrackStyle">
               <article
                 v-if="activePage === 0"
                 class="monthly-page monthly-page--flow"
@@ -184,42 +193,29 @@
                       :icon="card.icon"
                     />
                   </section>
-                </div>
 
-                <section class="monthly-panel monthly-panel--main-chart">
-                  <div class="monthly-panel__head">
-                    <div>
-                      <p>Pilotage revendeur</p>
-                      <h2>Plan d'action mensuel</h2>
+                  <section class="monthly-profit-strip" aria-label="Profit journalier du mois">
+                    <div class="monthly-profit-strip__head">
+                      <strong>Lecture jour par jour</strong>
+                      <span>
+                        <i class="is-loss"></i> perte
+                        <i class="is-flat"></i> nul
+                        <i class="is-profit"></i> benef
+                      </span>
                     </div>
-                    <span>{{ selectedMonthLabel }}</span>
-                  </div>
-                  <div class="monthly-action-overview" aria-label="Resume du plan d'action">
-                    <div
-                      v-for="item in actionSummaryItems"
-                      :key="item.label"
-                      class="monthly-action-summary"
-                      :class="item.tone ? `is-${item.tone}` : ''"
-                    >
-                      <span>{{ item.label }}</span>
-                      <strong>{{ item.value }}</strong>
-                      <small>{{ item.detail }}</small>
+                    <div class="monthly-profit-strip__grid">
+                      <div
+                        v-for="day in dailyProfitStrip"
+                        :key="day.date"
+                        class="monthly-profit-strip__cell"
+                        :title="`${formatDate(day.date)} · profit ${formatMoney(day.profit)}`"
+                        :style="{ background: day.color, borderColor: day.borderColor, color: day.textColor }"
+                      >
+                        {{ day.day }}
+                      </div>
                     </div>
-                  </div>
-                  <div class="monthly-action-grid" aria-label="Plan d'action revendeur">
-                    <article
-                      v-for="item in resellerSignals"
-                      :key="item.title"
-                      class="monthly-action-card"
-                      :class="item.tone ? `is-${item.tone}` : ''"
-                    >
-                      <span>{{ item.badge }}</span>
-                      <h3>{{ item.title }}</h3>
-                      <strong>{{ item.value }}</strong>
-                      <p>{{ item.detail }}</p>
-                    </article>
-                  </div>
-                </section>
+                  </section>
+                </div>
               </article>
 
               <article
@@ -242,7 +238,7 @@
                         <p>Meilleures ventes</p>
                         <h2>Benefices du mois</h2>
                       </div>
-                      <span>{{ topSales.length }} lignes</span>
+                      <span>{{ topSalesPreview.length }} lignes</span>
                     </div>
 
                     <div v-if="topSales.length" class="monthly-table-scroll">
@@ -255,11 +251,10 @@
                           </tr>
                         </thead>
                         <tbody>
-                          <tr v-for="(sale, index) in topSales" :key="`${sale.nomItem}-${index}`">
+                          <tr v-for="(sale, index) in topSalesPreview" :key="`${sale.nomItem}-${index}`">
                             <td>{{ index + 1 }}</td>
                             <td>
                               <strong :title="sale.nomItem">{{ sale.nomItem }}</strong>
-                              <span>Top vente mensuelle</span>
                             </td>
                             <td :class="profitClass(sale.benefice)">
                               {{ formatMoney(sale.benefice) }}
@@ -294,8 +289,9 @@
                   </article>
                 </section>
               </article>
-            </div>
-          </section>
+              </div>
+            </section>
+          </DashboardLayout>
         </template>
       </template>
     </div>
@@ -306,7 +302,6 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
   BadgeEuro,
-  Boxes,
   ChevronLeft,
   ChevronRight,
   CirclePercent,
@@ -315,6 +310,7 @@ import {
   Wallet,
 } from 'lucide-vue-next'
 import StatsServices from '@/services/StatsServices'
+import DashboardLayout from '../shared/DashboardLayout.vue'
 import MonthlyKpiCard from './MonthlyKpiCard.vue'
 
 type MonthlyTemplateState = {
@@ -376,6 +372,8 @@ const currentYear = today.getFullYear()
 const currentMonthKey = formatMonthKey(today)
 
 const selectedMonthKey = ref(normalizeInitialMonth(props.initialState))
+const viewportWidth = ref(typeof window === 'undefined' ? 1440 : window.innerWidth)
+const viewportHeight = ref(typeof window === 'undefined' ? 900 : window.innerHeight)
 const minMonthKey = ref('')
 const maxMonthKey = ref('')
 const minDate = ref('')
@@ -442,6 +440,13 @@ const periodShortLabel = computed(() => {
   return `${start.getDate()}-${end.getDate()} ${monthLabels[end.getMonth()]}`
 })
 const currentPage = computed(() => pages[activePage.value] ?? pages[1])
+const monthlySizeClass = computed(() => ({
+  'is-compact-height': viewportHeight.value <= 960,
+  'is-short-height': viewportHeight.value <= 860,
+  'is-narrow-template': viewportWidth.value <= 1280,
+  'is-wide-template': viewportWidth.value >= 1600,
+  'is-hd-template': viewportWidth.value >= 1900,
+}))
 const pageTrackStyle = computed(() => ({
   transform: 'translate3d(0, 0, 0)',
 }))
@@ -492,7 +497,24 @@ const dailyRows = computed(() => {
     }
   })
 })
-const brandPreview = computed(() => brands.value.slice(0, 5))
+const maxAbsDailyProfit = computed(() =>
+  dailyRows.value.reduce((max, row) => Math.max(max, Math.abs(toNumber(row.profit))), 0),
+)
+const dailyProfitStrip = computed(() =>
+  dailyRows.value.map((row) => ({
+    date: row.date,
+    day: formatDayShort(row.date),
+    profit: toNumber(row.profit),
+    ...resolveDailyProfitSwatch(toNumber(row.profit), maxAbsDailyProfit.value),
+  })),
+)
+const detailRowLimit = computed(() => {
+  if (viewportHeight.value <= 860) return viewportWidth.value <= 1400 ? 3 : 4
+  if (viewportHeight.value <= 960) return viewportWidth.value <= 1400 ? 4 : 5
+  return viewportWidth.value <= 1400 ? 5 : 6
+})
+const topSalesPreview = computed(() => topSales.value.slice(0, detailRowLimit.value))
+const brandPreview = computed(() => brands.value.slice(0, viewportHeight.value <= 860 ? 2 : 3))
 const hasMonthData = computed(() => {
   const totals = monthTotals.value
   return (
@@ -550,100 +572,27 @@ const kpiCards = computed(() => [
     icon: Wallet,
   },
   {
-    label: 'Stock fin de mois',
-    value: `${formatNumber(monthTotals.value.remainingStockCount)} articles`,
-    detail: `${formatMoney(monthTotals.value.remainingStockValue)} au ${formatDate(periodRange.value.to)}`,
-    tone: monthTotals.value.remainingStockCount > 0 ? ('warning' as const) : ('neutral' as const),
-    icon: Boxes,
+    label: 'Panier moyen',
+    value: formatMoney(monthTotals.value.averageSalePrice),
+    detail: 'Valeur moyenne par vente',
+    tone: 'primary' as const,
+    icon: BadgeEuro,
+  },
+  {
+    label: 'Profit moyen',
+    value: formatMoney(monthTotals.value.averageProfit),
+    detail: 'Marge moyenne par vente',
+    tone: monthTotals.value.averageProfit >= 0 ? ('profit' as const) : ('warning' as const),
+    icon: TrendingUp,
+  },
+  {
+    label: 'Cash net',
+    value: formatMoney(monthTotals.value.cashNet),
+    detail: 'Ventes moins achats du mois',
+    tone: monthTotals.value.cashNet >= 0 ? ('profit' as const) : ('warning' as const),
+    icon: Wallet,
   },
 ])
-const bestSale = computed(() => topSales.value[0] ?? null)
-const bestCategory = computed(() => categoryProfit.value[0] ?? null)
-const activeDayCount = computed(() => dailyRows.value.filter((row) => row.ca !== 0 || row.profit !== 0).length)
-const stockValueDelta = computed(() => deltaPct(monthTotals.value.remainingStockValue, previousTotals.value.stockValue))
-const profitDelta = computed(() => deltaPct(monthTotals.value.profit, previousTotals.value.profit))
-const actionSummaryItems = computed(() => [
-  {
-    label: 'Profit vs M-1',
-    value: formatDelta(monthTotals.value.profit, previousTotals.value.profit),
-    detail: 'Comparaison au mois precedent.',
-    tone: profitDelta.value == null ? 'neutral' : profitDelta.value >= 0 ? 'positive' : 'warning',
-  },
-  {
-    label: 'Jours actifs',
-    value: `${formatNumber(activeDayCount.value)} / ${formatNumber(daysInPeriod.value.length)}`,
-    detail: 'Jours avec CA ou profit enregistre.',
-    tone: activeDayCount.value > 0 ? 'positive' : 'neutral',
-  },
-  {
-    label: 'Priorite mix',
-    value: bestCategory.value?.label || 'Aucune',
-    detail: bestCategory.value?.label
-      ? `${formatMoney(bestCategory.value.value)} de profit categorie.`
-      : 'Categorie non disponible sur ce mois.',
-    tone: bestCategory.value?.value && bestCategory.value.value >= 0 ? 'positive' : 'neutral',
-  },
-])
-const resellerSignals = computed(() => {
-  const sale = bestSale.value
-  const category = bestCategory.value
-  const stockDelta = stockValueDelta.value
-  return [
-    {
-      badge: 'Cash',
-      title: monthTotals.value.cashNet >= 0 ? 'Cash positif' : 'Cash sous pression',
-      value: formatMoney(monthTotals.value.cashNet),
-      detail:
-        monthTotals.value.cashNet >= 0
-          ? 'Les ventes couvrent les achats du mois.'
-          : 'Les achats depassent les ventes: surveille le stock lent.',
-      tone: monthTotals.value.cashNet >= 0 ? 'positive' : 'warning',
-    },
-    {
-      badge: 'Top',
-      title: sale?.nomItem ? 'Meilleure vente' : 'Vente a creer',
-      value: sale?.nomItem || 'Aucune',
-      detail: sale?.nomItem
-        ? `${formatMoney(sale.benefice)} de benefice sur la meilleure ligne.`
-        : 'Aucune vente classee sur cette periode.',
-      tone: sale?.benefice && sale.benefice >= 0 ? 'positive' : 'neutral',
-    },
-    {
-      badge: 'Mix',
-      title: category?.label ? 'Categorie forte' : 'Mix incomplet',
-      value: category?.label || 'Aucune',
-      detail: category?.label
-        ? `${formatMoney(category.value)} de profit categorie.`
-        : 'Ajoute categories/marques pour affiner la lecture.',
-      tone: category?.value && category.value >= 0 ? 'positive' : 'neutral',
-    },
-    {
-      badge: 'Stock',
-      title: 'Valeur immobilisee',
-      value: formatMoney(monthTotals.value.remainingStockValue),
-      detail: stockDelta == null ? 'Comparaison indisponible.' : `${formatSignedRatio(stockDelta)} vs mois precedent.`,
-      tone: stockDelta != null && stockDelta > 0 ? 'warning' : 'neutral',
-    },
-    {
-      badge: 'Cadence',
-      title: 'Jours actifs',
-      value: `${formatNumber(activeDayCount.value)} j`,
-      detail: activeDayCount.value > 0 ? 'Jours avec CA ou profit enregistre.' : 'Aucun mouvement quotidien detecte.',
-      tone: activeDayCount.value > 0 ? 'positive' : 'neutral',
-    },
-    {
-      badge: 'ROI',
-      title: 'Rentabilite',
-      value: formatRatio(monthRoi.value),
-      detail: 'Profit / cout des achats vendus estime depuis CA et profit.',
-      tone: monthRoi.value >= 0 ? 'profit' : 'warning',
-    },
-  ]
-})
-const monthRoi = computed(() => {
-  const soldCost = monthTotals.value.revenue - monthTotals.value.profit
-  return soldCost > 0 ? monthTotals.value.profit / soldCost : 0
-})
 const dailyPerformanceOption = computed(() => ({
   color: ['#4f46e5', '#059669'],
   grid: { left: 8, right: 12, top: 38, bottom: 12, containLabel: true },
@@ -872,6 +821,11 @@ function buildMonthRange(monthKey: string) {
   return { from, to }
 }
 
+function updateViewport() {
+  viewportWidth.value = window.innerWidth
+  viewportHeight.value = Math.round(window.visualViewport?.height ?? window.innerHeight)
+}
+
 function formatMonthKey(date: Date) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}`
 }
@@ -1051,6 +1005,34 @@ function formatDayShort(value: string) {
   return Number.isNaN(date.getTime()) ? value : String(date.getDate()).padStart(2, '0')
 }
 
+function resolveDailyProfitSwatch(profit: number, maxAbsProfit: number) {
+  const value = toNumber(profit)
+  const scale = maxAbsProfit > 0 ? Math.min(1, Math.abs(value) / maxAbsProfit) : 0
+  const alpha = value === 0 ? 1 : 0.16 + scale * 0.56
+
+  if (value > 0) {
+    return {
+      color: `rgba(16, 185, 129, ${alpha.toFixed(3)})`,
+      borderColor: `rgba(5, 150, 105, ${Math.max(0.22, alpha).toFixed(3)})`,
+      textColor: '#065f46',
+    }
+  }
+
+  if (value < 0) {
+    return {
+      color: `rgba(239, 68, 68, ${alpha.toFixed(3)})`,
+      borderColor: `rgba(220, 38, 38, ${Math.max(0.22, alpha).toFixed(3)})`,
+      textColor: '#991b1b',
+    }
+  }
+
+  return {
+    color: '#ffffff',
+    borderColor: 'rgba(203, 213, 225, 0.9)',
+    textColor: '#64748b',
+  }
+}
+
 function profitClass(value: unknown) {
   return toNumber(value) >= 0 ? 'is-positive' : 'is-negative'
 }
@@ -1211,12 +1193,17 @@ async function loadMonthBounds() {
 }
 
 onMounted(async () => {
+  updateViewport()
   window.addEventListener('keydown', onKeyDown)
+  window.addEventListener('resize', updateViewport)
+  window.visualViewport?.addEventListener('resize', updateViewport)
   await loadMonthBounds()
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeyDown)
+  window.removeEventListener('resize', updateViewport)
+  window.visualViewport?.removeEventListener('resize', updateViewport)
 })
 </script>
 
@@ -1522,7 +1509,7 @@ onBeforeUnmount(() => {
 }
 
 .monthly-page--main {
-  grid-template-rows: auto auto;
+  grid-template-rows: auto;
   align-content: start;
 }
 
@@ -1563,27 +1550,163 @@ onBeforeUnmount(() => {
 .monthly-main-stack {
   min-width: 0;
   display: grid;
+  min-height: 0;
+  grid-template-rows: auto auto;
+  align-content: start;
+  gap: 12px;
+}
+
+.monthly-profit-strip {
+  min-width: 0;
+  min-height: 96px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.78);
+  padding: 10px 12px 12px;
+  display: grid;
+  align-content: start;
   gap: 10px;
+}
+
+.monthly-profit-strip__head {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.monthly-profit-strip__head strong {
+  color: #475569;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.monthly-profit-strip__head span {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.monthly-profit-strip__head i {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.monthly-profit-strip__head i.is-loss {
+  background: rgba(239, 68, 68, 0.5);
+}
+
+.monthly-profit-strip__head i.is-flat {
+  background: #ffffff;
+}
+
+.monthly-profit-strip__head i.is-profit {
+  background: rgba(16, 185, 129, 0.5);
+}
+
+.monthly-profit-strip__grid {
+  min-width: 0;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  align-items: stretch;
+  align-content: stretch;
+  height: 100%;
+  gap: 4px;
+}
+
+.monthly-profit-strip__cell {
+  min-width: 0;
+  min-height: 36px;
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1;
+  user-select: none;
 }
 
 .monthly-kpi-grid {
   min-width: 0;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+  grid-auto-rows: minmax(136px, auto);
+  grid-auto-flow: row dense;
+  align-items: start;
   gap: clamp(9px, 1vw, 12px);
 }
 
 .monthly-page--main :deep(.monthly-kpi) {
-  padding: clamp(11px, 1.2vw, 14px);
-  gap: 7px;
+  height: auto;
+  min-height: clamp(136px, 16vh, 156px);
+  padding: clamp(12px, 1.15vw, 14px);
+  grid-template-rows: auto auto auto;
+  align-content: start;
+  gap: 8px;
 }
 
 .monthly-page--main :deep(.monthly-kpi__value) {
-  font-size: clamp(1.22rem, 1.7vw, 1.82rem);
+  display: block;
+  font-size: clamp(1.34rem, 1.78vw, 1.9rem);
 }
 
 .monthly-page--main :deep(.monthly-kpi__detail) {
+  align-self: start;
   font-size: 0.78rem;
+}
+
+@media (min-width: 1180px) {
+  .monthly-main-stack {
+    min-height: 0;
+    grid-template-rows: auto auto;
+  }
+
+  .monthly-kpi-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-rows: unset;
+    grid-auto-rows: minmax(148px, auto);
+  }
+
+  .monthly-page--main :deep(.monthly-kpi) {
+    min-height: 148px;
+    padding: 14px 14px 12px;
+    gap: 9px;
+  }
+
+  .monthly-page--main :deep(.monthly-kpi__label) {
+    font-size: 0.78rem;
+  }
+
+  .monthly-page--main :deep(.monthly-kpi__value) {
+    font-size: clamp(1.48rem, 1.85vw, 2rem);
+  }
+
+  .monthly-page--main :deep(.monthly-kpi__detail) {
+    font-size: 0.88rem;
+    line-height: 1.32;
+  }
+
+  .monthly-profit-strip {
+    min-height: 102px;
+    padding: 12px 14px;
+  }
+
+  .monthly-profit-strip__cell {
+    min-height: 40px;
+    font-size: 0.72rem;
+  }
 }
 
 .monthly-page-grid {
@@ -1743,7 +1866,7 @@ onBeforeUnmount(() => {
 .monthly-action-overview {
   min-width: 0;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr));
   gap: 9px;
 }
 
@@ -1875,7 +1998,7 @@ onBeforeUnmount(() => {
   background: rgba(255, 255, 255, 0.68);
   padding: 10px;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
   gap: 8px;
 }
 
@@ -2196,8 +2319,8 @@ onBeforeUnmount(() => {
   }
 
   .monthly-page--main {
-    grid-template-rows: auto auto;
-    align-content: start;
+    grid-template-rows: minmax(0, 1fr);
+    align-content: stretch;
   }
 
   .monthly-page--details {
@@ -2389,6 +2512,26 @@ onBeforeUnmount(() => {
     gap: 8px;
   }
 
+  .monthly-profit-strip {
+    padding: 8px 9px 9px;
+    min-height: clamp(92px, 12vh, 128px);
+    gap: 7px;
+  }
+
+  .monthly-profit-strip__head strong,
+  .monthly-profit-strip__head span {
+    font-size: 0.68rem;
+  }
+
+  .monthly-profit-strip__grid {
+    gap: 3px;
+  }
+
+  .monthly-profit-strip__cell {
+    min-height: 28px;
+    font-size: 0.62rem;
+  }
+
   .monthly-page-grid,
   .monthly-table-grid {
     gap: 8px;
@@ -2545,7 +2688,7 @@ onBeforeUnmount(() => {
   }
 
   .monthly-action-grid {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
   }
 
   .monthly-action-card {
@@ -2559,9 +2702,8 @@ onBeforeUnmount(() => {
 
   .monthly-action-card strong {
     font-size: clamp(0.86rem, 1.05vw, 1rem);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
+    white-space: normal;
   }
 
   .monthly-action-card p {
@@ -2598,6 +2740,11 @@ onBeforeUnmount(() => {
   .monthly-action-overview,
   .monthly-action-grid {
     grid-template-columns: 1fr;
+  }
+
+  .monthly-profit-strip__head {
+    display: grid;
+    justify-content: stretch;
   }
 
   .monthly-flow-layout,
@@ -2687,6 +2834,239 @@ onBeforeUnmount(() => {
   border-color: rgba(148, 163, 184, 0.18);
   background: #fffdf9;
   box-shadow: none;
+}
+
+@media (min-width: 961px) {
+  .monthly-dashboard {
+    overflow: visible;
+  }
+
+  .monthly-dashboard__inner,
+  .monthly-stage,
+  .monthly-pages,
+  .monthly-page {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .monthly-page--details .monthly-table-scroll {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .monthly-page--details .monthly-table th {
+    position: static;
+  }
+}
+
+.monthly-dashboard__inner {
+  width: min(100%, 1840px);
+}
+
+.monthly-flow-layout {
+  grid-template-columns: minmax(0, 1.55fr) minmax(320px, 0.9fr);
+}
+
+.monthly-action-overview {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
+}
+
+.monthly-action-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  grid-auto-rows: minmax(0, auto);
+}
+
+.monthly-insights {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+}
+
+.monthly-table-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+}
+
+.monthly-page--details .monthly-table-grid {
+  width: 100%;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  align-items: stretch;
+}
+
+.monthly-page--details .monthly-table-card {
+  min-height: clamp(380px, 42vh, 520px);
+}
+
+.monthly-page--details .monthly-panel--benefit-list {
+  min-height: clamp(360px, 40vh, 500px);
+}
+
+.monthly-page--details .monthly-panel--year-context {
+  grid-template-rows: auto minmax(320px, 1fr) auto;
+  min-height: clamp(380px, 42vh, 520px);
+}
+
+.monthly-page--details .monthly-chart--context {
+  min-height: clamp(300px, 34vh, 420px);
+  height: clamp(300px, 34vh, 420px);
+}
+
+.monthly-page--details .monthly-brand-list {
+  gap: 6px;
+}
+
+.monthly-page--details .monthly-brand-row {
+  padding: 6px 10px;
+}
+
+.monthly-action-card,
+.monthly-action-summary,
+.monthly-insight,
+.monthly-brand-row {
+  align-self: stretch;
+}
+
+.monthly-action-card {
+  min-height: 0;
+}
+
+.monthly-action-card span,
+.monthly-action-card p,
+.monthly-table strong,
+.monthly-brand-row span {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  display: block;
+  -webkit-line-clamp: unset;
+  -webkit-box-orient: initial;
+}
+
+.monthly-table th,
+.monthly-table td {
+  white-space: normal;
+}
+
+@media (min-width: 961px) {
+  .monthly-dashboard {
+    overflow: hidden;
+  }
+
+  .monthly-dashboard :deep(.dashboard-layout) {
+    --dashboard-gap: clamp(0.8rem, 0.95vw, 1rem);
+    --dashboard-surface-padding: clamp(0.86rem, 1vw, 1.02rem);
+    --dashboard-kpi-min-width: 188px;
+    --dashboard-kpi-min-height: clamp(120px, 12vw, 142px);
+    --dashboard-kpi-padding: clamp(0.82rem, 0.95vw, 0.94rem);
+    --dashboard-kpi-value-size: clamp(1.72rem, 1.95vw, 2.18rem);
+    --dashboard-kpi-detail-size: 0.82rem;
+    --dashboard-module-min-width: 178px;
+    --dashboard-module-padding: clamp(0.8rem, 0.92vw, 0.94rem);
+    --dashboard-module-value-size: clamp(1.04rem, 1.32vw, 1.42rem);
+    --dashboard-module-detail-size: 0.78rem;
+  }
+
+  .monthly-page__heading {
+    display: none;
+  }
+
+  .monthly-dashboard.is-compact-height :deep(.dashboard-layout__inner) {
+    gap: 8px;
+    padding-top: 0.8rem;
+    padding-bottom: 0.85rem;
+  }
+
+  .monthly-dashboard.is-compact-height :deep(.dashboard-layout__surface) {
+    padding: 0.8rem;
+  }
+
+  .monthly-dashboard.is-compact-height :deep(.dashboard-layout__kpi-grid) {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 176px), 1fr));
+    gap: 8px;
+  }
+
+  .monthly-dashboard.is-compact-height :deep(.dashboard-layout__kpi-card) {
+    min-height: 112px;
+    padding: 0.78rem;
+    gap: 0.42rem;
+  }
+
+  .monthly-dashboard.is-compact-height :deep(.dashboard-layout__kpi-value) {
+    font-size: clamp(1.5rem, 1.75vw, 1.96rem);
+  }
+
+  .monthly-dashboard.is-compact-height :deep(.dashboard-layout__module-grid),
+  .monthly-dashboard.is-compact-height .monthly-action-grid {
+    gap: 8px;
+  }
+
+  .monthly-dashboard.is-compact-height .monthly-panel,
+  .monthly-dashboard.is-compact-height .monthly-insights,
+  .monthly-dashboard.is-compact-height .monthly-action-overview {
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .monthly-dashboard.is-compact-height .monthly-flow-layout {
+    grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.86fr);
+  }
+
+  .monthly-dashboard.is-compact-height .monthly-page--details .monthly-table td,
+  .monthly-dashboard.is-compact-height .monthly-page--details .monthly-table th {
+    padding-inline: 5px;
+  }
+
+  .monthly-dashboard.is-short-height :deep(.dashboard-layout__description),
+  .monthly-dashboard.is-short-height .monthly-month__head,
+  .monthly-dashboard.is-short-height .monthly-page-nav__count {
+    display: none;
+  }
+
+  .monthly-dashboard.is-short-height .monthly-flow-layout,
+  .monthly-dashboard.is-short-height .monthly-table-grid {
+    gap: 9px;
+  }
+
+  .monthly-dashboard.is-short-height .monthly-flow-layout {
+    grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.82fr);
+  }
+
+  .monthly-dashboard.is-short-height .monthly-panel,
+  .monthly-dashboard.is-short-height .monthly-insights,
+  .monthly-dashboard.is-short-height .monthly-action-overview {
+    padding: 7px;
+    gap: 7px;
+  }
+
+  .monthly-dashboard.is-short-height .monthly-action-summary small,
+  .monthly-dashboard.is-short-height .monthly-action-card p {
+    display: none;
+  }
+
+  .monthly-dashboard.is-wide-template :deep(.dashboard-layout__inner) {
+    width: min(100%, 1820px);
+  }
+
+  .monthly-dashboard.is-wide-template .monthly-flow-layout {
+    grid-template-columns: minmax(0, 1.5fr) minmax(340px, 0.9fr);
+  }
+
+  .monthly-dashboard.is-hd-template :deep(.dashboard-layout__inner) {
+    width: min(100%, 1940px);
+  }
+
+  .monthly-dashboard.is-hd-template .monthly-flow-layout {
+    grid-template-columns: minmax(0, 1.55fr) minmax(360px, 0.92fr);
+  }
+}
+
+@media (min-width: 1600px) {
+  .monthly-dashboard__inner {
+    width: min(100%, 2000px);
+  }
+
+  .monthly-action-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  }
 }
 
 </style>

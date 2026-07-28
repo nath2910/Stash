@@ -2,7 +2,10 @@
   <div
     class="app-layout-root flex flex-col font-poppins"
     :class="[
-      isLightAppShell ? 'layout-home-bg layout-document-flow' : 'bg-slate-950',
+      isLightAppShell || isStatsTemplateScroll
+        ? 'layout-home-bg layout-document-flow'
+        : 'bg-slate-950',
+      isStatsLight ? 'layout-stats-bg' : '',
       isGestionRoute ? 'layout-gestion-bg' : '',
       isLightChrome ? 'text-slate-900' : isStatsLight ? 'text-black' : 'text-slate-100',
     ]"
@@ -219,14 +222,21 @@
     <!-- Body -->
     <main
       class="layout-main flex-1 min-h-0"
-      :class="isLightAppShell ? 'layout-main--document-flow' : 'bg-slate-950/30'"
+      :class="
+        isLightAppShell || isStatsTemplateScroll
+          ? 'layout-main--document-flow'
+          : isStatsLight
+            ? 'layout-main--stats-light'
+            : 'bg-slate-950/30'
+      "
     >
       <div
         v-if="route.meta.fullBleed"
         class="layout-fullbleed"
         :class="[
-          route.meta.allowScroll ? 'overflow-auto' : 'overflow-hidden',
+          fullBleedAllowsScroll ? 'overflow-auto' : 'overflow-hidden',
           fullBleedHeaderOffsetClass,
+          isStatsTemplateScroll ? 'layout-fullbleed--template-scroll' : '',
         ]"
       >
         <slot />
@@ -390,7 +400,17 @@ const isGestionRoute = computed(() => route.path === '/gestion')
 const isLightAppShell = computed(() =>
   ['/', '/gestion', '/a-propos', '/confidentialite'].includes(route.path),
 )
-const isLightChrome = computed(() => isLightAppShell.value)
+const isLightChrome = computed(() =>
+  ![
+    'auth',
+    'discover',
+    'forgot-password',
+    'reset-password',
+    'authCallback',
+    'verify-email',
+    'verify-email-short',
+  ].includes(String(route.name || '')),
+)
 const isFullBleedRoute = computed(() => route.meta.fullBleed === true)
 const layoutVars = computed(() => {
   const edgeGap = isFullBleedRoute.value ? 'clamp(10px, 2vw, 32px)' : 'clamp(14px, 2vw, 40px)'
@@ -420,9 +440,13 @@ const showHeaderUserMenu = computed(
   () => showPrimaryNav.value && !isStats.value && !isAccountRoute.value,
 )
 const showAppHeader = computed(() => showHeaderNav.value || showHeaderUserMenu.value)
+const isStatsTemplateScroll = computed(() => isStats.value && statsTemplateModeActive.value)
+const fullBleedAllowsScroll = computed(
+  () => route.meta.allowScroll === true || isStatsTemplateScroll.value,
+)
 const fullBleedHeaderOffsetClass = computed(() => {
   const needsOffset =
-    route.meta.fullBleed === true && route.meta.allowScroll === true && !isAuthRoute.value
+    route.meta.fullBleed === true && fullBleedAllowsScroll.value && !isAuthRoute.value
   if (!needsOffset) return ''
   if (!showAppHeader.value) return ''
   if (showHeaderNav.value && isStats.value) return 'layout-fullbleed--with-header-stats'
@@ -925,9 +949,9 @@ onBeforeUnmount(() => {
 })
 
 watch(
-  () => route.meta.fullBleed,
-  (v) => {
-    document.body.classList.toggle('no-scroll', !!v)
+  () => [route.meta.fullBleed, fullBleedAllowsScroll.value],
+  ([isFullBleed, allowsScroll]) => {
+    document.body.classList.toggle('no-scroll', !!isFullBleed && !allowsScroll)
   },
   { immediate: true },
 )
@@ -1088,6 +1112,10 @@ body.layout-light-document-scroll::-webkit-scrollbar {
   overflow: visible;
 }
 
+.app-layout-root.layout-stats-bg {
+  background: #f7f4ee;
+}
+
 .app-layout-root.layout-document-flow {
   display: block;
 }
@@ -1100,6 +1128,11 @@ body.layout-light-document-scroll::-webkit-scrollbar {
 
 .layout-home-bg {
   background: var(--theme-page-bg);
+}
+
+.layout-main--stats-light,
+.layout-stats-bg .layout-fullbleed {
+  background: #f7f4ee;
 }
 
 .app-layout-root.layout-gestion-bg {
@@ -1166,6 +1199,14 @@ body.layout-light-document-scroll::-webkit-scrollbar {
   height: 100%;
   width: 100%;
   min-width: 0;
+}
+
+.layout-fullbleed--template-scroll {
+  height: auto;
+  min-height: 100dvh;
+  overflow-x: clip !important;
+  overflow-y: auto !important;
+  background: #f7f4ee;
 }
 
 .layout-main,

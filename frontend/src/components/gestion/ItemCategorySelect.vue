@@ -2,7 +2,7 @@
   <div
     ref="rootEl"
     class="category-field"
-    :class="{ 'category-field--dropdown': display === 'dropdown' }"
+    :class="{ 'category-field--dropdown': display === 'dropdown', 'is-open': menuOpen }"
   >
     <div class="field-heading">
       <div>
@@ -445,6 +445,10 @@ onBeforeUnmount(() => {
   z-index: 20;
 }
 
+.category-field--dropdown.is-open {
+  z-index: 260;
+}
+
 .field-heading {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -559,10 +563,13 @@ onBeforeUnmount(() => {
 .category-dropdown-menu {
   position: absolute;
   left: 0;
+  right: 0;
   top: calc(100% + 0.45rem);
   z-index: 220;
   display: grid;
-  width: max(100%, min(34rem, calc(100vw - 2rem)));
+  width: 100%;
+  max-width: min(34rem, calc(100vw - 2rem));
+  box-sizing: border-box;
   max-height: min(430px, calc(100dvh - 11rem));
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.45rem;

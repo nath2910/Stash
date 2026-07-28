@@ -29,6 +29,9 @@ const toneClass = computed(() => `kpi-card--${props.tone}`)
   min-height: 112px;
   display: grid;
   align-content: space-between;
+  min-width: 0;
+  overflow: hidden;
+  box-sizing: border-box;
   gap: 0.75rem;
   border: 1px solid rgba(148, 163, 184, 0.22);
   border-radius: 16px;
@@ -60,25 +63,37 @@ const toneClass = computed(() => `kpi-card--${props.tone}`)
 }
 
 .kpi-title {
+  min-width: 0;
+  overflow: hidden;
   color: #64748b;
   font-size: 0.72rem;
   font-weight: 700;
+  text-overflow: ellipsis;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .kpi-value {
   min-height: 2.1rem;
+  min-width: 0;
+  overflow: hidden;
   color: #0f172a;
   font-size: clamp(1.45rem, 3vw, 2rem);
   font-weight: 800;
   line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .kpi-subtitle {
   min-height: 1rem;
+  min-width: 0;
+  overflow: hidden;
   color: #64748b;
   font-size: 0.78rem;
   font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .kpi-card--success .kpi-value {

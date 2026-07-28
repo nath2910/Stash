@@ -1,5 +1,8 @@
 <template>
-  <div class="stats-page-shell stats-page-shell--light">
+  <div
+    class="stats-page-shell stats-page-shell--light"
+    :class="{ 'stats-page-shell--template-mode': templateModeActive }"
+  >
     <Transition name="stats-range-loader">
       <div v-if="rangeRefreshing" class="stats-range-loader" role="status" aria-live="polite">
         <span class="stats-range-loader__dot"></span>
@@ -16,11 +19,12 @@
 
 <script setup lang="ts">
 import { useStatsRange } from '@/composables/useStatsRange'
-import { computed, defineAsyncComponent, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 const StatsCanvas = defineAsyncComponent(() => import('@/components/stats/StatsCanvas.vue'))
 const { from, to } = useStatsRange()
 const rangeRefreshing = ref(false)
+const templateModeActive = ref(false)
 let rangeRefreshTimer: number | null = null
 
 const rangeLabel = computed(() => {
@@ -43,7 +47,16 @@ watch(
 
 onBeforeUnmount(() => {
   if (rangeRefreshTimer) window.clearTimeout(rangeRefreshTimer)
+  window.removeEventListener('snk:stats-template-mode', onTemplateModeChange)
 })
+
+onMounted(() => {
+  window.addEventListener('snk:stats-template-mode', onTemplateModeChange)
+})
+
+function onTemplateModeChange(event: Event) {
+  templateModeActive.value = Boolean((event as CustomEvent)?.detail?.active)
+}
 
 function formatDateLabel(value: string) {
   const [year, month, day] = value.split('-').map(Number)
@@ -69,6 +82,12 @@ function formatDateLabel(value: string) {
 .stats-page-shell--light {
   background: #f7f4ee;
   color: #000;
+}
+
+.stats-page-shell--template-mode {
+  height: auto;
+  min-height: 100%;
+  overflow: visible;
 }
 
 .stats-range-loader {

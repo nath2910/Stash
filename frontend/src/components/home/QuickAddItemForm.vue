@@ -48,18 +48,20 @@ defineExpose({
 <style scoped>
 .quick-add-panel {
   position: relative;
+  z-index: 6;
   display: grid;
   align-content: start;
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
   gap: 0.8rem;
-  overflow: hidden;
+  overflow: visible;
   border: 1px solid rgba(203, 213, 225, 0.72);
   border-radius: 20px;
   background: #ffffff;
   padding: clamp(0.9rem, 1.6vw, 1.15rem);
   box-shadow: 0 18px 42px rgba(15, 23, 42, 0.07);
+  isolation: isolate;
 }
 
 .quick-add-panel::before {
@@ -76,6 +78,18 @@ defineExpose({
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+}
+
+.quick-add-panel :deep(.item-form-grid) {
+  position: relative;
+  overflow: visible;
+  isolation: isolate;
+}
+
+.quick-add-panel :deep(.item-field--category),
+.quick-add-panel :deep(.item-field--subcategory) {
+  position: relative;
+  z-index: 3;
 }
 
 .panel-eyebrow {

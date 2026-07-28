@@ -617,9 +617,13 @@ const dashboardSizeClass = computed(() => ({
   'is-compact-height': viewportHeight.value <= 860,
   'is-short-height': viewportHeight.value <= 740,
   'is-narrow-template': viewportWidth.value <= 1180,
+  'is-wide-template': viewportWidth.value >= 1600,
+  'is-hd-template': viewportWidth.value >= 1900,
 }))
 const detailRowLimit = computed(() => {
   const heightLimit = viewportHeight.value <= 740 ? 4 : viewportHeight.value <= 860 ? 5 : 7
+  if (viewportWidth.value >= 1900) return Math.min(heightLimit + 1, 8)
+  if (viewportWidth.value >= 1600) return Math.min(heightLimit + 1, 7)
   return viewportWidth.value <= 1100 ? Math.min(heightLimit, 5) : heightLimit
 })
 const topChartRowLimit = computed(() => (viewportHeight.value <= 740 ? 4 : 5))
@@ -2871,7 +2875,7 @@ onBeforeUnmount(() => {
   }
 
   .category-kpi-grid {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 176px), 1fr));
     gap: 8px;
   }
 
@@ -2902,9 +2906,8 @@ onBeforeUnmount(() => {
   .category-kpi-grid :deep(.category-kpi__detail) {
     font-size: 0.64rem;
     line-height: 1.18;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
+    white-space: normal;
   }
 
   .category-panel--hero-chart,
@@ -3168,6 +3171,32 @@ onBeforeUnmount(() => {
   .category-dashboard.is-short-height .category-insight-panel > span {
     -webkit-line-clamp: 2;
   }
+
+  .category-dashboard.is-wide-template .category-dashboard__inner {
+    width: min(100%, 1820px);
+  }
+
+  .category-dashboard.is-wide-template .category-overview-grid,
+  .category-dashboard.is-wide-template .category-analysis-grid,
+  .category-dashboard.is-wide-template .category-table-grid {
+    gap: 12px;
+  }
+
+  .category-dashboard.is-wide-template .category-panel,
+  .category-dashboard.is-wide-template .category-insight-panel,
+  .category-dashboard.is-wide-template .category-rank-panel {
+    padding: 10px;
+  }
+
+  .category-dashboard.is-hd-template .category-dashboard__inner {
+    width: min(100%, 1940px);
+  }
+
+  .category-dashboard.is-hd-template .category-overview-grid,
+  .category-dashboard.is-hd-template .category-analysis-grid,
+  .category-dashboard.is-hd-template .category-table-grid {
+    gap: 14px;
+  }
 }
 
 @media (max-width: 1200px) {
@@ -3286,6 +3315,77 @@ onBeforeUnmount(() => {
   border-color: rgba(148, 163, 184, 0.18);
   background: #fffdf9;
   box-shadow: none;
+}
+
+.category-table-scroll {
+  height: auto;
+  max-height: none;
+  overflow: visible;
+}
+
+.category-table th {
+  position: static;
+}
+
+.category-dashboard {
+  overflow: visible;
+}
+
+.category-dashboard__inner,
+.category-stage,
+.category-pages,
+.category-page {
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+}
+
+.category-dashboard__inner {
+  width: min(100%, 1840px);
+}
+
+.category-controls {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+}
+
+.category-kpi-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+}
+
+.category-overview-grid,
+.category-analysis-grid,
+.category-table-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+}
+
+.category-rank-panel {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+}
+
+.category-header p,
+.category-page__heading span,
+.category-insight-panel > span,
+.category-performance-card p,
+.category-table strong,
+.category-kpi-grid :deep(.category-kpi__detail) {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  display: block;
+  -webkit-line-clamp: unset;
+  -webkit-box-orient: initial;
+}
+
+.category-table th,
+.category-table td,
+.category-performance-card span {
+  white-space: normal;
+}
+
+@media (min-width: 1600px) {
+  .category-dashboard__inner {
+    width: min(100%, 2000px);
+  }
 }
 
 </style>

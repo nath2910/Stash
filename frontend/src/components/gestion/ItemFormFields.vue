@@ -813,12 +813,14 @@ defineExpose({
   gap: 0.72rem;
   align-items: end;
   min-width: 0;
+  overflow: visible;
 }
 
 .item-field {
   display: grid;
   grid-column: span 3;
   min-width: 0;
+  max-width: 100%;
   gap: 0.3rem;
 }
 
@@ -919,6 +921,9 @@ defineExpose({
   display: grid;
   grid-template-columns: 2.45rem minmax(3.8rem, 1fr) 2.45rem;
   align-items: center;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   min-height: 40px;
   overflow: hidden;
   border: 1px solid rgba(100, 116, 139, 0.24);
@@ -954,6 +959,8 @@ defineExpose({
 }
 
 .quantity-input {
+  width: 100%;
+  min-width: 0;
   min-height: 40px !important;
   border: 0 !important;
   border-inline: 1px solid rgba(148, 163, 184, 0.2) !important;
@@ -972,6 +979,8 @@ defineExpose({
   display: flex;
   grid-column: 1 / -1;
   justify-content: flex-end;
+  min-width: 0;
+  flex-wrap: wrap;
   gap: 0.65rem;
   border-top: 1px solid rgba(226, 232, 240, 0.96);
   padding-top: 0.9rem;
@@ -997,6 +1006,11 @@ defineExpose({
 .item-secondary-button:disabled {
   cursor: not-allowed;
   opacity: 0.62;
+}
+
+.item-primary-button,
+.item-secondary-button {
+  max-width: 100%;
 }
 
 :deep(.cd-input) {

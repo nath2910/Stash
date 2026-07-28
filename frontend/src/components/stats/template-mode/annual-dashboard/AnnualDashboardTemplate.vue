@@ -1,49 +1,11 @@
-﻿<template>
-  <section class="annual-dashboard" aria-label="Dashboard annuel" @wheel="onWheel">
+<template>
+  <section
+    class="annual-dashboard"
+    :class="annualSizeClass"
+    aria-label="Dashboard annuel"
+    @wheel="onWheel"
+  >
     <div class="annual-dashboard__inner">
-      <header class="annual-header">
-        <div class="annual-header__copy">
-          <p class="annual-header__kicker">Template</p>
-          <h1>Dashboard annuel</h1>
-          <p>
-            Synthese {{ selectedYear }} des ventes, du profit, des achats et du stock restant.
-          </p>
-        </div>
-
-        <div class="annual-year">
-          <div class="annual-year__head">
-            <span>Annee selectionnee</span>
-            <small>Saisie libre</small>
-          </div>
-          <div class="annual-year__control">
-            <button
-              type="button"
-              aria-label="Annee precedente"
-              @click="changeYear(-1)"
-            >
-              <ChevronLeft aria-hidden="true" />
-            </button>
-            <input
-              :value="yearDraft"
-              inputmode="numeric"
-              pattern="[0-9]*"
-              autocomplete="off"
-              aria-label="Selectionner une annee"
-              @input="onYearInput"
-              @blur="commitYear()"
-              @keydown.enter.prevent="commitYear()"
-            />
-            <button
-              type="button"
-              aria-label="Annee suivante"
-              @click="changeYear(1)"
-            >
-              <ChevronRight aria-hidden="true" />
-            </button>
-          </div>
-        </div>
-      </header>
-
       <div v-if="loading && !dashboard" class="annual-state annual-state--loading" role="status">
         <div class="annual-state__pulse"></div>
         <h2>Chargement du dashboard</h2>
@@ -66,56 +28,105 @@
         </div>
 
         <template v-else>
-          <nav class="annual-page-nav" aria-label="Navigation du dashboard annuel">
-            <button
-              type="button"
-              class="annual-page-nav__arrow"
-              :disabled="activePage === 0"
-              aria-label="Page precedente"
-              @click="previousPage"
-            >
-              <ChevronLeft aria-hidden="true" />
-            </button>
-
-            <div class="annual-page-nav__center">
-              <span class="annual-page-nav__count">{{ activePage + 1 }} / {{ pages.length }}</span>
-              <strong>{{ currentPage.label }}</strong>
-              <div class="annual-page-nav__dots" role="tablist" aria-label="Pages">
-                <button
-                  v-for="(page, index) in pages"
-                  :key="page.key"
-                  type="button"
-                  class="annual-page-nav__dot"
-                  :class="{ 'is-active': activePage === index }"
-                  :aria-label="`Afficher ${page.label}`"
-                  :aria-selected="activePage === index"
-                  role="tab"
-                  @click="goToPage(index)"
-                ></button>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              class="annual-page-nav__arrow"
-              :disabled="activePage === pages.length - 1"
-              aria-label="Page suivante"
-              @click="nextPage"
-            >
-              <ChevronRight aria-hidden="true" />
-            </button>
-          </nav>
-
-          <section
-            class="annual-stage"
-            :class="{ 'is-dragging': pointerDrag.active }"
-            aria-live="polite"
-            @pointerdown="onPointerDown"
-            @pointerup="onPointerUp"
-            @pointercancel="resetPointerDrag"
-            @lostpointercapture="resetPointerDrag"
+          <DashboardLayout
+            title="Dashboard annuel"
+            :description="`Synthese ${selectedYear} des ventes, du profit, des achats et du stock restant.`"
+            :period-label="String(selectedYear)"
+            analytics-kicker="Pilotage revendeur"
+            analytics-title="Plan d'action annuel"
+            :analytics-meta="String(selectedYear)"
+            :kpis="pilotageKpiCards"
+            :modules="dashboardModules"
+            :show-unified-content="activePage === 1"
+            :fit-screen="true"
           >
-            <div class="annual-pages" :style="pageTrackStyle">
+            <template #selector>
+              <div class="annual-year">
+                <div class="annual-year__head">
+                  <span>Annee selectionnee</span>
+                  <small>Saisie libre</small>
+                </div>
+                <div class="annual-year__control">
+                  <button
+                    type="button"
+                    aria-label="Annee precedente"
+                    @click="changeYear(-1)"
+                  >
+                    <ChevronLeft aria-hidden="true" />
+                  </button>
+                  <input
+                    :value="yearDraft"
+                    inputmode="numeric"
+                    pattern="[0-9]*"
+                    autocomplete="off"
+                    aria-label="Selectionner une annee"
+                    @input="onYearInput"
+                    @blur="commitYear()"
+                    @keydown.enter.prevent="commitYear()"
+                  />
+                  <button
+                    type="button"
+                    aria-label="Annee suivante"
+                    @click="changeYear(1)"
+                  >
+                    <ChevronRight aria-hidden="true" />
+                  </button>
+                </div>
+              </div>
+            </template>
+
+            <template #navigation>
+              <nav class="annual-page-nav" aria-label="Navigation du dashboard annuel">
+                <button
+                  type="button"
+                  class="annual-page-nav__arrow"
+                  :disabled="activePage === 0"
+                  aria-label="Page precedente"
+                  @click="previousPage"
+                >
+                  <ChevronLeft aria-hidden="true" />
+                </button>
+
+                <div class="annual-page-nav__center">
+                  <span class="annual-page-nav__count">{{ activePage + 1 }} / {{ pages.length }}</span>
+                  <strong>{{ currentPage.label }}</strong>
+                  <div class="annual-page-nav__dots" role="tablist" aria-label="Pages">
+                    <button
+                      v-for="(page, index) in pages"
+                      :key="page.key"
+                      type="button"
+                      class="annual-page-nav__dot"
+                      :class="{ 'is-active': activePage === index }"
+                      :aria-label="`Afficher ${page.label}`"
+                      :aria-selected="activePage === index"
+                      role="tab"
+                      @click="goToPage(index)"
+                    ></button>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  class="annual-page-nav__arrow"
+                  :disabled="activePage === pages.length - 1"
+                  aria-label="Page suivante"
+                  @click="nextPage"
+                >
+                  <ChevronRight aria-hidden="true" />
+                </button>
+              </nav>
+            </template>
+
+            <section
+              class="annual-stage"
+              :class="{ 'is-dragging': pointerDrag.active }"
+              aria-live="polite"
+              @pointerdown="onPointerDown"
+              @pointerup="onPointerUp"
+              @pointercancel="resetPointerDrag"
+              @lostpointercapture="resetPointerDrag"
+            >
+              <div class="annual-pages" :style="pageTrackStyle">
               <article
                 v-if="activePage === 0"
                 class="annual-page annual-page--side"
@@ -153,13 +164,6 @@
                     <div v-else class="annual-mini-empty">Aucune categorie vendue sur cette annee.</div>
                   </section>
                 </div>
-
-                <section class="annual-insights" aria-label="Indicateurs de flux">
-                  <div v-for="item in insightItems" :key="item.label" class="annual-insight">
-                    <span>{{ item.label }}</span>
-                    <strong>{{ item.value }}</strong>
-                  </div>
-                </section>
               </article>
 
               <article
@@ -170,7 +174,7 @@
                 <div class="annual-main-stack">
                   <section class="annual-kpi-grid" aria-label="KPI annuels">
                     <AnnualKpiCard
-                      v-for="card in kpiCards"
+                      v-for="card in pilotageKpiCards"
                       :key="card.label"
                       :label="card.label"
                       :value="card.value"
@@ -299,8 +303,9 @@
                   </article>
                 </section>
               </article>
-            </div>
-          </section>
+              </div>
+            </section>
+          </DashboardLayout>
         </template>
       </template>
     </div>
@@ -320,6 +325,7 @@ import {
   Wallet,
 } from 'lucide-vue-next'
 import StatsServices from '@/services/StatsServices'
+import DashboardLayout from '../shared/DashboardLayout.vue'
 import AnnualKpiCard from './AnnualKpiCard.vue'
 
 type DashboardSummary = {
@@ -417,11 +423,12 @@ const selectedYear = ref(normalizeInitialYear(props.initialState?.year))
 const yearDraft = ref(String(selectedYear.value))
 const minYear = ref(currentYear - 5)
 const maxYear = ref(currentYear)
+const viewportWidth = ref(typeof window === 'undefined' ? 1440 : window.innerWidth)
+const viewportHeight = ref(typeof window === 'undefined' ? 900 : window.innerHeight)
 const dashboard = ref<AnnualDashboard | null>(null)
 const loading = ref(false)
 const error = ref('')
 const activePage = ref(1)
-const DETAILS_ROW_LIMIT = 20
 const pointerDrag = ref({
   active: false,
   pointerId: -1,
@@ -493,11 +500,23 @@ const emptySummary: DashboardSummary = {
 const summary = computed(() => dashboard.value?.summary ?? emptySummary)
 const monthlyRows = computed(() => normalizeMonthly(dashboard.value?.monthly ?? []))
 const currentPage = computed(() => pages[activePage.value] ?? pages[1])
+const annualSizeClass = computed(() => ({
+  'is-compact-height': viewportHeight.value <= 960,
+  'is-short-height': viewportHeight.value <= 860,
+  'is-narrow-template': viewportWidth.value <= 1280,
+  'is-wide-template': viewportWidth.value >= 1600,
+  'is-hd-template': viewportWidth.value >= 1900,
+}))
 const pageTrackStyle = computed(() => ({
   transform: 'translate3d(0, 0, 0)',
 }))
-const topProductsPreview = computed(() => dashboard.value?.topProducts.slice(0, DETAILS_ROW_LIMIT) ?? [])
-const inventoryPreview = computed(() => dashboard.value?.inventoryAging.slice(0, DETAILS_ROW_LIMIT) ?? [])
+const detailRowLimit = computed(() => {
+  if (viewportHeight.value <= 860) return viewportWidth.value <= 1400 ? 5 : 6
+  if (viewportHeight.value <= 960) return viewportWidth.value <= 1400 ? 6 : 7
+  return viewportWidth.value <= 1400 ? 7 : 8
+})
+const topProductsPreview = computed(() => dashboard.value?.topProducts.slice(0, detailRowLimit.value) ?? [])
+const inventoryPreview = computed(() => dashboard.value?.inventoryAging.slice(0, detailRowLimit.value) ?? [])
 const resellerSignals = computed(() => {
   const oldStock = (dashboard.value?.inventoryAging ?? []).filter((item) => Number(item.ageInDays || 0) >= 120)
   const cashNet = summary.value.revenue - summary.value.purchaseSpend
@@ -545,6 +564,15 @@ const resellerSignals = computed(() => {
     },
   ]
 })
+const dashboardModules = computed(() =>
+  resellerSignals.value.map((item) => ({
+    badge: item.badge,
+    title: item.title,
+    value: item.value,
+    detail: item.detail,
+    tone: item.tone === 'positive' ? 'positive' : item.tone === 'warning' ? 'warning' : 'neutral',
+  })),
+)
 const kpiCards = computed(() => [
   {
     label: "Chiffre d'affaires",
@@ -581,20 +609,31 @@ const kpiCards = computed(() => [
     tone: 'primary' as const,
     icon: Wallet,
   },
-  {
-    label: 'Stock restant',
-    value: `${formatNumber(summary.value.remainingStockCount)} articles`,
-    detail: `${formatMoney(summary.value.remainingStockValue)} immobilises`,
-    tone: summary.value.remainingStockCount > 0 ? ('warning' as const) : ('neutral' as const),
-    icon: Boxes,
-  },
 ])
 
-const insightItems = computed(() => [
-  { label: 'Panier moyen', value: formatMoney(summary.value.averageSalePrice) },
-  { label: 'Depenses achat', value: formatMoney(summary.value.purchaseSpend) },
-  { label: 'Profit moyen', value: formatMoney(summary.value.averageProfit) },
-  { label: 'Detention moyenne', value: formatDays(summary.value.averageHoldDays) },
+const pilotageKpiCards = computed(() => [
+  ...kpiCards.value,
+  {
+    label: 'Panier moyen',
+    value: formatMoney(summary.value.averageSalePrice),
+    detail: 'Valeur moyenne par vente',
+    tone: 'primary' as const,
+    icon: BadgeEuro,
+  },
+  {
+    label: 'Profit moyen',
+    value: formatMoney(summary.value.averageProfit),
+    detail: 'Marge moyenne par vente',
+    tone: summary.value.averageProfit >= 0 ? ('profit' as const) : ('warning' as const),
+    icon: TrendingUp,
+  },
+  {
+    label: 'Detention moyenne',
+    value: formatDays(summary.value.averageHoldDays),
+    detail: 'Temps moyen avant revente',
+    tone: summary.value.averageHoldDays > 120 ? ('warning' as const) : ('neutral' as const),
+    icon: Boxes,
+  },
 ])
 
 const cashflowOption = computed(() => {
@@ -937,6 +976,11 @@ function onWheel(event: WheelEvent) {
   }
 }
 
+function updateViewport() {
+  viewportWidth.value = window.innerWidth
+  viewportHeight.value = Math.round(window.visualViewport?.height ?? window.innerHeight)
+}
+
 function onKeyDown(event: KeyboardEvent) {
   const target = event.target as HTMLElement | null
   if (target?.closest('input, select, textarea, [contenteditable="true"]')) return
@@ -987,12 +1031,17 @@ watch(selectedYear, () => {
 })
 
 onMounted(async () => {
+  updateViewport()
   window.addEventListener('keydown', onKeyDown)
+  window.addEventListener('resize', updateViewport)
+  window.visualViewport?.addEventListener('resize', updateViewport)
   await Promise.all([loadYearBounds(), loadDashboard()])
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeyDown)
+  window.removeEventListener('resize', updateViewport)
+  window.visualViewport?.removeEventListener('resize', updateViewport)
 })
 </script>
 
@@ -1001,6 +1050,9 @@ onBeforeUnmount(() => {
   --annual-template-gap: clamp(10px, 1.35vh, 16px);
   --annual-bg: #f7f4ee;
   --annual-muted-bg: #fbfaf6;
+  --annual-flow-panel-min-height: clamp(264px, 31vh, 376px);
+  --annual-flow-card-min-height: clamp(86px, 10.4vh, 112px);
+  --annual-detail-scroll-max-height: clamp(260px, 38vh, 430px);
   width: 100%;
   height: 100%;
   min-width: 0;
@@ -1287,6 +1339,7 @@ onBeforeUnmount(() => {
 
 .annual-page--side {
   grid-template-rows: auto minmax(0, 1fr) auto;
+  align-content: stretch;
 }
 
 .annual-page--main {
@@ -1343,8 +1396,27 @@ onBeforeUnmount(() => {
 .annual-kpi-grid {
   min-width: 0;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   gap: 12px;
+}
+
+.annual-kpi-grid--insights {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+}
+
+.annual-page--side :deep(.annual-kpi) {
+  min-height: var(--annual-flow-card-min-height);
+  padding: clamp(0.78rem, 0.95vw, 0.95rem);
+  gap: 0.42rem;
+}
+
+.annual-page--side :deep(.annual-kpi__value) {
+  font-size: clamp(1.28rem, 1.7vw, 1.7rem);
+}
+
+.annual-page--side :deep(.annual-kpi__detail) {
+  font-size: 0.78rem;
+  line-height: 1.26;
 }
 
 .annual-page--main :deep(.annual-kpi) {
@@ -1366,7 +1438,7 @@ onBeforeUnmount(() => {
   background: rgba(255, 255, 255, 0.68);
   padding: 10px;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
   gap: 8px;
 }
 
@@ -1492,7 +1564,7 @@ onBeforeUnmount(() => {
   min-height: 0;
   height: auto;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   grid-auto-rows: auto;
   align-items: start;
   gap: 9px;
@@ -1593,10 +1665,30 @@ onBeforeUnmount(() => {
 
 .annual-page-grid--two {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  grid-auto-rows: 1fr;
 }
 
 .annual-page-grid--two .annual-panel {
-  min-height: clamp(300px, 34vh, 430px);
+  min-height: var(--annual-flow-panel-min-height);
+  height: 100%;
+}
+
+.annual-page--side .annual-page-grid--two {
+  min-height: clamp(420px, calc(100svh - 332px), 720px);
+}
+
+.annual-page--side .annual-chart,
+.annual-page--side .annual-chart-wrap,
+.annual-page--side .annual-mini-empty {
+  height: 100%;
+}
+
+.annual-page--side .annual-mini-empty {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  text-align: center;
 }
 
 .annual-table-grid {
@@ -1641,7 +1733,7 @@ onBeforeUnmount(() => {
   min-width: 0;
   min-height: 0;
   height: auto;
-  max-height: clamp(260px, 38vh, 430px);
+  max-height: var(--annual-detail-scroll-max-height);
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain;
@@ -2009,6 +2101,359 @@ onBeforeUnmount(() => {
   border-color: rgba(148, 163, 184, 0.18);
   background: #fffdf9;
   box-shadow: none;
+}
+
+.annual-table-scroll {
+  height: auto;
+  max-height: none;
+  overflow: visible;
+}
+
+.annual-table th {
+  position: static;
+}
+
+.annual-dashboard {
+  overflow: visible;
+}
+
+.annual-dashboard__inner,
+.annual-stage,
+.annual-pages,
+.annual-page {
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+}
+
+.annual-dashboard__inner {
+  width: min(100%, 1840px);
+}
+
+.annual-insights {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+}
+
+.annual-action-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+}
+
+.annual-page-grid--two,
+.annual-table-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+}
+
+.annual-action-card,
+.annual-insight {
+  align-self: stretch;
+}
+
+.annual-action-card p,
+.annual-table strong {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  display: block;
+  -webkit-line-clamp: unset;
+  -webkit-box-orient: initial;
+}
+
+.annual-table th,
+.annual-table td {
+  white-space: normal;
+}
+
+@media (min-width: 961px) {
+  .annual-dashboard {
+    overflow: hidden;
+  }
+
+  .annual-dashboard :deep(.dashboard-layout) {
+    --dashboard-gap: clamp(0.8rem, 0.95vw, 1rem);
+    --dashboard-surface-padding: clamp(0.86rem, 1vw, 1.02rem);
+    --dashboard-kpi-min-width: 188px;
+    --dashboard-kpi-min-height: clamp(120px, 12vw, 142px);
+    --dashboard-kpi-padding: clamp(0.82rem, 0.95vw, 0.94rem);
+    --dashboard-kpi-value-size: clamp(1.72rem, 1.95vw, 2.18rem);
+    --dashboard-kpi-detail-size: 0.82rem;
+    --dashboard-module-min-width: 180px;
+    --dashboard-module-padding: clamp(0.8rem, 0.92vw, 0.94rem);
+    --dashboard-module-value-size: clamp(1.04rem, 1.32vw, 1.42rem);
+    --dashboard-module-detail-size: 0.78rem;
+  }
+
+  .annual-page__heading {
+    display: none;
+  }
+
+  .annual-dashboard.is-compact-height :deep(.dashboard-layout__inner) {
+    gap: 8px;
+    padding-top: 0.8rem;
+    padding-bottom: 0.85rem;
+  }
+
+  .annual-dashboard.is-compact-height {
+    --annual-flow-panel-min-height: clamp(214px, 24vh, 276px);
+    --annual-flow-card-min-height: 84px;
+    --annual-detail-scroll-max-height: clamp(228px, 31vh, 310px);
+  }
+
+  .annual-dashboard.is-compact-height :deep(.dashboard-layout__header) {
+    gap: 0.9rem;
+  }
+
+  .annual-dashboard.is-compact-height :deep(.dashboard-layout__copy h1) {
+    font-size: clamp(1.9rem, 2.25vw, 2.5rem);
+  }
+
+  .annual-dashboard.is-compact-height :deep(.dashboard-layout__description) {
+    margin-top: 0.42rem;
+    font-size: 0.92rem;
+    line-height: 1.36;
+  }
+
+  .annual-dashboard.is-compact-height :deep(.dashboard-layout__surface) {
+    padding: 0.8rem;
+  }
+
+  .annual-dashboard.is-compact-height :deep(.dashboard-layout__kpi-grid) {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 176px), 1fr));
+    gap: 8px;
+  }
+
+  .annual-dashboard.is-compact-height :deep(.dashboard-layout__kpi-card) {
+    min-height: 112px;
+    padding: 0.78rem;
+    gap: 0.42rem;
+  }
+
+  .annual-dashboard.is-compact-height :deep(.dashboard-layout__kpi-value) {
+    font-size: clamp(1.52rem, 1.78vw, 2rem);
+  }
+
+  .annual-dashboard.is-compact-height :deep(.dashboard-layout__kpi-detail) {
+    font-size: 0.8rem;
+    line-height: 1.3;
+  }
+
+  .annual-dashboard.is-compact-height :deep(.dashboard-layout__module-grid) {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+    gap: 8px;
+  }
+
+  .annual-dashboard.is-compact-height :deep(.dashboard-layout__module-card) {
+    padding: 0.78rem;
+    gap: 0.42rem;
+  }
+
+  .annual-dashboard.is-compact-height .annual-year {
+    padding: 8px;
+    gap: 6px;
+  }
+
+  .annual-dashboard.is-compact-height .annual-year__control {
+    gap: 6px;
+  }
+
+  .annual-dashboard.is-compact-height .annual-year__control button {
+    width: 32px;
+    height: 32px;
+  }
+
+  .annual-dashboard.is-compact-height .annual-year__control input {
+    height: 32px;
+    font-size: 1rem;
+  }
+
+  .annual-dashboard.is-compact-height .annual-page-nav {
+    padding: 5px 7px;
+    grid-template-columns: 34px minmax(0, 1fr) 34px;
+    gap: 8px;
+  }
+
+  .annual-dashboard.is-compact-height .annual-page-nav__arrow {
+    width: 30px;
+    height: 30px;
+  }
+
+  .annual-dashboard.is-compact-height .annual-page {
+    gap: 8px;
+  }
+
+  .annual-dashboard.is-compact-height .annual-panel,
+  .annual-dashboard.is-compact-height .annual-insights {
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .annual-dashboard.is-compact-height .annual-page-grid--two,
+  .annual-dashboard.is-compact-height .annual-table-grid {
+    gap: 10px;
+  }
+
+  .annual-dashboard.is-compact-height .annual-kpi-grid--insights {
+    gap: 8px;
+  }
+
+  .annual-dashboard.is-compact-height .annual-page--side :deep(.annual-kpi) {
+    padding: 0.72rem;
+  }
+
+  .annual-dashboard.is-compact-height .annual-page--side :deep(.annual-kpi__value) {
+    font-size: clamp(1.18rem, 1.45vw, 1.44rem);
+  }
+
+  .annual-dashboard.is-compact-height .annual-page--side :deep(.annual-kpi__detail) {
+    font-size: 0.74rem;
+  }
+
+  .annual-dashboard.is-compact-height .annual-insight {
+    padding: 8px 10px;
+  }
+
+  .annual-dashboard.is-compact-height .annual-insight strong {
+    font-size: 0.92rem;
+  }
+
+  .annual-dashboard.is-compact-height .annual-action-grid {
+    gap: 8px;
+  }
+
+  .annual-dashboard.is-compact-height .annual-action-card {
+    padding: 8px;
+    gap: 5px;
+  }
+
+  .annual-dashboard.is-compact-height .annual-page--details .annual-panel__head h2,
+  .annual-dashboard.is-compact-height .annual-panel__head h2 {
+    font-size: 0.96rem;
+  }
+
+  .annual-dashboard.is-compact-height .annual-page--details .annual-table td {
+    padding: 6px 5px;
+    font-size: 0.72rem;
+  }
+
+  .annual-dashboard.is-compact-height .annual-page--details .annual-table th {
+    padding: 6px 5px;
+    font-size: 0.62rem;
+  }
+
+  .annual-dashboard.is-short-height :deep(.dashboard-layout__copy h1) {
+    font-size: clamp(1.72rem, 2vw, 2.18rem);
+  }
+
+  .annual-dashboard.is-short-height {
+    --annual-flow-panel-min-height: clamp(188px, 21vh, 236px);
+    --annual-flow-card-min-height: 76px;
+    --annual-detail-scroll-max-height: clamp(208px, 27vh, 270px);
+  }
+
+  .annual-dashboard.is-short-height :deep(.dashboard-layout__description),
+  .annual-dashboard.is-short-height .annual-year__head,
+  .annual-dashboard.is-short-height .annual-page-nav__count {
+    display: none;
+  }
+
+  .annual-dashboard.is-short-height :deep(.dashboard-layout__surface) {
+    padding: 0.72rem;
+  }
+
+  .annual-dashboard.is-short-height :deep(.dashboard-layout__kpi-card) {
+    min-height: 102px;
+    padding: 0.72rem;
+  }
+
+  .annual-dashboard.is-short-height :deep(.dashboard-layout__kpi-detail),
+  .annual-dashboard.is-short-height :deep(.dashboard-layout__module-detail) {
+    font-size: 0.74rem;
+    line-height: 1.22;
+  }
+
+  .annual-dashboard.is-short-height .annual-page-nav__center strong {
+    font-size: 0.84rem;
+  }
+
+  .annual-dashboard.is-short-height .annual-kpi-grid--insights {
+    gap: 7px;
+  }
+
+  .annual-dashboard.is-short-height .annual-page--side :deep(.annual-kpi) {
+    padding: 0.64rem;
+  }
+
+  .annual-dashboard.is-short-height .annual-page--side :deep(.annual-kpi__value) {
+    font-size: clamp(1.08rem, 1.28vw, 1.28rem);
+  }
+
+  .annual-dashboard.is-short-height .annual-page--side :deep(.annual-kpi__detail) {
+    font-size: 0.7rem;
+    line-height: 1.18;
+  }
+
+  .annual-dashboard.is-short-height .annual-action-card p {
+    display: none;
+  }
+
+  .annual-dashboard.is-short-height .annual-page--details .annual-table td span {
+    font-size: 0.64rem;
+    margin-top: 1px;
+  }
+
+  .annual-dashboard.is-wide-template {
+    --annual-flow-panel-min-height: clamp(276px, 31vh, 388px);
+    --annual-flow-card-min-height: clamp(92px, 9.8vh, 116px);
+    --annual-detail-scroll-max-height: clamp(300px, 41vh, 460px);
+  }
+
+  .annual-dashboard.is-wide-template :deep(.dashboard-layout__inner) {
+    width: min(100%, 1820px);
+  }
+
+  .annual-dashboard.is-wide-template :deep(.dashboard-layout__surface) {
+    padding: 0.9rem;
+  }
+
+  .annual-dashboard.is-wide-template .annual-page-grid--two,
+  .annual-dashboard.is-wide-template .annual-table-grid {
+    gap: 12px;
+  }
+
+  .annual-dashboard.is-wide-template .annual-kpi-grid--insights {
+    gap: 10px;
+  }
+
+  .annual-dashboard.is-wide-template .annual-page--side :deep(.annual-kpi__value) {
+    font-size: clamp(1.34rem, 1.55vw, 1.78rem);
+  }
+
+  .annual-dashboard.is-hd-template {
+    --annual-flow-panel-min-height: clamp(292px, 32vh, 412px);
+    --annual-flow-card-min-height: clamp(96px, 9.6vh, 122px);
+    --annual-detail-scroll-max-height: clamp(340px, 44vh, 520px);
+  }
+
+  .annual-dashboard.is-hd-template :deep(.dashboard-layout__inner) {
+    width: min(100%, 1940px);
+  }
+
+  .annual-dashboard.is-hd-template :deep(.dashboard-layout__copy h1) {
+    font-size: clamp(2rem, 2.35vw, 2.9rem);
+  }
+
+  .annual-dashboard.is-hd-template .annual-page--side :deep(.annual-kpi__value) {
+    font-size: clamp(1.42rem, 1.65vw, 1.9rem);
+  }
+}
+
+@media (min-width: 1600px) {
+  .annual-dashboard__inner {
+    width: min(100%, 2000px);
+  }
+
+  .annual-action-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  }
 }
 
 </style>
