@@ -17,9 +17,8 @@
         :loading="loading"
       />
       <KpiCard
-        title="En stock"
+        title="Items en stock"
         :value="formatNumber(summaryValue('itemsEnStock'))"
-        subtitle="Items disponibles"
         tone="accent"
         :loading="loading"
       />
@@ -66,14 +65,7 @@ const showEmptyState = computed(
     summaryValue('itemsVendues') <= 0,
 )
 
-const estimatedSubtitle = computed(() => {
-  const estimated = Number(props.summary?.estimatedStockValue ?? 0)
-  const invested = Number(props.summary?.valeurStock ?? 0)
-  if (estimated > 0 && Math.abs(estimated - invested) >= 0.01) {
-    return `Valeur estimee ${formatEUR(estimated)}`
-  }
-  return 'Montant investi'
-})
+const estimatedSubtitle = computed(() => '')
 </script>
 
 <style scoped>

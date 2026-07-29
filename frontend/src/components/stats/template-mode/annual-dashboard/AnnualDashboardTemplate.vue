@@ -510,13 +510,8 @@ const annualSizeClass = computed(() => ({
 const pageTrackStyle = computed(() => ({
   transform: 'translate3d(0, 0, 0)',
 }))
-const detailRowLimit = computed(() => {
-  if (viewportHeight.value <= 860) return viewportWidth.value <= 1400 ? 5 : 6
-  if (viewportHeight.value <= 960) return viewportWidth.value <= 1400 ? 6 : 7
-  return viewportWidth.value <= 1400 ? 7 : 8
-})
-const topProductsPreview = computed(() => dashboard.value?.topProducts.slice(0, detailRowLimit.value) ?? [])
-const inventoryPreview = computed(() => dashboard.value?.inventoryAging.slice(0, detailRowLimit.value) ?? [])
+const topProductsPreview = computed(() => dashboard.value?.topProducts ?? [])
+const inventoryPreview = computed(() => dashboard.value?.inventoryAging ?? [])
 const resellerSignals = computed(() => {
   const oldStock = (dashboard.value?.inventoryAging ?? []).filter((item) => Number(item.ageInDays || 0) >= 120)
   const cashNet = summary.value.revenue - summary.value.purchaseSpend
@@ -1052,6 +1047,7 @@ onBeforeUnmount(() => {
   --annual-muted-bg: #fbfaf6;
   --annual-flow-panel-min-height: clamp(264px, 31vh, 376px);
   --annual-flow-card-min-height: clamp(86px, 10.4vh, 112px);
+  --annual-detail-panel-min-height: clamp(420px, 54vh, 620px);
   --annual-detail-scroll-max-height: clamp(260px, 38vh, 430px);
   width: 100%;
   height: 100%;
@@ -1349,7 +1345,7 @@ onBeforeUnmount(() => {
 }
 
 .annual-page--details {
-  grid-template-rows: auto auto;
+  grid-template-rows: auto minmax(0, 1fr);
   align-content: start;
   gap: 10px;
 }
@@ -1698,11 +1694,13 @@ onBeforeUnmount(() => {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
-  align-items: start;
+  align-items: stretch;
 }
 
 .annual-table-card {
   align-content: start;
+  min-height: var(--annual-detail-panel-min-height);
+  height: 100%;
   overflow: hidden;
 }
 
@@ -2103,10 +2101,11 @@ onBeforeUnmount(() => {
   box-shadow: none;
 }
 
-.annual-table-scroll {
+.annual-page--details .annual-table-scroll {
   height: auto;
-  max-height: none;
-  overflow: visible;
+  max-height: var(--annual-detail-scroll-max-height);
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .annual-table th {
@@ -2195,6 +2194,7 @@ onBeforeUnmount(() => {
   .annual-dashboard.is-compact-height {
     --annual-flow-panel-min-height: clamp(214px, 24vh, 276px);
     --annual-flow-card-min-height: 84px;
+    --annual-detail-panel-min-height: clamp(336px, 41vh, 430px);
     --annual-detail-scroll-max-height: clamp(228px, 31vh, 310px);
   }
 
@@ -2346,6 +2346,7 @@ onBeforeUnmount(() => {
   .annual-dashboard.is-short-height {
     --annual-flow-panel-min-height: clamp(188px, 21vh, 236px);
     --annual-flow-card-min-height: 76px;
+    --annual-detail-panel-min-height: clamp(292px, 36vh, 360px);
     --annual-detail-scroll-max-height: clamp(208px, 27vh, 270px);
   }
 
@@ -2403,6 +2404,7 @@ onBeforeUnmount(() => {
   .annual-dashboard.is-wide-template {
     --annual-flow-panel-min-height: clamp(276px, 31vh, 388px);
     --annual-flow-card-min-height: clamp(92px, 9.8vh, 116px);
+    --annual-detail-panel-min-height: clamp(470px, 57vh, 700px);
     --annual-detail-scroll-max-height: clamp(300px, 41vh, 460px);
   }
 
@@ -2430,6 +2432,7 @@ onBeforeUnmount(() => {
   .annual-dashboard.is-hd-template {
     --annual-flow-panel-min-height: clamp(292px, 32vh, 412px);
     --annual-flow-card-min-height: clamp(96px, 9.6vh, 122px);
+    --annual-detail-panel-min-height: clamp(520px, 60vh, 780px);
     --annual-detail-scroll-max-height: clamp(340px, 44vh, 520px);
   }
 
