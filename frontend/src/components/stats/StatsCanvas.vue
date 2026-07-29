@@ -326,18 +326,18 @@
           <div class="canvas-empty-guide__kicker">Canvas libre</div>
           <h2 class="canvas-empty-guide__title">Ton dashboard est pret a etre construit</h2>
           <p class="canvas-empty-guide__lead">
-            Commence par ajouter tes widgets, ajuste ta periode, puis organise la feuille comme un
-            vrai board de pilotage.
+            Commence par un template pour poser une base complete, puis ajuste la periode et ajoute
+            seulement les widgets utiles a ton profil.
           </p>
 
           <div class="canvas-empty-guide__steps">
             <div class="canvas-empty-guide-step">
               <span class="canvas-empty-guide-step__icon">
-                <LayoutGrid class="h-4 w-4" />
+                <BarChart3 class="h-4 w-4" />
               </span>
               <div class="canvas-empty-guide-step__content">
-                <strong>1. Ajoute tes blocs clefs</strong>
-                <p>CA, profit, top ventes, stock: assemble tes KPI en quelques clics.</p>
+                <strong>1. Choisis un template adapte</strong>
+                <p>Prends une base prete pour lancer rapidement une vue claire de ton activite.</p>
               </div>
             </div>
             <div class="canvas-empty-guide-step">
@@ -345,32 +345,22 @@
                 <CalendarRange class="h-4 w-4" />
               </span>
               <div class="canvas-empty-guide-step__content">
-                <strong>2. Regle ta plage de dates</strong>
-                <p>Utilise la barre laterale pour passer de la vue jour au suivi mensuel.</p>
+                <strong>2. Regle la periode du profil</strong>
+                <p>Affiche la bonne lecture en passant d'un suivi ponctuel a une vue plus large.</p>
               </div>
             </div>
             <div class="canvas-empty-guide-step">
               <span class="canvas-empty-guide-step__icon">
-                <Target class="h-4 w-4" />
+                <LayoutGrid class="h-4 w-4" />
               </span>
               <div class="canvas-empty-guide-step__content">
-                <strong>3. Cadre ton espace d'analyse</strong>
-                <p>Centre, zoome, puis aligne tes widgets pour une lecture rapide et propre.</p>
+                <strong>3. Complete avec tes widgets</strong>
+                <p>Ajoute ensuite seulement les blocs qui manquent pour affiner ton dashboard.</p>
               </div>
             </div>
           </div>
 
           <div class="canvas-empty-guide__actions">
-            <button
-              type="button"
-              class="canvas-empty-guide__btn canvas-empty-guide__btn--primary panzoom-exclude"
-              @pointerdown.stop
-              @pointerup.stop.prevent="onEmptyGuideAddWidget"
-              @click.stop.prevent="onEmptyGuideAddWidget"
-            >
-              <PlusSquare class="h-4 w-4" />
-              <span>{{ emptyGuidePrimaryActionLabel }}</span>
-            </button>
             <button
               type="button"
               class="canvas-empty-guide__btn panzoom-exclude"
@@ -379,7 +369,17 @@
               @click.stop.prevent="onEmptyGuideOpenTemplate"
             >
               <BarChart3 class="h-4 w-4" />
-              <span>Voir les templates</span>
+              <span>Ajouter un template</span>
+            </button>
+            <button
+              type="button"
+              class="canvas-empty-guide__btn panzoom-exclude"
+              @pointerdown.stop
+              @pointerup.stop.prevent="onEmptyGuideAddWidget"
+              @click.stop.prevent="onEmptyGuideAddWidget"
+            >
+              <PlusSquare class="h-4 w-4" />
+              <span>{{ emptyGuideSecondaryActionLabel }}</span>
             </button>
           </div>
         </article>
@@ -2327,7 +2327,7 @@ const showCanvasEmptyGuide = computed(
     !profileEditorOpen.value &&
     !shortcutHelpOpen.value,
 )
-const emptyGuidePrimaryActionLabel = computed(() =>
+const emptyGuideSecondaryActionLabel = computed(() =>
   editMode.value ? 'Ajouter un widget' : 'Activer edition + ajouter un widget',
 )
 

@@ -24,12 +24,16 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.oauth2.client.endpoint.OAuth2AccessTokenResponseClient;
 import org.springframework.security.oauth2.client.endpoint.OAuth2AuthorizationCodeGrantRequest;
+import org.springframework.web.util.UriComponentsBuilder;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+  private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
 
   private final JwtAuthFilter jwtAuthFilter;
   private final OAuth2SuccessHandler oAuth2SuccessHandler;
@@ -37,6 +41,8 @@ public class SecurityConfig {
 
   @Value("${app.cors.allowed-origins:}")
   private String allowedOrigins;
+  @Value("${app.oauth2.success-redirect}")
+  private String oauthSuccessRedirect;
 
 
 public SecurityConfig(JwtAuthFilter jwtAuthFilter, OAuth2SuccessHandler oAuth2SuccessHandler, Environment environment) {
@@ -77,9 +83,8 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
               .accessTokenResponseClient(retryingTokenClient())
           )
           .failureHandler((req, res, ex) -> {
-            ex.printStackTrace(); // log minimal (Koyeb stdout)
-            String msg = URLEncoder.encode(ex.getMessage(), StandardCharsets.UTF_8);
-            res.sendRedirect("/login?error=" + msg);
+            log.warn("OAuth2 login failed: {}", ex.getMessage());
+            res.sendRedirect(oauthFailureRedirect("oauth_error"));
           })
       )
       .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
@@ -131,6 +136,14 @@ public CorsConfigurationSource corsConfigurationSource() {
   UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
   source.registerCorsConfiguration("/**", config);
   return source;
+}
+
+private String oauthFailureRedirect(String errorCode) {
+  String code = URLEncoder.encode(errorCode, StandardCharsets.UTF_8);
+  return UriComponentsBuilder.fromUriString(oauthSuccessRedirect)
+      .fragment("error=" + code)
+      .build(true)
+      .toUriString();
 }
 
 }

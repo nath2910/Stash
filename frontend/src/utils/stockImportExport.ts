@@ -457,15 +457,22 @@ export function resolveImportMapping(headers: string[]) {
     "nom de l'item",
     'nom de l item',
     'nom',
+    'nom article',
+    'nom produit',
+    'nom du produit',
     'item',
+    'item name',
+    'item title',
     'produit',
     'product name',
     'product',
+    'product title',
     'name',
-    'nom produit',
     'model',
     'modele',
+    'modele produit',
     'modele sneaker',
+    'titre',
     'sneaker',
     'sneakers',
   ])
@@ -481,12 +488,20 @@ export function resolveImportMapping(headers: string[]) {
   const retail = findHeader(headers, [
     'prix retail',
     'PrixRetail',
+    'prix retail eur',
+    'prix retail ttc',
     'prix achat',
     "prix d'achat",
     'prix d achat',
+    'montant achat',
+    'montant paye',
     'prix fournisseur',
     'purchase price',
+    'purchase amount',
     'buy price',
+    'buy amount',
+    'retail price',
+    'retail amount',
     'cost price',
     'achat',
     'retail',
@@ -499,6 +514,10 @@ export function resolveImportMapping(headers: string[]) {
     'prix revente',
     'prix vente',
     'prix de vente',
+    'prix resale',
+    'prix vendu',
+    'montant vente',
+    'montant revendu',
     'prix estime',
     'prix estime vente',
     'prix vente estime',
@@ -511,7 +530,10 @@ export function resolveImportMapping(headers: string[]) {
     'revente',
     'resale price',
     'resell',
+    'resell price',
     'sell price',
+    'selling price',
+    'sale amount',
     'sell',
     'sold',
     'sold price',
@@ -524,9 +546,13 @@ export function resolveImportMapping(headers: string[]) {
     'date achat',
     'date d achat',
     "date d'achat",
+    'achat date',
+    'date achete',
+    'date achetee',
     'purchase date',
     'bought at',
     'buy date',
+    'date buy',
     'acquired',
     'acquisition',
     'date',
@@ -534,10 +560,14 @@ export function resolveImportMapping(headers: string[]) {
   const dateVente = findHeader(headers, [
     'date vente',
     'date de vente',
+    'vente date',
+    'date vendue',
+    'date vendu',
     'sold date',
     'sale date',
     'resell date',
     'sold at',
+    'date sold',
   ])
   const mapping = {
     name,
@@ -741,9 +771,6 @@ function buildPreviewItem(row: CsvRow, headers: string[], mapping: ImportMapping
       ? { boxCondition: readCell(row, mapping.boxCondition) }
       : {}),
   } as Record<string, string>
-  if (typeValue === 'SNEAKER' && mapping.size && !metadata.size) {
-    errors.push('Taille manquante')
-  }
 
   const categoryRaw = readCell(row, mapping.brand)
   const categorie = categoryRaw ? categoryRaw.slice(0, 60) : null
@@ -823,10 +850,11 @@ export function analyzeImportRows(
   rowsWithNumbers.forEach(({ row, rowNumber }) => {
     const { item, quantity, errors, warnings } = buildPreviewItem(row, headers, mapping)
     const key = item.nomItem ? createDuplicateKey(item) : ''
-    if (key && (seenKeys.has(key) || existingKeys.has(key))) {
-      errors.push('Doublon detecte')
+    if (key && seenKeys.has(key)) {
+      errors.push('Doublon detecte dans le fichier')
       duplicateRows += 1
     }
+    if (key && existingKeys.has(key)) warnings.push('Ressemble a un item deja present')
 
     if (!errors.length && payload.length + quantity > 500) {
       errors.push('Import trop volumineux (max 500 items)')

@@ -6,6 +6,7 @@
         :class="{
           'is-admin-context': activeGestionTab === 'admin',
           'is-delivery-context': activeGestionTab === 'delivery',
+          'is-marketplace-context': activeGestionTab === 'other',
         }"
       >
         <div class="flex flex-wrap items-end gap-4">
@@ -55,6 +56,18 @@
             <span>
               <strong>Administratif</strong>
               <small>Declaration et docs</small>
+            </span>
+          </button>
+          <button
+            type="button"
+            class="gestion-tab-button"
+            :class="{ 'is-active': activeGestionTab === 'other' }"
+            @click="setGestionTab('other')"
+          >
+            <Layers3 class="h-4 w-4" aria-hidden="true" />
+            <span>
+              <strong>Autre</strong>
+              <small>Marketplace</small>
             </span>
           </button>
         </nav>
@@ -276,7 +289,8 @@
           </section>
 
           <DeliveryTrackingPanel v-else-if="activeGestionTab === 'delivery'" />
-          <AdminPage v-else embedded />
+          <AdminPage v-else-if="activeGestionTab === 'admin'" embedded />
+          <GestionMarketplacePanel v-else :items="snkVentes" />
         </div>
       </Transition>
 
@@ -346,6 +360,7 @@ import {
   ArrowUp,
   CalendarDays,
   ClipboardList,
+  Layers3,
   PackageSearch,
   RotateCcw,
   SlidersHorizontal,
@@ -380,6 +395,7 @@ const SupprimerModal = defineAsyncComponent(() => import('@/components/gestion/G
 const CsvImportExportWidget = defineAsyncComponent(() => import('@/components/gestion/CsvImportExportWidget.vue'))
 const DeliveryTrackingPanel = defineAsyncComponent(() => import('@/components/gestion/DeliveryTrackingPanel.vue'))
 const AdminPage = defineAsyncComponent(() => import('@/pages/adminPage.vue'))
+const GestionMarketplacePanel = defineAsyncComponent(() => import('@/components/gestion/GestionMarketplacePanel.vue'))
 
 const snkVentes = ref([])
 const searchTerm = ref('')
@@ -404,6 +420,7 @@ const router = useRouter()
 const tabFromRoute = () => {
   if (route.query?.tab === 'delivery') return 'delivery'
   if (route.query?.tab === 'admin') return 'admin'
+  if (route.query?.tab === 'other') return 'other'
   return 'inventory'
 }
 const activeGestionTab = ref(tabFromRoute())
@@ -455,12 +472,12 @@ const sortOptions = [
 ]
 
 const setGestionTab = (tab) => {
-  const nextTab = tab === 'delivery' || tab === 'admin' ? tab : 'inventory'
+  const nextTab = tab === 'delivery' || tab === 'admin' || tab === 'other' ? tab : 'inventory'
   activeGestionTab.value = nextTab
   filtersPanelOpen.value = false
 
   const nextQuery = { ...route.query }
-  if (nextTab === 'delivery' || nextTab === 'admin') {
+  if (nextTab === 'delivery' || nextTab === 'admin' || nextTab === 'other') {
     nextQuery.tab = nextTab
   } else {
     delete nextQuery.tab
@@ -1007,6 +1024,14 @@ const gestionHero = computed(() => {
       eyebrow: 'Suivi operationnel',
       title: 'Suivi livraison',
       subtitle: 'Centralise les colis, les mails de transporteurs et les actions a faire sur les livraisons.',
+    }
+  }
+
+  if (activeGestionTab.value === 'other') {
+    return {
+      eyebrow: 'Diffusion ventes',
+      title: 'Discord et marketplaces',
+      subtitle: 'Prepare des messages a copier et garde un espace reserve pour les futurs templates Vinted, Le Bon Coin et eBay.',
     }
   }
 
@@ -1956,6 +1981,13 @@ watch(
   border-color: rgba(14, 116, 144, 0.24);
 }
 
+.gestion-hero-panel.is-marketplace-context {
+  border-color: rgba(15, 118, 110, 0.2);
+  background:
+    linear-gradient(135deg, rgba(20, 184, 166, 0.08), transparent 34%),
+    #ffffff;
+}
+
 .gestion-hero-panel::before,
 .inventory-list-panel::before,
 .command-controls::before {
@@ -2008,7 +2040,7 @@ watch(
 
 .gestion-tab-nav {
   display: inline-flex;
-  width: min(100%, 720px);
+  width: min(100%, 920px);
   gap: 0.55rem;
   min-width: 0;
   max-width: 100%;
@@ -3237,7 +3269,7 @@ watch(
 
   .gestion-tab-nav {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     width: 100%;
     min-width: 0;
   }

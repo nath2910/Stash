@@ -357,10 +357,10 @@ public class snkVenteService {
 
   private boolean isKnownMetadataKey(String type, String key) {
     return switch (type) {
-      case "TICKET" -> key.matches("^(eventDate|venue|section|row|seat|status)$");
-      case "POKEMON_CARD" -> key.matches("^(set|language|rarity|condition|grade)$");
-      case "SNEAKER" -> key.matches("^(size|sku|colorway|condition|boxCondition)$");
-      case "OTHER" -> key.matches("^(size|sku|colorway|condition|reference|model|supplier|purchasePlace)$");
+      case "TICKET" -> key.matches("^(eventDate|venue|section|row|seat|status|marketUrl)$");
+      case "POKEMON_CARD" -> key.matches("^(set|language|rarity|condition|grade|marketUrl)$");
+      case "SNEAKER" -> key.matches("^(size|sku|colorway|condition|boxCondition|marketUrl)$");
+      case "OTHER" -> key.matches("^(size|sku|colorway|condition|reference|model|supplier|purchasePlace|marketUrl)$");
       default -> false;
     };
   }

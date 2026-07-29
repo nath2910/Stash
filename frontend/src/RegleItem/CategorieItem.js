@@ -19,6 +19,14 @@ export const DEFAULT_ITEM_TYPE_LABELS = Object.fromEntries(
   DEFAULT_ITEM_TYPES.map((item) => [item.value, item.label]),
 )
 
+const MARKET_REFERENCE_FIELDS = [
+  {
+    key: 'marketUrl',
+    label: 'URL fiche produit',
+    placeholder: 'https://www.amazon.fr/...',
+  },
+]
+
 const ITEM_TYPE_ALIASES = {
   SNEAKERS: 'SNEAKER',
   SHOE: 'SNEAKER',
@@ -89,43 +97,51 @@ export const METADATA_FIELDS = {
     { key: 'colorway', label: 'Coloris', placeholder: 'University Red/White' },
     { key: 'condition', label: 'Etat', placeholder: 'DS / Used' },
     { key: 'boxCondition', label: 'Etat boite', placeholder: 'OG all / Damagee' },
+    ...MARKET_REFERENCE_FIELDS,
   ],
   CLOTHING: [
     { key: 'size', label: 'Taille', placeholder: 'M / L / 42' },
     { key: 'sku', label: 'Reference', placeholder: 'SKU, drop, collection...' },
     { key: 'colorway', label: 'Couleur / variante', placeholder: 'Noir / edition limitee' },
     { key: 'condition', label: 'Etat', placeholder: 'Neuf / Tres bon etat' },
+    ...MARKET_REFERENCE_FIELDS,
   ],
   ACCESSORY: [
     { key: 'model', label: 'Modele', placeholder: 'Modele ou ligne produit' },
     { key: 'sku', label: 'Reference', placeholder: 'Reference, serie...' },
     { key: 'colorway', label: 'Couleur / variante', placeholder: 'Noir / cuir / acier' },
     { key: 'condition', label: 'Etat', placeholder: 'Neuf / Bon etat' },
+    ...MARKET_REFERENCE_FIELDS,
   ],
   WATCH: [
     { key: 'model', label: 'Modele', placeholder: 'Submariner, G-Shock...' },
     { key: 'reference', label: 'Reference', placeholder: 'Ref. / numero de serie' },
     { key: 'condition', label: 'Etat', placeholder: 'Neuf / Porte / Revise' },
+    ...MARKET_REFERENCE_FIELDS,
   ],
   ELECTRONICS: [
     { key: 'model', label: 'Modele', placeholder: 'PS5, iPhone, appareil photo...' },
     { key: 'reference', label: 'Reference', placeholder: 'Serie, SKU, IMEI...' },
     { key: 'condition', label: 'Etat', placeholder: 'Neuf / Reconditionne / Usage' },
+    ...MARKET_REFERENCE_FIELDS,
   ],
   COLLECTIBLE: [
     { key: 'reference', label: 'Reference', placeholder: 'Edition, numero, set...' },
     { key: 'condition', label: 'Etat', placeholder: 'Neuf / Scelle / Grade' },
+    ...MARKET_REFERENCE_FIELDS,
   ],
   HOME: [
     { key: 'model', label: 'Modele', placeholder: 'Nom du modele ou collection' },
     { key: 'colorway', label: 'Couleur / finition', placeholder: 'Chene, noir, tissu...' },
     { key: 'condition', label: 'Etat', placeholder: 'Neuf / Tres bon etat' },
+    ...MARKET_REFERENCE_FIELDS,
   ],
   POKEMON_CARD: [
     { key: 'set', label: 'Set', placeholder: '151 / Base Set' },
     { key: 'language', label: 'Langue', placeholder: 'FR / EN / JP' },
     { key: 'rarity', label: 'Rarete', placeholder: 'Secret Rare' },
     { key: 'condition', label: 'Condition', placeholder: 'NEUF / TRES BON ETAT / BON ETAT' },
+    ...MARKET_REFERENCE_FIELDS,
   ],
   TICKET: [
     { key: 'eventDate', label: "Date de l'evenement", placeholder: '2026-05-01' },
@@ -134,11 +150,13 @@ export const METADATA_FIELDS = {
     { key: 'row', label: 'Rang', placeholder: 'Rang 8' },
     { key: 'seat', label: 'Siege', placeholder: 'Siege 12' },
     { key: 'status', label: 'Statut', placeholder: 'valide / transfere / utilise' },
+    ...MARKET_REFERENCE_FIELDS,
   ],
   OTHER: [
     { key: 'model', label: 'Modele', placeholder: 'Modele ou nom court' },
     { key: 'reference', label: 'Reference', placeholder: 'SKU, serie, reference...' },
     { key: 'condition', label: 'Etat', placeholder: 'Neuf / Bon etat / Usage' },
+    ...MARKET_REFERENCE_FIELDS,
   ],
 }
 

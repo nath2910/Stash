@@ -1,44 +1,17 @@
 // src/store/authStore.js
 import { ref } from 'vue'
 import { useBillingStore } from './billingStore'
+import {
+  AUTH_STORAGE_KEYS,
+  AUTH_SYNC_EVENT,
+  readAuthToken,
+  readStoredUser,
+  safeStorageRemove,
+  writeAuthState,
+} from '@/utils/authStorage'
 
 const user = ref(null)
 const token = ref('')
-const AUTH_STORAGE_KEYS = ['snk_token', 'snk_user']
-const AUTH_SYNC_EVENT = 'snk:auth-storage-sync'
-
-function safeGet(key) {
-  try {
-    const localValue = localStorage.getItem(key)
-    if (localValue != null) return localValue
-  } catch {
-    // Ignore and fallback to session storage below.
-  }
-  try {
-    return sessionStorage.getItem(key)
-  } catch {
-    return null
-  }
-}
-function safeSet(key, value) {
-  try {
-    localStorage.setItem(key, value)
-  } catch {
-    sessionStorage.setItem(key, value)
-  }
-}
-function safeRemove(key) {
-  try {
-    localStorage.removeItem(key)
-  } catch {
-    // Ignore and continue with session storage cleanup below.
-  }
-  try {
-    sessionStorage.removeItem(key)
-  } catch {
-    // ignore
-  }
-}
 
 function syncBillingFromAuth(nextUser, nextToken, previousToken = token.value) {
   try {
@@ -60,25 +33,15 @@ function syncBillingFromAuth(nextUser, nextToken, previousToken = token.value) {
 
 function loadFromStorage() {
   const previousToken = token.value
-  let parsedUser = null
-  try {
-    parsedUser = JSON.parse(safeGet('snk_user') || 'null')
-  } catch {
-    parsedUser = null
-  }
-  token.value = safeGet('snk_token') || ''
+  const parsedUser = readStoredUser()
+  token.value = readAuthToken()
   user.value = token.value ? parsedUser : null
   if (!token.value && parsedUser) {
-    safeRemove('snk_user')
+    safeStorageRemove('snk_user')
   }
   syncBillingFromAuth(user.value, token.value, previousToken)
 }
 loadFromStorage()
-
-function notifyAuthStorageSync() {
-  if (typeof window === 'undefined') return
-  window.dispatchEvent(new CustomEvent(AUTH_SYNC_EVENT))
-}
 
 /**
  * payload attendu:
@@ -89,14 +52,8 @@ function setAuth(payload) {
   token.value = payload?.token ? String(payload.token) : ''
   user.value = token.value ? (payload?.user ?? null) : null
 
-  if (user.value) safeSet('snk_user', JSON.stringify(user.value))
-  else safeRemove('snk_user')
-
-  if (token.value) safeSet('snk_token', token.value)
-  else safeRemove('snk_token')
-
+  writeAuthState({ token: token.value, user: user.value })
   syncBillingFromAuth(user.value, token.value, previousToken)
-  notifyAuthStorageSync()
 }
 
 function setToken(newToken) {

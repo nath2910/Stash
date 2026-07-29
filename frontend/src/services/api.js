@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { clearAuthState, readAuthToken } from '@/utils/authStorage'
 
 const metaEnv = typeof import.meta !== 'undefined' ? import.meta.env : {}
 const LOCAL_BACKEND_ORIGIN = 'http://localhost:8080'
@@ -41,40 +42,6 @@ const api = axios.create({
   },
 })
 
-const AUTH_SYNC_EVENT = 'snk:auth-storage-sync'
-
-function getToken() {
-  try {
-    const localToken = localStorage.getItem('snk_token')
-    if (localToken) return localToken
-  } catch {
-    // Ignore and fallback to session storage.
-  }
-  try {
-    return sessionStorage.getItem('snk_token') || ''
-  } catch {
-    return ''
-  }
-}
-
-function clearAuthStorage() {
-  try {
-    localStorage.removeItem('snk_token')
-    localStorage.removeItem('snk_user')
-  } catch {
-    // ignore
-  }
-  try {
-    sessionStorage.removeItem('snk_token')
-    sessionStorage.removeItem('snk_user')
-  } catch {
-    // ignore
-  }
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent(AUTH_SYNC_EVENT))
-  }
-}
-
 function redirectToLogin(reason = 'auth') {
   if (redirectingOnAuth || window.location.pathname === '/auth') return
   redirectingOnAuth = true
@@ -83,7 +50,7 @@ function redirectToLogin(reason = 'auth') {
 }
 
 api.interceptors.request.use((config) => {
-  const token = getToken()
+  const token = readAuthToken()
   if (token) {
     // plus robuste avec AxiosHeaders
     config.headers = config.headers || {}
@@ -112,7 +79,7 @@ api.interceptors.response.use(
 
     // Token expirÃ© ou non autorisÃ©
     if ((status === 401 || status === 403) && !url.startsWith('/auth')) {
-      clearAuthStorage()
+      clearAuthState()
       redirectToLogin('unauthorized')
     }
 

@@ -133,16 +133,36 @@
           ></textarea>
         </label>
 
-        <div v-if="metadataFields.length" class="item-field item-field--section">
+        <div v-if="coreMetadataFields.length" class="item-field item-field--section">
           <p>Champs specifiques</p>
           <span>Adaptes au type {{ currentTypeLabel.toLowerCase() }}</span>
         </div>
 
-        <label v-for="field in metadataFields" :key="field.key" class="item-field">
+        <label v-for="field in coreMetadataFields" :key="field.key" class="item-field">
           <span>{{ field.label }}</span>
           <input
             v-model.trim="form.metadata[field.key]"
             type="text"
+            :placeholder="field.placeholder"
+          />
+        </label>
+
+        <div v-if="marketReferenceFields.length" class="item-field item-field--section item-field--market-section">
+          <p>Fiche source</p>
+          <span>Optionnel. Colle l'URL Amazon, eBay ou autre fiche produit de reference.</span>
+        </div>
+
+        <label
+          v-for="field in marketReferenceFields"
+          :key="field.key"
+          class="item-field item-field--market"
+        >
+          <span>{{ field.label }}</span>
+          <input
+            v-model.trim="form.metadata[field.key]"
+            type="url"
+            inputmode="url"
+            autocomplete="off"
             :placeholder="field.placeholder"
           />
         </label>
@@ -272,6 +292,12 @@ const isQuickSurface = computed(() => props.surface === 'quick')
 const showInlineDetails = computed(() => showDetails.value)
 const mainCategoryAliases = computed(() => buildItemCategoryAliases(categoryLabels.value))
 const metadataFields = computed(() => METADATA_FIELDS[form.value.type] || [])
+const marketReferenceFields = computed(() =>
+  metadataFields.value.filter((field) => field.key === 'marketUrl'),
+)
+const coreMetadataFields = computed(() =>
+  metadataFields.value.filter((field) => field.key !== 'marketUrl'),
+)
 const currentTypeLabel = computed(() => itemTypeLabel(form.value.type, categoryLabels.value))
 
 const suggestedFromHistory = computed(() => {
@@ -837,6 +863,14 @@ defineExpose({
 .item-field--quantity,
 .item-field--price {
   grid-column: span 3;
+}
+
+.item-field--market-section {
+  grid-column: span 12;
+}
+
+.item-field--market {
+  grid-column: span 6;
 }
 
 .item-field--notes,

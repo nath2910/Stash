@@ -1,4 +1,5 @@
 import api from './api'
+import { clearAuthState, writeAuthState } from '@/utils/authStorage'
 
 // permet d'envoyer des requetes concernant les comptes et l'authetification vers le back
 class AuthService {
@@ -25,18 +26,13 @@ class AuthService {
     }
 
     const user = res.data?.user ?? res.data?.utilisateur ?? null
-
-    localStorage.setItem('snk_token', token)
-    if (user) localStorage.setItem('snk_user', JSON.stringify(user))
+    writeAuthState({ token, user })
 
     return { user, token }
   }
 
   logout() {
-    localStorage.removeItem('snk_token')
-    localStorage.removeItem('snk_user')
-    sessionStorage.removeItem('snk_token')
-    sessionStorage.removeItem('snk_user')
+    clearAuthState()
   }
 
   async changePassword(payload) {
@@ -59,12 +55,7 @@ class AuthService {
     const token = res.data?.token || res.data?.accessToken || null
     const user = res.data?.user ?? res.data?.utilisateur ?? null
 
-    if (token) {
-      localStorage.setItem('snk_token', token)
-    }
-    if (user) {
-      localStorage.setItem('snk_user', JSON.stringify(user))
-    }
+    if (token || user) writeAuthState({ token, user })
 
     return { user, token, raw: res.data }
   }

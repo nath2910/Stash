@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   analyzeImportRows,
   buildStockExportCsv,
+  detectDelimiter,
+  EXPORT_HEADERS,
   parseDateSmart,
   resolveImportMapping,
   toNumberSmart,
@@ -32,9 +34,9 @@ describe('stockImportExport', () => {
 
     const preview = analyzeImportRows(rows, headers, resolveImportMapping(headers), existingRows)
 
-    expect(preview.validItems).toBe(0)
-    expect(preview.duplicateRows).toBe(1)
-    expect(preview.rows[0].errors).toContain('Doublon detecte')
+    expect(preview.validItems).toBe(1)
+    expect(preview.duplicateRows).toBe(0)
+    expect(preview.rows[0].warnings).toContain('Ressemble a un item deja present')
   })
 
   it('keeps custom item types when importing rows', () => {
@@ -63,5 +65,57 @@ describe('stockImportExport', () => {
     expect(csv).toContain('"Nike ""Sample"""')
     expect(csv).toContain('"125,5"')
     expect(csv).toContain('"42"')
+  })
+
+  it('accepts rows shaped like the built-in export even when optional sneaker metadata is missing', () => {
+    const csv = buildStockExportCsv([
+      {
+        nomItem: 'Nike P-6000',
+        type: 'SNEAKER',
+        prixRetail: 110,
+        prixResell: 140,
+        dateAchat: '2026-05-16',
+      },
+    ])
+
+    expect(detectDelimiter(csv)).toBe(';')
+
+    const headers = EXPORT_HEADERS
+    const rows = [
+      {
+        'nom item': 'Nike P-6000',
+        type: 'SNEAKER',
+        'type label': 'Sneaker',
+        categorie: '',
+        'prix retail': '110',
+        'prix resell': '140',
+        profit: '30',
+        'date achat': '2026-05-16',
+        'date vente': '',
+        description: '',
+        pointure: '',
+      },
+    ]
+    const preview = analyzeImportRows(rows, headers, resolveImportMapping(headers), [])
+
+    expect(preview.validItems).toBe(1)
+    expect(preview.rows[0].errors).toEqual([])
+    expect(preview.payload[0]).toMatchObject({
+      nomItem: 'Nike P-6000',
+      prixRetail: 110,
+      prixResell: 140,
+      dateAchat: '2026-05-16',
+    })
+  })
+
+  it('maps tolerant header variants with mixed casing and wording', () => {
+    const headers = ['Product Title', 'Retail Price EUR', 'Selling Price', 'Date Acheté', 'Date Sold']
+    const mapping = resolveImportMapping(headers)
+
+    expect(mapping.name).toBe('Product Title')
+    expect(mapping.retail).toBe('Retail Price EUR')
+    expect(mapping.resell).toBe('Selling Price')
+    expect(mapping.dateAchat).toBe('Date Acheté')
+    expect(mapping.dateVente).toBe('Date Sold')
   })
 })

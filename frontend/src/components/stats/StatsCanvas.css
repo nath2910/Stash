@@ -309,14 +309,14 @@ body.canvas-pan-cursor * {
 }
 
 .canvas-empty-guide__actions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
-  align-items: center;
 }
 
 .canvas-empty-guide__btn {
   height: 36px;
+  width: 100%;
   border-radius: 12px;
   border: 1px solid rgba(125, 211, 252, 0.38);
   background: rgba(14, 165, 233, 0.12);
@@ -324,17 +324,12 @@ body.canvas-pan-cursor * {
   padding: 0 14px;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   font-size: 0.78rem;
   font-weight: 700;
   cursor: pointer;
   touch-action: manipulation;
-}
-
-.canvas-empty-guide__btn--primary {
-  border-color: rgba(20, 184, 166, 0.45);
-  background: linear-gradient(180deg, rgba(13, 148, 136, 0.35), rgba(15, 118, 110, 0.34));
-  color: #ecfeff;
 }
 
 .canvas-empty-guide__btn:focus-visible {
@@ -363,7 +358,8 @@ body.canvas-pan-cursor * {
   grid-template-rows: auto minmax(0, 1fr) auto;
   width: min(1180px, calc(100vw - 148px));
   min-width: 760px;
-  height: calc(100dvh - 58px);
+  height: auto;
+  max-height: calc(100dvh - 58px);
   overflow: hidden;
   border-radius: 8px;
   border: 1px solid rgba(100, 116, 139, 0.22);
@@ -3368,12 +3364,6 @@ body.canvas-pan-cursor * {
   border-color: rgba(56, 189, 248, 0.5);
   background: rgba(186, 230, 253, 0.42);
   color: #0f172a;
-}
-
-.canvas-root.theme-light .canvas-empty-guide__btn--primary {
-  border-color: rgba(20, 184, 166, 0.56);
-  background: linear-gradient(180deg, rgba(45, 212, 191, 0.4), rgba(13, 148, 136, 0.34));
-  color: #082f49;
 }
 
 .canvas-root.theme-light .edit-grid {
