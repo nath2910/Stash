@@ -41,15 +41,38 @@ const api = axios.create({
   },
 })
 
+const AUTH_SYNC_EVENT = 'snk:auth-storage-sync'
+
 function getToken() {
-  return localStorage.getItem('snk_token') || sessionStorage.getItem('snk_token') || ''
+  try {
+    const localToken = localStorage.getItem('snk_token')
+    if (localToken) return localToken
+  } catch {
+    // Ignore and fallback to session storage.
+  }
+  try {
+    return sessionStorage.getItem('snk_token') || ''
+  } catch {
+    return ''
+  }
 }
 
 function clearAuthStorage() {
-  localStorage.removeItem('snk_token')
-  localStorage.removeItem('snk_user')
-  sessionStorage.removeItem('snk_token')
-  sessionStorage.removeItem('snk_user')
+  try {
+    localStorage.removeItem('snk_token')
+    localStorage.removeItem('snk_user')
+  } catch {
+    // ignore
+  }
+  try {
+    sessionStorage.removeItem('snk_token')
+    sessionStorage.removeItem('snk_user')
+  } catch {
+    // ignore
+  }
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(AUTH_SYNC_EVENT))
+  }
 }
 
 function redirectToLogin(reason = 'auth') {

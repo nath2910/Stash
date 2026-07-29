@@ -603,6 +603,7 @@ const onStatsTemplateModeChange = (event) => {
 }
 
 const currentUser = computed(() => {
+  if (!auth.token?.value) return null
   const u = auth.user
   return u && typeof u === 'object' && 'value' in u ? u.value : u
 })

@@ -4,12 +4,20 @@ import { useBillingStore } from './billingStore'
 
 const user = ref(null)
 const token = ref('')
+const AUTH_STORAGE_KEYS = ['snk_token', 'snk_user']
+const AUTH_SYNC_EVENT = 'snk:auth-storage-sync'
 
 function safeGet(key) {
   try {
-    return localStorage.getItem(key)
+    const localValue = localStorage.getItem(key)
+    if (localValue != null) return localValue
   } catch {
+    // Ignore and fallback to session storage below.
+  }
+  try {
     return sessionStorage.getItem(key)
+  } catch {
+    return null
   }
 }
 function safeSet(key, value) {
@@ -23,29 +31,54 @@ function safeRemove(key) {
   try {
     localStorage.removeItem(key)
   } catch {
+    // Ignore and continue with session storage cleanup below.
+  }
+  try {
     sessionStorage.removeItem(key)
+  } catch {
+    // ignore
+  }
+}
+
+function syncBillingFromAuth(nextUser, nextToken, previousToken = token.value) {
+  try {
+    const billing = useBillingStore()
+    if (!nextToken) {
+      billing.reset()
+      return
+    }
+    if (nextToken !== previousToken) {
+      billing.reset()
+    }
+    if (nextUser?.subscriptionStatus) {
+      billing.seedFromUser(nextUser)
+    }
+  } catch (e) {
+    console.warn('billingStore sync failed', e)
   }
 }
 
 function loadFromStorage() {
-  // user
+  const previousToken = token.value
+  let parsedUser = null
   try {
-    user.value = JSON.parse(safeGet('snk_user') || 'null')
+    parsedUser = JSON.parse(safeGet('snk_user') || 'null')
   } catch {
-    user.value = null
+    parsedUser = null
   }
-  // token (toujours string)
   token.value = safeGet('snk_token') || ''
-
-  if (user.value?.subscriptionStatus) {
-    try {
-      useBillingStore().seedFromUser(user.value)
-    } catch (e) {
-      console.warn('billingStore seed failed', e)
-    }
+  user.value = token.value ? parsedUser : null
+  if (!token.value && parsedUser) {
+    safeRemove('snk_user')
   }
+  syncBillingFromAuth(user.value, token.value, previousToken)
 }
 loadFromStorage()
+
+function notifyAuthStorageSync() {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new CustomEvent(AUTH_SYNC_EVENT))
+}
 
 /**
  * payload attendu:
@@ -53,10 +86,8 @@ loadFromStorage()
  */
 function setAuth(payload) {
   const previousToken = token.value
-  user.value = payload?.user ?? null
-
-  // IMPORTANT: token = string, jamais null
   token.value = payload?.token ? String(payload.token) : ''
+  user.value = token.value ? (payload?.user ?? null) : null
 
   if (user.value) safeSet('snk_user', JSON.stringify(user.value))
   else safeRemove('snk_user')
@@ -64,22 +95,8 @@ function setAuth(payload) {
   if (token.value) safeSet('snk_token', token.value)
   else safeRemove('snk_token')
 
-  // Reset billing cache when token changes (login/logout/switch account)
-  if (token.value !== previousToken) {
-    try {
-      useBillingStore().reset()
-    } catch (e) {
-      console.warn('billingStore reset failed', e)
-    }
-  }
-
-  if (user.value?.subscriptionStatus) {
-    try {
-      useBillingStore().seedFromUser(user.value)
-    } catch (e) {
-      console.warn('billingStore seed failed', e)
-    }
-  }
+  syncBillingFromAuth(user.value, token.value, previousToken)
+  notifyAuthStorageSync()
 }
 
 function setToken(newToken) {
@@ -94,6 +111,16 @@ function logout() {
   setAuth(null)
 }
 
+function handleStorageChange(event) {
+  if (event?.key && !AUTH_STORAGE_KEYS.includes(event.key)) return
+  loadFromStorage()
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', handleStorageChange)
+  window.addEventListener(AUTH_SYNC_EVENT, loadFromStorage)
+}
+
 export function useAuthStore() {
-  return { user, token, setAuth, setToken, setUser, logout }
+  return { user, token, setAuth, setToken, setUser, logout, loadFromStorage }
 }
