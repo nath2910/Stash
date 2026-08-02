@@ -1748,11 +1748,11 @@ onBeforeUnmount(() => {
 }
 
 .monthly-panel--daily-performance .monthly-chart {
-  min-height: 360px;
+  min-height: 392px;
 }
 
 .monthly-panel--category-profit {
-  min-height: 280px;
+  min-height: 316px;
 }
 
 .monthly-panel {
@@ -1783,13 +1783,13 @@ onBeforeUnmount(() => {
 
 .monthly-panel__head p {
   margin: 0 0 4px;
-  font-size: 0.7rem;
+  font-size: 0.74rem;
 }
 
 .monthly-panel__head h2 {
   margin: 0;
   color: #111827;
-  font-size: clamp(1rem, 1.4vw, 1.24rem);
+  font-size: clamp(1.08rem, 1.55vw, 1.38rem);
   line-height: 1.15;
   font-weight: 790;
 }
@@ -1821,7 +1821,7 @@ onBeforeUnmount(() => {
 }
 
 .monthly-chart--context {
-  min-height: 230px;
+  min-height: 250px;
 }
 
 .monthly-panel--main-chart {
@@ -1843,7 +1843,7 @@ onBeforeUnmount(() => {
 }
 
 .monthly-panel--main-chart .monthly-panel__head h2 {
-  font-size: 0.92rem;
+  font-size: 1rem;
   line-height: 1.1;
 }
 
@@ -1914,15 +1914,15 @@ onBeforeUnmount(() => {
 
 .monthly-action-card {
   min-width: 0;
-  min-height: 116px;
+  min-height: 126px;
   border: 1px solid rgba(148, 163, 184, 0.22);
   border-radius: 8px;
   background: var(--monthly-muted-bg);
-  padding: 10px;
+  padding: 12px;
   display: grid;
   grid-template-rows: auto auto auto auto;
   align-content: start;
-  gap: 6px;
+  gap: 8px;
 }
 
 .monthly-action-card span {
@@ -1945,7 +1945,7 @@ onBeforeUnmount(() => {
   min-width: 0;
   margin: 0;
   color: #64748b;
-  font-size: 0.72rem;
+  font-size: 0.76rem;
   line-height: 1.15;
   font-weight: 820;
 }
@@ -1953,7 +1953,7 @@ onBeforeUnmount(() => {
 .monthly-action-card strong {
   min-width: 0;
   color: #111827;
-  font-size: clamp(1rem, 1.18vw, 1.18rem);
+  font-size: clamp(1.08rem, 1.3vw, 1.36rem);
   line-height: 1.05;
   font-weight: 820;
   overflow-wrap: anywhere;
@@ -1963,8 +1963,8 @@ onBeforeUnmount(() => {
   min-width: 0;
   margin: 0;
   color: #64748b;
-  font-size: 0.68rem;
-  line-height: 1.25;
+  font-size: 0.74rem;
+  line-height: 1.32;
   font-weight: 680;
   overflow: hidden;
   display: -webkit-box;
@@ -2906,8 +2906,8 @@ onBeforeUnmount(() => {
 }
 
 .monthly-page--details .monthly-chart--context {
-  min-height: clamp(300px, 34vh, 420px);
-  height: clamp(300px, 34vh, 420px);
+  min-height: clamp(324px, 36vh, 456px);
+  height: clamp(324px, 36vh, 456px);
 }
 
 .monthly-page--details .monthly-brand-list {
@@ -3046,16 +3046,64 @@ onBeforeUnmount(() => {
     width: min(100%, 1820px);
   }
 
+  .monthly-dashboard.is-wide-template .monthly-panel__head h2 {
+    font-size: clamp(1.14rem, 1.48vw, 1.5rem);
+  }
+
   .monthly-dashboard.is-wide-template .monthly-flow-layout {
     grid-template-columns: minmax(0, 1.5fr) minmax(340px, 0.9fr);
+  }
+
+  .monthly-dashboard.is-wide-template .monthly-panel--daily-performance .monthly-chart {
+    min-height: clamp(420px, 49vh, 560px);
+  }
+
+  .monthly-dashboard.is-wide-template .monthly-panel--category-profit {
+    min-height: 340px;
+  }
+
+  .monthly-dashboard.is-wide-template .monthly-chart--context {
+    min-height: 274px;
+  }
+
+  .monthly-dashboard.is-wide-template .monthly-action-card strong {
+    font-size: clamp(1.14rem, 1.32vw, 1.44rem);
+  }
+
+  .monthly-dashboard.is-wide-template .monthly-action-card p {
+    font-size: 0.78rem;
   }
 
   .monthly-dashboard.is-hd-template :deep(.dashboard-layout__inner) {
     width: min(100%, 1940px);
   }
 
+  .monthly-dashboard.is-hd-template .monthly-panel__head h2 {
+    font-size: clamp(1.18rem, 1.52vw, 1.56rem);
+  }
+
   .monthly-dashboard.is-hd-template .monthly-flow-layout {
     grid-template-columns: minmax(0, 1.55fr) minmax(360px, 0.92fr);
+  }
+
+  .monthly-dashboard.is-hd-template .monthly-panel--daily-performance .monthly-chart {
+    min-height: clamp(448px, 51vh, 604px);
+  }
+
+  .monthly-dashboard.is-hd-template .monthly-panel--category-profit {
+    min-height: 360px;
+  }
+
+  .monthly-dashboard.is-hd-template .monthly-chart--context {
+    min-height: 292px;
+  }
+
+  .monthly-dashboard.is-hd-template .monthly-action-card strong {
+    font-size: clamp(1.18rem, 1.38vw, 1.5rem);
+  }
+
+  .monthly-dashboard.is-hd-template .monthly-action-card p {
+    font-size: 0.8rem;
   }
 }
 

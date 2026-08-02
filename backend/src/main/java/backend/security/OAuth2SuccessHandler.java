@@ -178,11 +178,6 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
     if (changed) user = userRepository.save(user);
 
-    if (!"active".equals(user.getSubscriptionStatus())) {
-      user.setSubscriptionStatus("active");
-      userRepository.save(user);
-    }
-
     redirectWithSession(user, response);
   }
 

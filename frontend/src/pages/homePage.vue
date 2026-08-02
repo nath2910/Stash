@@ -47,6 +47,25 @@
     </teleport>
 
     <section class="home-action-shell" aria-label="Actions rapides">
+      <section v-if="showImportPrompt" class="import-prompt-card" aria-label="Importer des donnees">
+        <div class="import-prompt-card__copy">
+          <p class="import-prompt-card__eyebrow">Demarrage rapide</p>
+          <h2>Importe tes donnees pour remplir l'app plus vite.</h2>
+          <p>
+            Si tu as deja un CSV ou un fichier Excel, envoie-le dans Gestion pour creer ton
+            inventaire en une fois.
+          </p>
+        </div>
+        <div class="import-prompt-card__actions">
+          <button type="button" class="import-prompt-card__primary" @click="goToImportFlow">
+            Importer mes donnees
+          </button>
+          <button type="button" class="import-prompt-card__secondary" @click="focusQuickAddForm">
+            Ajouter a la main
+          </button>
+        </div>
+      </section>
+
       <div class="home-hero-grid">
         <QuickSearchBar
           :items="stockItems"
@@ -169,6 +188,9 @@ const normalizedApiSummary = computed(() => {
 const kpiSummary = computed(() => (stockLoaded.value ? localSummary.value : normalizedApiSummary.value || localSummary.value))
 const kpiLoading = computed(() => (statsLoading.value || stockLoading.value) && !stockLoaded.value && !apiSummary.value)
 const kpiError = computed(() => stockError.value || statsError.value)
+const showImportPrompt = computed(
+  () => Boolean(auth.token.value) && stockLoaded.value && !stockLoading.value && stockItems.value.length === 0,
+)
 
 function notifyStockChanged(items = stockItems.value) {
   if (typeof window === 'undefined') return
@@ -372,6 +394,10 @@ function goToGestionFromModal() {
   router.push('/gestion')
 }
 
+function goToImportFlow() {
+  router.push({ path: '/gestion', query: { focus: 'import' } })
+}
+
 function focusQuickAddForm() {
   quickAddFormRef.value?.focusFirstField?.()
 }
@@ -438,6 +464,94 @@ function handleVisibilityChange() {
 
 .home-hero-grid > * {
   min-width: 0;
+}
+
+.import-prompt-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) auto;
+  gap: 1rem;
+  align-items: center;
+  border: 1px solid rgba(15, 118, 110, 0.18);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at top right, rgba(45, 212, 191, 0.2), transparent 36%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(240, 253, 250, 0.96));
+  padding: clamp(1rem, 2vw, 1.35rem);
+  box-shadow:
+    0 28px 60px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.92);
+}
+
+.import-prompt-card__copy {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.import-prompt-card__eyebrow {
+  color: #0f766e;
+  font-size: 0.74rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.import-prompt-card__copy h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: clamp(1.2rem, 2.4vw, 1.7rem);
+  font-weight: 900;
+  line-height: 1.06;
+}
+
+.import-prompt-card__copy p:last-child {
+  margin: 0;
+  max-width: 44rem;
+  color: #475569;
+  font-size: 0.96rem;
+  line-height: 1.55;
+}
+
+.import-prompt-card__actions {
+  display: grid;
+  gap: 0.65rem;
+  justify-items: stretch;
+}
+
+.import-prompt-card__primary,
+.import-prompt-card__secondary {
+  min-height: 46px;
+  border-radius: 16px;
+  padding: 0.78rem 1rem;
+  font-size: 0.92rem;
+  font-weight: 900;
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease,
+    background 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.import-prompt-card__primary {
+  border: 0;
+  background: linear-gradient(135deg, #0f766e, #0ea5e9);
+  color: #f8fafc;
+  box-shadow: 0 14px 34px rgba(14, 116, 144, 0.24);
+}
+
+.import-prompt-card__secondary {
+  border: 1px solid rgba(148, 163, 184, 0.34);
+  background: rgba(255, 255, 255, 0.86);
+  color: #0f172a;
+}
+
+.import-prompt-card__primary:hover,
+.import-prompt-card__secondary:hover {
+  transform: translateY(-1px);
+}
+
+.import-prompt-card__secondary:hover {
+  border-color: rgba(14, 116, 144, 0.28);
+  background: rgba(240, 249, 255, 0.92);
 }
 
 .quick-add-toast-layer {
@@ -534,6 +648,15 @@ function handleVisibilityChange() {
     margin-top: 0.25rem;
   }
 
+  .import-prompt-card {
+    grid-template-columns: minmax(0, 1fr);
+    border-radius: 22px;
+  }
+
+  .import-prompt-card__actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .home-action-shell {
     gap: 0.85rem;
     padding-inline-start: max(12px, env(safe-area-inset-left));
@@ -557,6 +680,18 @@ function handleVisibilityChange() {
 @media (max-width: 420px) {
   .home-page-light {
     margin-inline: -10px;
+  }
+
+  .import-prompt-card {
+    padding: 0.95rem;
+  }
+
+  .import-prompt-card__copy h2 {
+    font-size: 1.1rem;
+  }
+
+  .import-prompt-card__copy p:last-child {
+    font-size: 0.9rem;
   }
 
   .home-action-shell {

@@ -31,11 +31,13 @@ import backend.dto.TopVenteProjection;
 import backend.dto.AttachmentDto;
 import backend.entity.SnkVente;
 import backend.entity.User;
+import backend.security.RequiresActiveSubscription;
 import backend.repository.SnkVenteRepository.BrandCount;
 import backend.service.AttachmentService;
 import backend.service.snkVenteService;
 
 @RestController
+@RequiresActiveSubscription
 @RequestMapping(path = "snkVente")
 public class snkVenteController {
 

@@ -11,6 +11,7 @@ import backend.dto.AdministrativeProfileRequest;
 import backend.dto.AdministrativeProfileResponse;
 import backend.dto.AdministrativeSummaryResponse;
 import backend.entity.User;
+import backend.security.RequiresActiveSubscription;
 import backend.service.AdministrativeService;
 import java.time.LocalDate;
 import java.util.List;
@@ -29,6 +30,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@RequiresActiveSubscription
 @RequestMapping(path = "administrative")
 public class AdministrativeController {
 

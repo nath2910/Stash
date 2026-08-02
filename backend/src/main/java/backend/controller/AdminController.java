@@ -3,6 +3,7 @@ package backend.controller;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 import backend.entity.User;
+import backend.security.RequiresActiveSubscription;
 import backend.service.AdminService;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
@@ -25,6 +26,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@RequiresActiveSubscription
 @RequestMapping(path = "admin")
 public class AdminController {
 

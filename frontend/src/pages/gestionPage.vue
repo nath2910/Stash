@@ -88,7 +88,13 @@
 
             <!-- Tableau -->
             <div class="inventory-list-panel relative z-0">
-              <div class="inventory-sticky-tools" :class="{ 'is-condensed': hasScrolledInventory }">
+              <div
+                class="inventory-sticky-tools"
+                :class="{
+                  'is-condensed': hasScrolledInventory,
+                  'has-open-filters': filtersPanelOpen,
+                }"
+              >
                 <div class="inventory-toolbar">
                   <div class="inventory-toolbar-copy">
                     <h2>Liste des items</h2>
@@ -134,9 +140,6 @@
                   >
                     <SlidersHorizontal class="h-4 w-4" aria-hidden="true" />
                     <span>{{ filtersPanelOpen ? 'Masquer' : 'Filtres' }}</span>
-                    <span v-if="activeFilterCount" class="filter-toggle-badge">
-                      {{ activeFilterCount }}
-                    </span>
                   </button>
                   <button
                     type="button"
@@ -174,9 +177,6 @@
                     >
                       <RotateCcw class="h-3.5 w-3.5" />
                       <span class="filter-reset-text">Reset</span>
-                      <span v-if="activeFilterCount" class="filter-count-badge">
-                        {{ activeFilterCount }}
-                      </span>
                     </button>
 
                     <GestionFilterDropdown
@@ -184,6 +184,7 @@
                       label="Type item"
                       :options="filterItemTypeOptions"
                       icon-mode="type"
+                      menu-placement="up"
                     />
 
                     <GestionFilterDropdown
@@ -193,6 +194,7 @@
                       :disabled="!selectedItemType"
                       icon-mode="subcategory"
                       :placeholder="selectedItemType ? 'Toutes' : 'Choisir un type'"
+                      menu-placement="up"
                     />
 
                     <label class="filter-field filter-field--status">
@@ -312,7 +314,11 @@
           @close="showDeleteModal = false"
           @delete-requested="requestDeleteItems"
         />
-        <div class="gestion-import-widget">
+        <div
+          ref="importWidgetRef"
+          class="gestion-import-widget"
+          :class="{ 'is-spotlight': importWidgetSpotlight }"
+        >
           <CsvImportExportWidget :filteredRows="filteredVentes" @imported="reloadVentes" />
         </div>
 
@@ -354,7 +360,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, computed, watch, defineAsyncComponent } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed, watch, defineAsyncComponent, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   ArrowUp,
@@ -426,12 +432,15 @@ const tabFromRoute = () => {
 const activeGestionTab = ref(tabFromRoute())
 const filtersPanelOpen = ref(false)
 const inventoryScrollRef = ref(null)
+const importWidgetRef = ref(null)
+const importWidgetSpotlight = ref(false)
 const showBackToTop = ref(false)
 const hasScrolledInventory = ref(false)
 const renderLimit = ref(80)
 const pendingDeleteToasts = ref([])
 const pendingDeleteTimers = new Map()
 let pendingDeleteSequence = 0
+let importSpotlightTimer = null
 
 const EMPTY_CATEGORY_VALUE = '__empty_category__'
 const INITIAL_RENDER_LIMIT = 80
@@ -1075,7 +1084,6 @@ const scrollInventoryToTop = () => {
 const resetFilters = () => {
   searchTerm.value = ''
   filters.value = emptyFilters()
-  filtersPanelOpen.value = false
 }
 
 // Selection logique : si tu filtres, on garde seulement ce qui est visible
@@ -1243,6 +1251,50 @@ const reloadVentes = async () => {
   await chargerVentes()
 }
 
+const isImportFocusQuery = () => {
+  const raw = route.query?.focus
+  const value = Array.isArray(raw) ? raw[0] : raw
+  return value === 'import'
+}
+
+const clearImportFocusQuery = () => {
+  if (!('focus' in route.query)) return
+  const nextQuery = { ...route.query }
+  delete nextQuery.focus
+  router.replace({ query: nextQuery }).catch(() => {})
+}
+
+const openImportWidgetFromQuery = async () => {
+  if (!isImportFocusQuery()) return
+
+  if (route.query?.tab) {
+    const nextQuery = { ...route.query }
+    delete nextQuery.tab
+    router.replace({ query: nextQuery }).catch(() => {})
+  }
+  activeGestionTab.value = 'inventory'
+
+  await nextTick()
+
+  const target = importWidgetRef.value
+  if (target && typeof target.scrollIntoView === 'function') {
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+
+  importWidgetSpotlight.value = true
+  if (importSpotlightTimer) {
+    window.clearTimeout(importSpotlightTimer)
+  }
+  importSpotlightTimer = window.setTimeout(() => {
+    importWidgetSpotlight.value = false
+    importSpotlightTimer = null
+  }, 2600)
+
+  window.setTimeout(() => {
+    clearImportFocusQuery()
+  }, 200)
+}
+
 const parseOpenItemIdFromQuery = () => {
   const raw = route.query?.openItemId
   const value = Array.isArray(raw) ? raw[0] : raw
@@ -1288,6 +1340,14 @@ watch(
 )
 
 watch(
+  () => route.query.focus,
+  () => {
+    void openImportWidgetFromQuery()
+  },
+  { immediate: true },
+)
+
+watch(
   () => route.query.openItemId,
   () => {
     pendingOpenItemId.value = parseOpenItemIdFromQuery()
@@ -1295,6 +1355,13 @@ watch(
   },
   { immediate: true },
 )
+
+onBeforeUnmount(() => {
+  if (importSpotlightTimer) {
+    window.clearTimeout(importSpotlightTimer)
+    importSpotlightTimer = null
+  }
+})
 </script>
 
 <style scoped>
@@ -1367,20 +1434,6 @@ watch(
   border-color: rgba(167, 139, 250, 0.6);
   background: rgba(76, 29, 149, 0.2);
   color: white;
-}
-
-.filter-toggle-badge {
-  display: inline-grid;
-  min-width: 18px;
-  height: 18px;
-  place-items: center;
-  border-radius: 999px;
-  background: rgb(196 181 253);
-  color: rgb(30 27 75);
-  font-size: 11px;
-  font-weight: 900;
-  line-height: 1;
-  padding-inline: 0.25rem;
 }
 
 .filter-field {
@@ -1638,22 +1691,6 @@ watch(
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
-}
-
-.filter-count-badge {
-  display: inline-grid;
-  position: absolute;
-  top: -5px;
-  right: -5px;
-  min-width: 17px;
-  height: 17px;
-  place-items: center;
-  border-radius: 999px;
-  background: rgb(196 181 253);
-  color: rgb(30 27 75);
-  font-size: 11px;
-  font-weight: 900;
-  line-height: 1;
 }
 
 .inventory-actions {
@@ -2243,6 +2280,37 @@ watch(
   background: rgba(255, 255, 255, 0.78);
   padding: 0.45rem;
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.gestion-import-widget.is-spotlight {
+  border-color: rgba(20, 184, 166, 0.6);
+  box-shadow:
+    0 0 0 4px rgba(45, 212, 191, 0.16),
+    0 22px 44px rgba(15, 23, 42, 0.12);
+  transform: translateY(-2px);
+  animation: gestion-import-spotlight 1.6s ease;
+}
+
+@keyframes gestion-import-spotlight {
+  0% {
+    transform: translateY(8px) scale(0.99);
+    box-shadow:
+      0 0 0 0 rgba(45, 212, 191, 0.24),
+      0 12px 24px rgba(15, 23, 42, 0.06);
+  }
+  45% {
+    transform: translateY(-3px) scale(1);
+    box-shadow:
+      0 0 0 7px rgba(45, 212, 191, 0.18),
+      0 24px 48px rgba(15, 23, 42, 0.12);
+  }
+  100% {
+    transform: translateY(-2px) scale(1);
+  }
 }
 
 @media (max-width: 920px) {
@@ -2417,6 +2485,8 @@ watch(
 .inventory-filter-shell {
   display: grid;
   gap: 0.7rem;
+  position: relative;
+  z-index: 95;
   border-bottom: 1px solid rgba(125, 211, 252, 0.2);
   background: rgba(241, 245, 249, 0.66);
   padding: 0.85rem clamp(1rem, 2vw, 1.35rem) 1rem;
@@ -2445,6 +2515,8 @@ watch(
   grid-template-columns: repeat(3, minmax(150px, 1fr)) repeat(2, minmax(260px, 1.4fr));
   gap: 0.62rem;
   align-items: stretch;
+  position: relative;
+  z-index: 96;
 }
 
 .filter-compact-grid.is-open {
@@ -2706,7 +2778,8 @@ watch(
 }
 
 .inventory-list-panel {
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: visible;
 }
 
 .inventory-list-scroll {
@@ -2914,15 +2987,18 @@ watch(
   width: 100%;
   min-width: 0;
   max-width: 100%;
-  overflow-x: hidden;
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
 }
 
 .inventory-sticky-tools {
   position: sticky;
   top: max(0.75rem, env(safe-area-inset-top));
-  z-index: 24;
-  overflow: hidden;
-  border-radius: 20px 20px 16px 16px;
+  z-index: 90;
+  overflow: visible;
+  isolation: isolate;
+  border-radius: 18px 18px 0 0;
   background: rgba(251, 250, 247, 0.94);
   box-shadow:
     0 16px 34px rgba(15, 23, 42, 0.08),
@@ -2941,12 +3017,26 @@ watch(
     0 1px 0 rgba(255, 255, 255, 0.88) inset;
 }
 
+.inventory-sticky-tools::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  height: 1px;
+  background: rgba(148, 163, 184, 0.14);
+}
+
+.inventory-sticky-tools.has-open-filters::after {
+  opacity: 0;
+}
+
 .inventory-list-scroll {
   width: 100%;
   min-width: 0;
   max-width: 100%;
   scroll-behavior: smooth;
   will-change: scroll-position;
+  position: relative;
+  z-index: 1;
 }
 
 .inventory-load-more {
@@ -3230,7 +3320,7 @@ watch(
   border-top: 1px solid rgba(148, 163, 184, 0.14);
   border-bottom: 0;
   background: rgba(248, 250, 252, 0.76);
-  padding: 0.68rem clamp(0.95rem, 1.8vw, 1.25rem) 0.8rem;
+  padding: 0.68rem clamp(0.95rem, 1.8vw, 1.25rem) 0.78rem;
 }
 
 .inventory-filter-shell.is-open .filter-compact-grid.is-open {
@@ -3258,7 +3348,7 @@ watch(
   width: 100%;
   min-width: 0;
   max-width: 100%;
-  padding-top: 0.8rem;
+  padding: 0.28rem clamp(0.95rem, 1.8vw, 1.25rem) 0.95rem;
   overflow-x: hidden;
 }
 

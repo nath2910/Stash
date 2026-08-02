@@ -4,8 +4,9 @@ import backend.dto.BillingStatusResponse;
 import backend.dto.CheckoutRequest;
 import backend.dto.CheckoutResponse;
 import backend.entity.User;
-import backend.repository.UserRepository;
 import backend.service.BillingService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -16,12 +17,12 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping("/billing")
 public class BillingController {
 
-  private final BillingService billingService;
-  private final UserRepository userRepository;
+  private static final Logger log = LoggerFactory.getLogger(BillingController.class);
 
-  public BillingController(BillingService billingService, UserRepository userRepository) {
+  private final BillingService billingService;
+
+  public BillingController(BillingService billingService) {
     this.billingService = billingService;
-    this.userRepository = userRepository;
   }
 
   @GetMapping("/status")
@@ -44,6 +45,7 @@ public class BillingController {
       }
       return new BillingStatusResponse(user.getSubscriptionStatus(), portalUrl);
     } catch (Exception e) {
+      log.warn("Billing status refresh failed for user {}", user != null ? user.getId() : null, e);
       return new BillingStatusResponse(user.getSubscriptionStatus(), "");
     }
   }
@@ -62,8 +64,11 @@ public class BillingController {
       String discord = request != null ? request.discord() : null;
       var session = billingService.createCheckout(user, promo, discord);
       return new CheckoutResponse(session.getUrl());
+    } catch (ResponseStatusException ex) {
+      throw ex;
     } catch (Exception e) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
+      log.warn("Billing checkout failed for user {}", user != null ? user.getId() : null, e);
+      throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Session de paiement indisponible", e);
     }
   }
 

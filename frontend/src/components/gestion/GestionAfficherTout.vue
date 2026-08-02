@@ -634,7 +634,7 @@ onBeforeUnmount(() => {
 .gestion-list table {
   overflow: hidden;
   border: 1px solid rgba(125, 211, 252, 0.3);
-  border-radius: 16px;
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.92);
   color: #0f172a;
 }

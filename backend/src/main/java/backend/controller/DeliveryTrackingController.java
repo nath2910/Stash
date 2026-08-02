@@ -3,6 +3,7 @@ package backend.controller;
 import backend.dto.ParcelCreateRequest;
 import backend.dto.ParcelResponse;
 import backend.entity.User;
+import backend.security.RequiresActiveSubscription;
 import backend.service.DeliveryRefreshService;
 import backend.service.DeliveryTrackingService;
 import java.util.List;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@RequiresActiveSubscription
 @RequestMapping("/delivery/parcels")
 public class DeliveryTrackingController {
 

@@ -3,6 +3,7 @@ package backend.controller;
 import backend.dto.ParcelResponse;
 import backend.dto.TrackingCandidateResponse;
 import backend.entity.User;
+import backend.security.RequiresActiveSubscription;
 import backend.service.DeliveryTrackingService;
 import java.util.List;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@RequiresActiveSubscription
 @RequestMapping("/delivery/tracking-candidates")
 public class DeliveryTrackingCandidateController {
 

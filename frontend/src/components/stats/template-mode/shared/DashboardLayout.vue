@@ -765,11 +765,11 @@ onBeforeUnmount(() => {
   --dashboard-gap: calc(clamp(0.82rem, 1vw, 1.02rem) * var(--dashboard-fit-scale, 1));
   --dashboard-surface-padding: calc(clamp(0.88rem, 1vw, 1.05rem) * var(--dashboard-fit-scale, 1));
   --dashboard-kpi-padding: calc(clamp(0.84rem, 0.96vw, 0.98rem) * var(--dashboard-fit-scale, 1));
-  --dashboard-kpi-value-size: clamp(1.45rem, calc(2.05rem * var(--dashboard-fit-scale, 1)), 2.28rem);
-  --dashboard-kpi-detail-size: clamp(0.72rem, calc(0.84rem * var(--dashboard-fit-scale, 1)), 0.84rem);
+  --dashboard-kpi-value-size: clamp(1.58rem, calc(2.18rem * var(--dashboard-fit-scale, 1)), 2.46rem);
+  --dashboard-kpi-detail-size: clamp(0.76rem, calc(0.9rem * var(--dashboard-fit-scale, 1)), 0.92rem);
   --dashboard-module-padding: calc(clamp(0.82rem, 0.94vw, 0.98rem) * var(--dashboard-fit-scale, 1));
-  --dashboard-module-value-size: clamp(0.98rem, calc(1.34rem * var(--dashboard-fit-scale, 1)), 1.52rem);
-  --dashboard-module-detail-size: clamp(0.72rem, calc(0.82rem * var(--dashboard-fit-scale, 1)), 0.82rem);
+  --dashboard-module-value-size: clamp(1.04rem, calc(1.42rem * var(--dashboard-fit-scale, 1)), 1.62rem);
+  --dashboard-module-detail-size: clamp(0.74rem, calc(0.86rem * var(--dashboard-fit-scale, 1)), 0.86rem);
   overflow: hidden;
 }
 
@@ -788,12 +788,12 @@ onBeforeUnmount(() => {
 }
 
 .dashboard-layout--fit-screen .dashboard-layout__copy h1 {
-  font-size: clamp(1.82rem, calc(2.8rem * var(--dashboard-fit-scale, 1)), 3rem);
+  font-size: clamp(1.94rem, calc(2.96rem * var(--dashboard-fit-scale, 1)), 3.14rem);
 }
 
 .dashboard-layout--fit-screen .dashboard-layout__description {
   margin-top: calc(0.45rem * var(--dashboard-fit-scale, 1));
-  font-size: clamp(0.82rem, calc(0.96rem * var(--dashboard-fit-scale, 1)), 1rem);
+  font-size: clamp(0.86rem, calc(1rem * var(--dashboard-fit-scale, 1)), 1.04rem);
   line-height: 1.34;
 }
 
@@ -802,7 +802,7 @@ onBeforeUnmount(() => {
 }
 
 .dashboard-layout--fit-screen .dashboard-layout__section-head h2 {
-  font-size: clamp(1rem, calc(1.26rem * var(--dashboard-fit-scale, 1)), 1.4rem);
+  font-size: clamp(1.04rem, calc(1.34rem * var(--dashboard-fit-scale, 1)), 1.48rem);
 }
 
 .dashboard-layout--fit-screen .dashboard-layout__surface--kpis {
@@ -823,11 +823,11 @@ onBeforeUnmount(() => {
 
 .dashboard-layout--fit-screen .dashboard-layout__kpi-card,
 .dashboard-layout--fit-screen .dashboard-layout__module-card {
-  gap: 0.45rem;
+  gap: 0.52rem;
 }
 
 .dashboard-layout--fit-screen .dashboard-layout__module-card h3 {
-  font-size: clamp(0.84rem, 0.9vw, 0.92rem);
+  font-size: clamp(0.88rem, 0.94vw, 0.98rem);
   line-height: 1.22;
 }
 

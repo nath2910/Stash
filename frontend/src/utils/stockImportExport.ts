@@ -851,7 +851,7 @@ export function analyzeImportRows(
     const { item, quantity, errors, warnings } = buildPreviewItem(row, headers, mapping)
     const key = item.nomItem ? createDuplicateKey(item) : ''
     if (key && seenKeys.has(key)) {
-      errors.push('Doublon detecte dans le fichier')
+      warnings.push('Doublon detecte dans le fichier')
       duplicateRows += 1
     }
     if (key && existingKeys.has(key)) warnings.push('Ressemble a un item deja present')

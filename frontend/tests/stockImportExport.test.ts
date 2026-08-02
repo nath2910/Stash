@@ -39,6 +39,24 @@ describe('stockImportExport', () => {
     expect(preview.rows[0].warnings).toContain('Ressemble a un item deja present')
   })
 
+  it('keeps duplicates from the imported file as valid rows', () => {
+    const headers = ['Nom item', 'Prix achat', 'Pointure']
+    const rows = [
+      { 'Nom item': 'Jordan 1', 'Prix achat': '100', Pointure: '42' },
+      { 'Nom item': 'Jordan 1', 'Prix achat': '100', Pointure: '42' },
+    ]
+
+    const preview = analyzeImportRows(rows, headers, resolveImportMapping(headers), [])
+
+    expect(preview.validRows).toBe(2)
+    expect(preview.invalidRows).toBe(0)
+    expect(preview.validItems).toBe(2)
+    expect(preview.duplicateRows).toBe(1)
+    expect(preview.rows[1].status).toBe('valid')
+    expect(preview.rows[1].errors).toEqual([])
+    expect(preview.rows[1].warnings).toContain('Doublon detecte dans le fichier')
+  })
+
   it('keeps custom item types when importing rows', () => {
     const headers = ['Nom item', 'Type', 'Prix achat']
     const rows = [{ 'Nom item': 'Rolex sample', Type: 'Montres luxe', 'Prix achat': '1000' }]

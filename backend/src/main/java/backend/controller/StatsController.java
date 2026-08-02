@@ -12,10 +12,12 @@ import org.springframework.web.bind.annotation.*;
 import backend.dto.*;
 import backend.dto.TopVenteProjection;
 import backend.entity.User;
+import backend.security.RequiresActiveSubscription;
 import backend.service.StatsLayoutService;
 import backend.service.StatsService;
 
 @RestController
+@RequiresActiveSubscription
 @RequestMapping(path = { "stats", "snkVente/stats" }, produces = APPLICATION_JSON_VALUE)
 public class StatsController {
 

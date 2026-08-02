@@ -6,6 +6,7 @@ import backend.dto.MailScanBatchResponse;
 import backend.dto.MailScanResponse;
 import backend.dto.TrackingConnectResponse;
 import backend.entity.User;
+import backend.security.RequiresActiveSubscription;
 import backend.service.MailAccountService;
 import java.net.URI;
 import java.util.List;
@@ -38,11 +39,13 @@ public class MailAccountController {
   }
 
   @GetMapping
+  @RequiresActiveSubscription
   public List<MailAccountResponse> list(@AuthenticationPrincipal User currentUser) {
     return mailAccountService.listForUser(currentUser.getId());
   }
 
   @PostMapping("/gmail/connect")
+  @RequiresActiveSubscription
   public TrackingConnectResponse connectGmail(
       @AuthenticationPrincipal User currentUser,
       @RequestBody(required = false) GmailConnectRequest request
@@ -77,16 +80,19 @@ public class MailAccountController {
 
   @DeleteMapping("/{id}")
   @ResponseStatus(HttpStatus.NO_CONTENT)
+  @RequiresActiveSubscription
   public void delete(@AuthenticationPrincipal User currentUser, @PathVariable Long id) {
     mailAccountService.deleteForUser(currentUser.getId(), id);
   }
 
   @PostMapping("/{id}/scan-now")
+  @RequiresActiveSubscription
   public MailScanResponse scanNow(@AuthenticationPrincipal User currentUser, @PathVariable Long id) {
     return mailAccountService.scanNow(currentUser.getId(), id);
   }
 
   @PostMapping("/scan-all")
+  @RequiresActiveSubscription
   public MailScanBatchResponse scanAll(@AuthenticationPrincipal User currentUser) {
     return mailAccountService.scanAll(currentUser.getId());
   }

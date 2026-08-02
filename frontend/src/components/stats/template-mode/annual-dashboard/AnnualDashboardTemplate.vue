@@ -1045,8 +1045,8 @@ onBeforeUnmount(() => {
   --annual-template-gap: clamp(10px, 1.35vh, 16px);
   --annual-bg: #f7f4ee;
   --annual-muted-bg: #fbfaf6;
-  --annual-flow-panel-min-height: clamp(264px, 31vh, 376px);
-  --annual-flow-card-min-height: clamp(86px, 10.4vh, 112px);
+  --annual-flow-panel-min-height: clamp(284px, 33vh, 412px);
+  --annual-flow-card-min-height: clamp(92px, 10.8vh, 120px);
   --annual-detail-panel-min-height: clamp(420px, 54vh, 620px);
   --annual-detail-scroll-max-height: clamp(260px, 38vh, 430px);
   width: 100%;
@@ -1490,7 +1490,7 @@ onBeforeUnmount(() => {
 .annual-panel__head p {
   margin: 0 0 4px;
   color: #5b5ce2;
-  font-size: 0.7rem;
+  font-size: 0.74rem;
   font-weight: 820;
   letter-spacing: 0.13em;
   text-transform: uppercase;
@@ -1499,7 +1499,7 @@ onBeforeUnmount(() => {
 .annual-panel__head h2 {
   margin: 0;
   color: #111827;
-  font-size: clamp(1rem, 1.4vw, 1.24rem);
+  font-size: clamp(1.08rem, 1.55vw, 1.38rem);
   line-height: 1.15;
   font-weight: 790;
 }
@@ -1533,7 +1533,7 @@ onBeforeUnmount(() => {
 }
 
 .annual-panel--main-chart .annual-panel__head h2 {
-  font-size: 0.92rem;
+  font-size: 1rem;
   line-height: 1.1;
 }
 
@@ -1575,7 +1575,7 @@ onBeforeUnmount(() => {
   display: grid;
   grid-template-rows: auto auto auto auto;
   align-content: start;
-  gap: 6px;
+  gap: 8px;
 }
 
 .annual-action-card span {
@@ -1598,7 +1598,7 @@ onBeforeUnmount(() => {
   min-width: 0;
   margin: 0;
   color: #64748b;
-  font-size: 0.72rem;
+  font-size: 0.76rem;
   line-height: 1.15;
   font-weight: 820;
 }
@@ -1606,7 +1606,7 @@ onBeforeUnmount(() => {
 .annual-action-card strong {
   min-width: 0;
   color: #111827;
-  font-size: clamp(1rem, 1.18vw, 1.18rem);
+  font-size: clamp(1.08rem, 1.3vw, 1.36rem);
   line-height: 1.05;
   font-weight: 820;
   overflow-wrap: anywhere;
@@ -1616,8 +1616,8 @@ onBeforeUnmount(() => {
   min-width: 0;
   margin: 0;
   color: #64748b;
-  font-size: 0.68rem;
-  line-height: 1.25;
+  font-size: 0.74rem;
+  line-height: 1.32;
   font-weight: 680;
   overflow: hidden;
   display: -webkit-box;
@@ -2402,10 +2402,10 @@ onBeforeUnmount(() => {
   }
 
   .annual-dashboard.is-wide-template {
-    --annual-flow-panel-min-height: clamp(276px, 31vh, 388px);
-    --annual-flow-card-min-height: clamp(92px, 9.8vh, 116px);
-    --annual-detail-panel-min-height: clamp(470px, 57vh, 700px);
-    --annual-detail-scroll-max-height: clamp(300px, 41vh, 460px);
+    --annual-flow-panel-min-height: clamp(312px, 35vh, 452px);
+    --annual-flow-card-min-height: clamp(98px, 10.2vh, 126px);
+    --annual-detail-panel-min-height: clamp(500px, 59vh, 740px);
+    --annual-detail-scroll-max-height: clamp(320px, 43vh, 500px);
   }
 
   .annual-dashboard.is-wide-template :deep(.dashboard-layout__inner) {
@@ -2425,15 +2425,31 @@ onBeforeUnmount(() => {
     gap: 10px;
   }
 
+  .annual-dashboard.is-wide-template .annual-panel__head h2 {
+    font-size: clamp(1.14rem, 1.48vw, 1.5rem);
+  }
+
   .annual-dashboard.is-wide-template .annual-page--side :deep(.annual-kpi__value) {
-    font-size: clamp(1.34rem, 1.55vw, 1.78rem);
+    font-size: clamp(1.46rem, 1.68vw, 1.92rem);
+  }
+
+  .annual-dashboard.is-wide-template .annual-page--side :deep(.annual-kpi__detail) {
+    font-size: 0.82rem;
+  }
+
+  .annual-dashboard.is-wide-template .annual-action-card strong {
+    font-size: clamp(1.14rem, 1.32vw, 1.44rem);
+  }
+
+  .annual-dashboard.is-wide-template .annual-action-card p {
+    font-size: 0.78rem;
   }
 
   .annual-dashboard.is-hd-template {
-    --annual-flow-panel-min-height: clamp(292px, 32vh, 412px);
-    --annual-flow-card-min-height: clamp(96px, 9.6vh, 122px);
-    --annual-detail-panel-min-height: clamp(520px, 60vh, 780px);
-    --annual-detail-scroll-max-height: clamp(340px, 44vh, 520px);
+    --annual-flow-panel-min-height: clamp(336px, 37vh, 492px);
+    --annual-flow-card-min-height: clamp(104px, 10.4vh, 132px);
+    --annual-detail-panel-min-height: clamp(544px, 62vh, 820px);
+    --annual-detail-scroll-max-height: clamp(352px, 45vh, 540px);
   }
 
   .annual-dashboard.is-hd-template :deep(.dashboard-layout__inner) {
@@ -2445,7 +2461,19 @@ onBeforeUnmount(() => {
   }
 
   .annual-dashboard.is-hd-template .annual-page--side :deep(.annual-kpi__value) {
-    font-size: clamp(1.42rem, 1.65vw, 1.9rem);
+    font-size: clamp(1.56rem, 1.78vw, 2.02rem);
+  }
+
+  .annual-dashboard.is-hd-template .annual-panel__head h2 {
+    font-size: clamp(1.18rem, 1.52vw, 1.56rem);
+  }
+
+  .annual-dashboard.is-hd-template .annual-action-card strong {
+    font-size: clamp(1.18rem, 1.38vw, 1.5rem);
+  }
+
+  .annual-dashboard.is-hd-template .annual-action-card p {
+    font-size: 0.8rem;
   }
 }
 

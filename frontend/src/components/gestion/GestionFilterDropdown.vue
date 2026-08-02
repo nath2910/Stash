@@ -4,50 +4,61 @@
     class="filter-choice"
     :class="{ 'is-open': menuOpen, 'is-disabled': disabled }"
   >
-    <span class="filter-choice__label">{{ label }}</span>
     <button
+      ref="triggerEl"
       type="button"
       class="filter-choice__trigger"
       :disabled="disabled"
       :aria-expanded="menuOpen ? 'true' : 'false'"
       @click="toggleMenu"
     >
-      <span class="filter-choice__icon" :class="iconClass(selectedOption.value)">
-        <component :is="iconFor(selectedOption.value)" class="h-4 w-4" aria-hidden="true" />
+      <span class="filter-choice__label">{{ label }}</span>
+      <span class="filter-choice__trigger-row">
+        <span class="filter-choice__icon" :class="iconClass(selectedOption.value)">
+          <component :is="iconFor(selectedOption.value)" class="h-4 w-4" aria-hidden="true" />
+        </span>
+        <span
+          class="filter-choice__value"
+          :class="{ 'is-placeholder': selectedOption.placeholder }"
+        >
+          {{ selectedOption.label }}
+        </span>
+        <ChevronDown class="filter-choice__chevron h-4 w-4" aria-hidden="true" />
       </span>
-      <span
-        class="filter-choice__value"
-        :class="{ 'is-placeholder': selectedOption.placeholder }"
-      >
-        {{ selectedOption.label }}
-      </span>
-      <ChevronDown class="filter-choice__chevron h-4 w-4" aria-hidden="true" />
     </button>
 
-    <div v-if="menuOpen" class="filter-choice__menu">
-      <button
-        v-for="option in safeOptions"
-        :key="option.value"
-        type="button"
-        class="filter-choice__option"
-        :class="{ 'is-active': option.value === modelValue }"
-        @click="selectOption(option.value)"
+    <Teleport to="body">
+      <div
+        v-if="menuOpen"
+        ref="menuEl"
+        class="filter-choice__menu"
+        :class="{ 'opens-upward': openUpward }"
+        :style="menuStyles"
       >
-        <span class="filter-choice__option-icon" :class="iconClass(option.value)">
-          <component :is="iconFor(option.value)" class="h-4 w-4" aria-hidden="true" />
-        </span>
-        <span class="filter-choice__option-text">
-          <span>{{ option.label }}</span>
-          <small v-if="option.detail">{{ option.detail }}</small>
-        </span>
-        <Check v-if="option.value === modelValue" class="filter-choice__check h-4 w-4" />
-      </button>
-    </div>
+        <button
+          v-for="option in safeOptions"
+          :key="option.value"
+          type="button"
+          class="filter-choice__option"
+          :class="{ 'is-active': option.value === modelValue }"
+          @click="selectOption(option.value)"
+        >
+          <span class="filter-choice__option-icon" :class="iconClass(option.value)">
+            <component :is="iconFor(option.value)" class="h-4 w-4" aria-hidden="true" />
+          </span>
+          <span class="filter-choice__option-text">
+            <span>{{ option.label }}</span>
+            <small v-if="option.detail">{{ option.detail }}</small>
+          </span>
+          <Check v-if="option.value === modelValue" class="filter-choice__check h-4 w-4" />
+        </button>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Check, ChevronDown, CircleHelp, Package, Tag, Ticket } from 'lucide-vue-next'
 
 const props = defineProps({
@@ -57,12 +68,17 @@ const props = defineProps({
   options: { type: Array, default: () => [] },
   disabled: { type: Boolean, default: false },
   iconMode: { type: String, default: 'type' },
+  menuPlacement: { type: String, default: 'auto' },
 })
 
 const emit = defineEmits(['update:modelValue'])
 
 const rootEl = ref(null)
+const triggerEl = ref(null)
+const menuEl = ref(null)
 const menuOpen = ref(false)
+const openUpward = ref(false)
+const menuStyles = ref({})
 
 const safeOptions = computed(() =>
   props.options
@@ -108,9 +124,58 @@ function iconClass(value) {
   return `is-${String(value || 'empty').toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
 }
 
+function updateMenuPosition() {
+  if (!menuOpen.value || !rootEl.value || typeof window === 'undefined') return
+
+  const viewportWidth = window.innerWidth
+  const viewportHeight = window.innerHeight
+  const rootRect = rootEl.value.getBoundingClientRect()
+  const viewportPadding = 8
+  const menuGap = 8
+  const naturalHeight =
+    menuEl.value?.scrollHeight ?? Math.min(Math.max(safeOptions.value.length * 62, 200), 380)
+  const preferredHeight = Math.min(360, naturalHeight)
+  const preferredWidth = Math.max(
+    rootRect.width,
+    props.iconMode === 'subcategory' ? 360 : 340,
+  )
+  const width = Math.min(preferredWidth, viewportWidth - viewportPadding * 2)
+  const left = Math.min(
+    Math.max(viewportPadding, rootRect.left),
+    viewportWidth - width - viewportPadding,
+  )
+  const spaceBelow = viewportHeight - rootRect.bottom - menuGap - viewportPadding
+  const spaceAbove = rootRect.top - menuGap - viewportPadding
+  let shouldOpenUpward = false
+  if (props.menuPlacement === 'up') {
+    shouldOpenUpward = spaceAbove >= 140 || spaceAbove >= spaceBelow
+  } else if (props.menuPlacement === 'down') {
+    shouldOpenUpward = false
+  } else {
+    shouldOpenUpward = spaceBelow < Math.min(preferredHeight, 220) && spaceAbove > spaceBelow
+  }
+  const availableHeight = Math.max(
+    140,
+    Math.min(360, shouldOpenUpward ? spaceAbove : spaceBelow),
+  )
+  const renderedHeight = Math.min(preferredHeight, availableHeight)
+  const top = shouldOpenUpward
+    ? Math.max(viewportPadding, rootRect.top - renderedHeight - menuGap)
+    : Math.min(viewportHeight - viewportPadding - renderedHeight, rootRect.bottom + menuGap)
+
+  openUpward.value = shouldOpenUpward
+  menuStyles.value = {
+    left: `${Math.round(left)}px`,
+    top: `${Math.round(top)}px`,
+    width: `${Math.round(width)}px`,
+    maxHeight: `${Math.round(availableHeight)}px`,
+  }
+}
+
 function onDocumentPointerDown(event) {
   if (!menuOpen.value) return
   if (rootEl.value?.contains(event.target)) return
+  if (menuEl.value?.contains(event.target)) return
   menuOpen.value = false
 }
 
@@ -118,27 +183,47 @@ function onDocumentKeydown(event) {
   if (event.key === 'Escape') menuOpen.value = false
 }
 
+function onViewportChange() {
+  updateMenuPosition()
+}
+
+watch(menuOpen, async (isOpen) => {
+  if (!isOpen) {
+    openUpward.value = false
+    menuStyles.value = {}
+    return
+  }
+
+  await nextTick()
+  updateMenuPosition()
+  window.requestAnimationFrame(() => {
+    updateMenuPosition()
+  })
+})
+
 onMounted(() => {
   document.addEventListener('pointerdown', onDocumentPointerDown, true)
   document.addEventListener('keydown', onDocumentKeydown)
+  window.addEventListener('resize', onViewportChange)
+  document.addEventListener('scroll', onViewportChange, true)
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('pointerdown', onDocumentPointerDown, true)
   document.removeEventListener('keydown', onDocumentKeydown)
+  window.removeEventListener('resize', onViewportChange)
+  document.removeEventListener('scroll', onViewportChange, true)
 })
 </script>
 
 <style scoped>
 .filter-choice {
   position: relative;
-  display: grid;
+  display: block;
   min-width: 0;
-  gap: 0.12rem;
   border: 1px solid rgba(100, 116, 139, 0.24);
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.9);
-  padding: 0.38rem 0.55rem;
   color: #0f172a;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
   transition:
@@ -152,6 +237,10 @@ onBeforeUnmount(() => {
   border-color: rgba(20, 184, 166, 0.42);
   background: rgba(241, 245, 249, 0.96);
   box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.12);
+}
+
+.filter-choice.is-open {
+  z-index: 160;
 }
 
 .filter-choice.is-disabled {
@@ -169,13 +258,21 @@ onBeforeUnmount(() => {
 
 .filter-choice__trigger {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
   min-width: 0;
-  height: 22px;
-  align-items: center;
-  gap: 0.45rem;
+  width: 100%;
+  gap: 0.3rem;
   color: #0f172a;
   text-align: left;
+  padding: 0.42rem 0.55rem 0.48rem;
+}
+
+.filter-choice__trigger-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  min-width: 0;
+  min-height: 2rem;
+  align-items: center;
+  gap: 0.45rem;
 }
 
 .filter-choice__trigger:disabled {
@@ -199,8 +296,8 @@ onBeforeUnmount(() => {
 }
 
 .filter-choice__option-icon {
-  width: 1.85rem;
-  height: 1.85rem;
+  width: 2rem;
+  height: 2rem;
   border-radius: 0.65rem;
 }
 
@@ -236,25 +333,27 @@ onBeforeUnmount(() => {
 }
 
 .filter-choice__menu {
-  position: absolute;
-  left: 0;
-  top: calc(100% + 0.45rem);
-  z-index: 120;
+  position: fixed;
+  z-index: 10020;
   display: grid;
-  width: max(100%, min(31rem, calc(100vw - 2rem)));
-  max-height: min(360px, calc(100dvh - 10rem));
+  min-width: 0;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.45rem;
+  gap: 0.55rem;
   align-content: start;
   overflow-y: auto;
   overscroll-behavior: contain;
   border: 1px solid rgba(203, 213, 225, 0.9);
   border-radius: 1rem;
   background: #ffffff;
-  padding: 0.55rem;
+  padding: 0.65rem;
   box-shadow: 0 24px 70px rgba(15, 23, 42, 0.18);
   scrollbar-width: thin;
   scrollbar-color: rgba(15, 118, 110, 0.42) rgba(241, 245, 249, 0.9);
+  transform-origin: top left;
+}
+
+.filter-choice__menu.opens-upward {
+  transform-origin: bottom left;
 }
 
 .filter-choice__menu::-webkit-scrollbar {
@@ -274,13 +373,13 @@ onBeforeUnmount(() => {
 .filter-choice__option {
   display: flex;
   min-width: 0;
-  min-height: 2.8rem;
+  min-height: 3.15rem;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.72rem;
   border: 1px solid rgba(203, 213, 225, 0.76);
   border-radius: 0.85rem;
   background: #ffffff;
-  padding: 0.5rem 0.6rem;
+  padding: 0.62rem 0.72rem;
   text-align: left;
   transition:
     border-color 140ms ease,
@@ -307,19 +406,22 @@ onBeforeUnmount(() => {
 
 .filter-choice__option-text span {
   min-width: 0;
-  overflow: hidden;
   color: #0f172a;
-  font-size: 0.84rem;
+  font-size: 0.9rem;
   font-weight: 850;
+  line-height: 1.12;
+  display: -webkit-box;
+  overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .filter-choice__option-text small {
   min-width: 0;
   overflow: hidden;
   color: #64748b;
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   font-weight: 750;
   text-overflow: ellipsis;
   white-space: nowrap;

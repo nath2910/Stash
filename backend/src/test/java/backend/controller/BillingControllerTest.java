@@ -4,7 +4,6 @@ import backend.dto.BillingStatusResponse;
 import backend.dto.CheckoutRequest;
 import backend.dto.CheckoutResponse;
 import backend.entity.User;
-import backend.repository.UserRepository;
 import backend.service.BillingService;
 import com.stripe.model.billingportal.Session;
 import org.junit.jupiter.api.Assertions;
@@ -21,17 +20,15 @@ class BillingControllerTest {
   @Mock
   private BillingService billingService;
 
-  @Mock
-  private UserRepository userRepository;
-
   private BillingController controller;
   private User user;
 
   @BeforeEach
   void setup() {
     MockitoAnnotations.openMocks(this);
-    controller = new BillingController(billingService, userRepository);
+    controller = new BillingController(billingService);
     user = Mockito.mock(User.class);
+    Mockito.when(user.getId()).thenReturn(42L);
     Mockito.when(user.getSubscriptionStatus()).thenReturn("inactive");
   }
 
@@ -84,5 +81,20 @@ class BillingControllerTest {
     CheckoutResponse response = controller.checkout(user, new CheckoutRequest("PROMO", "123"));
 
     Assertions.assertEquals("https://stripe.test/checkout", response.url());
+  }
+
+  @Test
+  void checkoutSanitizesUnexpectedProviderFailures() throws Exception {
+    Mockito.when(billingService.isConfigured()).thenReturn(true);
+    Mockito.when(billingService.createCheckout(user, null, null))
+        .thenThrow(new IllegalStateException("Stripe low-level error"));
+
+    ResponseStatusException ex = Assertions.assertThrows(
+        ResponseStatusException.class,
+        () -> controller.checkout(user, new CheckoutRequest(null, null))
+    );
+
+    Assertions.assertEquals(HttpStatus.BAD_GATEWAY, ex.getStatusCode());
+    Assertions.assertEquals("Session de paiement indisponible", ex.getReason());
   }
 }
