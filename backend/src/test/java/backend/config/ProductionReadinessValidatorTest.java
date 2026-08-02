@@ -23,11 +23,18 @@ class ProductionReadinessValidatorTest {
   }
 
   @Test
-  void rejectsLocalhostCorsOriginsForProduction() {
+  void acceptsLocalhostCorsOriginsForProduction() {
+    Assertions.assertDoesNotThrow(() ->
+        ProductionReadinessValidator.validateCorsOrigins(
+            "https://mystash.fr,http://localhost:5173,https://preview.localhost:4173"));
+  }
+
+  @Test
+  void rejectsNonHttpsPublicCorsOriginsForProduction() {
     IllegalStateException ex = Assertions.assertThrows(
         IllegalStateException.class,
         () -> ProductionReadinessValidator.validateCorsOrigins(
-            "https://mystash.fr,http://localhost:5173")
+            "https://mystash.fr,http://frontend.mystash.fr")
     );
 
     Assertions.assertTrue(ex.getMessage().contains("APP_CORS_ALLOWED_ORIGINS"));

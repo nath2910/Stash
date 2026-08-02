@@ -76,11 +76,43 @@ public class ProductionReadinessValidator {
       if (origin.isEmpty()) {
         continue;
       }
-      validatePublicHttpsUrl(origin, "APP_CORS_ALLOWED_ORIGINS");
+      validateCorsOrigin(origin);
+    }
+  }
+
+  static void validateCorsOrigin(String rawValue) {
+    URI uri = parseAbsoluteUri(rawValue, "APP_CORS_ALLOWED_ORIGINS");
+    String scheme = uri.getScheme();
+    String host = uri.getHost();
+    String normalizedHost = host.toLowerCase(Locale.ROOT);
+
+    if (isLocalHost(normalizedHost)) {
+      if (!"http".equalsIgnoreCase(scheme) && !"https".equalsIgnoreCase(scheme)) {
+        throw new IllegalStateException("APP_CORS_ALLOWED_ORIGINS localhost entries must use http or https");
+      }
+      return;
+    }
+
+    if (!"https".equalsIgnoreCase(scheme)) {
+      throw new IllegalStateException("APP_CORS_ALLOWED_ORIGINS public entries must use https in prod");
     }
   }
 
   static void validatePublicHttpsUrl(String rawValue, String propertyName) {
+    URI uri = parseAbsoluteUri(rawValue, propertyName);
+    String scheme = uri.getScheme();
+    String host = uri.getHost();
+    if (!"https".equalsIgnoreCase(scheme)) {
+      throw new IllegalStateException(propertyName + " must use https in prod");
+    }
+
+    String normalizedHost = host.toLowerCase(Locale.ROOT);
+    if (isLocalHost(normalizedHost)) {
+      throw new IllegalStateException(propertyName + " cannot point to localhost in prod");
+    }
+  }
+
+  private static URI parseAbsoluteUri(String rawValue, String propertyName) {
     URI uri;
     try {
       uri = URI.create(rawValue);
@@ -93,16 +125,13 @@ public class ProductionReadinessValidator {
     if (scheme == null || host == null) {
       throw new IllegalStateException(propertyName + " must be a valid absolute URL in prod");
     }
-    if (!"https".equalsIgnoreCase(scheme)) {
-      throw new IllegalStateException(propertyName + " must use https in prod");
-    }
+    return uri;
+  }
 
-    String normalizedHost = host.toLowerCase(Locale.ROOT);
-    if (normalizedHost.equals("localhost")
+  private static boolean isLocalHost(String normalizedHost) {
+    return normalizedHost.equals("localhost")
         || normalizedHost.equals("127.0.0.1")
         || normalizedHost.equals("0.0.0.0")
-        || normalizedHost.endsWith(".localhost")) {
-      throw new IllegalStateException(propertyName + " cannot point to localhost in prod");
-    }
+        || normalizedHost.endsWith(".localhost");
   }
 }
