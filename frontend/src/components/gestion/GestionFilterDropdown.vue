@@ -32,7 +32,11 @@
         v-if="menuOpen"
         ref="menuEl"
         class="filter-choice__menu"
-        :class="{ 'opens-upward': openUpward }"
+        :class="{
+          'opens-upward': openUpward,
+          'is-subcategory': iconMode === 'subcategory',
+          'is-type': iconMode === 'type',
+        }"
         :style="menuStyles"
       >
         <button
@@ -131,13 +135,13 @@ function updateMenuPosition() {
   const viewportHeight = window.innerHeight
   const rootRect = rootEl.value.getBoundingClientRect()
   const viewportPadding = 8
-  const menuGap = 8
+  const menuGap = 6
   const naturalHeight =
-    menuEl.value?.scrollHeight ?? Math.min(Math.max(safeOptions.value.length * 62, 200), 380)
-  const preferredHeight = Math.min(360, naturalHeight)
+    menuEl.value?.scrollHeight ?? Math.min(Math.max(safeOptions.value.length * 52, 168), 320)
+  const preferredHeight = Math.min(308, naturalHeight)
   const preferredWidth = Math.max(
     rootRect.width,
-    props.iconMode === 'subcategory' ? 360 : 340,
+    props.iconMode === 'subcategory' ? 520 : 460,
   )
   const width = Math.min(preferredWidth, viewportWidth - viewportPadding * 2)
   const left = Math.min(
@@ -155,8 +159,8 @@ function updateMenuPosition() {
     shouldOpenUpward = spaceBelow < Math.min(preferredHeight, 220) && spaceAbove > spaceBelow
   }
   const availableHeight = Math.max(
-    140,
-    Math.min(360, shouldOpenUpward ? spaceAbove : spaceBelow),
+    124,
+    Math.min(320, shouldOpenUpward ? spaceAbove : spaceBelow),
   )
   const renderedHeight = Math.min(preferredHeight, availableHeight)
   const top = shouldOpenUpward
@@ -249,9 +253,9 @@ onBeforeUnmount(() => {
 
 .filter-choice__label {
   color: #0f766e;
-  font-size: 0.58rem;
+  font-size: 0.54rem;
   font-weight: 900;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.07em;
   line-height: 1;
   text-transform: uppercase;
 }
@@ -260,19 +264,19 @@ onBeforeUnmount(() => {
   display: grid;
   min-width: 0;
   width: 100%;
-  gap: 0.3rem;
+  gap: 0.28rem;
   color: #0f172a;
   text-align: left;
-  padding: 0.42rem 0.55rem 0.48rem;
+  padding: 0.46rem 0.62rem 0.5rem;
 }
 
 .filter-choice__trigger-row {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   min-width: 0;
-  min-height: 2rem;
+  min-height: 1.9rem;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.48rem;
 }
 
 .filter-choice__trigger:disabled {
@@ -292,13 +296,13 @@ onBeforeUnmount(() => {
 .filter-choice__icon {
   width: 1.4rem;
   height: 1.4rem;
-  border-radius: 0.48rem;
+  border-radius: 0.5rem;
 }
 
 .filter-choice__option-icon {
-  width: 2rem;
-  height: 2rem;
-  border-radius: 0.65rem;
+  width: 1.72rem;
+  height: 1.72rem;
+  border-radius: 0.56rem;
 }
 
 .filter-choice__icon.is-all,
@@ -312,9 +316,9 @@ onBeforeUnmount(() => {
   min-width: 0;
   overflow: hidden;
   color: #0f172a;
-  font-size: 0.84rem;
+  font-size: 0.82rem;
   font-weight: 850;
-  line-height: 1.05;
+  line-height: 1.15;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -337,19 +341,27 @@ onBeforeUnmount(() => {
   z-index: 10020;
   display: grid;
   min-width: 0;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.55rem;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
   align-content: start;
   overflow-y: auto;
   overscroll-behavior: contain;
   border: 1px solid rgba(203, 213, 225, 0.9);
-  border-radius: 1rem;
+  border-radius: 0.9rem;
   background: #ffffff;
-  padding: 0.65rem;
-  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.18);
+  padding: 0.62rem;
+  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.14);
   scrollbar-width: thin;
   scrollbar-color: rgba(15, 118, 110, 0.42) rgba(241, 245, 249, 0.9);
   transform-origin: top left;
+}
+
+.filter-choice__menu.is-type {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.filter-choice__menu.is-subcategory {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .filter-choice__menu.opens-upward {
@@ -373,13 +385,13 @@ onBeforeUnmount(() => {
 .filter-choice__option {
   display: flex;
   min-width: 0;
-  min-height: 3.15rem;
+  min-height: 2.6rem;
   align-items: center;
-  gap: 0.72rem;
+  gap: 0.62rem;
   border: 1px solid rgba(203, 213, 225, 0.76);
-  border-radius: 0.85rem;
+  border-radius: 0.74rem;
   background: #ffffff;
-  padding: 0.62rem 0.72rem;
+  padding: 0.5rem 0.62rem;
   text-align: left;
   transition:
     border-color 140ms ease,
@@ -400,20 +412,20 @@ onBeforeUnmount(() => {
 .filter-choice__option-text {
   display: grid;
   min-width: 0;
-  gap: 0.05rem;
+  gap: 0.02rem;
   flex: 1;
 }
 
 .filter-choice__option-text span {
   min-width: 0;
   color: #0f172a;
-  font-size: 0.9rem;
+  font-size: 0.84rem;
   font-weight: 850;
-  line-height: 1.12;
+  line-height: 1.14;
   display: -webkit-box;
   overflow: hidden;
   text-overflow: ellipsis;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
 }
 
@@ -421,7 +433,7 @@ onBeforeUnmount(() => {
   min-width: 0;
   overflow: hidden;
   color: #64748b;
-  font-size: 0.72rem;
+  font-size: 0.67rem;
   font-weight: 750;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -436,6 +448,10 @@ onBeforeUnmount(() => {
   .filter-choice__menu {
     width: min(100%, calc(100vw - 2rem));
     grid-template-columns: 1fr;
+  }
+
+  .filter-choice__option {
+    min-height: 2.5rem;
   }
 }
 </style>

@@ -63,11 +63,43 @@ public interface SnkVenteRepository extends JpaRepository<SnkVente, Integer> {
 
 
   // Liste de tout les items dans la liste
-  List<SnkVente> findByUser_IdOrderByDateAchatDesc(Long userId);
-  List<SnkVente> findByUser_IdOrderByDateAchatDesc(Long userId, Pageable pageable);
+  @Query("""
+      select v
+      from SnkVente v
+      where v.user.id = :userId
+        and coalesce(v.groupParent, false) = false
+      order by v.dateAchat desc, v.id desc
+      """)
+  List<SnkVente> findByUser_IdOrderByDateAchatDesc(@Param("userId") Long userId);
+
+  @Query("""
+      select v
+      from SnkVente v
+      where v.user.id = :userId
+        and coalesce(v.groupParent, false) = false
+      order by v.dateAchat desc, v.id desc
+      """)
+  List<SnkVente> findByUser_IdOrderByDateAchatDesc(@Param("userId") Long userId, Pageable pageable);
+
+  @Query("""
+      select v
+      from SnkVente v
+      where v.user.id = :userId
+      order by v.dateAchat desc, v.id desc
+      """)
+  List<SnkVente> findAllByUser_IdOrderByDateAchatDesc(@Param("userId") Long userId);
 
   // Trouver des dernier ajout 
-  List<SnkVente> findByUser_IdOrderByCreatedAtDesc(Long userId, Pageable pageable);
+  @Query("""
+      select v
+      from SnkVente v
+      where v.user.id = :userId
+        and coalesce(v.groupParent, false) = false
+      order by v.createdAt desc, v.id desc
+      """)
+  List<SnkVente> findByUser_IdOrderByCreatedAtDesc(@Param("userId") Long userId, Pageable pageable);
+
+  List<SnkVente> findByParent_IdOrderByUnitIndexAscIdAsc(Integer parentId);
 
   @Query("""
       select v

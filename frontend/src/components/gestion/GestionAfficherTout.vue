@@ -16,31 +16,49 @@
         v-for="vente in snkVentes"
         :key="vente.id"
         class="gestion-list-row gestion-mobile-card rounded-2xl border border-gray-700 bg-gray-900/60 p-3"
-        role="button"
-        tabindex="0"
-        @click="emit('edit', vente)"
-        @keydown.enter.prevent="emit('edit', vente)"
-        @keydown.space.prevent="emit('edit', vente)"
       >
         <div class="flex items-start justify-between gap-3">
-          <div class="min-w-0 space-y-1">
-            <p class="gestion-mobile-title text-sm font-semibold text-gray-100">
-              {{ vente.nomItem || vente.nom_item }}
+          <button
+            type="button"
+            class="gestion-mobile-main min-w-0 flex-1 text-left"
+            @click="emit('edit', vente)"
+          >
+            <div class="flex items-center gap-2">
+              <p class="gestion-mobile-title text-sm font-semibold text-gray-100">
+                {{ vente.nomItem || vente.nom_item }}
+              </p>
+              <span v-if="isGroup(vente)" class="gestion-qty-pill">
+                {{ quantityLabel(vente) }}
+              </span>
+            </div>
+            <p
+              v-if="groupSubtitle(vente)"
+              class="gestion-mobile-description line-clamp-2 text-xs text-gray-400"
+            >
+              {{ groupSubtitle(vente) }}
             </p>
-            <p v-if="vente.description" class="gestion-mobile-description line-clamp-2 text-xs text-gray-400">
-              {{ vente.description }}
-            </p>
-          </div>
+          </button>
 
           <div class="flex items-center gap-2">
             <input
               v-if="selectable"
               type="checkbox"
               class="accent-purple-500"
-              :checked="isSelected(vente.id)"
+              :checked="isGroupChecked(vente)"
               @click.stop
-              @change="toggleOne(vente.id)"
+              @change="toggleGroup(vente)"
             />
+
+            <button
+              v-if="isGroup(vente)"
+              type="button"
+              class="gestion-icon-button"
+              :aria-label="isExpanded(vente.id) ? 'Replier le groupe' : 'Deplier le groupe'"
+              @click.stop="toggleExpanded(vente.id)"
+            >
+              <ChevronDown v-if="isExpanded(vente.id)" class="h-4 w-4" aria-hidden="true" />
+              <ChevronRight v-else class="h-4 w-4" aria-hidden="true" />
+            </button>
 
             <button
               type="button"
@@ -81,9 +99,9 @@
           </div>
           <span
             class="text-sm font-semibold"
-            :class="profit(vente) >= 0 ? 'text-emerald-400' : 'text-red-400'"
+            :class="profitValue(vente) >= 0 ? 'text-emerald-400' : 'text-red-400'"
           >
-            {{ formatCurrency(profit(vente)) }}
+            {{ formatCurrency(profitValue(vente)) }}
           </span>
         </div>
 
@@ -91,13 +109,13 @@
           <div class="rounded-lg border border-gray-700/80 bg-gray-950/40 px-2.5 py-2">
             <p class="text-[10px] uppercase tracking-wide text-gray-500">Retail</p>
             <p class="mt-1 text-xs font-medium text-gray-200">
-              {{ formatCurrency(vente.prixRetail ?? vente.prix_retail) }}
+              {{ retailLabel(vente) }}
             </p>
           </div>
           <div class="rounded-lg border border-gray-700/80 bg-gray-950/40 px-2.5 py-2">
             <p class="text-[10px] uppercase tracking-wide text-gray-500">Resell</p>
             <p class="mt-1 text-xs font-medium text-gray-200">
-              {{ formatCurrency(vente.prixResell ?? vente.prix_resell) }}
+              {{ resellLabel(vente) }}
             </p>
           </div>
           <div class="rounded-lg border border-gray-700/80 bg-gray-950/40 px-2.5 py-2">
@@ -109,13 +127,69 @@
           <div class="rounded-lg border border-gray-700/80 bg-gray-950/40 px-2.5 py-2">
             <p class="text-[10px] uppercase tracking-wide text-gray-500">Date vente</p>
             <p class="mt-1 text-xs font-medium text-gray-300">
-              {{
-                vente.dateVente || vente.date_vente
-                  ? formatDate(vente.dateVente ?? vente.date_vente)
-                  : '-'
-              }}
+              {{ saleDateLabel(vente) }}
             </p>
           </div>
+        </div>
+
+        <div v-if="isGroup(vente) && isExpanded(vente.id)" class="gestion-child-stack mt-3">
+          <article
+            v-for="child in childRows(vente)"
+            :key="child.id"
+            class="gestion-child-card"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <button
+                type="button"
+                class="gestion-child-main min-w-0 flex-1 text-left"
+                @click="emit('edit', child)"
+              >
+                <p class="text-sm font-semibold text-slate-900">
+                  {{ childLabel(child) }}
+                </p>
+                <p class="mt-1 text-xs text-slate-500">
+                  <span class="gestion-child-meta-badge">{{ childLineLabel(child) }}</span>
+                  <span class="gestion-child-meta-separator">-</span>
+                  {{ formatCurrency(child.prixRetail ?? child.prix_retail) }}
+                  -
+                  {{
+                    isVendue(child)
+                      ? `${formatCurrency(child.prixResell ?? child.prix_resell)} vendu`
+                      : 'non vendu'
+                  }}
+                </p>
+              </button>
+
+              <div class="flex items-center gap-2">
+                <input
+                  v-if="selectable"
+                  type="checkbox"
+                  class="accent-purple-500"
+                  :checked="isSelected(child.id)"
+                  @click.stop
+                  @change="toggleOne(child.id)"
+                />
+
+                <button
+                  type="button"
+                  class="gestion-icon-button"
+                  aria-label="Modifier le sous-item"
+                  @click.stop="emit('edit', child)"
+                >
+                  <Pencil class="h-4 w-4" aria-hidden="true" />
+                </button>
+
+                <button
+                  type="button"
+                  class="gestion-icon-button gestion-icon-button--danger"
+                  aria-label="Supprimer le sous-item"
+                  @click.stop="emit('delete', [child.id])"
+                >
+                  <Trash2 class="h-4 w-4" aria-hidden="true" />
+                </button>
+              </div>
+            </div>
+          </article>
         </div>
       </article>
     </div>
@@ -128,7 +202,7 @@
     </div>
 
     <div v-if="isDesktop" class="hidden lg:block">
-      <table class="min-w-[920px] w-full text-sm text-gray-100">
+      <table class="min-w-[1040px] w-full text-sm text-gray-100">
         <thead class="border-b border-gray-700 bg-gray-900">
           <tr>
             <th
@@ -142,155 +216,248 @@
                 @change="toggleAll"
               />
             </th>
-
-            <th
-              class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-400"
-            >
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
               nom de l'item
             </th>
-            <th
-              class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-400"
-            >
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
               type
             </th>
-            <th
-              class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-400"
-            >
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
               sous-categorie
             </th>
-            <th
-              class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-400"
-            >
+            <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-400">
+              quantite
+            </th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-400">
               prix_retail
             </th>
-            <th
-              class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-400"
-            >
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-400">
               prix_resell
             </th>
-            <th
-              class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-400"
-            >
+            <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-400">
               date achat
             </th>
-            <th
-              class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-400"
-            >
+            <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-400">
               date vente
             </th>
-            <th
-              class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-400"
-            >
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-400">
               profit
             </th>
-            <th
-              class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-400"
-            >
+            <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-400">
               actions
             </th>
           </tr>
         </thead>
 
         <tbody>
-          <tr
-            v-for="vente in snkVentes"
-            :key="vente.id"
-            class="gestion-list-row border-b border-gray-800"
-            tabindex="0"
-            @click="emit('edit', vente)"
-            @keydown.enter.prevent="emit('edit', vente)"
-            @keydown.space.prevent="emit('edit', vente)"
-          >
-            <td v-if="selectable" class="px-4 py-3">
-              <input
-                type="checkbox"
-                class="accent-purple-500"
-                :checked="isSelected(vente.id)"
-                @click.stop
-                @change="toggleOne(vente.id)"
-              />
-            </td>
+          <template v-for="vente in snkVentes" :key="vente.id">
+            <tr
+              class="gestion-list-row border-b border-gray-800"
+              :class="{ 'gestion-parent-row': isGroup(vente) }"
+              tabindex="0"
+              @click="emit('edit', vente)"
+              @keydown.enter.prevent="emit('edit', vente)"
+              @keydown.space.prevent="emit('edit', vente)"
+            >
+              <td v-if="selectable" class="px-4 py-3">
+                <input
+                  type="checkbox"
+                  class="accent-purple-500"
+                  :checked="isGroupChecked(vente)"
+                  @click.stop
+                  @change="toggleGroup(vente)"
+                />
+              </td>
 
-            <td class="px-4 py-3">
-              <div class="flex flex-col">
-                <span class="font-medium text-gray-100">
-                  {{ vente.nomItem || vente.nom_item }}
-                </span>
-                <span v-if="vente.description" class="line-clamp-1 text-[11px] text-gray-400">
-                  {{ vente.description }}
-                </span>
-              </div>
-            </td>
+              <td class="px-4 py-3">
+                <div class="flex items-start gap-2">
+                  <button
+                    v-if="isGroup(vente)"
+                    type="button"
+                    class="gestion-expand-button"
+                    :aria-label="isExpanded(vente.id) ? 'Replier le groupe' : 'Deplier le groupe'"
+                    @click.stop="toggleExpanded(vente.id)"
+                  >
+                    <ChevronDown v-if="isExpanded(vente.id)" class="h-4 w-4" aria-hidden="true" />
+                    <ChevronRight v-else class="h-4 w-4" aria-hidden="true" />
+                  </button>
+                  <div class="flex flex-col">
+                    <span class="font-medium text-gray-100">
+                      {{ vente.nomItem || vente.nom_item }}
+                    </span>
+                    <span v-if="groupSubtitle(vente)" class="line-clamp-1 text-[11px] text-gray-400">
+                      {{ groupSubtitle(vente) }}
+                    </span>
+                  </div>
+                </div>
+              </td>
 
-            <td class="px-4 py-3">
-              <span
-                class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide"
-                :class="typeBadgeClass(vente.type)"
-              >
-                {{ typeLabelDisplay(vente.type) }}
-              </span>
-            </td>
-
-            <td class="px-4 py-3 text-xs text-gray-300">
-              {{ subcategoryLabel(vente) || '--' }}
-            </td>
-
-            <td class="px-4 py-3 text-right">
-              {{ formatCurrency(vente.prixRetail ?? vente.prix_retail) }}
-            </td>
-
-            <td class="px-4 py-3 text-right">
-              {{ formatCurrency(vente.prixResell ?? vente.prix_resell) }}
-            </td>
-
-            <td class="px-4 py-3 text-center text-xs text-gray-300">
-              {{ formatDate(vente.dateAchat ?? vente.date_achat) }}
-            </td>
-
-            <td class="px-4 py-3 text-center text-xs text-gray-300">
-              {{
-                vente.dateVente || vente.date_vente
-                  ? formatDate(vente.dateVente ?? vente.date_vente)
-                  : '-'
-              }}
-            </td>
-
-            <td class="px-4 py-3 text-right">
-              <span
-                class="font-semibold"
-                :class="profit(vente) >= 0 ? 'text-emerald-400' : 'text-red-400'"
-              >
-                {{ formatCurrency(profit(vente)) }}
-              </span>
-            </td>
-
-            <td class="px-4 py-3 text-center">
-              <div class="gestion-row-actions">
-                <button
-                  type="button"
-                  class="gestion-icon-button"
-                  aria-label="Modifier l'item"
-                  title="Modifier"
-                  @click.stop="emit('edit', vente)"
+              <td class="px-4 py-3">
+                <span
+                  class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide"
+                  :class="typeBadgeClass(vente.type)"
                 >
-                  <Pencil class="h-4 w-4" aria-hidden="true" />
-                </button>
+                  {{ typeLabelDisplay(vente.type) }}
+                </span>
+              </td>
 
-                <button
-                  type="button"
-                  class="gestion-icon-button gestion-icon-button--danger"
-                  aria-label="Supprimer l'item"
-                  title="Supprimer"
-                  @click.stop="emit('delete', [vente.id])"
+              <td class="px-4 py-3 text-xs text-gray-300">
+                {{ subcategoryLabel(vente) || '--' }}
+              </td>
+
+              <td class="px-4 py-3 text-center text-xs text-gray-300">
+                {{ quantityLabel(vente) }}
+              </td>
+
+              <td class="px-4 py-3 text-right text-xs">
+                {{ retailLabel(vente) }}
+              </td>
+
+              <td class="px-4 py-3 text-right text-xs">
+                {{ resellLabel(vente) }}
+              </td>
+
+              <td class="px-4 py-3 text-center text-xs text-gray-300">
+                {{ formatDate(vente.dateAchat ?? vente.date_achat) }}
+              </td>
+
+              <td class="px-4 py-3 text-center text-xs text-gray-300">
+                {{ saleDateLabel(vente) }}
+              </td>
+
+              <td class="px-4 py-3 text-right">
+                <span
+                  class="font-semibold"
+                  :class="profitValue(vente) >= 0 ? 'text-emerald-400' : 'text-red-400'"
                 >
-                  <Trash2 class="h-4 w-4" aria-hidden="true" />
-                </button>
-              </div>
-            </td>
-          </tr>
+                  {{ formatCurrency(profitValue(vente)) }}
+                </span>
+              </td>
+
+              <td class="px-4 py-3 text-center">
+                <div class="gestion-row-actions">
+                  <button
+                    type="button"
+                    class="gestion-icon-button"
+                    aria-label="Modifier l'item"
+                    title="Modifier"
+                    @click.stop="emit('edit', vente)"
+                  >
+                    <Pencil class="h-4 w-4" aria-hidden="true" />
+                  </button>
+
+                  <button
+                    type="button"
+                    class="gestion-icon-button gestion-icon-button--danger"
+                    aria-label="Supprimer l'item"
+                    title="Supprimer"
+                    @click.stop="emit('delete', [vente.id])"
+                  >
+                    <Trash2 class="h-4 w-4" aria-hidden="true" />
+                  </button>
+                </div>
+              </td>
+            </tr>
+
+            <tr
+              v-for="child in isExpanded(vente.id) ? childRows(vente) : []"
+              :key="child.id"
+              class="gestion-child-row border-b border-gray-100"
+              tabindex="0"
+              @click="emit('edit', child)"
+              @keydown.enter.prevent="emit('edit', child)"
+              @keydown.space.prevent="emit('edit', child)"
+            >
+              <td v-if="selectable" class="px-4 py-3">
+                <input
+                  type="checkbox"
+                  class="accent-purple-500"
+                  :checked="isSelected(child.id)"
+                  @click.stop
+                  @change="toggleOne(child.id)"
+                />
+              </td>
+
+              <td class="px-4 py-3">
+                <div class="pl-7">
+                  <div class="flex flex-col gap-1">
+                    <span class="font-medium text-slate-900">{{ childLabel(child) }}</span>
+                    <span class="gestion-child-inline-badge">{{ childLineLabel(child) }}</span>
+                  </div>
+                </div>
+              </td>
+
+              <td class="px-4 py-3 text-xs text-gray-300">
+                {{ typeLabelDisplay(child.type) }}
+              </td>
+
+              <td class="px-4 py-3 text-xs text-gray-300">
+                {{ subcategoryLabel(child) || '--' }}
+              </td>
+
+              <td class="px-4 py-3 text-center text-xs text-gray-300">
+                1
+              </td>
+
+              <td class="px-4 py-3 text-right">
+                {{ formatCurrency(child.prixRetail ?? child.prix_retail) }}
+              </td>
+
+              <td class="px-4 py-3 text-right">
+                {{
+                  isVendue(child)
+                    ? formatCurrency(child.prixResell ?? child.prix_resell)
+                    : '--'
+                }}
+              </td>
+
+              <td class="px-4 py-3 text-center text-xs text-gray-300">
+                {{ formatDate(child.dateAchat ?? child.date_achat) }}
+              </td>
+
+              <td class="px-4 py-3 text-center text-xs text-gray-300">
+                {{
+                  child.dateVente || child.date_vente
+                    ? formatDate(child.dateVente ?? child.date_vente)
+                    : '-'
+                }}
+              </td>
+
+              <td class="px-4 py-3 text-right">
+                <span
+                  class="font-semibold"
+                  :class="profitValue(child) >= 0 ? 'text-emerald-400' : 'text-red-400'"
+                >
+                  {{ formatCurrency(profitValue(child)) }}
+                </span>
+              </td>
+
+              <td class="px-4 py-3 text-center">
+                <div class="gestion-row-actions">
+                  <button
+                    type="button"
+                    class="gestion-icon-button"
+                    aria-label="Modifier le sous-item"
+                    @click.stop="emit('edit', child)"
+                  >
+                    <Pencil class="h-4 w-4" aria-hidden="true" />
+                  </button>
+
+                  <button
+                    type="button"
+                    class="gestion-icon-button gestion-icon-button--danger"
+                    aria-label="Supprimer le sous-item"
+                    @click.stop="emit('delete', [child.id])"
+                  >
+                    <Trash2 class="h-4 w-4" aria-hidden="true" />
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </template>
 
           <tr v-if="!snkVentes.length">
-            <td :colspan="selectable ? 10 : 9" class="px-4 py-8 text-center text-sm text-gray-400">
+            <td :colspan="selectable ? 11 : 10" class="px-4 py-8 text-center text-sm text-gray-400">
               Aucun item a afficher pour le moment.
             </td>
           </tr>
@@ -302,9 +469,18 @@
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { Pencil, Trash2 } from 'lucide-vue-next'
+import { ChevronDown, ChevronRight, Pencil, Trash2 } from 'lucide-vue-next'
 import { formatDateFR, formatEUR } from '@/utils/formatters'
-import { profitOf } from '@/utils/snkVente'
+import {
+  childItemsOf,
+  isGroupedItem,
+  isVendue,
+  itemQuantityOf,
+  soldCountOf,
+  totalProfitOf,
+  totalResellOf,
+  totalRetailOf,
+} from '@/utils/snkVente'
 import {
   isItemCategoryAlias,
   itemTypeLabel,
@@ -325,25 +501,56 @@ const categoryLabels = ref(readStoredItemCategories(currentUserId.value))
 const isDesktop = ref(
   typeof window === 'undefined' ? true : window.matchMedia('(min-width: 1024px)').matches,
 )
+const expandedIds = ref([])
 let desktopMediaQuery = null
+
+const selectedSet = computed(() => new Set(props.modelValue))
+const expandedSet = computed(() => new Set(expandedIds.value))
+const visibleIds = computed(() => {
+  const ids = []
+  for (const vente of props.snkVentes) {
+    ids.push(vente.id)
+    if (expandedSet.value.has(vente.id)) {
+      childRows(vente).forEach((child) => ids.push(child.id))
+    }
+  }
+  return ids
+})
+
+const allSelected = computed(() => {
+  if (!visibleIds.value.length) return false
+  return visibleIds.value.every((id) => selectedSet.value.has(id))
+})
+
 const onDesktopChange = (event) => {
   isDesktop.value = event.matches
 }
 
-const selectedSet = computed(() => new Set(props.modelValue))
-const visibleIds = computed(() => props.snkVentes.map((v) => v.id))
-
 const isSelected = (id) => selectedSet.value.has(id)
+const isGroup = (vente) => isGroupedItem(vente)
+const isExpanded = (id) => expandedSet.value.has(id)
+const childRows = (vente) => childItemsOf(vente)
+const quantityOf = (vente) => itemQuantityOf(vente)
+const soldCount = (vente) => soldCountOf(vente)
 
-const allSelected = computed(() => {
-  if (!props.snkVentes.length) return false
-  return visibleIds.value.every((id) => selectedSet.value.has(id))
-})
+const groupIds = (vente) => [vente.id, ...childRows(vente).map((child) => child.id)]
+const isGroupChecked = (vente) => groupIds(vente).every((id) => selectedSet.value.has(id))
 
 const toggleOne = (id) => {
   const next = new Set(props.modelValue)
   if (next.has(id)) next.delete(id)
   else next.add(id)
+  emit('update:modelValue', Array.from(next))
+}
+
+const toggleGroup = (vente) => {
+  const next = new Set(props.modelValue)
+  const ids = groupIds(vente)
+  const shouldClear = ids.every((id) => next.has(id))
+  ids.forEach((id) => {
+    if (shouldClear) next.delete(id)
+    else next.add(id)
+  })
   emit('update:modelValue', Array.from(next))
 }
 
@@ -360,6 +567,12 @@ const toggleAll = () => {
   emit('update:modelValue', Array.from(next))
 }
 
+const toggleExpanded = (id) => {
+  expandedIds.value = isExpanded(id)
+    ? expandedIds.value.filter((currentId) => currentId !== id)
+    : [...expandedIds.value, id]
+}
+
 const formatCurrency = (val) => {
   const num = Number(val)
   if (val === null || val === undefined || Number.isNaN(num)) return '--'
@@ -368,11 +581,11 @@ const formatCurrency = (val) => {
 
 const formatDate = (val) => formatDateFR(val, { fallback: '--' })
 
-const profit = (vente) => profitOf(vente)
 const subcategoryLabel = (vente) => {
   const label = String(vente?.categorie ?? '').trim()
   return isItemCategoryAlias(label, categoryLabels.value) ? '' : label
 }
+
 const typeBadgeClass = (type) => {
   switch (type) {
     case 'TICKET':
@@ -385,13 +598,72 @@ const typeBadgeClass = (type) => {
       return 'bg-purple-500/10 text-purple-200 border border-purple-400/60'
   }
 }
+
 const typeLabelDisplay = (type) =>
   itemTypeLabel(type || 'SNEAKER', categoryLabels.value).toUpperCase()
+
+const quantityLabel = (vente) => {
+  const quantity = quantityOf(vente)
+  if (!isGroup(vente)) return String(quantity)
+  return quantity > 1 ? `${quantity} lignes` : '1 ligne'
+}
+
+const groupSubtitle = (vente) => {
+  if (!isGroup(vente)) return vente?.description || ''
+  const quantity = quantityOf(vente)
+  const sold = soldCount(vente)
+  if (!sold) return quantityLabel(vente)
+  if (sold >= quantity) return `${quantityLabel(vente)} - tout vendu`
+  return `${quantityLabel(vente)} - ${sold} vendu${sold > 1 ? 's' : ''}`
+}
+
+const retailLabel = (vente) => {
+  if (!isGroup(vente)) return formatCurrency(vente.prixRetail ?? vente.prix_retail)
+  const unitRetail = childRows(vente)[0]?.prixRetail ?? childRows(vente)[0]?.prix_retail
+  return `${formatCurrency(unitRetail)} / unite - ${formatCurrency(totalRetailOf(vente))} total`
+}
+
+const resellLabel = (vente) => {
+  if (!isGroup(vente)) {
+    return isVendue(vente) ? formatCurrency(vente.prixResell ?? vente.prix_resell) : '--'
+  }
+  if (!soldCount(vente)) return '--'
+  if (soldCount(vente) < quantityOf(vente)) return `${soldCount(vente)}/${quantityOf(vente)} vendus`
+  return formatCurrency(totalResellOf(vente))
+}
+
+const saleDateLabel = (vente) => {
+  if (!isGroup(vente)) {
+    return vente.dateVente || vente.date_vente ? formatDate(vente.dateVente ?? vente.date_vente) : '-'
+  }
+  if (!soldCount(vente)) return '-'
+  if (soldCount(vente) < quantityOf(vente)) return 'Vente partielle'
+  return formatDate(vente.dateVente ?? vente.date_vente)
+}
+
+const profitValue = (vente) => totalProfitOf(vente)
+
+const childLabel = (child) => {
+  return child?.nomItem || child?.nom_item || 'Sous-item'
+}
+
+const childLineLabel = (child) => {
+  const unitIndex = Number(child?.unitIndex ?? 0)
+  return unitIndex > 0 ? `Ligne ${unitIndex}` : 'Ligne'
+}
 
 watch(
   () => currentUserId.value,
   (userId) => {
     categoryLabels.value = readStoredItemCategories(userId)
+  },
+)
+
+watch(
+  () => props.snkVentes,
+  (rows) => {
+    const visibleParents = new Set((rows || []).map((row) => row.id))
+    expandedIds.value = expandedIds.value.filter((id) => visibleParents.has(id))
   },
 )
 
@@ -463,7 +735,6 @@ onBeforeUnmount(() => {
 }
 
 .gestion-list-row {
-  cursor: pointer;
   outline: none;
   transition:
     border-color 160ms ease,
@@ -484,14 +755,11 @@ onBeforeUnmount(() => {
 }
 
 .gestion-list article:hover,
-.gestion-list article:focus-visible {
+.gestion-list article:focus-visible,
+.gestion-list tbody tr:hover td,
+.gestion-list tbody tr:focus-visible td {
   border-color: rgba(20, 184, 166, 0.46);
-  box-shadow: 0 18px 38px rgba(14, 116, 144, 0.09);
-  transform: translateY(-1px);
-}
-
-.gestion-list article:active {
-  transform: translateY(0) scale(0.995);
+  background: rgba(236, 253, 245, 0.78);
 }
 
 .gestion-list input[type='checkbox'] {
@@ -541,6 +809,11 @@ onBeforeUnmount(() => {
   max-width: 100%;
 }
 
+.gestion-mobile-main,
+.gestion-child-main {
+  min-width: 0;
+}
+
 .gestion-mobile-title,
 .gestion-mobile-description {
   overflow-wrap: anywhere;
@@ -568,6 +841,39 @@ onBeforeUnmount(() => {
   white-space: nowrap;
 }
 
+.gestion-qty-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(20, 184, 166, 0.3);
+  border-radius: 999px;
+  background: #ecfdf5;
+  color: #0f766e;
+  padding: 0.14rem 0.52rem;
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+.gestion-child-meta-badge,
+.gestion-child-inline-badge {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(20, 184, 166, 0.18);
+  border-radius: 999px;
+  background: rgba(240, 253, 250, 0.92);
+  color: #0f766e;
+  padding: 0.1rem 0.45rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.gestion-child-meta-separator {
+  margin: 0 0.3rem;
+  color: #94a3b8;
+}
+
 .gestion-list button {
   border-color: rgba(14, 116, 144, 0.28);
   background: rgba(255, 255, 255, 0.82);
@@ -587,10 +893,6 @@ onBeforeUnmount(() => {
   color: #0f766e;
 }
 
-.gestion-list button:active {
-  transform: translateY(0) scale(0.96);
-}
-
 .gestion-row-actions {
   display: inline-flex;
   align-items: center;
@@ -598,7 +900,8 @@ onBeforeUnmount(() => {
   gap: 0.45rem;
 }
 
-.gestion-icon-button {
+.gestion-icon-button,
+.gestion-expand-button {
   display: inline-grid;
   width: 2.35rem;
   height: 2.35rem;
@@ -607,9 +910,8 @@ onBeforeUnmount(() => {
   box-shadow: 0 8px 18px rgba(14, 116, 144, 0.08);
 }
 
-.gestion-icon-button:hover {
-  box-shadow: 0 12px 22px rgba(14, 116, 144, 0.13);
-  transform: translateY(-1px);
+.gestion-expand-button {
+  flex: 0 0 auto;
 }
 
 .gestion-icon-button--danger {
@@ -621,6 +923,20 @@ onBeforeUnmount(() => {
   border-color: rgba(239, 68, 68, 0.46) !important;
   background: #fef2f2 !important;
   color: #991b1b !important;
+}
+
+.gestion-child-stack {
+  display: grid;
+  gap: 0.55rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.18);
+  padding-top: 0.75rem;
+}
+
+.gestion-child-card {
+  border: 1px solid rgba(125, 211, 252, 0.24);
+  border-radius: 16px;
+  background: rgba(248, 250, 252, 0.94);
+  padding: 0.75rem;
 }
 
 .gestion-list :is(.text-emerald-400) {
@@ -656,19 +972,12 @@ onBeforeUnmount(() => {
   border-color: rgba(226, 232, 240, 0.9);
 }
 
-.gestion-list tbody tr td {
-  transition:
-    background-color 160ms ease,
-    color 160ms ease;
+.gestion-parent-row td {
+  background: rgba(255, 255, 255, 0.92);
 }
 
-.gestion-list tbody tr.gestion-list-row:hover td,
-.gestion-list tbody tr.gestion-list-row:focus-visible td {
-  background: rgba(236, 253, 245, 0.78);
-}
-
-.gestion-list tbody tr.gestion-list-row:active td {
-  background: rgba(204, 251, 241, 0.9);
+.gestion-child-row td {
+  background: rgba(248, 250, 252, 0.92);
 }
 
 .gestion-list td {
@@ -696,5 +1005,11 @@ onBeforeUnmount(() => {
     .border-slate-400\/60
   ) {
   border-color: rgba(20, 184, 166, 0.4);
+}
+
+@media (max-width: 640px) {
+  .gestion-child-card {
+    padding: 0.68rem;
+  }
 }
 </style>

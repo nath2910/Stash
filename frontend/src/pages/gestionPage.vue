@@ -111,7 +111,7 @@
 
                   <div class="inventory-toolbar-actions">
                     <GestionActionsPanel
-                      :items="snkVentes"
+                      :items="allInventoryUnits"
                       @vente-ajoutee="handleVenteAjouteeFromActions"
                     />
                     <button
@@ -180,6 +180,7 @@
                     </button>
 
                     <GestionFilterDropdown
+                      class="filter-dropdown filter-dropdown--type"
                       v-model="filters.itemType"
                       label="Type item"
                       :options="filterItemTypeOptions"
@@ -188,6 +189,7 @@
                     />
 
                     <GestionFilterDropdown
+                      class="filter-dropdown filter-dropdown--subcategory"
                       v-model="filters.category"
                       label="Sous-categorie"
                       :options="filterCategoryOptions"
@@ -210,7 +212,7 @@
                       </select>
                     </label>
 
-                    <label class="filter-field">
+                    <label class="filter-field filter-field--sort">
                       <span>Tri</span>
                       <select v-model="filters.sort" class="filter-control">
                         <option
@@ -223,7 +225,7 @@
                       </select>
                     </label>
 
-                    <section class="date-range-compact">
+                    <section class="date-range-compact date-range-compact--purchase">
                       <div class="date-range-title">
                         <CalendarDays class="h-3.5 w-3.5" />
                         <span>Achat</span>
@@ -243,7 +245,7 @@
                       </div>
                     </section>
 
-                    <section class="date-range-compact">
+                    <section class="date-range-compact date-range-compact--sale">
                       <div class="date-range-title">
                         <CalendarDays class="h-3.5 w-3.5" />
                         <span>Vente</span>
@@ -292,7 +294,7 @@
 
           <DeliveryTrackingPanel v-else-if="activeGestionTab === 'delivery'" />
           <AdminPage v-else-if="activeGestionTab === 'admin'" embedded />
-          <GestionMarketplacePanel v-else :items="snkVentes" />
+          <GestionMarketplacePanel v-else :items="allInventoryUnits" />
         </div>
       </Transition>
 
@@ -301,14 +303,14 @@
         <EditVenteModal
           v-model="showEditModal"
           :vente="venteToEdit"
-          :items="snkVentes"
+          :items="allInventoryUnits"
           @saved="handleVenteUpdated"
         />
 
         <!-- Delete modal (unique) -->
         <SupprimerModal
           v-if="showDeleteModal"
-          :snkVentes="snkVentes"
+          :snkVentes="allInventoryUnits"
           :selectedIds="selectedIds"
           :defaultMode="deleteMode"
           @close="showDeleteModal = false"
@@ -380,7 +382,16 @@ import GestionActionsPanel from '@/components/gestion/GestionBlocBoutonAddDelete
 import afficherTout from '@/components/gestion/GestionAfficherTout.vue'
 import GestionFilterDropdown from '@/components/gestion/GestionFilterDropdown.vue'
 import CompactDateInput from '@/components/ui/CompactDateInput.vue'
-import { getField, isVendue, prixRetailOf } from '@/utils/snkVente'
+import {
+  childItemsOf,
+  getField,
+  isGroupedItem,
+  isVendue,
+  itemQuantityOf,
+  prixRetailOf,
+  soldCountOf,
+  totalProfitOf,
+} from '@/utils/snkVente'
 import { normalizeSearchText, searchTokens } from '@/utils/homeDashboard'
 import { METADATA_FIELDS } from '@/RegleItem/CategorieItem'
 import {
@@ -558,19 +569,23 @@ const normalizeDateRange = (from, to) => {
   return { from: fromKey, to: toKey }
 }
 
-const dateInRange = (value, from, to) => {
+const categoryValueOf = (vente) => {
+  const raw = String(vente?.categorie ?? '').trim()
+  if (isMainCategoryAliasValue(raw)) return EMPTY_CATEGORY_VALUE
+  return raw || EMPTY_CATEGORY_VALUE
+}
+
+const dateKeyInRange = (key, from, to) => {
   if (!from && !to) return true
-  const key = toDateKey(value)
   if (!key) return false
   if (from && key < from) return false
   if (to && key > to) return false
   return true
 }
 
-const categoryValueOf = (vente) => {
-  const raw = String(vente?.categorie ?? '').trim()
-  if (isMainCategoryAliasValue(raw)) return EMPTY_CATEGORY_VALUE
-  return raw || EMPTY_CATEGORY_VALUE
+const appendDateKey = (list, value) => {
+  const key = toDateKey(value)
+  if (key) list.push(key)
 }
 
 const itemTypeOptions = computed(() => resolveItemTypeOptions(categoryLabels.value))
@@ -598,6 +613,9 @@ const isMainCategoryAliasValue = (value) => {
 }
 const discoveredSubcategories = computed(() =>
   extractSubcategoriesByType(snkVentes.value, categoryLabels.value),
+)
+const allInventoryUnits = computed(() =>
+  snkVentes.value.flatMap((vente) => (isGroupedItem(vente) ? childItemsOf(vente) : [vente])),
 )
 
 const categoryOptions = computed(() => {
@@ -641,6 +659,12 @@ const buildVenteSearchRecord = (vente) => {
   const metadataFieldLabels = new Map(
     (METADATA_FIELDS[type] || []).map((field) => [field.key, field.label]),
   )
+  const children = childItemsOf(vente)
+  const quantity = itemQuantityOf(vente)
+  const soldCount = soldCountOf(vente)
+  const grouped = isGroupedItem(vente)
+  const purchaseDateKeys = []
+  const saleDateKeys = []
   const parts = []
 
   ;[
@@ -657,6 +681,9 @@ const buildVenteSearchRecord = (vente) => {
     isVendue(vente) ? 'vendu vendue vente sold' : 'stock disponible en stock',
   ].forEach((value) => appendSearchPart(parts, value))
 
+  appendDateKey(purchaseDateKeys, getField(vente, 'dateAchat'))
+  appendDateKey(saleDateKeys, getField(vente, 'dateVente'))
+
   SEARCH_EXTRA_FIELDS.forEach((field) => appendSearchPart(parts, getField(vente, field)))
 
   Object.entries(metadata).forEach(([key, value]) => {
@@ -665,9 +692,37 @@ const buildVenteSearchRecord = (vente) => {
     appendSearchPart(parts, value)
   })
 
+  children.forEach((child) => {
+    ;[
+      child?.nomItem,
+      child?.description,
+      child?.categorie,
+      getField(child, 'prixRetail'),
+      getField(child, 'prixResell'),
+      getField(child, 'dateAchat'),
+      getField(child, 'dateVente'),
+      child?.unitIndex,
+    ].forEach((value) => appendSearchPart(parts, value))
+
+    appendDateKey(purchaseDateKeys, getField(child, 'dateAchat'))
+    appendDateKey(saleDateKeys, getField(child, 'dateVente'))
+
+    const childMetadata = child?.metadata && typeof child.metadata === 'object' ? child.metadata : {}
+    Object.entries(childMetadata).forEach(([key, value]) => {
+      appendSearchPart(parts, key)
+      appendSearchPart(parts, value)
+    })
+  })
+
   const text = normalizeText(parts.join(' '))
   return {
     vente,
+    type,
+    normalizedCategory: normalizeText(categoryValueOf(vente)),
+    hasStock: grouped ? soldCount < quantity : !isVendue(vente),
+    fullySold: grouped ? quantity > 0 && soldCount >= quantity : isVendue(vente),
+    purchaseDateKeys,
+    saleDateKeys,
     text,
     compact: text.replace(/\s+/g, ''),
     words: Array.from(new Set(text.split(/\s+/).filter(Boolean))).slice(0, MAX_SEARCH_WORDS),
@@ -824,60 +879,91 @@ const sanitizeFilters = (rawFilters) => {
   }
 }
 
-const venteMatchesFilters = (vente, activeFilters) => {
-  const venteType = normalizeItemType(vente?.type || 'SNEAKER')
-  if (activeFilters.itemType !== 'all' && venteType !== activeFilters.itemType) return false
+const recordMatchesFilters = (record, activeFilters) => {
+  if (activeFilters.itemType !== 'all' && record.type !== activeFilters.itemType) return false
   if (
     activeFilters.category !== 'all' &&
-    normalizeText(categoryValueOf(vente)) !== normalizeText(activeFilters.category)
-  )
+    record.normalizedCategory !== normalizeText(activeFilters.category)
+  ) {
     return false
-  if (activeFilters.status === 'stock' && isVendue(vente)) return false
-  if (activeFilters.status === 'sold' && !isVendue(vente)) return false
+  }
+  if (activeFilters.status === 'stock' && !record.hasStock) return false
+  if (activeFilters.status === 'sold' && !record.fullySold) return false
   if (
-    !dateInRange(
-      vente.dateAchat ?? vente.date_achat,
-      activeFilters.purchaseFrom,
-      activeFilters.purchaseTo,
+    (activeFilters.purchaseFrom || activeFilters.purchaseTo) &&
+    !record.purchaseDateKeys.some((key) =>
+      dateKeyInRange(key, activeFilters.purchaseFrom, activeFilters.purchaseTo),
     )
-  )
+  ) {
     return false
+  }
   if (
-    !dateInRange(vente.dateVente ?? vente.date_vente, activeFilters.saleFrom, activeFilters.saleTo)
-  )
+    (activeFilters.saleFrom || activeFilters.saleTo) &&
+    !record.saleDateKeys.some((key) =>
+      dateKeyInRange(key, activeFilters.saleFrom, activeFilters.saleTo),
+    )
+  ) {
     return false
+  }
   return true
 }
 
-const sortVentes = (list, sort) => {
-  if (sort !== 'az' && sort !== 'za') return list
-  const direction = sort === 'az' ? 1 : -1
-  return [...list].sort((a, b) => {
-    const aName = String(a.nomItem ?? a.nom_item ?? '')
-    const bName = String(b.nomItem ?? b.nom_item ?? '')
-    return aName.localeCompare(bName, 'fr', { sensitivity: 'base', numeric: true }) * direction
-  })
+const compareNames = (a, b) => {
+  const aName = String(a.nomItem ?? a.nom_item ?? '')
+  const bName = String(b.nomItem ?? b.nom_item ?? '')
+  return aName.localeCompare(bName, 'fr', { sensitivity: 'base', numeric: true })
+}
+
+const compareDatesDesc = (a, b, field) => {
+  const aDate = toDateKey(a?.[field] ?? a?.[field === 'dateAchat' ? 'date_achat' : 'date_vente'])
+  const bDate = toDateKey(b?.[field] ?? b?.[field === 'dateAchat' ? 'date_achat' : 'date_vente'])
+
+  if (aDate && bDate && aDate !== bDate) return bDate.localeCompare(aDate)
+  if (aDate && !bDate) return -1
+  if (!aDate && bDate) return 1
+  return compareNames(a, b)
+}
+
+const sortVentes = (list, activeFilters) => {
+  if (activeFilters.sort === 'az' || activeFilters.sort === 'za') {
+    const direction = activeFilters.sort === 'az' ? 1 : -1
+    return [...list].sort((a, b) => compareNames(a, b) * direction)
+  }
+
+  if (activeFilters.saleFrom || activeFilters.saleTo) {
+    return [...list].sort((a, b) => compareDatesDesc(a, b, 'dateVente'))
+  }
+
+  if (activeFilters.purchaseFrom || activeFilters.purchaseTo) {
+    return [...list].sort((a, b) => compareDatesDesc(a, b, 'dateAchat'))
+  }
+
+  return list
 }
 
 const buildFilteredVentes = () => {
   const activeFilters = sanitizeFilters(filters.value)
   const search = searchDescriptor.value
-  let records = indexedVentes.value
+  const matches = []
 
-  if (search.query) {
-    records = records
-      .map((record) => ({ ...record, searchScore: searchScoreForRecord(record, search) }))
-      .filter((record) => record.searchScore > 0)
+  for (const record of indexedVentes.value) {
+    let searchScore = 0
+    if (search.query) {
+      searchScore = searchScoreForRecord(record, search)
+      if (searchScore <= 0) continue
+    }
+
+    if (!recordMatchesFilters(record, activeFilters)) continue
+    matches.push({ vente: record.vente, searchScore })
   }
-
-  records = records.filter((record) => venteMatchesFilters(record.vente, activeFilters))
 
   if (search.query && activeFilters.sort === 'none') {
-    records = [...records].sort((a, b) => (b.searchScore || 0) - (a.searchScore || 0))
+    matches.sort((a, b) => b.searchScore - a.searchScore)
+    return matches.map((record) => record.vente)
   }
 
-  const list = records.map((record) => record.vente)
-  return sortVentes(list, activeFilters.sort)
+  const list = matches.map((record) => record.vente)
+  return sortVentes(list, activeFilters)
 }
 
 const hasActiveFilters = computed(() => {
@@ -914,7 +1000,7 @@ const chargerVentes = async () => {
   }
 
   try {
-    const { data } = await SnkVenteServices.getSnkVente()
+    const { data } = await SnkVenteServices.getGroupedSnkVente()
     snkVentes.value = Array.isArray(data) ? data : []
     tryOpenPendingItem()
   } catch (e) {
@@ -1004,6 +1090,16 @@ const inventorySummary = computed(() => {
   let stockCount = 0
   let stockValue = 0
   for (const v of snkVentes.value) {
+    if (isGroupedItem(v)) {
+      const unsoldChildren = childItemsOf(v).filter((child) => !isVendue(child))
+      stockCount += unsoldChildren.length
+      unsoldChildren.forEach((child) => {
+        const prix = prixRetailOf(child)
+        if (!Number.isNaN(prix)) stockValue += prix
+      })
+      continue
+    }
+
     if (!isVendue(v)) {
       stockCount += 1
       const prix = prixRetailOf(v)
@@ -1011,7 +1107,7 @@ const inventorySummary = computed(() => {
     }
   }
   return {
-    totalPaires: snkVentes.value.length,
+    totalPaires: snkVentes.value.reduce((sum, vente) => sum + itemQuantityOf(vente), 0),
     nbEnStock: stockCount,
     valeurStock: stockValue,
   }
@@ -1105,13 +1201,16 @@ const handleVenteAjouteeFromActions = async () => {
 
 // Edition
 const openEditModal = (vente) => {
-  venteToEdit.value = { ...vente }
+  try {
+    venteToEdit.value = structuredClone(vente)
+  } catch {
+    venteToEdit.value = JSON.parse(JSON.stringify(vente))
+  }
   showEditModal.value = true
 }
 
-const handleVenteUpdated = (updated) => {
-  const index = snkVentes.value.findIndex((v) => v.id === updated.id)
-  if (index !== -1) snkVentes.value[index] = updated
+const handleVenteUpdated = async () => {
+  await reloadVentes()
 }
 
 const openDeleteFromActions = () => {
@@ -1143,13 +1242,36 @@ const removePendingDeleteToast = (toastId) => {
   pendingDeleteToasts.value = pendingDeleteToasts.value.filter((toast) => toast.id !== toastId)
 }
 
-const restoreDeletedSnapshots = (snapshots) => {
-  const next = [...snkVentes.value]
-  for (const snapshot of [...snapshots].sort((a, b) => a.index - b.index)) {
-    if (!snapshot.vente || next.some((vente) => vente.id === snapshot.vente.id)) continue
-    next.splice(Math.min(snapshot.index, next.length), 0, snapshot.vente)
-  }
-  snkVentes.value = next
+const restoreDeletedSnapshots = (snapshot) => {
+  snkVentes.value = Array.isArray(snapshot?.rows) ? snapshot.rows : []
+  selectedIds.value = Array.isArray(snapshot?.selectedIds) ? snapshot.selectedIds : []
+}
+
+const removeIdsFromGroupedRows = (rows, idsToRemove) => {
+  return rows
+    .map((row) => {
+      if (idsToRemove.has(row.id)) return null
+      if (!isGroupedItem(row)) return row
+
+      const nextChildren = childItemsOf(row).filter((child) => !idsToRemove.has(child.id))
+      if (!nextChildren.length) return null
+
+      return {
+        ...row,
+        quantity: nextChildren.length,
+        soldCount: nextChildren.filter((child) => isVendue(child)).length,
+        totalRetail: nextChildren.reduce((sum, child) => sum + prixRetailOf(child), 0),
+        totalResell: nextChildren.reduce((sum, child) => sum + Number(getField(child, 'prixResell', 0) || 0), 0),
+        totalProfit: nextChildren.reduce((sum, child) => sum + totalProfitOf(child), 0),
+        dateVente: nextChildren
+          .map((child) => child?.dateVente || child?.date_vente || '')
+          .filter(Boolean)
+          .sort()
+          .at(-1) || null,
+        children: nextChildren,
+      }
+    })
+    .filter(Boolean)
 }
 
 const commitPendingDelete = async (toastId) => {
@@ -1199,23 +1321,31 @@ const requestDeleteItems = (ids = []) => {
 
   showDeleteModal.value = false
 
-  const idSet = new Set(uniqueIds)
-  const snapshots = []
-  snkVentes.value.forEach((vente, index) => {
-    if (idSet.has(vente.id)) snapshots.push({ vente, index })
-  })
+  const snapshot = {
+    rows: structuredClone(snkVentes.value),
+    selectedIds: [...selectedIds.value],
+  }
 
-  if (!snapshots.length) return
-
-  const deletedIds = snapshots.map((snapshot) => snapshot.vente.id)
+  const deletedIds = uniqueIds.filter((id) =>
+    snkVentes.value.some(
+      (vente) => vente.id === id || childItemsOf(vente).some((child) => child.id === id),
+    ),
+  )
+  if (!deletedIds.length) return
   const deletedSet = new Set(deletedIds)
-  snkVentes.value = snkVentes.value.filter((vente) => !deletedSet.has(vente.id))
+  snkVentes.value = removeIdsFromGroupedRows(snkVentes.value, deletedSet)
   selectedIds.value = selectedIds.value.filter((id) => !deletedSet.has(id))
 
   pendingDeleteSequence += 1
   const toastId = `gestion-delete-${Date.now()}-${pendingDeleteSequence}`
-  const count = snapshots.length
-  const title = count === 1 ? `${itemName(snapshots[0].vente)} retire` : `${count} items retires`
+  const count = deletedIds.length
+  const removedName = count === 1
+    ? itemName(
+        allInventoryUnits.value.find((item) => Number(item.id) === Number(deletedIds[0])) ||
+          snkVentes.value.find((item) => Number(item.id) === Number(deletedIds[0])),
+      )
+    : ''
+  const title = count === 1 ? `${removedName} retire` : `${count} items retires`
   const message =
     count === 1
       ? 'Suppression definitive dans quelques secondes.'
@@ -1225,7 +1355,7 @@ const requestDeleteItems = (ids = []) => {
     {
       id: toastId,
       ids: deletedIds,
-      snapshots,
+      snapshots: snapshot,
       state: 'pending',
       title,
       message,
@@ -1320,7 +1450,9 @@ const tryOpenPendingItem = () => {
     return
   }
 
-  const targetItem = snkVentes.value.find((v) => Number(v.id) === targetId)
+  const targetItem =
+    allInventoryUnits.value.find((v) => Number(v.id) === targetId) ||
+    snkVentes.value.find((v) => Number(v.id) === targetId)
   if (!targetItem) return
 
   searchTerm.value = ''
@@ -3210,22 +3342,22 @@ onBeforeUnmount(() => {
 
 .inventory-sticky-tools {
   border: 1px solid rgba(148, 163, 184, 0.18);
-  border-radius: 18px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.075);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
 }
 
 .inventory-sticky-tools.is-condensed {
-  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.1);
 }
 
 .inventory-toolbar {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 0.9rem;
+  gap: 0.75rem;
   border-bottom: 1px solid rgba(148, 163, 184, 0.14);
-  padding: 0.86rem clamp(0.95rem, 1.8vw, 1.25rem) 0.72rem;
+  padding: 0.72rem clamp(0.9rem, 1.6vw, 1.15rem) 0.58rem;
 }
 
 .inventory-toolbar-copy {
@@ -3234,7 +3366,7 @@ onBeforeUnmount(() => {
 
 .inventory-toolbar-copy h2 {
   color: #0f172a;
-  font-size: 1.05rem;
+  font-size: 0.98rem;
   font-weight: 950;
   line-height: 1.1;
 }
@@ -3242,7 +3374,7 @@ onBeforeUnmount(() => {
 .inventory-toolbar-copy p {
   margin-top: 0.22rem;
   color: #64748b;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 800;
   line-height: 1.25;
 }
@@ -3255,7 +3387,7 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: flex-end;
   flex-wrap: wrap;
-  gap: 0.55rem;
+  gap: 0.48rem;
 }
 
 .inventory-toolbar-actions > * {
@@ -3266,8 +3398,8 @@ onBeforeUnmount(() => {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
-  gap: 0.6rem;
-  padding: 0.68rem clamp(0.95rem, 1.8vw, 1.25rem);
+  gap: 0.5rem;
+  padding: 0.56rem clamp(0.9rem, 1.6vw, 1.15rem);
 }
 
 .inventory-control-row > * {
@@ -3275,8 +3407,8 @@ onBeforeUnmount(() => {
 }
 
 .inventory-control-row :deep(.gestion-search-field) {
-  min-height: 46px;
-  border-radius: 14px;
+  min-height: 42px;
+  border-radius: 12px;
   border-color: rgba(148, 163, 184, 0.26);
   box-shadow: none;
 }
@@ -3288,27 +3420,27 @@ onBeforeUnmount(() => {
 }
 
 .inventory-control-row :deep(.gestion-search-icon) {
-  width: 1.08rem;
-  height: 1.08rem;
+  width: 0.96rem;
+  height: 0.96rem;
 }
 
 .inventory-control-row :deep(.gestion-search-input) {
-  font-size: 0.94rem;
+  font-size: 0.88rem;
 }
 
 .inventory-control-row .filter-panel-toggle {
   width: auto;
-  min-width: 7rem;
-  height: 46px;
-  border-radius: 14px;
-  padding-inline: 0.9rem;
+  min-width: 6.5rem;
+  height: 42px;
+  border-radius: 12px;
+  padding-inline: 0.82rem;
 }
 
 .filter-reset-button--inline {
-  width: 46px;
-  min-width: 46px;
-  height: 46px;
-  border-radius: 14px;
+  width: 42px;
+  min-width: 42px;
+  height: 42px;
+  border-radius: 12px;
 }
 
 .inventory-filter-shell:not(.is-open) {
@@ -3320,7 +3452,7 @@ onBeforeUnmount(() => {
   border-top: 1px solid rgba(148, 163, 184, 0.14);
   border-bottom: 0;
   background: rgba(248, 250, 252, 0.76);
-  padding: 0.68rem clamp(0.95rem, 1.8vw, 1.25rem) 0.78rem;
+  padding: 0.56rem clamp(0.9rem, 1.6vw, 1.15rem) 0.68rem;
 }
 
 .inventory-filter-shell.is-open .filter-compact-grid.is-open {
@@ -3330,25 +3462,27 @@ onBeforeUnmount(() => {
 .inventory-danger-button {
   width: auto;
   max-width: 100%;
-  min-height: 44px;
-  border-radius: 14px;
-  padding-inline: 1rem;
-  font-size: 0.82rem;
+  min-height: 40px;
+  border-radius: 12px;
+  padding-inline: 0.92rem;
+  font-size: 0.78rem;
   line-height: 1.15;
   text-align: center;
   white-space: normal;
 }
 
 .inventory-toolbar-actions :deep(button) {
-  min-height: 44px;
-  border-radius: 14px;
+  min-height: 40px;
+  border-radius: 12px;
+  padding-inline: 0.92rem;
+  font-size: 0.78rem;
 }
 
 .inventory-list-body {
   width: 100%;
   min-width: 0;
   max-width: 100%;
-  padding: 0.28rem clamp(0.95rem, 1.8vw, 1.25rem) 0.95rem;
+  padding: 0.22rem clamp(0.9rem, 1.6vw, 1.15rem) 0.82rem;
   overflow-x: hidden;
 }
 
@@ -3565,6 +3699,135 @@ onBeforeUnmount(() => {
   .inventory-danger-button,
   .inventory-toolbar-actions :deep(button) {
     min-height: 48px;
+  }
+}
+
+.inventory-filter-shell.is-open {
+  gap: 0.66rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 0 0 18px 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.9)),
+    rgba(248, 250, 252, 0.82);
+  padding: 0.72rem clamp(0.9rem, 1.6vw, 1.15rem) 0.82rem;
+}
+
+.inventory-filter-shell.is-open .filter-compact-grid.is-open {
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0.52rem;
+  align-items: start;
+}
+
+.filter-dropdown,
+.filter-field,
+.date-range-compact,
+.filter-reset-button--panel {
+  min-height: 44px;
+  border-radius: 14px;
+}
+
+.filter-dropdown--subcategory,
+.date-range-compact--purchase,
+.date-range-compact--sale {
+  grid-column: span 2;
+}
+
+.filter-dropdown :deep(.filter-choice) {
+  min-height: 44px;
+  border-color: rgba(148, 163, 184, 0.3);
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.filter-dropdown :deep(.filter-choice__label) {
+  font-size: 0.54rem;
+  letter-spacing: 0.07em;
+}
+
+.filter-dropdown :deep(.filter-choice__value) {
+  font-size: 0.8rem;
+}
+
+.filter-field {
+  gap: 0.18rem;
+  padding: 0.42rem 0.64rem;
+  border-color: rgba(148, 163, 184, 0.3);
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.filter-field > span,
+.date-range-title {
+  color: #0f766e;
+  font-size: 0.54rem;
+  font-weight: 900;
+  letter-spacing: 0.07em;
+}
+
+.filter-control {
+  height: 22px;
+  color: #0f172a;
+  font-size: 0.8rem;
+  font-weight: 800;
+  padding-right: 1.7rem;
+}
+
+.date-range-compact {
+  gap: 0.42rem;
+  padding: 0.52rem 0.65rem;
+  border-color: rgba(148, 163, 184, 0.3);
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.date-range-inputs {
+  gap: 0.38rem;
+}
+
+.date-range-inputs :deep(.cd-input) {
+  min-height: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: rgba(248, 250, 252, 0.98);
+  color: #0f172a;
+  font-size: 0.78rem;
+  font-weight: 760;
+  padding-inline: 0.42rem;
+}
+
+.date-range-separator {
+  color: #64748b;
+  font-weight: 900;
+}
+
+.filter-reset-button--panel {
+  min-width: 98px;
+  justify-content: center;
+  align-self: stretch;
+}
+
+@media (max-width: 1180px) {
+  .filter-dropdown--subcategory,
+  .date-range-compact--purchase,
+  .date-range-compact--sale {
+    grid-column: span 1;
+  }
+}
+
+@media (max-width: 760px) {
+  .inventory-filter-shell.is-open .filter-compact-grid.is-open {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-dropdown--subcategory,
+  .date-range-compact--purchase,
+  .date-range-compact--sale {
+    grid-column: auto;
+  }
+
+  .date-range-inputs {
+    grid-template-columns: 1fr;
+  }
+
+  .date-range-separator {
+    display: none;
   }
 }
 

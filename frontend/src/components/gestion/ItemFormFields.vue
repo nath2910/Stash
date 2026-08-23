@@ -106,6 +106,24 @@
         </div>
       </div>
 
+      <div
+        v-if="quantityEnabled && Number(form.quantity) > 1 && (!showDetails || isQuickSurface)"
+        class="item-field item-field--grouping"
+      >
+        <span>Regroupement</span>
+        <label class="grouping-toggle">
+          <input v-model="form.grouped" type="checkbox" role="switch" class="grouping-checkbox" />
+          <span class="grouping-switch" aria-hidden="true">
+            <span class="grouping-switch__thumb"></span>
+          </span>
+          <div class="grouping-toggle__copy">
+            <strong>Reunir sur une seule ligne</strong>
+            <small>Creer un parent avec {{ form.quantity }} sous-items modifiables.</small>
+          </div>
+          <span class="grouping-toggle__badge">{{ groupingBadgeLabel }}</span>
+        </label>
+      </div>
+
       <template v-if="showInlineDetails">
         <div class="item-field item-field--date">
           <span>Date de vente</span>
@@ -203,6 +221,24 @@
         </div>
       </div>
 
+      <div
+        v-if="quantityEnabled && Number(form.quantity) > 1 && showInlineDetails"
+        class="item-field item-field--grouping"
+      >
+        <span>Regroupement</span>
+        <label class="grouping-toggle">
+          <input v-model="form.grouped" type="checkbox" role="switch" class="grouping-checkbox" />
+          <span class="grouping-switch" aria-hidden="true">
+            <span class="grouping-switch__thumb"></span>
+          </span>
+          <div class="grouping-toggle__copy">
+            <strong>Reunir sur une seule ligne</strong>
+            <small>Creer un parent avec {{ form.quantity }} sous-items modifiables.</small>
+          </div>
+          <span class="grouping-toggle__badge">{{ groupingBadgeLabel }}</span>
+        </label>
+      </div>
+
       <slot name="after-fields" :form="form" :show-details="showDetails"></slot>
 
       <footer class="item-form-actions">
@@ -292,6 +328,10 @@ const isQuickSurface = computed(() => props.surface === 'quick')
 const showInlineDetails = computed(() => showDetails.value)
 const mainCategoryAliases = computed(() => buildItemCategoryAliases(categoryLabels.value))
 const metadataFields = computed(() => METADATA_FIELDS[form.value.type] || [])
+const groupingBadgeLabel = computed(() => {
+  const quantity = Number(form.value.quantity || 1)
+  return quantity > 1 ? `${quantity} lignes` : '1 ligne'
+})
 const marketReferenceFields = computed(() =>
   metadataFields.value.filter((field) => field.key === 'marketUrl'),
 )
@@ -412,6 +452,7 @@ function emptyForm(prefill = {}) {
     categorie: '',
     type,
     quantity: 1,
+    grouped: false,
     metadata: defaultMetadata(type),
     ...prefill,
     type,
@@ -715,6 +756,9 @@ function clampQuantity(value) {
 
 function setQuantity(value) {
   form.value.quantity = clampQuantity(value)
+  if (form.value.quantity <= 1) {
+    form.value.grouped = false
+  }
 }
 
 function decreaseQuantity() {
@@ -768,6 +812,7 @@ function buildPayload() {
     categorie: form.value.categorie.trim() || null,
     type: itemType,
     metadata: cleanedMetadata(),
+    grouped: props.quantityEnabled && Number(form.value.quantity) > 1 ? Boolean(form.value.grouped) : false,
   }
 }
 
@@ -861,8 +906,13 @@ defineExpose({
 .item-field--subcategory,
 .item-field--date,
 .item-field--quantity,
-.item-field--price {
+.item-field--price,
+.item-field--grouping {
   grid-column: span 3;
+}
+
+.item-field--grouping {
+  grid-column: span 6;
 }
 
 .item-field--market-section {
@@ -926,6 +976,137 @@ defineExpose({
 .item-field textarea {
   min-height: 68px;
   resize: vertical;
+}
+
+.grouping-toggle {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.95rem;
+  min-height: 72px;
+  width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 250, 252, 0.96));
+  padding: 1rem 1.05rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.96),
+    0 10px 24px rgba(15, 23, 42, 0.04);
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease,
+    box-shadow 140ms ease,
+    transform 140ms ease;
+}
+
+.grouping-toggle:hover {
+  border-color: rgba(15, 118, 110, 0.28);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.98),
+    0 14px 28px rgba(15, 23, 42, 0.06);
+  transform: translateY(-1px);
+}
+
+.grouping-toggle__copy {
+  min-width: 0;
+}
+
+.grouping-checkbox {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 1px !important;
+  min-width: 1px !important;
+  height: 1px !important;
+  min-height: 1px !important;
+  margin: 0;
+}
+
+.grouping-switch {
+  position: relative;
+  width: 3.5rem;
+  height: 2.05rem;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: #cbd5e1;
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.4),
+    0 8px 18px rgba(15, 23, 42, 0.08);
+  transition:
+    background 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.grouping-switch__thumb {
+  position: absolute;
+  top: 0.2rem;
+  left: 0.22rem;
+  width: 1.62rem;
+  height: 1.62rem;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  box-shadow:
+    0 4px 10px rgba(15, 23, 42, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.92);
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.grouping-checkbox:checked + .grouping-switch {
+  background: linear-gradient(135deg, #0e7490, #14b8a6);
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.28),
+    0 10px 22px rgba(15, 118, 110, 0.24);
+}
+
+.grouping-checkbox:checked + .grouping-switch .grouping-switch__thumb {
+  transform: translateX(1.44rem);
+}
+
+.grouping-toggle:hover .grouping-switch {
+  transform: translateY(-1px);
+}
+
+.grouping-checkbox:focus-visible + .grouping-switch {
+  box-shadow:
+    0 0 0 3px rgba(20, 184, 166, 0.18),
+    inset 0 1px 2px rgba(255, 255, 255, 0.4),
+    0 8px 18px rgba(15, 23, 42, 0.08);
+}
+
+.grouping-toggle strong {
+  display: block;
+  color: #0f172a;
+  font-size: 0.96rem;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.grouping-toggle small {
+  display: block;
+  margin-top: 0.18rem;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.grouping-toggle__badge {
+  display: inline-flex;
+  min-width: 2.5rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(15, 118, 110, 0.14);
+  border-radius: 999px;
+  background: rgba(240, 253, 250, 0.92);
+  color: #0f766e;
+  padding: 0 0.75rem;
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
 }
 
 .item-field input[type='number'] {
@@ -1108,6 +1289,7 @@ defineExpose({
     grid-column: span 1;
   }
 
+  .item-field--grouping,
   .item-field--name,
   .item-field--notes,
   .item-field--section,
@@ -1136,6 +1318,7 @@ defineExpose({
   .item-field--price,
   .item-field--date,
   .item-field--quantity,
+  .item-field--grouping,
   .item-field--notes,
   .item-field--section,
   .item-form-actions {
@@ -1149,6 +1332,17 @@ defineExpose({
   .item-secondary-button,
   .item-primary-button {
     width: 100%;
+  }
+
+  .grouping-toggle {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .grouping-toggle__badge {
+    grid-column: 2;
+    justify-self: start;
+    margin-top: 0.2rem;
   }
 
 }

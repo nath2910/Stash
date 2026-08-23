@@ -4,6 +4,7 @@ import api from './api.js'
 const DEFAULT_CACHE_TTL_MS = 20_000
 const inFlightRequests = new Map()
 const responseCache = new Map()
+let cacheGeneration = 0
 
 function asStableString(value) {
   if (value == null) return ''
@@ -51,6 +52,7 @@ function cachedGet(path, params, opts = {}) {
   }
 
   const key = buildCacheKey(path, params)
+  const requestGeneration = cacheGeneration
   const now = Date.now()
   const cached = responseCache.get(key)
   if (cached && cached.expiresAt > now) {
@@ -63,6 +65,7 @@ function cachedGet(path, params, opts = {}) {
   const req = api
     .get(path, { params })
     .then((response) => {
+      if (requestGeneration !== cacheGeneration) return response
       responseCache.set(key, {
         response,
         expiresAt: Date.now() + ttlMs,
@@ -75,6 +78,12 @@ function cachedGet(path, params, opts = {}) {
 
   inFlightRequests.set(key, req)
   return req
+}
+
+function invalidateStatsCache() {
+  cacheGeneration += 1
+  responseCache.clear()
+  inFlightRequests.clear()
 }
 
 /**
@@ -227,4 +236,7 @@ export default {
   categories,
   getLayout,
   saveLayout,
+  invalidateCache: invalidateStatsCache,
 }
+
+export { invalidateStatsCache }

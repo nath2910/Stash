@@ -13,19 +13,22 @@
       </div>
     </Transition>
 
-    <StatsCanvas v-model:from="from" v-model:to="to" />
+    <StatsCanvas :key="statsCanvasKey" v-model:from="from" v-model:to="to" />
   </div>
 </template>
 
 <script setup lang="ts">
+import { INVENTORY_CHANGED_EVENT } from '@/utils/inventoryEvents'
 import { useStatsRange } from '@/composables/useStatsRange'
 import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 const StatsCanvas = defineAsyncComponent(() => import('@/components/stats/StatsCanvas.vue'))
 const { from, to } = useStatsRange()
 const rangeRefreshing = ref(false)
+const statsCanvasKey = ref(0)
 const templateModeActive = ref(false)
 let rangeRefreshTimer: number | null = null
+let inventoryRefreshTimer: number | null = null
 
 const rangeLabel = computed(() => {
   if (!from.value || !to.value) return 'Chargement de la nouvelle periode...'
@@ -47,12 +50,25 @@ watch(
 
 onBeforeUnmount(() => {
   if (rangeRefreshTimer) window.clearTimeout(rangeRefreshTimer)
+  if (inventoryRefreshTimer) window.clearTimeout(inventoryRefreshTimer)
+  window.removeEventListener(INVENTORY_CHANGED_EVENT, onInventoryChanged)
   window.removeEventListener('snk:stats-template-mode', onTemplateModeChange)
 })
 
 onMounted(() => {
+  window.addEventListener(INVENTORY_CHANGED_EVENT, onInventoryChanged)
   window.addEventListener('snk:stats-template-mode', onTemplateModeChange)
 })
+
+function onInventoryChanged() {
+  rangeRefreshing.value = true
+  if (inventoryRefreshTimer) window.clearTimeout(inventoryRefreshTimer)
+  inventoryRefreshTimer = window.setTimeout(() => {
+    statsCanvasKey.value += 1
+    rangeRefreshing.value = false
+    inventoryRefreshTimer = null
+  }, 120)
+}
 
 function onTemplateModeChange(event: Event) {
   templateModeActive.value = Boolean((event as CustomEvent)?.detail?.active)

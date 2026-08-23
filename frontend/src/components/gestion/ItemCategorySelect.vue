@@ -546,6 +546,9 @@ onBeforeUnmount(() => {
   min-width: 0;
   flex: 1;
   overflow: hidden;
+  color: #0f172a;
+  font-size: 0.96rem;
+  font-weight: 800;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -563,23 +566,24 @@ onBeforeUnmount(() => {
 .category-dropdown-menu {
   position: absolute;
   left: 0;
-  right: 0;
+  right: auto;
   top: calc(100% + 0.45rem);
   z-index: 220;
   display: grid;
-  width: 100%;
-  max-width: min(34rem, calc(100vw - 2rem));
+  width: max(100%, min(28rem, calc(100vw - 2rem)));
+  min-width: min(28rem, calc(100vw - 2rem));
+  max-width: min(32rem, calc(100vw - 2rem));
   box-sizing: border-box;
   max-height: min(430px, calc(100dvh - 11rem));
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.45rem;
+  grid-template-columns: 1fr;
+  gap: 0.55rem;
   align-content: start;
   overflow-y: auto;
   overscroll-behavior: contain;
   border: 1px solid rgba(203, 213, 225, 0.9);
-  border-radius: 1rem;
+  border-radius: 1.05rem;
   background: rgba(255, 255, 255, 0.99);
-  padding: 0.55rem;
+  padding: 0.7rem;
   box-shadow: 0 24px 70px rgba(15, 23, 42, 0.18);
   scrollbar-width: thin;
   scrollbar-color: rgba(15, 118, 110, 0.42) rgba(241, 245, 249, 0.9);
@@ -602,13 +606,13 @@ onBeforeUnmount(() => {
 .category-dropdown-option {
   display: flex;
   min-width: 0;
-  min-height: 2.8rem;
+  min-height: 3.25rem;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.75rem;
   border: 1px solid rgba(203, 213, 225, 0.76);
   border-radius: 0.85rem;
   background: #ffffff;
-  padding: 0.5rem 0.6rem;
+  padding: 0.7rem 0.8rem;
   text-align: left;
   transition:
     border-color 140ms ease,
@@ -628,16 +632,25 @@ onBeforeUnmount(() => {
 
 .category-dropdown-option .category-choice__label {
   color: #0f172a;
-  font-size: 0.84rem;
+  font-size: 0.95rem;
+  line-height: 1.2;
+  white-space: normal;
+  text-overflow: clip;
 }
 
 .category-dropdown-option .category-choice__base {
   color: #64748b;
+  white-space: normal;
+  text-overflow: clip;
 }
 
 .category-dropdown-option .category-choice__icon {
-  height: 1.85rem;
-  width: 1.85rem;
+  height: 2rem;
+  width: 2rem;
+}
+
+.category-dropdown-option .category-choice__text {
+  gap: 0.18rem;
 }
 
 .category-dropdown-check {
@@ -1009,6 +1022,8 @@ onBeforeUnmount(() => {
 
   .category-dropdown-menu {
     width: 100%;
+    min-width: 100%;
+    max-width: 100%;
     grid-template-columns: 1fr;
   }
 

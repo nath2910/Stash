@@ -100,17 +100,6 @@ function formatDiscordLine(listing) {
   return `- ${listing.name}${details.length ? ` | ${details.join(' | ')}` : ''}`
 }
 
-function summarizeListings(listings = []) {
-  return listings.reduce(
-    (totals, listing) => {
-      totals.revenue += listing.price ?? 0
-      totals.profit += listing.estimatedProfit ?? 0
-      return totals
-    },
-    { revenue: 0, profit: 0 },
-  )
-}
-
 export function estimateDiscordProfitPercent(items = []) {
   const rows = (Array.isArray(items) ? items : [])
     .filter((item) => !isVendue(item))

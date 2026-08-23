@@ -362,17 +362,17 @@ async function handleQuickAdd({ payload, quantity }) {
   quickAddSaving.value = true
   try {
     const safeQuantity = Math.min(50, Math.max(1, Math.trunc(Number(quantity || 1))))
-    const { data } = await SnkVenteServices.createMany(payload, safeQuantity)
-    const created = Array.isArray(data) ? data : data ? [data] : []
-    if (created.length > 0) {
-      stockItems.value = [...created, ...stockItems.value]
-      stockLoaded.value = true
-    } else {
-      await chargerVentes()
-    }
+    await SnkVenteServices.createMany(payload, safeQuantity)
+    await chargerVentes()
     notifyStockChanged()
     quickAddSuccessKey.value += 1
-    showQuickAddToast(safeQuantity > 1 ? `${safeQuantity} items ajoutes` : 'Item ajoute')
+    showQuickAddToast(
+      safeQuantity > 1 && payload?.grouped
+        ? `Groupe cree (${safeQuantity} unites)`
+        : safeQuantity > 1
+          ? `${safeQuantity} items ajoutes`
+          : 'Item ajoute',
+    )
   } catch (error) {
     showQuickAddToast(resolveQuickAddError(error), 'error')
   } finally {

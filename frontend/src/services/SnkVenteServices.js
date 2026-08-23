@@ -1,9 +1,12 @@
 // src/services/SnkVenteServices.js
 import api from './api'
+import { invalidateStatsCache } from './StatsServices.js'
+import { notifyInventoryChanged } from '@/utils/inventoryEvents.js'
 
 const LIST_CACHE_TTL_MS = 60_000
 const listCache = new Map()
 const listInflight = new Map()
+let listCacheGeneration = 0
 
 function normalizeOptions(options = {}) {
   if (typeof options === 'number') return { limit: options }
@@ -23,8 +26,15 @@ function cacheKeyFor(options = {}) {
 }
 
 function invalidateListCache() {
+  listCacheGeneration += 1
   listCache.clear()
   listInflight.clear()
+}
+
+function syncAfterInventoryMutation(detail = {}) {
+  invalidateListCache()
+  invalidateStatsCache()
+  notifyInventoryChanged(detail)
 }
 
 class SnkVenteServices {
@@ -36,6 +46,7 @@ class SnkVenteServices {
     delete params.noCache
 
     const key = cacheKeyFor(params)
+    const requestGeneration = listCacheGeneration
     const now = Date.now()
     const cached = listCache.get(key)
     if (!bypassCache && cached && cached.expiresAt > now) {
@@ -48,6 +59,7 @@ class SnkVenteServices {
     const request = api
       .get('/snkVente', { params })
       .then((response) => {
+        if (requestGeneration !== listCacheGeneration) return response
         listCache.set(key, {
           response,
           expiresAt: Date.now() + LIST_CACHE_TTL_MS,
@@ -60,6 +72,11 @@ class SnkVenteServices {
 
     if (!bypassCache) listInflight.set(key, request)
     return request
+  }
+
+  getGroupedSnkVente(options = {}) {
+    const params = normalizeOptions(options)
+    return api.get('/snkVente/grouped', { params })
   }
 
   recent(limit = 8) {
@@ -83,14 +100,14 @@ class SnkVenteServices {
 
   ajouter(vente) {
     return api.post('/snkVente/add', vente).then((response) => {
-      invalidateListCache()
+      syncAfterInventoryMutation({ source: 'inventory-service', action: 'add' })
       return response
     })
   }
 
   create(vente) {
     return api.post('/snkVente', vente).then((response) => {
-      invalidateListCache()
+      syncAfterInventoryMutation({ source: 'inventory-service', action: 'create' })
       return response
     })
   }
@@ -102,21 +119,29 @@ class SnkVenteServices {
         quantity,
       })
       .then((response) => {
-        invalidateListCache()
+        syncAfterInventoryMutation({
+          source: 'inventory-service',
+          action: 'bulk-create',
+          quantity,
+        })
         return response
       })
   }
 
   supprimer(id) {
     return api.delete(`/snkVente/${id}`).then((response) => {
-      invalidateListCache()
+      syncAfterInventoryMutation({ source: 'inventory-service', action: 'delete', id })
       return response
     })
   }
 
   supprimerEnMasse(ids) {
     return api.post('/snkVente/bulk-delete', ids).then((response) => {
-      invalidateListCache()
+      syncAfterInventoryMutation({
+        source: 'inventory-service',
+        action: 'bulk-delete',
+        count: Array.isArray(ids) ? ids.length : undefined,
+      })
       return response
     })
   }
@@ -127,7 +152,7 @@ class SnkVenteServices {
 
   update(id, vente) {
     return api.put(`/snkVente/${id}`, vente).then((response) => {
-      invalidateListCache()
+      syncAfterInventoryMutation({ source: 'inventory-service', action: 'update', id })
       return response
     })
   }
@@ -138,7 +163,11 @@ class SnkVenteServices {
         timeout: 120000,
       })
       .then((response) => {
-        invalidateListCache()
+        syncAfterInventoryMutation({
+          source: 'inventory-service',
+          action: 'import',
+          count: Array.isArray(items) ? items.length : undefined,
+        })
         return response
       })
   }

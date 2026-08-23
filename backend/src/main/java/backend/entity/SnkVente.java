@@ -2,6 +2,7 @@ package backend.entity;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -24,6 +25,7 @@ import org.hibernate.type.SqlTypes;
 @AllArgsConstructor
 @Entity
 @Table(name = "tableauventes", schema = "public")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class SnkVente {
 
   @Id
@@ -70,6 +72,27 @@ public class SnkVente {
   @Column(name = "metadata", columnDefinition = "jsonb")
   @Builder.Default
   private Map<String, Object> metadata = new HashMap<>();
+
+  @Column(name = "is_group_parent", nullable = false)
+  @Builder.Default
+  private boolean groupParent = false;
+
+  @Column(name = "unit_index")
+  private Integer unitIndex;
+
+  @Column(name = "parent_id", insertable = false, updatable = false)
+  private Integer parentId;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "parent_id")
+  @JsonIgnore
+  private SnkVente parent;
+
+  @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+  @OrderBy("unitIndex ASC, id ASC")
+  @JsonIgnore
+  @Builder.Default
+  private List<SnkVente> children = new ArrayList<>();
 
   @OneToMany(mappedBy = "vente", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
   @JsonIgnore

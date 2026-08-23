@@ -26,6 +26,8 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.multipart.MultipartFile;
 
 import backend.dto.SnkVenteCreateDto;
+import backend.dto.SnkVenteChildViewDto;
+import backend.dto.SnkVenteGroupViewDto;
 import backend.dto.SnkVenteImportDto;
 import backend.dto.TopVenteProjection;
 import backend.dto.AttachmentDto;
@@ -81,6 +83,22 @@ public class snkVenteController {
       @RequestParam(required = false) Integer limit
   ) {
     return snkVenteService.rechercherParUser(userId(currentUser), limit);
+  }
+
+  @GetMapping(path = "/grouped", produces = APPLICATION_JSON_VALUE)
+  public List<SnkVenteGroupViewDto> rechercherGroupes(
+      @AuthenticationPrincipal User currentUser,
+      @RequestParam(required = false) Integer limit
+  ) {
+    return snkVenteService.rechercherGroupesParUser(userId(currentUser), limit);
+  }
+
+  @GetMapping(path = "{id}/children", produces = APPLICATION_JSON_VALUE)
+  public List<SnkVenteChildViewDto> lireChildren(
+      @AuthenticationPrincipal User currentUser,
+      @PathVariable Integer id
+  ) {
+    return snkVenteService.lireChildren(userId(currentUser), id);
   }
 
   @GetMapping("/recent")

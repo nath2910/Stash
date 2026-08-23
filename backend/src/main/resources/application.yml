@@ -162,7 +162,7 @@ spring:
             user-name-attribute: id
 
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://127.0.0.1:5433/snkProjet_docker}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://127.0.0.1:5433/snkProjet_docker?sslmode=disable&connectTimeout=5&socketTimeout=30}
     username: ${SPRING_DATASOURCE_USERNAME:myuser}
     password: ${SPRING_DATASOURCE_PASSWORD:}
     driver-class-name: org.postgresql.Driver

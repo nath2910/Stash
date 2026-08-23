@@ -4,11 +4,14 @@ import java.math.BigDecimal;
 import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.Year;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.LinkedHashMap;
 import java.util.stream.Collectors;
 import java.util.regex.Pattern;
 
@@ -20,6 +23,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import backend.dto.SnkVenteCreateDto;
+import backend.dto.SnkVenteChildViewDto;
+import backend.dto.SnkVenteGroupViewDto;
 import backend.dto.SnkVenteImportDto;
 import backend.dto.TopVenteProjection;
 import backend.entity.SnkVente;
@@ -83,7 +88,17 @@ public class snkVenteService {
   @CacheEvict(cacheNames = "statsQueries", allEntries = true)
   public SnkVente creer(Long userId, SnkVenteCreateDto dto) {
     User user = getUserOrThrow(userId);
-    return snkVenteRepository.save(buildEntity(user, dto));
+    int quantity = safeQuantity(dto.quantity());
+    if (quantity <= 1) {
+      return snkVenteRepository.save(buildEntity(user, dto));
+    }
+    if (shouldCreateGroup(dto, quantity)) {
+      return snkVenteRepository.save(createGroupedParent(user, dto, quantity));
+    }
+    List<SnkVente> entities = java.util.stream.IntStream.range(0, quantity)
+        .mapToObj(i -> buildEntity(user, dto))
+        .collect(Collectors.toList());
+    return snkVenteRepository.saveAll(entities).get(0);
   }
 
   @Transactional
@@ -91,6 +106,16 @@ public class snkVenteService {
   public List<SnkVente> creerPlusieurs(Long userId, SnkVenteCreateDto dto) {
     User user = getUserOrThrow(userId);
     int quantity = safeQuantity(dto.quantity());
+    if (quantity <= 1) {
+      return List.of(snkVenteRepository.save(buildEntity(user, dto)));
+    }
+    if (shouldCreateGroup(dto, quantity)) {
+      SnkVente parent = snkVenteRepository.save(createGroupedParent(user, dto, quantity));
+      List<SnkVente> out = new ArrayList<>();
+      out.add(parent);
+      out.addAll(parent.getChildren());
+      return out;
+    }
     List<SnkVente> entities = java.util.stream.IntStream.range(0, quantity)
         .mapToObj(i -> buildEntity(user, dto))
         .collect(Collectors.toList());
@@ -104,9 +129,36 @@ public class snkVenteService {
     return v;
   }
 
+  private SnkVente createGroupedParent(User user, SnkVenteCreateDto dto, int quantity) {
+    SnkVente parent = new SnkVente();
+    parent.setUser(user);
+    applyFields(parent, dto);
+    parent.setGroupParent(true);
+    parent.setUnitIndex(null);
+    parent.setParent(null);
+
+    List<SnkVente> children = java.util.stream.IntStream.range(0, quantity)
+        .mapToObj(index -> buildChildEntity(user, parent, dto, index + 1))
+        .collect(Collectors.toCollection(ArrayList::new));
+    parent.setChildren(children);
+    return parent;
+  }
+
+  private SnkVente buildChildEntity(User user, SnkVente parent, SnkVenteCreateDto dto, int unitIndex) {
+    SnkVente child = buildEntity(user, dto);
+    child.setParent(parent);
+    child.setGroupParent(false);
+    child.setUnitIndex(unitIndex);
+    return child;
+  }
+
   private int safeQuantity(Integer quantity) {
     if (quantity == null) return 1;
     return Math.min(50, Math.max(1, quantity));
+  }
+
+  private boolean shouldCreateGroup(SnkVenteCreateDto dto, int quantity) {
+    return quantity > 1 && Boolean.TRUE.equals(dto.grouped());
   }
 
   @Transactional(readOnly = true)
@@ -124,10 +176,32 @@ public class snkVenteService {
   }
 
   @Transactional(readOnly = true)
+  public List<SnkVenteGroupViewDto> rechercherGroupesParUser(Long userId, Integer limit) {
+    List<SnkVente> rows = snkVenteRepository.findAllByUser_IdOrderByDateAchatDesc(userId);
+    List<SnkVenteGroupViewDto> groups = buildGroupedViews(rows);
+    if (limit != null && limit > 0 && limit < groups.size()) {
+      return groups.subList(0, limit);
+    }
+    return groups;
+  }
+
+  @Transactional(readOnly = true)
   public SnkVente lire(Long userId, Integer id) {
     return snkVenteRepository.findById(id)
         .filter(v -> v.getUser() != null && userId.equals(v.getUser().getId()))
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Vente introuvable"));
+  }
+
+  @Transactional(readOnly = true)
+  public List<SnkVenteChildViewDto> lireChildren(Long userId, Integer id) {
+    SnkVente parent = lire(userId, id);
+    if (!parent.isGroupParent()) {
+      return List.of();
+    }
+    return snkVenteRepository.findByParent_IdOrderByUnitIndexAscIdAsc(id).stream()
+        .filter(v -> v.getUser() != null && userId.equals(v.getUser().getId()))
+        .map(SnkVenteChildViewDto::fromEntity)
+        .toList();
   }
 
   @Transactional(readOnly = true)
@@ -243,6 +317,86 @@ public class snkVenteService {
 
     snkVenteRepository.saveAll(entities);
     return entities.size();
+  }
+
+  private List<SnkVenteGroupViewDto> buildGroupedViews(List<SnkVente> rows) {
+    Map<Integer, List<SnkVente>> childrenByParentId = rows.stream()
+        .filter(row -> row.getParentId() != null)
+        .collect(Collectors.groupingBy(SnkVente::getParentId, LinkedHashMap::new, Collectors.toList()));
+
+    List<SnkVenteGroupViewDto> out = new ArrayList<>();
+    for (SnkVente row : rows) {
+      if (row.getParentId() != null) continue;
+      if (row.isGroupParent()) {
+        out.add(toGroupView(row, childrenByParentId.getOrDefault(row.getId(), List.of())));
+        continue;
+      }
+      out.add(toGroupView(row, List.of()));
+    }
+    return out;
+  }
+
+  private SnkVenteGroupViewDto toGroupView(SnkVente parent, List<SnkVente> rawChildren) {
+    List<SnkVente> children = rawChildren.stream()
+        .sorted(Comparator
+            .comparing((SnkVente child) -> child.getUnitIndex() == null ? Integer.MAX_VALUE : child.getUnitIndex())
+            .thenComparing(SnkVente::getId))
+        .toList();
+
+    List<SnkVenteChildViewDto> childViews = children.stream().map(SnkVenteChildViewDto::fromEntity).toList();
+    boolean grouped = parent.isGroupParent();
+    int quantity = grouped ? childViews.size() : 1;
+    int soldCount = grouped ? (int) children.stream().filter(child -> child.getDateVente() != null).count() : (parent.getDateVente() != null ? 1 : 0);
+    BigDecimal totalRetail = grouped
+        ? children.stream().map(this::safeRetail).reduce(BigDecimal.ZERO, BigDecimal::add)
+        : safeRetail(parent);
+    BigDecimal totalResell = grouped
+        ? children.stream().map(this::safeResell).reduce(BigDecimal.ZERO, BigDecimal::add)
+        : safeResell(parent);
+    BigDecimal totalProfit = grouped
+        ? children.stream().map(this::profitOf).reduce(BigDecimal.ZERO, BigDecimal::add)
+        : profitOf(parent);
+
+    LocalDate latestSaleDate = grouped
+        ? children.stream()
+            .map(SnkVente::getDateVente)
+            .filter(Objects::nonNull)
+            .max(LocalDate::compareTo)
+            .orElse(null)
+        : parent.getDateVente();
+
+    return new SnkVenteGroupViewDto(
+        parent.getId(),
+        parent.getParentId(),
+        grouped,
+        quantity,
+        soldCount,
+        parent.getNomItem(),
+        parent.getDescription(),
+        parent.getCategorie(),
+        parent.getType(),
+        parent.getDateAchat(),
+        latestSaleDate,
+        parent.getPrixRetail(),
+        parent.getPrixResell(),
+        totalRetail,
+        totalResell,
+        totalProfit,
+        parent.getMetadata() == null ? new HashMap<>() : new HashMap<>(parent.getMetadata()),
+        childViews
+    );
+  }
+
+  private BigDecimal safeRetail(SnkVente vente) {
+    return vente.getPrixRetail() == null ? BigDecimal.ZERO : vente.getPrixRetail();
+  }
+
+  private BigDecimal safeResell(SnkVente vente) {
+    return vente.getPrixResell() == null ? BigDecimal.ZERO : vente.getPrixResell();
+  }
+
+  private BigDecimal profitOf(SnkVente vente) {
+    return safeResell(vente).subtract(safeRetail(vente));
   }
 
   private SnkVenteImportDto trimDto(SnkVenteImportDto dto) {

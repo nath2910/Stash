@@ -779,7 +779,6 @@ import {
   Paintbrush,
   LayoutGrid,
   MousePointer2,
-  Target,
   PlusSquare,
   Trash2,
 } from 'lucide-vue-next'

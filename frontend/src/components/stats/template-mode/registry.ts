@@ -62,10 +62,10 @@ export const TEMPLATE_DEFINITIONS = [
   {
     id: CATEGORY_DASHBOARD_TEMPLATE_ID,
     badge: 'Inventory',
-    title: 'Analyse categories',
-    headline: 'Lecture stock et mix produit',
-    description: 'Focus categories avec comparaison, stock visible, ventes et top items.',
-    highlights: ['Categories', 'Mix stock / ventes', 'Top items'],
+    title: 'Analyse par univers',
+    headline: 'Univers puis sous-categories',
+    description: 'Vue simple par grande categorie avec filtre de sous-categories, stock visible et top ventes.',
+    highlights: ['Univers', 'Sous-categories', 'Top ventes'],
     accent: 'amber',
     component: defineAsyncComponent(
       () => import('./category-dashboard/CategoryDashboardTemplate.vue'),

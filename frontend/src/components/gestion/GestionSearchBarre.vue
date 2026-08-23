@@ -1,10 +1,10 @@
 ﻿<template>
   <div class="gestion-search-root w-full min-w-0">
     <div
-      class="gestion-search-field group flex h-10 items-center gap-2.5 rounded-[14px] border border-sky-200/80 bg-white/90 px-3.5 text-slate-950 shadow-sm transition focus-within:border-teal-400/70 focus-within:bg-white focus-within:ring-2 focus-within:ring-teal-400/15"
+      class="gestion-search-field group flex h-9 items-center gap-2 rounded-[12px] border border-sky-200/80 bg-white/90 px-3 text-slate-950 shadow-sm transition focus-within:border-teal-400/70 focus-within:bg-white focus-within:ring-2 focus-within:ring-teal-400/15"
     >
       <Search
-        class="gestion-search-icon h-4 w-4 shrink-0 text-sky-600 transition group-focus-within:text-teal-600"
+        class="gestion-search-icon h-[15px] w-[15px] shrink-0 text-sky-600 transition group-focus-within:text-teal-600"
         aria-hidden="true"
       />
 
@@ -16,7 +16,7 @@
         autocapitalize="none"
         spellcheck="false"
         placeholder="Rechercher nom, categorie, tag, SKU..."
-        class="gestion-search-input min-w-0 flex-1 border-0 bg-transparent text-[16px] font-semibold leading-none text-slate-950 placeholder:text-slate-400 focus:outline-none focus:ring-0 sm:text-[14px]"
+        class="gestion-search-input min-w-0 flex-1 border-0 bg-transparent text-[15px] font-semibold leading-none text-slate-950 placeholder:text-slate-400 focus:outline-none focus:ring-0 sm:text-[13px]"
       />
 
     </div>

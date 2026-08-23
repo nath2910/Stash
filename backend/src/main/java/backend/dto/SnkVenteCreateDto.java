@@ -20,5 +20,6 @@ public record SnkVenteCreateDto(
   @Size(max = 60) String categorie,
   @Size(max = 80) String type,
   Map<String, Object> metadata,
-  @Min(1) @Max(50) Integer quantity
+  @Min(1) @Max(50) Integer quantity,
+  Boolean grouped
 ) {}
