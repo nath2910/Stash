@@ -379,6 +379,7 @@ import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/store/authStore'
 import { useBillingStore } from '@/store/billingStore'
 import { useNotificationStore } from '@/store/notificationStore'
+import { scopedStorageKey } from '@/RegleItem/storageScope'
 import { Home, BarChart3, Boxes, Bell } from 'lucide-vue-next'
 
 const AsyncNotificationCenter = defineAsyncComponent(
@@ -494,8 +495,8 @@ const quickIntroOpen = ref(false)
 const IDLE_ACTIVITY_EVENTS = ['pointerdown', 'keydown', 'visibilitychange']
 
 const QUICK_INTRO_STORAGE_PREFIX = 'snk_quick_intro_seen'
-const HOME_ONBOARD_PENDING_KEY = 'snk_onboarding_pending'
-const HOME_ONBOARD_SEEN_KEY = 'snk_onboarding_seen'
+const HOME_ONBOARD_PENDING_PREFIX = 'snk_onboarding_pending'
+const HOME_ONBOARD_SEEN_PREFIX = 'snk_onboarding_seen'
 const QUICK_INTRO_CONFIG = {
   home: {
     kicker: 'Quick intro',
@@ -608,6 +609,12 @@ const currentUser = computed(() => {
   return u && typeof u === 'object' && 'value' in u ? u.value : u
 })
 const currentUserId = computed(() => currentUser.value?.id ?? 'guest')
+const homeOnboardPendingStorageKey = computed(() =>
+  scopedStorageKey(HOME_ONBOARD_PENDING_PREFIX, currentUserId.value),
+)
+const homeOnboardSeenStorageKey = computed(() =>
+  scopedStorageKey(HOME_ONBOARD_SEEN_PREFIX, currentUserId.value),
+)
 const activeQuickIntroKey = computed(() => {
   if (!auth.token?.value || !currentUser.value?.id) return ''
 
@@ -896,8 +903,8 @@ function shouldSuppressHomeQuickIntro() {
   if (typeof window === 'undefined') return false
   try {
     return (
-      localStorage.getItem(HOME_ONBOARD_PENDING_KEY) === '1' ||
-      localStorage.getItem(HOME_ONBOARD_SEEN_KEY) === '1'
+      localStorage.getItem(homeOnboardPendingStorageKey.value) === '1' ||
+      localStorage.getItem(homeOnboardSeenStorageKey.value) === '1'
     )
   } catch {
     return false

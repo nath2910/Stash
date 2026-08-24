@@ -177,6 +177,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { scopedStorageKey } from '@/RegleItem/storageScope'
 import BillingService from '@/services/BillingService'
 import { useAuthStore } from '@/store/authStore'
 import { useBillingStore } from '@/store/billingStore'
@@ -197,7 +198,10 @@ const returnTo = computed(() => (route.query.returnTo as string) || '')
 const successRedirect = computed(
   () => (route.query.successRedirect as string) || returnTo.value || '/',
 )
-const onboardingFlag = 'snk_onboarding_pending'
+const currentUserId = computed(() => auth.user.value?.id ?? 'guest')
+const onboardingPendingStorageKey = computed(() =>
+  scopedStorageKey('snk_onboarding_pending', currentUserId.value),
+)
 
 let poll: number | null = null
 let previousStatus: string | null = null
@@ -315,7 +319,7 @@ const fetchStatus = async (includePortal = false, forceRefresh = false) => {
 
     if (previousStatus !== 'active' && status.value === 'active') {
       try {
-        localStorage.setItem(onboardingFlag, '1')
+        localStorage.setItem(onboardingPendingStorageKey.value, '1')
       } catch (e) {
         console.warn('onboarding flag', e)
       }

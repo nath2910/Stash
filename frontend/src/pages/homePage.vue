@@ -138,14 +138,15 @@ import QuickItemModal from '@/components/home/QuickItemModal.vue'
 import SnkVenteServices from '@/services/SnkVenteServices.js'
 import StatsServices from '@/services/StatsServices.js'
 import { useAuthStore } from '@/store/authStore'
+import { scopedStorageKey } from '@/RegleItem/storageScope'
 import { calculatePeriodStats, getCurrentYearRange } from '@/utils/homeDashboard'
 
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
 
-const ONBOARD_PENDING = 'snk_onboarding_pending'
-const ONBOARD_SEEN = 'snk_onboarding_seen'
+const ONBOARD_PENDING_PREFIX = 'snk_onboarding_pending'
+const ONBOARD_SEEN_PREFIX = 'snk_onboarding_seen'
 
 const showOnboarding = ref(false)
 const quickAddFormRef = ref(null)
@@ -165,6 +166,13 @@ const quickAddSuccessKey = ref(0)
 const quickAddToast = ref({ visible: false, message: '', type: 'success' })
 const clockTick = ref(Date.now())
 const annualRange = computed(() => getCurrentYearRange(new Date(clockTick.value)))
+const currentUserId = computed(() => auth.user.value?.id ?? 'guest')
+const onboardingPendingStorageKey = computed(() =>
+  scopedStorageKey(ONBOARD_PENDING_PREFIX, currentUserId.value),
+)
+const onboardingSeenStorageKey = computed(() =>
+  scopedStorageKey(ONBOARD_SEEN_PREFIX, currentUserId.value),
+)
 let quickAddToastTimer = null
 let clockTimer = null
 let statsFallbackTimer = null
@@ -268,14 +276,15 @@ onMounted(() => {
     document.addEventListener('visibilitychange', handleVisibilityChange)
   }
   try {
-    const pending = localStorage.getItem(ONBOARD_PENDING) === '1' || route.query.onboarding === '1'
-    const seen = localStorage.getItem(ONBOARD_SEEN) === '1'
+    const pending =
+      localStorage.getItem(onboardingPendingStorageKey.value) === '1' || route.query.onboarding === '1'
+    const seen = localStorage.getItem(onboardingSeenStorageKey.value) === '1'
     if (pending && !seen) {
       showOnboarding.value = true
-      localStorage.setItem(ONBOARD_SEEN, '1')
+      localStorage.setItem(onboardingSeenStorageKey.value, '1')
     }
     if (pending) {
-      localStorage.removeItem(ONBOARD_PENDING)
+      localStorage.removeItem(onboardingPendingStorageKey.value)
     }
   } catch (error) {
     console.warn('onboarding check', error)

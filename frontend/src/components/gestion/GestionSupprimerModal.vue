@@ -109,6 +109,7 @@ const error = ref('')
 const query = ref('')
 const selected = ref(null)
 const openList = ref(false)
+const skipNextQuerySelectionReset = ref(false)
 
 const searchTextForVente = (vente) =>
   normalizeSearchText([
@@ -144,6 +145,7 @@ const setMode = (nextMode) => {
 
 const selectVente = (vente) => {
   selected.value = vente
+  skipNextQuerySelectionReset.value = true
   query.value = vente.nomItem || vente.nom_item
   openList.value = false
   error.value = ''
@@ -169,6 +171,12 @@ const queueDelete = () => {
 }
 
 watch(query, () => {
+  if (skipNextQuerySelectionReset.value) {
+    skipNextQuerySelectionReset.value = false
+    error.value = ''
+    return
+  }
+
   selected.value = null
   error.value = ''
   openList.value = true
