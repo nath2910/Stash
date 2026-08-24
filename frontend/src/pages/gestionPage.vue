@@ -2916,7 +2916,7 @@ onBeforeUnmount(() => {
 
 .inventory-list-scroll {
   max-height: clamp(420px, 56dvh, 690px);
-  overflow-x: auto;
+  overflow-x: hidden;
   overflow-y: scroll;
   overscroll-behavior: contain;
   padding-right: 0.15rem;
@@ -2929,7 +2929,7 @@ onBeforeUnmount(() => {
 .inventory-list-scroll::-webkit-scrollbar {
   display: block !important;
   width: 0.6rem !important;
-  height: 0.6rem !important;
+  height: 0 !important;
 }
 
 .inventory-list-scroll::-webkit-scrollbar-track {

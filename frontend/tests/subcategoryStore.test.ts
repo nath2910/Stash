@@ -8,6 +8,8 @@ import {
   removeSubcategory,
   renameSubcategory,
   resolveSubcategoryOptions,
+  subcategoryStorageKey,
+  writeStoredSubcategories,
 } from '../src/RegleItem/subcategoryStore'
 
 function memoryStorage(seed = {}) {
@@ -81,5 +83,59 @@ describe('subcategoryStore', () => {
     expect(resolveSubcategoryOptions('MONTRES_LUXE', { stored: map, discovered, categoryLabels: labels })).toEqual(
       expect.arrayContaining(['Neuf', 'Vintage']),
     )
+  })
+
+  it('keeps persisted subcategories isolated per account', () => {
+    const storage = memoryStorage()
+    const u1 = addSubcategory({}, 'SNEAKER', 'U1 only')
+    const u2 = addSubcategory({}, 'SNEAKER', 'U2 only')
+
+    writeStoredSubcategories('u1', u1, storage)
+    writeStoredSubcategories('u2', u2, storage)
+
+    expect(readStoredSubcategories('u1', storage).SNEAKER).toContain('U1 only')
+    expect(readStoredSubcategories('u1', storage).SNEAKER).not.toContain('U2 only')
+    expect(readStoredSubcategories('u2', storage).SNEAKER).toContain('U2 only')
+    expect(readStoredSubcategories('u2', storage).SNEAKER).not.toContain('U1 only')
+  })
+
+  it('migrates legacy subcategory storage keys to the scoped current key', () => {
+    const storage = memoryStorage({
+      snk_item_subcategories_v1_u1: JSON.stringify({
+        SNEAKER: ['Archivee'],
+      }),
+    })
+
+    const map = readStoredSubcategories('u1', storage)
+
+    expect(map.SNEAKER).toContain('Archivee')
+    expect(storage.getItem(subcategoryStorageKey('u1'))).toContain('Archivee')
+    expect(storage.getItem('snk_item_subcategories_v1_u1')).toBe(null)
+  })
+
+  it('repairs corrupted persisted subcategory payloads', () => {
+    const storage = memoryStorage({
+      [subcategoryStorageKey('u1')]: '{bad json',
+    })
+
+    const map = readStoredSubcategories('u1', storage)
+
+    expect(map.SNEAKER).toContain('Jordan')
+    expect(storage.getItem(subcategoryStorageKey('u1'))).toContain('"Jordan"')
+  })
+
+  it('recovers from a corrupted current subcategory key when a legacy key is still valid', () => {
+    const storage = memoryStorage({
+      [subcategoryStorageKey('u1')]: '{bad json',
+      snk_item_subcategories_v1_u1: JSON.stringify({
+        SNEAKER: ['Recuperee'],
+      }),
+    })
+
+    const map = readStoredSubcategories('u1', storage)
+
+    expect(map.SNEAKER).toContain('Recuperee')
+    expect(storage.getItem(subcategoryStorageKey('u1'))).toContain('Recuperee')
+    expect(storage.getItem('snk_item_subcategories_v1_u1')).toBe(null)
   })
 })

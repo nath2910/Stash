@@ -191,6 +191,11 @@ const submitReset = async () => {
     return
   }
 
+  if (newPassword.value.length < 10) {
+    error.value = "Choisis un mot de passe d'au moins 10 caracteres."
+    return
+  }
+
   loading.value = true
   try {
     await AuthService.resetPassword({

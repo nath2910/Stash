@@ -202,7 +202,20 @@
     </div>
 
     <div v-if="isDesktop" class="hidden lg:block">
-      <table class="min-w-[1040px] w-full text-sm text-gray-100">
+      <table class="gestion-desktop-table w-full text-sm text-gray-100">
+        <colgroup>
+          <col v-if="selectable" class="gestion-col-select" />
+          <col class="gestion-col-name" />
+          <col class="gestion-col-type" />
+          <col class="gestion-col-subcategory" />
+          <col class="gestion-col-quantity" />
+          <col class="gestion-col-retail" />
+          <col class="gestion-col-resell" />
+          <col class="gestion-col-date" />
+          <col class="gestion-col-date" />
+          <col class="gestion-col-profit" />
+          <col class="gestion-col-actions" />
+        </colgroup>
         <thead class="border-b border-gray-700 bg-gray-900">
           <tr>
             <th
@@ -269,8 +282,8 @@
                 />
               </td>
 
-              <td class="px-4 py-3">
-                <div class="flex items-start gap-2">
+              <td class="gestion-cell-name px-4 py-3">
+                <div class="flex min-w-0 items-start gap-2">
                   <button
                     v-if="isGroup(vente)"
                     type="button"
@@ -281,11 +294,11 @@
                     <ChevronDown v-if="isExpanded(vente.id)" class="h-4 w-4" aria-hidden="true" />
                     <ChevronRight v-else class="h-4 w-4" aria-hidden="true" />
                   </button>
-                  <div class="flex flex-col">
-                    <span class="font-medium text-gray-100">
+                  <div class="gestion-name-block flex min-w-0 flex-col">
+                    <span class="gestion-name-text font-medium text-gray-100">
                       {{ vente.nomItem || vente.nom_item }}
                     </span>
-                    <span v-if="groupSubtitle(vente)" class="line-clamp-1 text-[11px] text-gray-400">
+                    <span v-if="groupSubtitle(vente)" class="gestion-name-subtitle text-[11px] text-gray-400">
                       {{ groupSubtitle(vente) }}
                     </span>
                   </div>
@@ -301,31 +314,31 @@
                 </span>
               </td>
 
-              <td class="px-4 py-3 text-xs text-gray-300">
+              <td class="gestion-cell-subcategory px-4 py-3 text-xs text-gray-300">
                 {{ subcategoryLabel(vente) || '--' }}
               </td>
 
-              <td class="px-4 py-3 text-center text-xs text-gray-300">
+              <td class="gestion-cell-quantity px-4 py-3 text-center text-xs text-gray-300">
                 {{ quantityLabel(vente) }}
               </td>
 
-              <td class="px-4 py-3 text-right text-xs">
+              <td class="gestion-cell-retail px-4 py-3 text-right text-xs">
                 {{ retailLabel(vente) }}
               </td>
 
-              <td class="px-4 py-3 text-right text-xs">
+              <td class="gestion-cell-resell px-4 py-3 text-right text-xs">
                 {{ resellLabel(vente) }}
               </td>
 
-              <td class="px-4 py-3 text-center text-xs text-gray-300">
+              <td class="gestion-cell-date px-4 py-3 text-center text-xs text-gray-300">
                 {{ formatDate(vente.dateAchat ?? vente.date_achat) }}
               </td>
 
-              <td class="px-4 py-3 text-center text-xs text-gray-300">
+              <td class="gestion-cell-date px-4 py-3 text-center text-xs text-gray-300">
                 {{ saleDateLabel(vente) }}
               </td>
 
-              <td class="px-4 py-3 text-right">
+              <td class="gestion-cell-profit px-4 py-3 text-right">
                 <span
                   class="font-semibold"
                   :class="profitValue(vente) >= 0 ? 'text-emerald-400' : 'text-red-400'"
@@ -378,10 +391,10 @@
                 />
               </td>
 
-              <td class="px-4 py-3">
+              <td class="gestion-cell-name px-4 py-3">
                 <div class="pl-7">
-                  <div class="flex flex-col gap-1">
-                    <span class="font-medium text-slate-900">{{ childLabel(child) }}</span>
+                  <div class="gestion-name-block flex min-w-0 flex-col gap-1">
+                    <span class="gestion-name-text font-medium text-slate-900">{{ childLabel(child) }}</span>
                     <span class="gestion-child-inline-badge">{{ childLineLabel(child) }}</span>
                   </div>
                 </div>
@@ -391,19 +404,19 @@
                 {{ typeLabelDisplay(child.type) }}
               </td>
 
-              <td class="px-4 py-3 text-xs text-gray-300">
+              <td class="gestion-cell-subcategory px-4 py-3 text-xs text-gray-300">
                 {{ subcategoryLabel(child) || '--' }}
               </td>
 
-              <td class="px-4 py-3 text-center text-xs text-gray-300">
+              <td class="gestion-cell-quantity px-4 py-3 text-center text-xs text-gray-300">
                 1
               </td>
 
-              <td class="px-4 py-3 text-right">
+              <td class="gestion-cell-retail px-4 py-3 text-right">
                 {{ formatCurrency(child.prixRetail ?? child.prix_retail) }}
               </td>
 
-              <td class="px-4 py-3 text-right">
+              <td class="gestion-cell-resell px-4 py-3 text-right">
                 {{
                   isVendue(child)
                     ? formatCurrency(child.prixResell ?? child.prix_resell)
@@ -411,11 +424,11 @@
                 }}
               </td>
 
-              <td class="px-4 py-3 text-center text-xs text-gray-300">
+              <td class="gestion-cell-date px-4 py-3 text-center text-xs text-gray-300">
                 {{ formatDate(child.dateAchat ?? child.date_achat) }}
               </td>
 
-              <td class="px-4 py-3 text-center text-xs text-gray-300">
+              <td class="gestion-cell-date px-4 py-3 text-center text-xs text-gray-300">
                 {{
                   child.dateVente || child.date_vente
                     ? formatDate(child.dateVente ?? child.date_vente)
@@ -423,7 +436,7 @@
                 }}
               </td>
 
-              <td class="px-4 py-3 text-right">
+              <td class="gestion-cell-profit px-4 py-3 text-right">
                 <span
                   class="font-semibold"
                   :class="profitValue(child) >= 0 ? 'text-emerald-400' : 'text-red-400'"
@@ -948,11 +961,54 @@ onBeforeUnmount(() => {
 }
 
 .gestion-list table {
+  width: 100%;
+  min-width: 0;
+  table-layout: fixed;
   overflow: hidden;
   border: 1px solid rgba(125, 211, 252, 0.3);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.92);
   color: #0f172a;
+}
+
+.gestion-col-select {
+  width: 3%;
+}
+
+.gestion-col-name {
+  width: 21%;
+}
+
+.gestion-col-type {
+  width: 10%;
+}
+
+.gestion-col-subcategory {
+  width: 9%;
+}
+
+.gestion-col-quantity {
+  width: 7%;
+}
+
+.gestion-col-retail {
+  width: 13%;
+}
+
+.gestion-col-resell {
+  width: 10%;
+}
+
+.gestion-col-date {
+  width: 8%;
+}
+
+.gestion-col-profit {
+  width: 6%;
+}
+
+.gestion-col-actions {
+  width: 5%;
 }
 
 .gestion-list thead {
@@ -966,6 +1022,15 @@ onBeforeUnmount(() => {
 .gestion-list th {
   color: #0f766e;
   font-weight: 900;
+}
+
+.gestion-list th,
+.gestion-list td {
+  min-width: 0;
+  padding-inline: 0.7rem;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  vertical-align: middle;
 }
 
 .gestion-list tbody tr {
@@ -986,7 +1051,50 @@ onBeforeUnmount(() => {
 
 .gestion-list td:first-child,
 .gestion-list th:first-child {
-  padding-left: 1rem;
+  padding-left: 0.85rem;
+}
+
+.gestion-list td:last-child,
+.gestion-list th:last-child {
+  padding-right: 0.85rem;
+}
+
+.gestion-cell-name,
+.gestion-name-block {
+  min-width: 0;
+}
+
+.gestion-name-text {
+  display: -webkit-box;
+  min-width: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.gestion-name-subtitle {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gestion-cell-subcategory,
+.gestion-cell-quantity,
+.gestion-cell-date,
+.gestion-cell-profit {
+  line-height: 1.25;
+}
+
+.gestion-cell-retail,
+.gestion-cell-resell {
+  line-height: 1.35;
+  white-space: normal;
+}
+
+.gestion-row-actions {
+  flex-wrap: nowrap;
 }
 
 .gestion-list :is(.bg-purple-500\/10, .bg-cyan-500\/15, .bg-amber-500\/15, .bg-slate-500\/15) {

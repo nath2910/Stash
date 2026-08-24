@@ -13,6 +13,7 @@ import backend.dto.RegisterRequest;
 import backend.dto.ChangePasswordRequest;
 
 import backend.entity.User;
+import backend.security.PasswordPolicy;
 import backend.repository.UserRepository;
 import backend.repository.EmailVerificationTokenRepository;
 import backend.repository.PasswordResetTokenRepository;
@@ -51,8 +52,11 @@ public class UserService {
         if (request == null || request.getEmail() == null || request.getEmail().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email manquant");
         }
-        if (request.getPassword() == null || request.getPassword().length() < 6) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mot de passe trop court");
+        if (PasswordPolicy.isTooShort(request.getPassword())) {
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Mot de passe trop court (minimum " + PasswordPolicy.MIN_LENGTH + " caracteres)"
+            );
         }
 
         String email = request.getEmail().trim().toLowerCase();
@@ -110,6 +114,13 @@ public class UserService {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Email ou mot de passe invalide");
         }
 
+        if ("LOCAL".equalsIgnoreCase(user.getProvider()) && !user.isEmailVerified()) {
+            throw new ResponseStatusException(
+                HttpStatus.FORBIDDEN,
+                "Email non verifie. Verifie ton adresse email avant de te connecter"
+            );
+        }
+
         // Pour l'instant, on renvoie juste le user (sans le hash dans la version front)
         return user;
     }
@@ -119,9 +130,9 @@ public class UserService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Champs manquants");
         }
 
-        if (request.getNewPassword().length() < 6) {
+        if (PasswordPolicy.isTooShort(request.getNewPassword())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                "Le nouveau mot de passe doit faire au moins 6 caracteres");
+                "Le nouveau mot de passe doit faire au moins " + PasswordPolicy.MIN_LENGTH + " caracteres");
         }
 
         User user = userRepository.findById(userId)

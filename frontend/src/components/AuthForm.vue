@@ -424,6 +424,13 @@ const authErrorNotice = (err, fallbackTitle, fallbackMessage) => {
     }
   }
 
+  if (status === 403 || raw.includes('email non verifie')) {
+    return {
+      title: 'Email non verifie',
+      message: "Valide ton adresse email avant de te connecter. Un nouveau lien peut etre renvoye depuis l'ecran de verification.",
+    }
+  }
+
   if (raw.includes('email manquant')) {
     return {
       title: 'Email manquant',
@@ -448,7 +455,7 @@ const authErrorNotice = (err, fallbackTitle, fallbackMessage) => {
   if (raw.includes('mot de passe trop court')) {
     return {
       title: 'Mot de passe trop court',
-      message: "Choisis un mot de passe d'au moins 6 caracteres.",
+      message: "Choisis un mot de passe d'au moins 10 caracteres.",
     }
   }
 
@@ -527,6 +534,11 @@ const submitSignup = async () => {
     return
   }
 
+  if (signupForm.value.password.length < 10) {
+    setNotice('error', 'Mot de passe trop court', "Choisis un mot de passe d'au moins 10 caracteres.")
+    return
+  }
+
   loading.value = true
   try {
     const response = await AuthService.register({
@@ -580,18 +592,30 @@ const loginWithDiscord = () => {
   window.location.href = discordAuthUrl
 }
 
+function canWarmPostAuthHome() {
+  if (typeof navigator === 'undefined') return true
+  const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection
+  if (connection?.saveData) return false
+  if (['slow-2g', '2g'].includes(connection?.effectiveType)) return false
+  const memory = Number(navigator.deviceMemory || 0)
+  if (memory && memory <= 2) return false
+  return true
+}
+
 onMounted(() => {
-  if (!('requestIdleCallback' in window)) {
+  if (!canWarmPostAuthHome()) return
+
+  const warmHomePage = () => {
     void import('@/pages/homePage.vue')
+  }
+
+  if (!('requestIdleCallback' in window)) {
+    warmHomePage()
     return
   }
 
   window.requestIdleCallback(
-    () => {
-      void import('@/pages/homePage.vue')
-      void import('@/pages/gestionPage.vue')
-      void import('@/pages/statsPage.vue')
-    },
+    () => warmHomePage(),
     { timeout: 1200 },
   )
 })

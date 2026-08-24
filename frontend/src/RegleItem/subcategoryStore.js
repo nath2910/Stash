@@ -4,8 +4,10 @@ import {
   normalizeItemType as normalizeCategoryItemType,
   resolveItemTypeOptions,
 } from './itemCategoryStore'
+import { legacyScopedStorageKeys, scopedStorageKey } from './storageScope'
 
-const STORAGE_PREFIX = 'snk_item_subcategories_v1'
+const STORAGE_PREFIX = 'snk_item_subcategories_v2'
+const LEGACY_STORAGE_PREFIX = 'snk_item_subcategories_v1'
 const MAX_SUBCATEGORY_LENGTH = 60
 
 export const DEFAULT_SUBCATEGORIES = {
@@ -82,8 +84,7 @@ export function sanitizeSubcategoryMap(value, fallback = DEFAULT_SUBCATEGORIES, 
 }
 
 export function subcategoryStorageKey(userId) {
-  const suffix = String(userId || 'guest').trim() || 'guest'
-  return `${STORAGE_PREFIX}_${suffix}`
+  return scopedStorageKey(STORAGE_PREFIX, userId)
 }
 
 function getStorage(storage) {
@@ -92,20 +93,56 @@ function getStorage(storage) {
   return window.localStorage ?? null
 }
 
+function legacySubcategoryStorageKeys(userId) {
+  return legacyScopedStorageKeys(LEGACY_STORAGE_PREFIX, userId)
+}
+
+function persistedSubcategoryKeys(userId) {
+  return [subcategoryStorageKey(userId), ...legacySubcategoryStorageKeys(userId)].filter(
+    (key, index, values) => key && values.indexOf(key) === index,
+  )
+}
+
+function persistSubcategories(target, userId, value) {
+  const nextValue = JSON.stringify(value)
+  const currentKey = subcategoryStorageKey(userId)
+  try {
+    target.setItem(currentKey, nextValue)
+    for (const key of legacySubcategoryStorageKeys(userId)) {
+      if (key !== currentKey) target.removeItem?.(key)
+    }
+    return true
+  } catch {
+    return false
+  }
+}
+
 export function readStoredSubcategories(userId, storage, categoryLabels) {
   const target = getStorage(storage)
-  if (!target) return sanitizeSubcategoryMap(DEFAULT_SUBCATEGORIES, DEFAULT_SUBCATEGORIES, categoryLabels)
+  const defaults = sanitizeSubcategoryMap(DEFAULT_SUBCATEGORIES, DEFAULT_SUBCATEGORIES, categoryLabels)
+  if (!target) return defaults
 
   try {
-    const raw = target.getItem(subcategoryStorageKey(userId))
-    if (!raw) {
-      const defaults = sanitizeSubcategoryMap(DEFAULT_SUBCATEGORIES, DEFAULT_SUBCATEGORIES, categoryLabels)
-      target.setItem(subcategoryStorageKey(userId), JSON.stringify(defaults))
-      return defaults
+    const currentKey = subcategoryStorageKey(userId)
+    for (const key of persistedSubcategoryKeys(userId)) {
+      const raw = target.getItem(key)
+      if (!raw) continue
+      try {
+        const sanitized = sanitizeSubcategoryMap(JSON.parse(raw), DEFAULT_SUBCATEGORIES, categoryLabels)
+        if (key !== currentKey || raw !== JSON.stringify(sanitized)) {
+          persistSubcategories(target, userId, sanitized)
+        }
+        return sanitized
+      } catch {
+        target.removeItem?.(key)
+      }
     }
-    return sanitizeSubcategoryMap(JSON.parse(raw), DEFAULT_SUBCATEGORIES, categoryLabels)
+
+    persistSubcategories(target, userId, defaults)
+    return defaults
   } catch {
-    return sanitizeSubcategoryMap(DEFAULT_SUBCATEGORIES, DEFAULT_SUBCATEGORIES, categoryLabels)
+    persistSubcategories(target, userId, defaults)
+    return defaults
   }
 }
 
@@ -113,8 +150,8 @@ export function writeStoredSubcategories(userId, value, storage, categoryLabels)
   const target = getStorage(storage)
   const sanitized = sanitizeSubcategoryMap(value, DEFAULT_SUBCATEGORIES, categoryLabels)
   if (!target) return sanitized
-  target.setItem(subcategoryStorageKey(userId), JSON.stringify(sanitized))
-  if (typeof window !== 'undefined' && !storage) {
+  const persisted = persistSubcategories(target, userId, sanitized)
+  if (persisted && typeof window !== 'undefined' && !storage) {
     window.dispatchEvent(
       new CustomEvent('snk:item-subcategories-change', {
         detail: { userId: String(userId || 'guest'), subcategories: sanitized },

@@ -3,6 +3,7 @@ package backend.service;
 import backend.dto.ResetPasswordRequest;
 import backend.entity.PasswordResetToken;
 import backend.entity.User;
+import backend.security.SensitiveTokenHasher;
 import backend.repository.PasswordResetTokenRepository;
 import backend.repository.UserRepository;
 import java.time.Instant;
@@ -49,7 +50,7 @@ class PasswordResetServiceTest {
     request.setToken("reset-token");
     request.setNewPassword("new-password");
 
-    Mockito.when(tokenRepository.findByToken("reset-token")).thenReturn(Optional.of(token));
+    Mockito.when(tokenRepository.findByToken(SensitiveTokenHasher.hash("reset-token"))).thenReturn(Optional.of(token));
     Mockito.when(passwordEncoder.encode("new-password")).thenReturn("encoded-password");
 
     service.resetPassword(request);
@@ -83,7 +84,7 @@ class PasswordResetServiceTest {
     request.setToken("missing-token");
     request.setNewPassword("new-password");
 
-    Mockito.when(tokenRepository.findByToken("missing-token")).thenReturn(Optional.empty());
+    Mockito.when(tokenRepository.findByToken(SensitiveTokenHasher.hash("missing-token"))).thenReturn(Optional.empty());
 
     ResponseStatusException exception = Assertions.assertThrows(
         ResponseStatusException.class,

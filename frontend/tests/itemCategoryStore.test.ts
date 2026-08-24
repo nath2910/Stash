@@ -3,6 +3,7 @@ import {
   addItemCategory,
   buildItemCategoryAliases,
   canRemoveItemCategory,
+  itemCategoryStorageKey,
   itemTypeLabel,
   normalizeItemType,
   readStoredItemCategories,
@@ -106,5 +107,57 @@ describe('itemCategoryStore', () => {
     expect(aliases.has('pokemon')).toBe(true)
     expect(aliases.has('cartes pokemon')).toBe(true)
     expect(aliases.has('montres luxe')).toBe(true)
+  })
+
+  it('keeps persisted labels isolated per account', () => {
+    const storage = memoryStorage()
+    const u1 = renameItemCategory(readStoredItemCategories('u1', storage), 'SNEAKER', 'Chaussures U1')
+    const u2 = renameItemCategory(readStoredItemCategories('u2', storage), 'SNEAKER', 'Chaussures U2')
+
+    writeStoredItemCategories('u1', u1, storage)
+    writeStoredItemCategories('u2', u2, storage)
+
+    expect(readStoredItemCategories('u1', storage).SNEAKER).toBe('Chaussures U1')
+    expect(readStoredItemCategories('u2', storage).SNEAKER).toBe('Chaussures U2')
+  })
+
+  it('migrates legacy storage keys to the scoped current key', () => {
+    const storage = memoryStorage({
+      snk_item_categories_v1_u1: JSON.stringify({
+        SNEAKER: 'Chaussures archivees',
+      }),
+    })
+
+    const labels = readStoredItemCategories('u1', storage)
+
+    expect(labels.SNEAKER).toBe('Chaussures archivees')
+    expect(storage.getItem(itemCategoryStorageKey('u1'))).toContain('Chaussures archivees')
+    expect(storage.getItem('snk_item_categories_v1_u1')).toBe(null)
+  })
+
+  it('repairs corrupted persisted payloads with sane defaults', () => {
+    const storage = memoryStorage({
+      [itemCategoryStorageKey('u1')]: '{bad json',
+    })
+
+    const labels = readStoredItemCategories('u1', storage)
+
+    expect(labels.SNEAKER).toBe('Sneakers')
+    expect(storage.getItem(itemCategoryStorageKey('u1'))).toContain('"SNEAKER":"Sneakers"')
+  })
+
+  it('recovers from a corrupted current key when a legacy key is still valid', () => {
+    const storage = memoryStorage({
+      [itemCategoryStorageKey('u1')]: '{bad json',
+      snk_item_categories_v1_u1: JSON.stringify({
+        SNEAKER: 'Chaussures recuperees',
+      }),
+    })
+
+    const labels = readStoredItemCategories('u1', storage)
+
+    expect(labels.SNEAKER).toBe('Chaussures recuperees')
+    expect(storage.getItem(itemCategoryStorageKey('u1'))).toContain('Chaussures recuperees')
+    expect(storage.getItem('snk_item_categories_v1_u1')).toBe(null)
   })
 })

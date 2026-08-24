@@ -1,5 +1,6 @@
 package backend.dto;
 
+import backend.security.PasswordPolicy;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
@@ -8,7 +9,7 @@ public class ResetPasswordRequest {
   private String token;
 
   @NotBlank
-  @Size(min = 6, max = 100)
+  @Size(min = PasswordPolicy.MIN_LENGTH, max = PasswordPolicy.MAX_LENGTH)
   private String newPassword;
 
   public ResetPasswordRequest() {}

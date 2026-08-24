@@ -1,5 +1,6 @@
 package backend.service;
 
+import backend.security.SensitiveTokenHasher;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
@@ -70,9 +71,10 @@ public class EmailVerificationService {
     tokenRepository.deleteByUserIdAndUsedAtIsNull(user.getId());
 
     String token = generateToken();
+    String tokenHash = SensitiveTokenHasher.hash(token);
     EmailVerificationToken verificationToken = new EmailVerificationToken();
     verificationToken.setUser(user);
-    verificationToken.setToken(token);
+    verificationToken.setToken(tokenHash);
     verificationToken.setExpiresAt(Instant.now().plus(Duration.ofMinutes(expirationMinutes)));
     tokenRepository.save(verificationToken);
 
@@ -98,7 +100,7 @@ public class EmailVerificationService {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Token manquant");
     }
 
-    EmailVerificationToken verificationToken = tokenRepository.findByToken(token)
+    EmailVerificationToken verificationToken = tokenRepository.findByToken(SensitiveTokenHasher.hash(token))
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Lien invalide ou expire"));
 
     if (verificationToken.getUsedAt() != null

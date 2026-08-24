@@ -1,5 +1,7 @@
 package backend.service;
 
+import backend.security.PasswordPolicy;
+import backend.security.SensitiveTokenHasher;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
@@ -83,9 +85,10 @@ public class PasswordResetService {
     ensureMailConfigured();
 
     String token = UUID.randomUUID().toString().replace("-", "");
+    String tokenHash = SensitiveTokenHasher.hash(token);
     PasswordResetToken resetToken = new PasswordResetToken();
     resetToken.setUser(user);
-    resetToken.setToken(token);
+    resetToken.setToken(tokenHash);
     resetToken.setExpiresAt(Instant.now().plus(Duration.ofMinutes(expirationMinutes)));
     tokenRepository.save(resetToken);
 
@@ -99,11 +102,14 @@ public class PasswordResetService {
     if (request == null || request.getToken() == null || request.getToken().isBlank()) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Token manquant");
     }
-    if (request.getNewPassword() == null || request.getNewPassword().length() < 6) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mot de passe trop court");
+    if (PasswordPolicy.isTooShort(request.getNewPassword())) {
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST,
+          "Mot de passe trop court (minimum " + PasswordPolicy.MIN_LENGTH + " caracteres)"
+      );
     }
 
-    PasswordResetToken token = tokenRepository.findByToken(request.getToken())
+    PasswordResetToken token = tokenRepository.findByToken(SensitiveTokenHasher.hash(request.getToken()))
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Lien invalide ou expire"));
 
     if (token.getUsedAt() != null || token.getExpiresAt().isBefore(Instant.now())) {

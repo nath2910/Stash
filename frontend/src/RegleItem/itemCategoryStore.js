@@ -5,8 +5,10 @@ import {
   formatItemTypeLabel,
   normalizeItemTypeValue,
 } from './CategorieItem'
+import { legacyScopedStorageKeys, scopedStorageKey } from './storageScope'
 
-const STORAGE_PREFIX = 'snk_item_categories_v1'
+const STORAGE_PREFIX = 'snk_item_categories_v2'
+const LEGACY_STORAGE_PREFIX = 'snk_item_categories_v1'
 const MAX_CATEGORY_LABEL_LENGTH = 40
 const REMOVED_ITEM_TYPES_KEY = '__removedItemTypes'
 
@@ -97,8 +99,7 @@ export function sanitizeItemCategoryLabels(value, fallback = DEFAULT_ITEM_TYPE_L
 }
 
 export function itemCategoryStorageKey(userId) {
-  const suffix = String(userId || 'guest').trim() || 'guest'
-  return `${STORAGE_PREFIX}_${suffix}`
+  return scopedStorageKey(STORAGE_PREFIX, userId)
 }
 
 function getStorage(storage) {
@@ -107,20 +108,56 @@ function getStorage(storage) {
   return window.localStorage ?? null
 }
 
+function legacyItemCategoryStorageKeys(userId) {
+  return legacyScopedStorageKeys(LEGACY_STORAGE_PREFIX, userId)
+}
+
+function persistedCategoryKeys(userId) {
+  return [itemCategoryStorageKey(userId), ...legacyItemCategoryStorageKeys(userId)].filter(
+    (key, index, values) => key && values.indexOf(key) === index,
+  )
+}
+
+function persistCategories(target, userId, value) {
+  const nextValue = JSON.stringify(value)
+  const currentKey = itemCategoryStorageKey(userId)
+  try {
+    target.setItem(currentKey, nextValue)
+    for (const key of legacyItemCategoryStorageKeys(userId)) {
+      if (key !== currentKey) target.removeItem?.(key)
+    }
+    return true
+  } catch {
+    return false
+  }
+}
+
 export function readStoredItemCategories(userId, storage) {
   const target = getStorage(storage)
-  if (!target) return sanitizeItemCategoryLabels(DEFAULT_ITEM_TYPE_LABELS)
+  const defaults = sanitizeItemCategoryLabels(DEFAULT_ITEM_TYPE_LABELS)
+  if (!target) return defaults
 
   try {
-    const raw = target.getItem(itemCategoryStorageKey(userId))
-    if (!raw) {
-      const defaults = sanitizeItemCategoryLabels(DEFAULT_ITEM_TYPE_LABELS)
-      target.setItem(itemCategoryStorageKey(userId), JSON.stringify(defaults))
-      return defaults
+    const currentKey = itemCategoryStorageKey(userId)
+    for (const key of persistedCategoryKeys(userId)) {
+      const raw = target.getItem(key)
+      if (!raw) continue
+      try {
+        const sanitized = sanitizeItemCategoryLabels(JSON.parse(raw))
+        if (key !== currentKey || raw !== JSON.stringify(sanitized)) {
+          persistCategories(target, userId, sanitized)
+        }
+        return sanitized
+      } catch {
+        target.removeItem?.(key)
+      }
     }
-    return sanitizeItemCategoryLabels(JSON.parse(raw))
+
+    persistCategories(target, userId, defaults)
+    return defaults
   } catch {
-    return sanitizeItemCategoryLabels(DEFAULT_ITEM_TYPE_LABELS)
+    persistCategories(target, userId, defaults)
+    return defaults
   }
 }
 
@@ -128,8 +165,8 @@ export function writeStoredItemCategories(userId, value, storage) {
   const target = getStorage(storage)
   const sanitized = sanitizeItemCategoryLabels(value)
   if (!target) return sanitized
-  target.setItem(itemCategoryStorageKey(userId), JSON.stringify(sanitized))
-  if (typeof window !== 'undefined' && !storage) {
+  const persisted = persistCategories(target, userId, sanitized)
+  if (persisted && typeof window !== 'undefined' && !storage) {
     window.dispatchEvent(
       new CustomEvent('snk:item-categories-change', {
         detail: { userId: String(userId || 'guest'), labels: sanitized },

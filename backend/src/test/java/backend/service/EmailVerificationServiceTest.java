@@ -2,7 +2,7 @@ package backend.service;
 
 import backend.entity.EmailVerificationToken;
 import backend.entity.User;
-import backend.entity.User;
+import backend.security.SensitiveTokenHasher;
 import backend.repository.EmailVerificationTokenRepository;
 import backend.repository.UserRepository;
 import java.time.Instant;
@@ -116,7 +116,8 @@ class EmailVerificationServiceTest {
     token.setUser(user);
     token.setExpiresAt(Instant.now().plusSeconds(3600));
 
-    Mockito.when(tokenRepository.findByToken("valid-token")).thenReturn(java.util.Optional.of(token));
+    Mockito.when(tokenRepository.findByToken(SensitiveTokenHasher.hash("valid-token")))
+        .thenReturn(java.util.Optional.of(token));
 
     User verifiedUser = service.verifyToken("valid-token");
 
@@ -153,7 +154,8 @@ class EmailVerificationServiceTest {
     token.setUser(user);
     token.setExpiresAt(Instant.now().minusSeconds(60));
 
-    Mockito.when(tokenRepository.findByToken("expired-token")).thenReturn(java.util.Optional.of(token));
+    Mockito.when(tokenRepository.findByToken(SensitiveTokenHasher.hash("expired-token")))
+        .thenReturn(java.util.Optional.of(token));
 
     ResponseStatusException exception = Assertions.assertThrows(
         ResponseStatusException.class,

@@ -1,5 +1,6 @@
 package backend.dto;
 
+import backend.security.PasswordPolicy;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -17,7 +18,7 @@ public class RegisterRequest {
     private String lastName;
 
     @NotBlank
-    @Size(min = 6, max = 100)
+    @Size(min = PasswordPolicy.MIN_LENGTH, max = PasswordPolicy.MAX_LENGTH)
     private String password;
 
     public RegisterRequest() {

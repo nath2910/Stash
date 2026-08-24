@@ -12,6 +12,7 @@ public class PasswordResetToken {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
+  // Stores the SHA-256 hash of the raw token sent by email.
   @Column(length = 200, nullable = false, unique = true)
   private String token;
 

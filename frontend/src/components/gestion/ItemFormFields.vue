@@ -110,17 +110,16 @@
         v-if="quantityEnabled && Number(form.quantity) > 1 && (!showDetails || isQuickSurface)"
         class="item-field item-field--grouping"
       >
-        <span>Regroupement</span>
+        <span>Reunir</span>
         <label class="grouping-toggle">
           <input v-model="form.grouped" type="checkbox" role="switch" class="grouping-checkbox" />
           <span class="grouping-switch" aria-hidden="true">
             <span class="grouping-switch__thumb"></span>
           </span>
           <div class="grouping-toggle__copy">
-            <strong>Reunir sur une seule ligne</strong>
-            <small>Creer un parent avec {{ form.quantity }} sous-items modifiables.</small>
+            <strong>Une ligne</strong>
+            <small>{{ form.quantity }} items reunis</small>
           </div>
-          <span class="grouping-toggle__badge">{{ groupingBadgeLabel }}</span>
         </label>
       </div>
 
@@ -225,17 +224,16 @@
         v-if="quantityEnabled && Number(form.quantity) > 1 && showInlineDetails"
         class="item-field item-field--grouping"
       >
-        <span>Regroupement</span>
+        <span>Reunir</span>
         <label class="grouping-toggle">
           <input v-model="form.grouped" type="checkbox" role="switch" class="grouping-checkbox" />
           <span class="grouping-switch" aria-hidden="true">
             <span class="grouping-switch__thumb"></span>
           </span>
           <div class="grouping-toggle__copy">
-            <strong>Reunir sur une seule ligne</strong>
-            <small>Creer un parent avec {{ form.quantity }} sous-items modifiables.</small>
+            <strong>Une ligne</strong>
+            <small>{{ form.quantity }} items reunis</small>
           </div>
-          <span class="grouping-toggle__badge">{{ groupingBadgeLabel }}</span>
         </label>
       </div>
 
@@ -310,10 +308,8 @@ const showDetails = ref(props.detailsDefaultOpen)
 const manualTypeOverride = ref(false)
 const manualSubcategoryOverride = ref(false)
 const manualRetailOverride = ref(false)
-const manualResellOverride = ref(false)
 const autoFilledSubcategory = ref(false)
 const autoFilledRetail = ref(false)
-const autoFilledResell = ref(false)
 const nameInputRef = ref(null)
 const priceInputs = ref({
   prixRetail: '',
@@ -328,10 +324,6 @@ const isQuickSurface = computed(() => props.surface === 'quick')
 const showInlineDetails = computed(() => showDetails.value)
 const mainCategoryAliases = computed(() => buildItemCategoryAliases(categoryLabels.value))
 const metadataFields = computed(() => METADATA_FIELDS[form.value.type] || [])
-const groupingBadgeLabel = computed(() => {
-  const quantity = Number(form.value.quantity || 1)
-  return quantity > 1 ? `${quantity} lignes` : '1 ligne'
-})
 const marketReferenceFields = computed(() =>
   metadataFields.value.filter((field) => field.key === 'marketUrl'),
 )
@@ -494,10 +486,8 @@ function resetForm() {
   manualTypeOverride.value = false
   manualSubcategoryOverride.value = false
   manualRetailOverride.value = false
-  manualResellOverride.value = false
   autoFilledSubcategory.value = false
   autoFilledRetail.value = false
-  autoFilledResell.value = false
   syncPriceInputsFromForm()
   applyNameInference()
   applySmartAutofill()
@@ -522,7 +512,6 @@ function applySuggestedPrice(key, value) {
   form.value[key] = Number(parsed)
   priceInputs.value[key] = formatPriceValue(parsed)
   if (key === 'prixRetail') autoFilledRetail.value = true
-  if (key === 'prixResell') autoFilledResell.value = true
   return true
 }
 
@@ -530,7 +519,6 @@ function clearAutoSuggestedPrice(key) {
   form.value[key] = null
   priceInputs.value[key] = ''
   if (key === 'prixRetail') autoFilledRetail.value = false
-  if (key === 'prixResell') autoFilledResell.value = false
 }
 
 function applySmartAutofill() {
@@ -538,7 +526,6 @@ function applySmartAutofill() {
   const source = suggestedFromHistory.value
   if (!source) {
     if (!manualRetailOverride.value && autoFilledRetail.value) clearAutoSuggestedPrice('prixRetail')
-    if (!manualResellOverride.value && autoFilledResell.value) clearAutoSuggestedPrice('prixResell')
     if (!manualSubcategoryOverride.value && autoFilledSubcategory.value) {
       form.value.categorie = ''
       autoFilledSubcategory.value = false
@@ -549,12 +536,6 @@ function applySmartAutofill() {
   if (!manualRetailOverride.value && (numberOrNull(form.value.prixRetail) === null || autoFilledRetail.value)) {
     if (!applySuggestedPrice('prixRetail', getField(source, 'prixRetail', null)) && autoFilledRetail.value) {
       clearAutoSuggestedPrice('prixRetail')
-    }
-  }
-
-  if (!manualResellOverride.value && (numberOrNull(form.value.prixResell) === null || autoFilledResell.value)) {
-    if (!applySuggestedPrice('prixResell', getField(source, 'prixResell', null)) && autoFilledResell.value) {
-      clearAutoSuggestedPrice('prixResell')
     }
   }
 
@@ -586,16 +567,6 @@ watch(
     categoryLabels.value = readStoredItemCategories(userId)
     storedSubcategories.value = readStoredSubcategories(userId, undefined, categoryLabels.value)
     if (props.mode !== 'edit') resetForm()
-  },
-)
-
-watch(
-  () => form.value.dateVente,
-  (value) => {
-    if (value && (form.value.prixResell === null || form.value.prixResell === '')) {
-      form.value.prixResell = 0
-      priceInputs.value.prixResell = formatPriceValue(0)
-    }
   },
 )
 
@@ -721,10 +692,6 @@ function updatePriceField(key, event) {
   if (key === 'prixRetail') {
     manualRetailOverride.value = true
     autoFilledRetail.value = false
-  }
-  if (key === 'prixResell') {
-    manualResellOverride.value = true
-    autoFilledResell.value = false
   }
 
   const parsed = parsePriceValue(priceInputs.value[key])
@@ -912,7 +879,7 @@ defineExpose({
 }
 
 .item-field--grouping {
-  grid-column: span 6;
+  align-self: end;
 }
 
 .item-field--market-section {
@@ -980,15 +947,15 @@ defineExpose({
 
 .grouping-toggle {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  gap: 0.95rem;
-  min-height: 72px;
+  gap: 0.65rem;
+  min-height: 40px;
   width: 100%;
-  border: 1px solid rgba(148, 163, 184, 0.26);
-  border-radius: 18px;
+  border: 1px solid rgba(100, 116, 139, 0.24);
+  border-radius: 12px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 250, 252, 0.96));
-  padding: 1rem 1.05rem;
+  padding: 0.5rem 0.72rem;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.96),
     0 10px 24px rgba(15, 23, 42, 0.04);
@@ -1024,8 +991,8 @@ defineExpose({
 
 .grouping-switch {
   position: relative;
-  width: 3.5rem;
-  height: 2.05rem;
+  width: 2.85rem;
+  height: 1.72rem;
   flex: 0 0 auto;
   border-radius: 999px;
   background: #cbd5e1;
@@ -1040,10 +1007,10 @@ defineExpose({
 
 .grouping-switch__thumb {
   position: absolute;
-  top: 0.2rem;
-  left: 0.22rem;
-  width: 1.62rem;
-  height: 1.62rem;
+  top: 0.15rem;
+  left: 0.16rem;
+  width: 1.4rem;
+  height: 1.4rem;
   border-radius: 999px;
   background: linear-gradient(180deg, #ffffff, #f8fafc);
   box-shadow:
@@ -1062,7 +1029,7 @@ defineExpose({
 }
 
 .grouping-checkbox:checked + .grouping-switch .grouping-switch__thumb {
-  transform: translateX(1.44rem);
+  transform: translateX(1.12rem);
 }
 
 .grouping-toggle:hover .grouping-switch {
@@ -1079,34 +1046,18 @@ defineExpose({
 .grouping-toggle strong {
   display: block;
   color: #0f172a;
-  font-size: 0.96rem;
+  font-size: 0.9rem;
   font-weight: 900;
   line-height: 1.2;
 }
 
 .grouping-toggle small {
   display: block;
-  margin-top: 0.18rem;
+  margin-top: 0.08rem;
   color: #64748b;
-  font-size: 0.78rem;
-  font-weight: 700;
-  line-height: 1.35;
-}
-
-.grouping-toggle__badge {
-  display: inline-flex;
-  min-width: 2.5rem;
-  height: 2rem;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgba(15, 118, 110, 0.14);
-  border-radius: 999px;
-  background: rgba(240, 253, 250, 0.92);
-  color: #0f766e;
-  padding: 0 0.75rem;
-  font-size: 0.76rem;
-  font-weight: 900;
-  letter-spacing: 0.04em;
+  font-size: 0.72rem;
+  font-weight: 750;
+  line-height: 1.2;
 }
 
 .item-field input[type='number'] {
@@ -1285,11 +1236,11 @@ defineExpose({
   .item-field--subcategory,
   .item-field--price,
   .item-field--date,
-  .item-field--quantity {
+  .item-field--quantity,
+  .item-field--grouping {
     grid-column: span 1;
   }
 
-  .item-field--grouping,
   .item-field--name,
   .item-field--notes,
   .item-field--section,
@@ -1338,13 +1289,6 @@ defineExpose({
     grid-template-columns: auto minmax(0, 1fr);
     align-items: start;
   }
-
-  .grouping-toggle__badge {
-    grid-column: 2;
-    justify-self: start;
-    margin-top: 0.2rem;
-  }
-
 }
 
 @media (hover: none) and (pointer: coarse) {
