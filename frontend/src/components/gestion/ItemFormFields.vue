@@ -107,8 +107,10 @@
       </div>
 
       <div
-        v-if="quantityEnabled && Number(form.quantity) > 1 && (!showDetails || isQuickSurface)"
+        v-if="quantityEnabled && (!showDetails || isQuickSurface)"
         class="item-field item-field--grouping"
+        :class="{ 'is-inactive': Number(form.quantity) <= 1 }"
+        :aria-hidden="Number(form.quantity) <= 1"
       >
         <span>Reunir</span>
         <label class="grouping-toggle">
@@ -221,8 +223,10 @@
       </div>
 
       <div
-        v-if="quantityEnabled && Number(form.quantity) > 1 && showInlineDetails"
+        v-if="quantityEnabled && showInlineDetails"
         class="item-field item-field--grouping"
+        :class="{ 'is-inactive': Number(form.quantity) <= 1 }"
+        :aria-hidden="Number(form.quantity) <= 1"
       >
         <span>Reunir</span>
         <label class="grouping-toggle">
@@ -880,6 +884,11 @@ defineExpose({
 
 .item-field--grouping {
   align-self: end;
+}
+
+.item-field--grouping.is-inactive {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .item-field--market-section {

@@ -237,35 +237,37 @@
                 @change="toggleAll"
               />
             </th>
-            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
-              nom de l'item
+            <th class="gestion-header-cell px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
+              nom item
             </th>
-            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
+            <th class="gestion-header-cell px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
               type
             </th>
-            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
-              sous-categorie
+            <th class="gestion-header-cell px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
+              sous-cat.
             </th>
-            <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-400">
-              quantite
+            <th class="gestion-header-cell px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-400">
+              qte
             </th>
-            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-400">
-              prix_retail
+            <th class="gestion-header-cell px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-400">
+              retail
             </th>
-            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-400">
-              prix_resell
+            <th class="gestion-header-cell px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-400">
+              resell
             </th>
-            <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-400">
-              date achat
+            <th class="gestion-header-cell px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-400">
+              achat
             </th>
-            <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-400">
-              date vente
+            <th class="gestion-header-cell px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-400">
+              vente
             </th>
-            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-400">
+            <th class="gestion-header-cell px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-400">
               profit
             </th>
-            <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-400">
-              actions
+            <th
+              aria-label="Actions"
+              class="gestion-header-cell gestion-header-cell--actions px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-400"
+            >
             </th>
           </tr>
         </thead>
@@ -1014,23 +1016,23 @@ onBeforeUnmount(() => {
 }
 
 .gestion-col-name {
-  width: 21%;
+  width: 22%;
 }
 
 .gestion-col-type {
-  width: 10%;
-}
-
-.gestion-col-subcategory {
   width: 9%;
 }
 
+.gestion-col-subcategory {
+  width: 11%;
+}
+
 .gestion-col-quantity {
-  width: 7%;
+  width: 6%;
 }
 
 .gestion-col-retail {
-  width: 13%;
+  width: 12%;
 }
 
 .gestion-col-resell {
@@ -1062,6 +1064,18 @@ onBeforeUnmount(() => {
 .gestion-list th {
   color: #1e293b;
   font-weight: 900;
+}
+
+.gestion-header-cell {
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+  line-height: 1.1;
+}
+
+.gestion-header-cell--actions {
+  padding-left: 0.4rem;
+  padding-right: 0.4rem;
 }
 
 .gestion-list th,
