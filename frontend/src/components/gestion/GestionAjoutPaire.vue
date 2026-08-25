@@ -4,9 +4,9 @@
       <div v-if="visible" class="fixed inset-0 z-[9999]">
         <div class="absolute inset-0 bg-slate-950/48 backdrop-blur-[2px]" @click.self="handleClose"></div>
 
-        <div class="relative z-10 flex min-h-full items-end justify-center p-0 sm:items-center sm:p-4">
+        <div class="relative z-10 flex min-h-full items-center justify-center p-4">
           <section
-            class="modal-card w-full max-w-4xl max-h-[100dvh] rounded-t-2xl rounded-b-none border bg-white shadow-2xl sm:max-h-[92vh] sm:rounded-2xl"
+            class="modal-card w-full max-w-4xl max-h-[92vh] rounded-2xl border bg-white shadow-2xl"
             role="dialog"
             aria-modal="true"
             aria-labelledby="add-item-title"

@@ -357,7 +357,7 @@
                 </span>
               </td>
 
-              <td class="px-4 py-3 text-center">
+              <td class="gestion-cell-actions px-4 py-3 text-center">
                 <div class="gestion-row-actions">
                   <button
                     type="button"
@@ -455,7 +455,7 @@
                 </span>
               </td>
 
-              <td class="px-4 py-3 text-center">
+              <td class="gestion-cell-actions px-4 py-3 text-center">
                 <div class="gestion-row-actions">
                   <button
                     type="button"
@@ -948,6 +948,7 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   gap: 0.45rem;
+  min-width: max-content;
 }
 
 .gestion-icon-button,
@@ -1020,27 +1021,27 @@ onBeforeUnmount(() => {
 }
 
 .gestion-col-type {
-  width: 9%;
+  width: 8.5%;
 }
 
 .gestion-col-subcategory {
-  width: 11%;
-}
-
-.gestion-col-quantity {
-  width: 6%;
-}
-
-.gestion-col-retail {
-  width: 12%;
-}
-
-.gestion-col-resell {
   width: 10%;
 }
 
+.gestion-col-quantity {
+  width: 5.5%;
+}
+
+.gestion-col-retail {
+  width: 11.5%;
+}
+
+.gestion-col-resell {
+  width: 9.5%;
+}
+
 .gestion-col-date {
-  width: 8%;
+  width: 7.5%;
 }
 
 .gestion-col-profit {
@@ -1048,7 +1049,7 @@ onBeforeUnmount(() => {
 }
 
 .gestion-col-actions {
-  width: 5%;
+  width: 9%;
 }
 
 .gestion-list thead {
@@ -1111,6 +1112,12 @@ onBeforeUnmount(() => {
 .gestion-list td:last-child,
 .gestion-list th:last-child {
   padding-right: 0.85rem;
+}
+
+.gestion-cell-actions,
+.gestion-header-cell--actions {
+  padding-left: 0.45rem !important;
+  padding-right: 0.45rem !important;
 }
 
 .gestion-cell-name,
