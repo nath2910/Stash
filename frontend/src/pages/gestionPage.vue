@@ -456,7 +456,7 @@ let importSpotlightTimer = null
 const EMPTY_CATEGORY_VALUE = '__empty_category__'
 const INITIAL_RENDER_LIMIT = 80
 const RENDER_BATCH_SIZE = 80
-const DELETE_UNDO_DELAY_MS = 5200
+const DELETE_UNDO_DELAY_MS = 9000
 const MAX_SEARCH_WORDS = 120
 const SEARCH_EXTRA_FIELDS = [
   'marque',
@@ -1322,7 +1322,7 @@ const requestDeleteItems = (ids = []) => {
   showDeleteModal.value = false
 
   const snapshot = {
-    rows: structuredClone(snkVentes.value),
+    rows: JSON.parse(JSON.stringify(snkVentes.value)),
     selectedIds: [...selectedIds.value],
   }
 
@@ -3341,23 +3341,27 @@ onBeforeUnmount(() => {
 }
 
 .inventory-sticky-tools {
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.985), rgba(249, 250, 251, 0.965)),
+    #ffffff;
+  box-shadow:
+    0 12px 30px rgba(15, 23, 42, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.68);
 }
 
 .inventory-sticky-tools.is-condensed {
-  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.1);
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
 }
 
 .inventory-toolbar {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 0.75rem;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
-  padding: 0.72rem clamp(0.9rem, 1.6vw, 1.15rem) 0.58rem;
+  gap: 0.9rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+  padding: 0.9rem clamp(1rem, 1.8vw, 1.3rem) 0.68rem;
 }
 
 .inventory-toolbar-copy {
@@ -3366,7 +3370,7 @@ onBeforeUnmount(() => {
 
 .inventory-toolbar-copy h2 {
   color: #0f172a;
-  font-size: 0.98rem;
+  font-size: 1.02rem;
   font-weight: 950;
   line-height: 1.1;
 }
@@ -3374,9 +3378,9 @@ onBeforeUnmount(() => {
 .inventory-toolbar-copy p {
   margin-top: 0.22rem;
   color: #64748b;
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   font-weight: 800;
-  line-height: 1.25;
+  line-height: 1.35;
 }
 
 .inventory-toolbar-actions {
@@ -3387,7 +3391,7 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: flex-end;
   flex-wrap: wrap;
-  gap: 0.48rem;
+  gap: 0.58rem;
 }
 
 .inventory-toolbar-actions > * {
@@ -3398,8 +3402,8 @@ onBeforeUnmount(() => {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.56rem clamp(0.9rem, 1.6vw, 1.15rem);
+  gap: 0.58rem;
+  padding: 0.72rem clamp(1rem, 1.8vw, 1.3rem) 0.82rem;
 }
 
 .inventory-control-row > * {
@@ -3408,15 +3412,16 @@ onBeforeUnmount(() => {
 
 .inventory-control-row :deep(.gestion-search-field) {
   min-height: 42px;
-  border-radius: 12px;
-  border-color: rgba(148, 163, 184, 0.26);
-  box-shadow: none;
+  border-radius: 14px;
+  border-color: rgba(148, 163, 184, 0.22);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.62);
 }
 
 .inventory-control-row :deep(.gestion-search-field:hover),
 .inventory-control-row :deep(.gestion-search-field:focus-within) {
-  border-color: rgba(20, 184, 166, 0.42);
-  box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.11);
+  border-color: rgba(45, 212, 191, 0.34);
+  box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.1);
 }
 
 .inventory-control-row :deep(.gestion-search-icon) {
@@ -3432,15 +3437,15 @@ onBeforeUnmount(() => {
   width: auto;
   min-width: 6.5rem;
   height: 42px;
-  border-radius: 12px;
-  padding-inline: 0.82rem;
+  border-radius: 14px;
+  padding-inline: 0.9rem;
 }
 
 .filter-reset-button--inline {
   width: 42px;
   min-width: 42px;
   height: 42px;
-  border-radius: 12px;
+  border-radius: 14px;
 }
 
 .inventory-filter-shell:not(.is-open) {
@@ -3460,11 +3465,15 @@ onBeforeUnmount(() => {
 }
 
 .inventory-danger-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: auto;
   max-width: 100%;
+  min-width: 12.75rem;
   min-height: 40px;
-  border-radius: 12px;
-  padding-inline: 0.92rem;
+  border-radius: 14px;
+  padding-inline: 1rem;
   font-size: 0.78rem;
   line-height: 1.15;
   text-align: center;
@@ -3473,8 +3482,8 @@ onBeforeUnmount(() => {
 
 .inventory-toolbar-actions :deep(button) {
   min-height: 40px;
-  border-radius: 12px;
-  padding-inline: 0.92rem;
+  border-radius: 14px;
+  padding-inline: 1rem;
   font-size: 0.78rem;
 }
 
@@ -3482,7 +3491,7 @@ onBeforeUnmount(() => {
   width: 100%;
   min-width: 0;
   max-width: 100%;
-  padding: 0.22rem clamp(0.9rem, 1.6vw, 1.15rem) 0.82rem;
+  padding: 0.58rem clamp(1rem, 1.8vw, 1.3rem) 1rem;
   overflow-x: hidden;
 }
 

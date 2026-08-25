@@ -240,14 +240,53 @@ public class snkVenteService {
       throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Acces interdit");
     }
 
+    Integer parentIdToCheck = existing.getParentId();
     snkVenteRepository.delete(existing);
+    cleanupEmptyGroupParent(userId, parentIdToCheck);
   }
 
   @Transactional
   @CacheEvict(cacheNames = "statsQueries", allEntries = true)
   public int deleteBulk(Long userId, List<Integer> ids) {
     if (ids == null || ids.isEmpty()) return 0;
-    return snkVenteRepository.deleteByUserAndIds(userId, ids);
+
+    List<Integer> uniqueIds = ids.stream()
+        .filter(Objects::nonNull)
+        .distinct()
+        .toList();
+    if (uniqueIds.isEmpty()) return 0;
+
+    List<SnkVente> matches = snkVenteRepository.findByUser_IdAndIdIn(userId, uniqueIds);
+    if (matches.isEmpty()) return 0;
+
+    java.util.Set<Integer> selectedParentIds = matches.stream()
+        .filter(SnkVente::isGroupParent)
+        .map(SnkVente::getId)
+        .collect(Collectors.toSet());
+
+    java.util.Set<Integer> parentIdsToCheck = matches.stream()
+        .map(SnkVente::getParentId)
+        .filter(Objects::nonNull)
+        .filter(parentId -> !selectedParentIds.contains(parentId))
+        .collect(Collectors.toSet());
+
+    matches.stream()
+        .filter(vente -> vente.getParentId() == null || !selectedParentIds.contains(vente.getParentId()))
+        .sorted(Comparator.comparing((SnkVente vente) -> vente.getParentId() == null))
+        .forEach(snkVenteRepository::delete);
+
+    parentIdsToCheck.forEach(parentId -> cleanupEmptyGroupParent(userId, parentId));
+    return matches.size();
+  }
+
+  private void cleanupEmptyGroupParent(Long userId, Integer parentId) {
+    if (parentId == null) return;
+    if (snkVenteRepository.countByUser_IdAndParent_Id(userId, parentId) > 0) return;
+
+    snkVenteRepository.findById(parentId)
+        .filter(parent -> parent.getUser() != null && userId.equals(parent.getUser().getId()))
+        .filter(SnkVente::isGroupParent)
+        .ifPresent(snkVenteRepository::delete);
   }
 
   public List<TopVenteProjection> getTop3VentesAnneeCourante(Long userId) {

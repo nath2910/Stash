@@ -1,13 +1,21 @@
 <template>
   <div class="gestion-list space-y-3">
     <div
-      v-if="selectable && (!isDesktop || modelValue.length)"
+      v-if="selectable"
       class="gestion-selection-bar mb-3 flex items-center justify-between"
+      :class="{ 'is-idle': !modelValue.length }"
     >
-      <p class="text-xs text-gray-400">{{ modelValue.length }} selectionnee(s)</p>
+      <p class="text-xs text-gray-400">
+        {{ modelValue.length ? `${modelValue.length} selectionnee(s)` : 'Aucune selection' }}
+      </p>
 
-      <button type="button" class="gestion-selection-toggle" @click="toggleAll">
-        {{ allSelected ? 'Tout deselectionner' : 'Tout selectionner' }}
+      <button
+        type="button"
+        class="gestion-selection-toggle"
+        :disabled="!visibleIds.length"
+        @click="toggleAll"
+      >
+        {{ allSelected && modelValue.length ? 'Tout deselectionner' : 'Tout selectionner' }}
       </button>
     </div>
 
@@ -75,7 +83,7 @@
               class="gestion-icon-button gestion-icon-button--danger"
               aria-label="Supprimer l'item"
               title="Supprimer"
-              @click.stop="emit('delete', [vente.id])"
+              @click.stop="emit('delete', deleteIdsFor(vente))"
             >
               <Trash2 class="h-4 w-4" aria-hidden="true" />
             </button>
@@ -364,7 +372,7 @@
                     class="gestion-icon-button gestion-icon-button--danger"
                     aria-label="Supprimer l'item"
                     title="Supprimer"
-                    @click.stop="emit('delete', [vente.id])"
+                    @click.stop="emit('delete', deleteIdsFor(vente))"
                   >
                     <Trash2 class="h-4 w-4" aria-hidden="true" />
                   </button>
@@ -547,6 +555,7 @@ const quantityOf = (vente) => itemQuantityOf(vente)
 const soldCount = (vente) => soldCountOf(vente)
 
 const groupIds = (vente) => [vente.id, ...childRows(vente).map((child) => child.id)]
+const deleteIdsFor = (vente) => (isGroup(vente) ? groupIds(vente) : [vente.id])
 const isGroupChecked = (vente) => groupIds(vente).every((id) => selectedSet.value.has(id))
 
 const toggleOne = (id) => {
@@ -602,13 +611,13 @@ const subcategoryLabel = (vente) => {
 const typeBadgeClass = (type) => {
   switch (type) {
     case 'TICKET':
-      return 'bg-amber-500/15 text-amber-200 border border-amber-400/60'
+      return 'gestion-type-badge gestion-type-badge--ticket'
     case 'POKEMON_CARD':
-      return 'bg-cyan-500/15 text-cyan-200 border border-cyan-400/60'
+      return 'gestion-type-badge gestion-type-badge--pokemon'
     case 'OTHER':
-      return 'bg-slate-500/15 text-slate-200 border border-slate-400/60'
+      return 'gestion-type-badge gestion-type-badge--other'
     default:
-      return 'bg-purple-500/10 text-purple-200 border border-purple-400/60'
+      return 'gestion-type-badge gestion-type-badge--default'
   }
 }
 
@@ -724,26 +733,24 @@ onBeforeUnmount(() => {
 
 .gestion-list
   :is(.bg-gray-900, .bg-gray-900\/60, .bg-gray-900\/40, .bg-gray-950\/60, .bg-gray-950\/40) {
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.9)),
-    #ffffff;
+  background: rgba(255, 255, 255, 0.98);
 }
 
 .gestion-list
   :is(.border-gray-700, .border-gray-700\/70, .border-gray-700\/80, .border-gray-800) {
-  border-color: rgba(125, 211, 252, 0.32);
+  border-color: rgba(148, 163, 184, 0.24);
 }
 
 .gestion-list > div:first-child {
-  border: 1px solid rgba(125, 211, 252, 0.28);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.74);
-  padding: 0.55rem 0.85rem;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.94));
+  padding: 0.62rem 0.9rem;
 }
 
 .gestion-list > div:first-child p,
 .gestion-list > div:first-child button {
-  color: #0f766e;
+  color: #0f172a;
   font-weight: 800;
 }
 
@@ -760,19 +767,21 @@ onBeforeUnmount(() => {
   width: 100%;
   min-width: 0;
   max-width: 100%;
-  border-color: rgba(125, 211, 252, 0.34);
+  border-color: rgba(148, 163, 184, 0.2);
   background:
-    linear-gradient(135deg, rgba(236, 253, 245, 0.5), transparent 42%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.92));
-  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.06);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 250, 252, 0.95)),
+    #ffffff;
+  box-shadow:
+    0 10px 24px rgba(15, 23, 42, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
 .gestion-list article:hover,
 .gestion-list article:focus-visible,
 .gestion-list tbody tr:hover td,
 .gestion-list tbody tr:focus-visible td {
-  border-color: rgba(20, 184, 166, 0.46);
-  background: rgba(236, 253, 245, 0.78);
+  border-color: rgba(45, 212, 191, 0.28);
+  background: rgba(248, 250, 252, 0.96);
 }
 
 .gestion-list input[type='checkbox'] {
@@ -784,27 +793,47 @@ onBeforeUnmount(() => {
 
 .gestion-selection-bar {
   position: sticky;
-  top: 0;
+  top: 0.35rem;
   z-index: 8;
   width: 100%;
   min-width: 0;
   min-height: 44px;
   gap: 0.55rem;
   flex-wrap: wrap;
-  border: 1px solid rgba(125, 211, 252, 0.34);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.96);
-  padding: 0.55rem 0.9rem;
-  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.06);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.94)),
+    #ffffff;
+  padding: 0.62rem 0.92rem;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.05);
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.gestion-selection-bar.is-idle {
+  border-color: rgba(148, 163, 184, 0.2);
+  background: rgba(248, 250, 252, 0.88);
+  box-shadow: none;
 }
 
 .gestion-selection-bar p,
 .gestion-selection-bar button {
-  color: #0f766e;
-  font-weight: 900;
+  color: #0f172a;
+  font-weight: 800;
+}
+
+.gestion-selection-bar.is-idle p,
+.gestion-selection-bar.is-idle button {
+  color: #64748b;
 }
 
 .gestion-selection-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
   min-height: 2rem;
   min-width: 0;
   max-width: 100%;
@@ -813,6 +842,12 @@ onBeforeUnmount(() => {
   cursor: pointer;
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+.gestion-selection-toggle:disabled {
+  cursor: default;
+  opacity: 0.6;
+  text-decoration: none;
 }
 
 .gestion-mobile-list,
@@ -858,13 +893,13 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(20, 184, 166, 0.3);
+  border: 1px solid rgba(45, 212, 191, 0.24);
   border-radius: 999px;
-  background: #ecfdf5;
+  background: #f0fdfa;
   color: #0f766e;
-  padding: 0.14rem 0.52rem;
+  padding: 0.16rem 0.56rem;
   font-size: 0.68rem;
-  font-weight: 900;
+  font-weight: 800;
 }
 
 .gestion-child-meta-badge,
@@ -873,10 +908,10 @@ onBeforeUnmount(() => {
   width: fit-content;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(20, 184, 166, 0.18);
+  border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 999px;
-  background: rgba(240, 253, 250, 0.92);
-  color: #0f766e;
+  background: rgba(248, 250, 252, 0.94);
+  color: #475569;
   padding: 0.1rem 0.45rem;
   font-size: 0.68rem;
   font-weight: 800;
@@ -888,8 +923,8 @@ onBeforeUnmount(() => {
 }
 
 .gestion-list button {
-  border-color: rgba(14, 116, 144, 0.28);
-  background: rgba(255, 255, 255, 0.82);
+  border-color: rgba(148, 163, 184, 0.24);
+  background: rgba(255, 255, 255, 0.96);
   color: #0f766e;
   cursor: pointer;
   transition:
@@ -901,8 +936,8 @@ onBeforeUnmount(() => {
 }
 
 .gestion-list button:hover {
-  border-color: rgba(20, 184, 166, 0.5);
-  background: #ecfdf5;
+  border-color: rgba(45, 212, 191, 0.34);
+  background: rgba(240, 253, 250, 0.9);
   color: #0f766e;
 }
 
@@ -920,7 +955,7 @@ onBeforeUnmount(() => {
   height: 2.35rem;
   place-items: center;
   border-radius: 999px;
-  box-shadow: 0 8px 18px rgba(14, 116, 144, 0.08);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.05);
 }
 
 .gestion-expand-button {
@@ -946,9 +981,9 @@ onBeforeUnmount(() => {
 }
 
 .gestion-child-card {
-  border: 1px solid rgba(125, 211, 252, 0.24);
+  border: 1px solid rgba(148, 163, 184, 0.18);
   border-radius: 16px;
-  background: rgba(248, 250, 252, 0.94);
+  background: rgba(248, 250, 252, 0.86);
   padding: 0.75rem;
 }
 
@@ -965,10 +1000,13 @@ onBeforeUnmount(() => {
   min-width: 0;
   table-layout: fixed;
   overflow: hidden;
-  border: 1px solid rgba(125, 211, 252, 0.3);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.985), rgba(248, 250, 252, 0.97)),
+    #ffffff;
   color: #0f172a;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.04);
 }
 
 .gestion-col-select {
@@ -1015,12 +1053,14 @@ onBeforeUnmount(() => {
   position: sticky;
   top: 0;
   z-index: 7;
-  border-color: rgba(125, 211, 252, 0.28);
-  background: linear-gradient(135deg, #ecfdf5, #e0f2fe);
+  border-color: rgba(148, 163, 184, 0.2);
+  background:
+    linear-gradient(180deg, rgba(250, 252, 255, 0.99), rgba(241, 245, 249, 0.98)),
+    #f8fafc;
 }
 
 .gestion-list th {
-  color: #0f766e;
+  color: #1e293b;
   font-weight: 900;
 }
 
@@ -1034,15 +1074,15 @@ onBeforeUnmount(() => {
 }
 
 .gestion-list tbody tr {
-  border-color: rgba(226, 232, 240, 0.9);
+  border-color: rgba(226, 232, 240, 0.78);
 }
 
 .gestion-parent-row td {
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.96);
 }
 
 .gestion-child-row td {
-  background: rgba(248, 250, 252, 0.92);
+  background: rgba(248, 250, 252, 0.74);
 }
 
 .gestion-list td {
@@ -1091,28 +1131,42 @@ onBeforeUnmount(() => {
 .gestion-cell-resell {
   line-height: 1.35;
   white-space: normal;
+  color: #475569;
 }
 
 .gestion-row-actions {
   flex-wrap: nowrap;
 }
 
-.gestion-list :is(.bg-purple-500\/10, .bg-cyan-500\/15, .bg-amber-500\/15, .bg-slate-500\/15) {
-  background: rgba(240, 253, 250, 0.86);
+.gestion-type-badge {
+  border-width: 1px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.58);
 }
 
-.gestion-list :is(.text-purple-200, .text-cyan-200, .text-amber-200, .text-slate-200) {
+.gestion-type-badge--default {
+  border-color: rgba(14, 165, 233, 0.2);
+  background: rgba(239, 246, 255, 0.96);
+  color: #0369a1;
+}
+
+.gestion-type-badge--ticket {
+  border-color: rgba(245, 158, 11, 0.22);
+  background: rgba(255, 247, 237, 0.96);
+  color: #b45309;
+}
+
+.gestion-type-badge--pokemon {
+  border-color: rgba(20, 184, 166, 0.22);
+  background: rgba(240, 253, 250, 0.96);
   color: #0f766e;
 }
 
-.gestion-list
-  :is(
-    .border-purple-400\/60,
-    .border-cyan-400\/60,
-    .border-amber-400\/60,
-    .border-slate-400\/60
-  ) {
-  border-color: rgba(20, 184, 166, 0.4);
+.gestion-type-badge--other {
+  border-color: rgba(148, 163, 184, 0.24);
+  background: rgba(248, 250, 252, 0.96);
+  color: #475569;
 }
 
 @media (max-width: 640px) {

@@ -101,6 +101,10 @@ public interface SnkVenteRepository extends JpaRepository<SnkVente, Integer> {
 
   List<SnkVente> findByParent_IdOrderByUnitIndexAscIdAsc(Integer parentId);
 
+  List<SnkVente> findByUser_IdAndIdIn(Long userId, List<Integer> ids);
+
+  long countByUser_IdAndParent_Id(Long userId, Integer parentId);
+
   @Query("""
       select v
       from SnkVente v
