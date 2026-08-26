@@ -1,5 +1,5 @@
 <template>
-  <form class="item-form" :class="[`item-form--${surface}`, { 'has-cancel': showCancel }]" @submit.prevent="submit">
+  <form class="item-form" :class="[`item-form--${surface}`, { 'has-cancel': showCancel }]" @submit.prevent="submit" @keydown="handleFormKeydown">
     <div v-if="showDetailsToggle" class="item-form-tools">
       <button
         type="button"
@@ -800,6 +800,21 @@ function submit() {
     return
   }
   emit('submit', { quantity: props.quantityEnabled ? Number(form.value.quantity) : 1, payload })
+}
+
+// Raccourci clavier : Entrée soumet le formulaire même quand le focus est sur
+// un bouton interne (champ date custom, steppers quantité...) qui bloque la
+// soumission native du <form>.
+function handleFormKeydown(event) {
+  if (event.key !== 'Enter') return
+  const target = event.target
+  if (!(target instanceof Element)) return
+  // Laisser Entrée fonctionner normalement dans les zones multilignes.
+  if (target.tagName === 'TEXTAREA') return
+  // Ne pas intercepter les sous-formulaires (gestionnaire de catégories...).
+  if (target.closest('.manager-add-form')) return
+  event.preventDefault()
+  submit()
 }
 
 defineExpose({
