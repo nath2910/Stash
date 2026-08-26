@@ -100,40 +100,41 @@
               Cette action supprime definitivement ton compte et tes donnees.
             </p>
 
-            <div class="mt-4 space-y-3 text-sm text-slate-200">
-              <label class="flex items-start gap-2">
-                <input v-model="deleteConfirmChecked" type="checkbox" class="mt-0.5 h-4 w-4" />
-                <span>Je comprends que cette action est irreversible.</span>
-              </label>
-
-              <div>
-                <label class="block text-xs uppercase tracking-[0.2em] text-slate-500">
-                  Tape SUPPRIMER pour confirmer
+            <form class="mt-4" @submit.prevent="submitDelete">
+              <div class="space-y-3 text-sm text-slate-200">
+                <label class="flex items-start gap-2">
+                  <input v-model="deleteConfirmChecked" type="checkbox" class="mt-0.5 h-4 w-4" />
+                  <span>Je comprends que cette action est irreversible.</span>
                 </label>
-                <input
-                  v-model="deleteConfirmText"
-                  type="text"
-                  placeholder="SUPPRIMER"
-                  class="mt-2 block w-full rounded-xl border border-red-500/40 bg-slate-900/70 px-4 py-2.5 text-sm text-slate-100 shadow-sm transition focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-400"
-                />
+
+                <div>
+                  <label class="block text-xs uppercase tracking-[0.2em] text-slate-500">
+                    Tape SUPPRIMER pour confirmer
+                  </label>
+                  <input
+                    v-model="deleteConfirmText"
+                    type="text"
+                    placeholder="SUPPRIMER"
+                    class="mt-2 block w-full rounded-xl border border-red-500/40 bg-slate-900/70 px-4 py-2.5 text-sm text-slate-100 shadow-sm transition focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-400"
+                  />
+                </div>
               </div>
-            </div>
 
-            <div
-              v-if="deleteError"
-              class="mt-3 rounded-xl border border-red-500/70 bg-red-500/10 p-3 text-sm text-red-200"
-            >
-              {{ deleteError }}
-            </div>
+              <div
+                v-if="deleteError"
+                class="mt-3 rounded-xl border border-red-500/70 bg-red-500/10 p-3 text-sm text-red-200"
+              >
+                {{ deleteError }}
+              </div>
 
-            <button
-              type="button"
-              :disabled="deleting || !canDelete"
-              @click="submitDelete"
-              class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-red-500 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-red-400 focus:outline-none focus:ring-2 focus:ring-red-400 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
-            >
-              {{ deleting ? 'Suppression...' : 'Supprimer mon compte' }}
-            </button>
+              <button
+                type="submit"
+                :disabled="deleting || !canDelete"
+                class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-red-500 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-red-400 focus:outline-none focus:ring-2 focus:ring-red-400 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+              >
+                {{ deleting ? 'Suppression...' : 'Supprimer mon compte' }}
+              </button>
+            </form>
           </div>
         </section>
 

@@ -4,7 +4,7 @@ services:
     container_name: pg
     environment:
       POSTGRES_USER: myuser
-      POSTGRES_PASSWORD: Pipounet29
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: snkProjet_docker
     ports:
       - "5433:5432"

@@ -1,6 +1,12 @@
 <template>
   <div class="delete-sheet-backdrop" @click.self="close">
-    <section class="delete-sheet" role="dialog" aria-modal="true" aria-labelledby="delete-title">
+    <form
+      class="delete-sheet"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="delete-title"
+      @submit.prevent="queueDelete"
+    >
       <header class="delete-sheet-header">
         <div>
           <p>Suppression</p>
@@ -78,16 +84,15 @@
       <footer class="delete-sheet-actions">
         <button type="button" class="delete-secondary-button" @click="close">Annuler</button>
         <button
-          type="button"
+          type="submit"
           class="delete-danger-button"
-          :disabled="mode === 'name' ? !selected : !selectedIds.length"
-          @click="queueDelete"
+          :disabled="!canSubmitDelete"
         >
           <Trash2 class="h-4 w-4" aria-hidden="true" />
           <span>{{ mode === 'name' ? 'Supprimer cet item' : 'Supprimer la selection' }}</span>
         </button>
       </footer>
-    </section>
+    </form>
   </div>
 </template>
 
@@ -137,6 +142,11 @@ const suggestions = computed(() => {
 const modeLabel = computed(() =>
   mode.value === 'name' ? 'Choisir un item' : 'Supprimer la selection',
 )
+const canSubmitDelete = computed(() =>
+  mode.value === 'name'
+    ? Boolean(resolveSelectedForDelete()?.id)
+    : Boolean(props.selectedIds.length),
+)
 
 const setMode = (nextMode) => {
   mode.value = nextMode
@@ -159,10 +169,22 @@ const close = () => {
   emit('close')
 }
 
+const resolveSelectedForDelete = () => {
+  if (selected.value?.id) return selected.value
+  if (mode.value === 'name' && suggestions.value.length === 1) {
+    return suggestions.value[0]
+  }
+  return null
+}
+
 const queueDelete = () => {
-  const ids = mode.value === 'name' ? [selected.value?.id].filter(Boolean) : props.selectedIds
+  const candidate = resolveSelectedForDelete()
+  const ids = mode.value === 'name' ? [candidate?.id].filter(Boolean) : props.selectedIds
   if (!ids.length) {
-    error.value = 'Aucun item a supprimer.'
+    error.value =
+      mode.value === 'name' && query.value && suggestions.value.length > 1
+        ? 'Choisis un item dans la liste avant de supprimer.'
+        : 'Aucun item a supprimer.'
     return
   }
 

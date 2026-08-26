@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_DB: snkProjet_docker
       POSTGRES_USER: myuser
-      POSTGRES_PASSWORD: Pipounet29
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
     ports:
       - "5433:5432"
     volumes:
@@ -23,7 +23,7 @@ services:
       SPRING_PROFILES_ACTIVE: dev
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/snkProjet_docker
       SPRING_DATASOURCE_USERNAME: myuser
-      SPRING_DATASOURCE_PASSWORD: Pipounet29
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
       APP_STORAGE_ROOT: /app/uploads
     depends_on:
       db:

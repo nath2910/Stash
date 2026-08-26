@@ -22,7 +22,7 @@
             class="legal-profile-choice"
             :class="{ 'is-selected': selectedType === option.type }"
             :disabled="saving"
-            @click="selectType(option.type)"
+            @click="handleChoice(option.type)"
           >
             <span class="legal-profile-choice-head">
               <strong>{{ option.title }}</strong>
@@ -36,7 +36,12 @@
           </button>
         </div>
 
-        <form v-else class="legal-profile-form" @submit.prevent="submit">
+        <form
+          v-else
+          :id="detailFormId"
+          class="legal-profile-form"
+          @submit.prevent="submit"
+        >
           <div>
             <p class="legal-profile-form-title">Informations micro-entreprise</p>
             <p class="legal-profile-form-help">
@@ -127,8 +132,10 @@
           <button
             type="button"
             class="legal-profile-button is-primary"
+            :type="step === 'micro' ? 'submit' : 'button'"
+            :form="step === 'micro' ? detailFormId : undefined"
             :disabled="saving || !selectedType"
-            @click="submit"
+            @click="handlePrimaryAction"
           >
             <RefreshCw v-if="saving" class="legal-profile-button-icon is-spinning" />
             <span>{{ primaryButtonLabel }}</span>
@@ -177,6 +184,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'saved', 'cancel'])
 
+const detailFormId = 'legal-profile-form'
 const step = ref('choice')
 const selectedType = ref('')
 const saving = ref(false)
@@ -250,9 +258,24 @@ function selectType(type) {
   apiError.value = ''
 }
 
+function handleChoice(type) {
+  if (saving.value) return
+  if (selectedType.value === type) {
+    void submit()
+    return
+  }
+  selectType(type)
+}
+
 function cancel() {
   emit('cancel')
   emit('update:modelValue', false)
+}
+
+function handlePrimaryAction(event) {
+  if (step.value !== 'choice') return
+  event?.preventDefault?.()
+  void submit()
 }
 
 async function submit() {
