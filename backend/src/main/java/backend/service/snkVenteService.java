@@ -15,7 +15,6 @@ import java.util.LinkedHashMap;
 import java.util.stream.Collectors;
 import java.util.regex.Pattern;
 
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -73,10 +72,14 @@ public class snkVenteService {
   );
 
   private final SnkVenteRepository snkVenteRepository;
+
+  private final StatsCacheEvictionService statsCacheEviction;
   private final UserRepository userRepository;
 
-  public snkVenteService(SnkVenteRepository snkVenteRepository, UserRepository userRepository) {
+  public snkVenteService(SnkVenteRepository snkVenteRepository, UserRepository userRepository,
+      StatsCacheEvictionService statsCacheEviction) {
     this.snkVenteRepository = snkVenteRepository;
+    this.statsCacheEviction = statsCacheEviction;
     this.userRepository = userRepository;
   }
 
@@ -85,41 +88,33 @@ public class snkVenteService {
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Utilisateur introuvable"));
   }
 
-  @CacheEvict(cacheNames = "statsQueries", allEntries = true)
   public SnkVente creer(Long userId, SnkVenteCreateDto dto) {
-    User user = getUserOrThrow(userId);
-    int quantity = safeQuantity(dto.quantity());
-    if (quantity <= 1) {
-      return snkVenteRepository.save(buildEntity(user, dto));
-    }
-    if (shouldCreateGroup(dto, quantity)) {
-      return snkVenteRepository.save(createGroupedParent(user, dto, quantity));
-    }
-    List<SnkVente> entities = java.util.stream.IntStream.range(0, quantity)
-        .mapToObj(i -> buildEntity(user, dto))
-        .collect(Collectors.toList());
-    return snkVenteRepository.saveAll(entities).get(0);
+    return creerPlusieurs(userId, dto).get(0);
   }
 
   @Transactional
-  @CacheEvict(cacheNames = "statsQueries", allEntries = true)
   public List<SnkVente> creerPlusieurs(Long userId, SnkVenteCreateDto dto) {
     User user = getUserOrThrow(userId);
     int quantity = safeQuantity(dto.quantity());
+    List<SnkVente> out = new ArrayList<>();
     if (quantity <= 1) {
-      return List.of(snkVenteRepository.save(buildEntity(user, dto)));
+      out.add(snkVenteRepository.save(buildEntity(user, dto)));
+      statsCacheEviction.evictUser(userId);
+      return out;
     }
     if (shouldCreateGroup(dto, quantity)) {
       SnkVente parent = snkVenteRepository.save(createGroupedParent(user, dto, quantity));
-      List<SnkVente> out = new ArrayList<>();
       out.add(parent);
       out.addAll(parent.getChildren());
+      statsCacheEviction.evictUser(userId);
       return out;
     }
     List<SnkVente> entities = java.util.stream.IntStream.range(0, quantity)
         .mapToObj(i -> buildEntity(user, dto))
         .collect(Collectors.toList());
-    return snkVenteRepository.saveAll(entities);
+    out.addAll(snkVenteRepository.saveAll(entities));
+    statsCacheEviction.evictUser(userId);
+    return out;
   }
 
   private SnkVente buildEntity(User user, SnkVenteCreateDto dto) {
@@ -231,7 +226,6 @@ public class snkVenteService {
   }
 
   @Transactional
-  @CacheEvict(cacheNames = "statsQueries", allEntries = true)
   public void deleteVente(Long userId, Integer id) {
     SnkVente existing = snkVenteRepository.findById(id)
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Vente introuvable"));
@@ -243,10 +237,10 @@ public class snkVenteService {
     Integer parentIdToCheck = existing.getParentId();
     snkVenteRepository.delete(existing);
     cleanupEmptyGroupParent(userId, parentIdToCheck);
+    statsCacheEviction.evictUser(userId);
   }
 
   @Transactional
-  @CacheEvict(cacheNames = "statsQueries", allEntries = true)
   public int deleteBulk(Long userId, List<Integer> ids) {
     if (ids == null || ids.isEmpty()) return 0;
 
@@ -276,6 +270,7 @@ public class snkVenteService {
         .forEach(snkVenteRepository::delete);
 
     parentIdsToCheck.forEach(parentId -> cleanupEmptyGroupParent(userId, parentId));
+    statsCacheEviction.evictUser(userId);
     return matches.size();
   }
 
@@ -295,7 +290,6 @@ public class snkVenteService {
   }
 
   @Transactional
-  @CacheEvict(cacheNames = "statsQueries", allEntries = true)
   public SnkVente updateVente(Long userId, Integer id, SnkVente payload) {
     SnkVente existing = snkVenteRepository.findById(id)
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Vente introuvable"));
@@ -305,7 +299,9 @@ public class snkVenteService {
     }
 
     applyFields(existing, payload);
-    return snkVenteRepository.save(existing);
+    SnkVente saved = snkVenteRepository.save(existing);
+    statsCacheEviction.evictUser(userId);
+    return saved;
   }
 
   @Transactional(readOnly = true)
@@ -323,7 +319,6 @@ public class snkVenteService {
   }
 
   @Transactional
-  @CacheEvict(cacheNames = "statsQueries", allEntries = true)
   public int importBulk(Long userId, List<SnkVenteImportDto> items) {
     User user = getUserOrThrow(userId);
     if (items == null || items.isEmpty()) {
@@ -355,6 +350,7 @@ public class snkVenteService {
     }
 
     snkVenteRepository.saveAll(entities);
+    statsCacheEviction.evictUser(userId);
     return entities.size();
   }
 

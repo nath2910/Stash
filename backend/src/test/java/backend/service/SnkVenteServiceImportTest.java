@@ -28,7 +28,9 @@ class SnkVenteServiceImportTest {
     MockitoAnnotations.openMocks(this);
     venteRepo = Mockito.mock(SnkVenteRepository.class);
     userRepo = Mockito.mock(UserRepository.class);
-    service = new snkVenteService(venteRepo, userRepo);
+    StatsCacheEvictionService cacheEviction = Mockito.mock(StatsCacheEvictionService.class);
+    Mockito.doNothing().when(cacheEviction).evictUser(Mockito.anyLong());
+    service = new snkVenteService(venteRepo, userRepo, cacheEviction);
 
     user = Mockito.mock(User.class);
     Mockito.when(user.getId()).thenReturn(1L);
