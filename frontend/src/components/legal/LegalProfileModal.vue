@@ -1,6 +1,11 @@
 <template>
   <Teleport to="body">
-    <div v-if="modelValue" class="legal-profile-overlay" role="presentation">
+    <div
+      v-if="modelValue"
+      class="legal-profile-overlay"
+      role="presentation"
+      @click.self="requestClose"
+    >
       <section
         class="legal-profile-modal"
         role="dialog"
@@ -270,6 +275,11 @@ function handleChoice(type) {
 function cancel() {
   emit('cancel')
   emit('update:modelValue', false)
+}
+
+function requestClose() {
+  if (props.mandatory || saving.value) return
+  cancel()
 }
 
 function handlePrimaryAction(event) {

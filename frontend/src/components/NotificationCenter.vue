@@ -1,139 +1,142 @@
 <template>
   <Transition name="notification-center-fade">
-    <section
-      v-if="open"
-      class="notification-center-panel"
-      :class="panelThemeClass"
-      role="dialog"
-      aria-label="Centre de notifications"
-    >
-      <header class="notification-center-header">
-        <div class="min-w-0">
-          <p class="notification-center-eyebrow">Alertes Stash</p>
-          <h3 class="notification-center-title">Notifications</h3>
-        </div>
+    <div v-if="open" class="notification-center-layer" aria-hidden="true">
+      <section
+        ref="panelEl"
+        class="notification-center-panel"
+        :class="panelThemeClass"
+        role="dialog"
+        aria-label="Centre de notifications"
+        aria-modal="true"
+      >
+        <header class="notification-center-header">
+          <div class="min-w-0">
+            <p class="notification-center-eyebrow">Alertes Stash</p>
+            <h3 class="notification-center-title">Notifications</h3>
+          </div>
 
-        <div class="notification-center-tools">
-          <span class="notification-count" :aria-label="`${unreadCount} notifications non lues`">
-            {{ unreadCount }}
-          </span>
-
-          <button
-            type="button"
-            class="notification-action notification-action--soft"
-            :disabled="!unreadCount"
-            @click="$emit('read-all')"
-          >
-            Tout lire
-          </button>
-
-          <button
-            type="button"
-            class="notification-icon-button"
-            aria-label="Fermer"
-            @click="$emit('close')"
-          >
-            <X class="h-4 w-4" aria-hidden="true" />
-          </button>
-        </div>
-      </header>
-
-      <div class="notification-center-body">
-        <div v-if="loading && !notifications.length" class="notification-state">
-          Chargement...
-        </div>
-
-        <div v-else-if="!notifications.length" class="notification-state notification-state--empty">
-          <Inbox class="h-6 w-6" aria-hidden="true" />
-          <p>Aucune notification recente.</p>
-          <span>Les nouvelles alertes apparaitront ici.</span>
-        </div>
-
-        <ul v-else class="notification-list">
-          <li
-            v-for="notification in notifications"
-            :key="notification.id"
-            class="notification-item"
-            :class="[
-              notification.isRead ? 'is-read' : 'is-unread',
-              severityClass(notification.severity),
-              domainClass(notification),
-            ]"
-          >
-            <span class="notification-item-icon" aria-hidden="true">
-              <component :is="domainIcon(notification)" class="h-4 w-4" />
+          <div class="notification-center-tools">
+            <span class="notification-count" :aria-label="`${unreadCount} notifications non lues`">
+              {{ unreadCount }}
             </span>
 
-            <div class="notification-item-content">
-              <button
-                type="button"
-                class="notification-item-main"
-                @click="$emit('open-notification', notification)"
-              >
-                <span class="notification-item-meta">
-                  <span class="notification-domain-pill">{{ domainMeta(notification).label }}</span>
-                  <span>{{ typeLabel(notification) }}</span>
-                  <span>{{ severityLabel(notification.severity) }}</span>
-                </span>
-                <strong>{{ notification.title }}</strong>
-                <span>{{ notification.message }}</span>
-              </button>
+            <button
+              type="button"
+              class="notification-action notification-action--soft"
+              :disabled="!unreadCount"
+              @click="$emit('read-all')"
+            >
+              Tout lire
+            </button>
 
-              <div class="notification-item-actions">
-                <button
-                  v-if="!notification.isRead"
-                  type="button"
-                  class="notification-action"
-                  @click="$emit('mark-read', notification.id)"
-                >
-                  <Check class="h-3.5 w-3.5" aria-hidden="true" />
-                  Lu
-                </button>
+            <button
+              type="button"
+              class="notification-icon-button"
+              aria-label="Fermer"
+              @click="$emit('close')"
+            >
+              <X class="h-4 w-4" aria-hidden="true" />
+            </button>
+          </div>
+        </header>
 
+        <div class="notification-center-body">
+          <div v-if="loading && !notifications.length" class="notification-state">
+            Chargement...
+          </div>
+
+          <div v-else-if="!notifications.length" class="notification-state notification-state--empty">
+            <Inbox class="h-6 w-6" aria-hidden="true" />
+            <p>Aucune notification recente.</p>
+            <span>Les nouvelles alertes apparaitront ici.</span>
+          </div>
+
+          <ul v-else class="notification-list">
+            <li
+              v-for="notification in notifications"
+              :key="notification.id"
+              class="notification-item"
+              :class="[
+                notification.isRead ? 'is-read' : 'is-unread',
+                severityClass(notification.severity),
+                domainClass(notification),
+              ]"
+            >
+              <span class="notification-item-icon" aria-hidden="true">
+                <component :is="domainIcon(notification)" class="h-4 w-4" />
+              </span>
+
+              <div class="notification-item-content">
                 <button
-                  v-if="notification.ctaRoute"
                   type="button"
-                  class="notification-action notification-action--primary"
+                  class="notification-item-main"
                   @click="$emit('open-notification', notification)"
                 >
-                  <ExternalLink class="h-3.5 w-3.5" aria-hidden="true" />
-                  {{ notification.ctaLabel || 'Ouvrir' }}
+                  <span class="notification-item-meta">
+                    <span class="notification-domain-pill">{{ domainMeta(notification).label }}</span>
+                    <span>{{ typeLabel(notification) }}</span>
+                    <span>{{ severityLabel(notification.severity) }}</span>
+                  </span>
+                  <strong>{{ notification.title }}</strong>
+                  <span>{{ notification.message }}</span>
                 </button>
 
-                <button
-                  type="button"
-                  class="notification-action"
-                  @click="$emit('dismiss', notification.id)"
-                >
-                  <Archive class="h-3.5 w-3.5" aria-hidden="true" />
-                  Masquer
-                </button>
+                <div class="notification-item-actions">
+                  <button
+                    v-if="!notification.isRead"
+                    type="button"
+                    class="notification-action"
+                    @click="$emit('mark-read', notification.id)"
+                  >
+                    <Check class="h-3.5 w-3.5" aria-hidden="true" />
+                    Lu
+                  </button>
 
-                <time class="notification-item-date" :datetime="notification.createdAt">
-                  {{ formatNotificationDate(notification.createdAt) }}
-                </time>
+                  <button
+                    v-if="notification.ctaRoute"
+                    type="button"
+                    class="notification-action notification-action--primary"
+                    @click="$emit('open-notification', notification)"
+                  >
+                    <ExternalLink class="h-3.5 w-3.5" aria-hidden="true" />
+                    {{ notification.ctaLabel || 'Ouvrir' }}
+                  </button>
+
+                  <button
+                    type="button"
+                    class="notification-action"
+                    @click="$emit('dismiss', notification.id)"
+                  >
+                    <Archive class="h-3.5 w-3.5" aria-hidden="true" />
+                    Masquer
+                  </button>
+
+                  <time class="notification-item-date" :datetime="notification.createdAt">
+                    {{ formatNotificationDate(notification.createdAt) }}
+                  </time>
+                </div>
               </div>
-            </div>
-          </li>
-        </ul>
+            </li>
+          </ul>
 
-        <div v-if="hasNext" class="notification-load-more">
-          <button
-            type="button"
-            class="notification-action notification-action--wide"
-            :disabled="loading"
-            @click="$emit('load-more')"
-          >
-            {{ loading ? 'Chargement...' : 'Charger plus' }}
-          </button>
+          <div v-if="hasNext" class="notification-load-more">
+            <button
+              type="button"
+              class="notification-action notification-action--wide"
+              :disabled="loading"
+              @click="$emit('load-more')"
+            >
+              {{ loading ? 'Chargement...' : 'Charger plus' }}
+            </button>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </div>
   </Transition>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { Archive, Check, CreditCard, ExternalLink, FileCheck2, Inbox, PackageSearch, X } from 'lucide-vue-next'
 import {
   formatNotificationDate,
@@ -143,6 +146,7 @@ import {
   getNotificationTypeLabel,
   normalizeNotificationSeverity,
 } from '@/utils/notificationUi'
+import { useClickOutside } from '@/composables/useClickOutside'
 
 const props = defineProps({
   open: {
@@ -171,13 +175,19 @@ const props = defineProps({
   },
 })
 
-defineEmits(['close', 'mark-read', 'read-all', 'dismiss', 'load-more', 'open-notification'])
+const emit = defineEmits(['close', 'mark-read', 'read-all', 'dismiss', 'load-more', 'open-notification'])
+
+const panelEl = ref(null)
 
 const panelThemeClass = computed(() =>
   props.theme === 'home' || props.theme === 'light'
     ? 'notification-center-panel--home'
     : 'notification-center-panel--dark',
 )
+
+useClickOutside(panelEl, () => emit('close'), {
+  enabled: () => props.open,
+})
 
 function normalizeSeverity(severity) {
   return normalizeNotificationSeverity(severity)
@@ -215,6 +225,12 @@ function typeLabel(notification) {
 </script>
 
 <style scoped>
+.notification-center-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 84;
+}
+
 .notification-center-panel {
   position: fixed;
   right: max(0.5rem, env(safe-area-inset-right));

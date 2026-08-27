@@ -442,11 +442,11 @@ onBeforeUnmount(() => {
 }
 
 .category-field--dropdown {
-  z-index: 20;
+  z-index: 1;
 }
 
 .category-field--dropdown.is-open {
-  z-index: 260;
+  z-index: 30;
 }
 
 .field-heading {
@@ -568,7 +568,7 @@ onBeforeUnmount(() => {
   left: 0;
   right: auto;
   top: calc(100% + 0.45rem);
-  z-index: 220;
+  z-index: 31;
   display: grid;
   width: max(100%, min(28rem, calc(100vw - 2rem)));
   min-width: min(28rem, calc(100vw - 2rem));

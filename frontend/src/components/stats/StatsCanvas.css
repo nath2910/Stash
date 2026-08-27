@@ -38,8 +38,18 @@
   --stats-side-gap: var(--app-edge-gap, clamp(10px, 2.8vw, 18px));
   --stats-bottom-gap: max(16px, env(safe-area-inset-bottom, 0px) + 10px);
   --stats-rail-offset: clamp(12px, 1.3vw, 18px);
-  --template-rail-width: 64px;
-  --template-rail-gap: 8px;
+  --template-rail-width: clamp(62px, 4.6vw, 74px);
+  --template-rail-gap: clamp(7px, 0.45vw, 10px);
+  --template-rail-radius: 10px;
+  --template-rail-padding-block: clamp(8px, 0.55vw, 10px);
+  --template-rail-padding-inline: clamp(6px, 0.45vw, 8px);
+  --template-rail-user-size: clamp(48px, 3.2vw, 54px);
+  --template-rail-avatar-size: clamp(38px, 2.5vw, 42px);
+  --template-rail-avatar-font-size: clamp(0.95rem, 0.88rem + 0.12vw, 1.02rem);
+  --template-rail-nav-size: clamp(40px, 2.9vw, 44px);
+  --template-rail-meta-width: clamp(40px, 2.9vw, 44px);
+  --template-rail-meta-height: clamp(40px, 2.9vw, 44px);
+  --template-rail-min-height: clamp(500px, 70dvh, 620px);
   --stats-toolbar-clearance: 84px;
   --stats-profile-clearance: 76px;
   position: relative;
@@ -997,45 +1007,64 @@ body.canvas-pan-cursor * {
 
 .template-rail {
   position: absolute;
-  top: 10px;
+  top: var(--stats-top-gap);
   left: var(--stats-rail-offset);
   right: auto;
-  bottom: 10px;
+  bottom: auto;
   width: var(--template-rail-width, 64px);
-  border-radius: 8px;
+  min-height: min(var(--template-rail-min-height), calc(100dvh - (var(--stats-top-gap) * 2)));
+  border-radius: var(--template-rail-radius, 8px);
   border: 1px solid #9eb8d6;
   background: linear-gradient(180deg, rgba(228, 236, 246, 0.98), rgba(221, 232, 245, 0.98));
-  display: grid;
-  grid-template-rows: auto 1fr auto auto;
-  justify-items: center;
-  gap: 12px;
-  padding: 8px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--template-rail-gap, 8px);
+  padding: var(--template-rail-padding-block, 8px) var(--template-rail-padding-inline, 6px);
   box-shadow: 0 12px 28px rgba(34, 63, 98, 0.1);
+  max-height: calc(100dvh - (var(--stats-top-gap) * 2));
+  overflow-y: auto;
+  scrollbar-width: none;
   z-index: 12;
 }
 
 .template-mode ~ .template-rail {
-  top: 10px;
+  top: var(--stats-top-gap);
   left: var(--stats-rail-offset);
   right: auto;
-  bottom: 10px;
+  bottom: auto;
   width: var(--template-rail-width, 64px);
-  border-radius: 8px;
+  height: auto;
+  min-height: min(var(--template-rail-min-height), calc(100dvh - (var(--stats-top-gap) * 2)));
+  max-height: calc(100dvh - (var(--stats-top-gap) * 2));
+  border-radius: var(--template-rail-radius, 8px);
   border-color: rgba(113, 151, 195, 0.42);
   background:
     linear-gradient(180deg, rgba(247, 251, 255, 0.76), rgba(224, 235, 249, 0.78)),
     linear-gradient(90deg, rgba(255, 255, 255, 0.28), rgba(109, 93, 252, 0.05));
+  gap: var(--template-rail-gap, 8px);
+  padding: var(--template-rail-padding-block, 8px) var(--template-rail-padding-inline, 6px);
   box-shadow:
     0 12px 28px rgba(54, 78, 112, 0.14),
     inset 0 1px 0 rgba(255, 255, 255, 0.72),
     inset 0 0 0 1px rgba(255, 255, 255, 0.28);
   backdrop-filter: blur(18px);
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.template-mode ~ .template-rail::-webkit-scrollbar {
+  display: none;
+}
+
+.template-rail::-webkit-scrollbar {
+  display: none;
 }
 
 .template-rail__user {
-  width: 52px;
-  height: 52px;
-  border-radius: 8px;
+  width: var(--template-rail-user-size, 52px);
+  height: var(--template-rail-user-size, 52px);
+  border-radius: var(--template-rail-radius, 8px);
   border: 1px solid transparent;
   background: transparent;
   display: grid;
@@ -1048,16 +1077,16 @@ body.canvas-pan-cursor * {
 }
 
 .template-mode ~ .template-rail .template-rail__user {
-  width: 52px;
-  height: 52px;
+  width: var(--template-rail-user-size, 52px);
+  height: var(--template-rail-user-size, 52px);
   border-color: transparent;
   background: transparent;
   box-shadow: none;
 }
 
 .template-rail__user-avatar {
-  width: 42px;
-  height: 42px;
+  width: var(--template-rail-avatar-size, 42px);
+  height: var(--template-rail-avatar-size, 42px);
   border-radius: 999px;
   border: 1px solid rgba(65, 94, 134, 0.5);
   background:
@@ -1066,7 +1095,7 @@ body.canvas-pan-cursor * {
   color: #f8fbff;
   display: grid;
   place-items: center;
-  font-size: 1.05rem;
+  font-size: var(--template-rail-avatar-font-size, 1.05rem);
   font-weight: 780;
   line-height: 1;
   box-shadow: 0 10px 22px rgba(54, 78, 112, 0.2);
@@ -1106,13 +1135,13 @@ body.canvas-pan-cursor * {
 .template-rail__nav {
   display: grid;
   align-content: start;
-  gap: 8px;
+  gap: var(--template-rail-gap, 8px);
 }
 
 .template-rail__nav-btn {
-  width: 42px;
-  height: 42px;
-  border-radius: 8px;
+  width: var(--template-rail-nav-size, 42px);
+  height: var(--template-rail-nav-size, 42px);
+  border-radius: var(--template-rail-radius, 8px);
   border: 1px solid #9eb8d6;
   background: rgba(248, 251, 255, 0.96);
   color: #4b6b92;
@@ -1125,9 +1154,9 @@ body.canvas-pan-cursor * {
 }
 
 .template-mode ~ .template-rail .template-rail__nav-btn {
-  width: 42px;
-  height: 42px;
-  border-radius: 8px;
+  width: var(--template-rail-nav-size, 42px);
+  height: var(--template-rail-nav-size, 42px);
+  border-radius: var(--template-rail-radius, 8px);
   border-color: rgba(113, 151, 195, 0.44);
   background: rgba(255, 255, 255, 0.62);
   color: #426894;
@@ -1138,9 +1167,9 @@ body.canvas-pan-cursor * {
 
 .template-mode ~ .template-rail .template-rail__meta-btn,
 .template-mode ~ .template-rail .template-rail__profile-btn {
-  width: 42px;
-  height: 36px;
-  border-radius: 8px;
+  width: var(--template-rail-meta-width, 42px);
+  height: var(--template-rail-meta-height, 36px);
+  border-radius: var(--template-rail-radius, 8px);
   border-color: rgba(113, 151, 195, 0.44);
   background: rgba(255, 255, 255, 0.62);
   color: #426894;
@@ -1176,14 +1205,16 @@ body.canvas-pan-cursor * {
 
 .template-rail__meta {
   display: grid;
-  gap: 8px;
-  align-content: center;
+  gap: var(--template-rail-gap, 8px);
+  align-content: start;
+  margin-top: auto;
+  padding-top: clamp(8px, 0.45vw, 12px);
 }
 
 .template-rail__meta-btn {
-  width: 42px;
-  height: 36px;
-  border-radius: 8px;
+  width: var(--template-rail-meta-width, 42px);
+  height: var(--template-rail-meta-height, 36px);
+  border-radius: var(--template-rail-radius, 8px);
   border: 1px solid #9eb8d6;
   background: rgba(248, 251, 255, 0.96);
   color: #4b6b92;
@@ -1226,14 +1257,16 @@ body.canvas-pan-cursor * {
 
 .template-rail__profiles {
   display: grid;
-  gap: 8px;
-  align-content: end;
+  gap: var(--template-rail-gap, 8px);
+  align-content: start;
+  margin-top: 0;
+  padding-top: 0;
 }
 
 .template-rail__profile-btn {
-  width: 42px;
-  height: 36px;
-  border-radius: 8px;
+  width: var(--template-rail-meta-width, 42px);
+  height: var(--template-rail-meta-height, 36px);
+  border-radius: var(--template-rail-radius, 8px);
   border: 1px solid #9eb8d6;
   background: rgba(248, 251, 255, 0.96);
   display: grid;
@@ -2886,13 +2919,54 @@ body.canvas-pan-cursor * {
 }
 
 @media (max-width: 640px) {
+  .template-rail,
+  .template-mode ~ .template-rail {
+    display: grid;
+  }
+
   .template-rail {
+    top: auto;
     left: 6px;
     right: 6px;
+    bottom: var(--stats-bottom-gap);
+    width: auto;
     height: 58px;
+    grid-template-columns: auto auto 1fr auto;
+    grid-template-rows: 1fr;
+    align-items: center;
+    justify-items: start;
     padding: 5px 7px;
     border-radius: 14px;
     gap: 7px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+  }
+
+  .template-rail::-webkit-scrollbar {
+    display: none;
+  }
+
+  .template-rail__nav,
+  .template-rail__meta,
+  .template-rail__profiles {
+    display: inline-flex;
+    align-items: center;
+    align-content: center;
+    gap: 7px;
+  }
+
+  .template-rail__nav {
+    justify-content: flex-start;
+  }
+
+  .template-rail__meta {
+    min-width: max-content;
+  }
+
+  .template-rail__profiles {
+    justify-self: end;
+    min-width: max-content;
   }
 
   .template-rail__user,
@@ -2904,11 +2978,21 @@ body.canvas-pan-cursor * {
   }
 
   .template-mode ~ .template-rail {
+    top: auto;
     left: 6px;
     right: 6px;
+    bottom: var(--stats-bottom-gap);
+    width: auto;
     height: 58px;
+    grid-template-columns: auto auto 1fr auto;
+    grid-template-rows: 1fr;
+    align-items: center;
+    justify-items: start;
     padding: 5px 7px;
     border-radius: 14px;
+    gap: 7px;
+    overflow-x: auto;
+    overflow-y: hidden;
   }
 
   .template-mode ~ .template-rail .template-rail__user,
@@ -2917,6 +3001,45 @@ body.canvas-pan-cursor * {
   .template-mode ~ .template-rail .template-rail__profile-btn {
     width: 36px;
     height: 36px;
+  }
+
+  .template-mode ~ .template-rail .template-rail__nav,
+  .template-mode ~ .template-rail .template-rail__meta,
+  .template-mode ~ .template-rail .template-rail__profiles {
+    display: inline-flex;
+    align-items: center;
+    align-content: center;
+    gap: 7px;
+  }
+
+  .template-mode ~ .template-rail .template-rail__meta {
+    min-width: max-content;
+  }
+
+  .template-mode ~ .template-rail .template-rail__profiles {
+    justify-self: end;
+    min-width: max-content;
+  }
+
+  .template-rail__user-avatar,
+  .template-mode ~ .template-rail .template-rail__user-avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 0.92rem;
+  }
+
+  .template-rail [data-tooltip]::before,
+  .template-rail [data-tooltip]::after {
+    display: none;
+  }
+
+  .template-rail-date-popover {
+    position: fixed;
+    left: 10px;
+    right: 10px;
+    bottom: calc(var(--stats-bottom-gap) + 58px + 8px);
+    width: auto;
+    max-width: none;
   }
 
   .canvas-root {
@@ -3786,33 +3909,42 @@ body.canvas-pan-cursor * {
   .canvas-root {
     --stats-side-gap: clamp(24px, 2vw, 40px);
     --stats-rail-offset: clamp(18px, 1.3vw, 26px);
+  }
+
+  .canvas-root,
+  .canvas-root.theme-light {
     --template-rail-width: 74px;
+    --template-rail-user-size: 58px;
+    --template-rail-avatar-size: 46px;
+    --template-rail-nav-size: 48px;
+    --template-rail-meta-width: 48px;
+    --template-rail-meta-height: 48px;
   }
 
   .template-rail,
   .template-mode ~ .template-rail {
     top: 16px;
-    bottom: 16px;
+    bottom: auto;
     padding: 10px 8px;
   }
 
   .template-rail__user,
   .template-mode ~ .template-rail .template-rail__user {
-    width: 58px;
-    height: 58px;
+    width: var(--template-rail-user-size, 58px);
+    height: var(--template-rail-user-size, 58px);
   }
 
   .template-rail__nav-btn,
   .template-mode ~ .template-rail .template-rail__nav-btn {
-    width: 48px;
-    height: 48px;
+    width: var(--template-rail-nav-size, 48px);
+    height: var(--template-rail-nav-size, 48px);
   }
 
   .template-rail__meta-btn,
   .template-rail__profile-btn,
   .template-mode ~ .template-rail .template-rail__meta-btn,
   .template-mode ~ .template-rail .template-rail__profile-btn {
-    width: 48px;
-    height: 42px;
+    width: var(--template-rail-meta-width, 48px);
+    height: var(--template-rail-meta-height, 48px);
   }
 }

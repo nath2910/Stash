@@ -28,6 +28,7 @@
               :item="item"
               :items="items"
               :saving="saving"
+              auto-fill-sale-date-on-edit
               auto-focus-first-field
               details-default-open
               submit-label="Enregistrer"

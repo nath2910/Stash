@@ -1,5 +1,5 @@
 <template>
-  <section class="quick-search-panel">
+  <section ref="panelEl" class="quick-search-panel">
     <div class="search-heading">
       <div>
         <p class="search-eyebrow">Inventaire</p>
@@ -59,6 +59,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { Search, X } from 'lucide-vue-next'
 import SearchResultsDropdown from './SearchResultsDropdown.vue'
+import { useClickOutside } from '@/composables/useClickOutside'
 import { useAuthStore } from '@/store/authStore'
 import { itemTypeLabel, readStoredItemCategories } from '@/RegleItem/itemCategoryStore'
 import { formatNumber } from '@/utils/formatters'
@@ -80,6 +81,7 @@ const debouncedQuery = ref('')
 const focused = ref(false)
 const activeIndex = ref(-1)
 const inputEl = ref(null)
+const panelEl = ref(null)
 let debounceTimer = null
 let closeTimer = null
 
@@ -188,6 +190,11 @@ function selectItem(item) {
 function onGlobalSearchFocus() {
   focusSearch()
 }
+
+useClickOutside(panelEl, () => {
+  if (!dropdownOpen.value) return
+  close()
+})
 
 watch(
   () => currentUserId.value,

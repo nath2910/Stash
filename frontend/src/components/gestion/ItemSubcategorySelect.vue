@@ -445,7 +445,7 @@ onBeforeUnmount(() => {
 }
 
 .subcategory-field.is-open {
-  z-index: 180;
+  z-index: 30;
 }
 
 .subcategory-field-header {
@@ -551,7 +551,7 @@ onBeforeUnmount(() => {
   left: 0;
   right: 0;
   top: calc(100% + 0.5rem);
-  z-index: 80;
+  z-index: 31;
   overflow: hidden;
   border: 1px solid rgba(125, 211, 252, 0.38);
   border-radius: 14px;

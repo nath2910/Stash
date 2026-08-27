@@ -73,9 +73,11 @@
               v-if="selectedPeriodMode === 'month'"
               :value="selectedMonthKey"
               type="month"
+              class="category-month__native-input"
               :min="minMonthKey || undefined"
               :max="maxMonthKey || undefined"
               aria-label="Selectionner un mois"
+              @change="onMonthInput"
               @input="onMonthInput"
             />
             <input
@@ -116,18 +118,30 @@
           <div class="category-page-nav__center">
             <span class="category-page-nav__count">{{ activePage + 1 }} / {{ pages.length }}</span>
             <strong>{{ currentPage.label }}</strong>
-            <div class="category-page-nav__dots" role="tablist" aria-label="Pages">
+            <div class="category-page-nav__meta">
+              <div class="category-page-nav__dots" role="tablist" aria-label="Pages">
+                <button
+                  v-for="(page, index) in pages"
+                  :key="page.key"
+                  type="button"
+                  class="category-page-nav__dot"
+                  :class="{ 'is-active': activePage === index }"
+                  :aria-label="`Afficher ${page.label}`"
+                  :aria-selected="activePage === index"
+                  role="tab"
+                  @click="goToPage(index)"
+                ></button>
+              </div>
               <button
-                v-for="(page, index) in pages"
-                :key="page.key"
                 type="button"
-                class="category-page-nav__dot"
-                :class="{ 'is-active': activePage === index }"
-                :aria-label="`Afficher ${page.label}`"
-                :aria-selected="activePage === index"
-                role="tab"
-                @click="goToPage(index)"
-              ></button>
+                class="category-page-nav__scope-toggle"
+                :class="{ 'is-open': isScopeExpanded }"
+                :aria-expanded="isScopeExpanded"
+                aria-label="Afficher les filtres categorie"
+                @click="toggleScopePanel"
+              >
+                <ChevronDown aria-hidden="true" />
+              </button>
             </div>
           </div>
 
@@ -139,16 +153,6 @@
             @click="goToPage(activePage + 1)"
           >
             <ChevronRight aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            class="category-page-nav__scope-toggle"
-            :class="{ 'is-open': isScopeExpanded }"
-            :aria-expanded="isScopeExpanded"
-            aria-label="Afficher les filtres categorie"
-            @click="toggleScopePanel"
-          >
-            <ChevronDown aria-hidden="true" />
           </button>
         </nav>
       </template>
@@ -638,6 +642,7 @@ const today = new Date()
 const currentMonthKey = formatMonthKey(today)
 const currentYear = today.getFullYear()
 const UNKNOWN_SCOPE_LABEL = 'Sans sous-categorie'
+const TEMPLATE_STATE_EMIT_DEBOUNCE_MS = 140
 
 const selectedPeriodMode = ref(normalizeInitialPeriodMode(props.initialState))
 const selectedMonthKey = ref(normalizeInitialMonth(props.initialState))
@@ -661,6 +666,8 @@ const rawItems = ref<RawItem[]>([])
 const categoryLabels = ref(readStoredItemCategories(currentUserId()))
 const storedSubcategories = ref(readStoredSubcategories(currentUserId(), undefined, categoryLabels.value))
 let requestId = 0
+let templateStateEmitTimer: number | null = null
+let lastEmittedTemplateStateKey = ''
 
 const pages = [
   { key: 'overview', label: "Vue d'ensemble" },
@@ -1300,14 +1307,7 @@ watch(
 watch(
   [selectedPeriodMode, selectedMonthKey, selectedType, selectedSubcategories],
   () => {
-    emit('state-change', {
-      periodMode: selectedPeriodMode.value,
-      monthKey: selectedMonthKey.value,
-      month: Number(selectedMonthKey.value.slice(5, 7)),
-      year: Number(selectedMonthKey.value.slice(0, 4)),
-      type: selectedType.value,
-      categories: [...selectedSubcategories.value],
-    })
+    scheduleTemplateStateEmit()
   },
   { deep: true, immediate: true },
 )
@@ -1625,8 +1625,10 @@ function changePeriod(delta: number) {
 function onMonthInput(event: Event) {
   const input = event.target as HTMLInputElement | null
   const value = normalizeMonthKey(input?.value, selectedMonthKey.value)
-  selectedMonthKey.value = clampMonthKey(value)
-  if (input && input.value !== selectedMonthKey.value) input.value = selectedMonthKey.value
+  const nextValue = clampMonthKey(value)
+  if (input && input.value !== nextValue) input.value = nextValue
+  if (nextValue === selectedMonthKey.value) return
+  selectedMonthKey.value = nextValue
 }
 
 function onYearInput(event: Event) {
@@ -1689,6 +1691,40 @@ function toggleSubcategory(option: SubcategoryOption) {
 function clearSelectedSubcategories() {
   selectedSubcategories.value = []
   isSubcategoryMenuOpen.value = false
+}
+
+function buildTemplateState(): CategoryTemplateState {
+  return {
+    periodMode: selectedPeriodMode.value,
+    monthKey: selectedMonthKey.value,
+    month: Number(selectedMonthKey.value.slice(5, 7)),
+    year: Number(selectedMonthKey.value.slice(0, 4)),
+    type: selectedType.value,
+    categories: [...selectedSubcategories.value],
+  }
+}
+
+function flushTemplateStateEmit() {
+  const state = buildTemplateState()
+  const stateKey = JSON.stringify(state)
+  if (stateKey === lastEmittedTemplateStateKey) return
+  lastEmittedTemplateStateKey = stateKey
+  emit('state-change', state)
+}
+
+function scheduleTemplateStateEmit(immediate = false) {
+  if (templateStateEmitTimer) {
+    window.clearTimeout(templateStateEmitTimer)
+    templateStateEmitTimer = null
+  }
+  if (immediate) {
+    flushTemplateStateEmit()
+    return
+  }
+  templateStateEmitTimer = window.setTimeout(() => {
+    templateStateEmitTimer = null
+    flushTemplateStateEmit()
+  }, TEMPLATE_STATE_EMIT_DEBOUNCE_MS)
 }
 
 function refreshStoredCategoryMetadata() {
@@ -1763,6 +1799,7 @@ onMounted(async () => {
   window.addEventListener('snk:item-subcategories-change', onSubcategoriesChange)
   document.addEventListener('pointerdown', onDocumentPointerDown)
   document.addEventListener('keydown', onDocumentKeydown)
+  scheduleTemplateStateEmit(true)
   await loadDataset()
 })
 
@@ -1771,6 +1808,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('snk:item-subcategories-change', onSubcategoriesChange)
   document.removeEventListener('pointerdown', onDocumentPointerDown)
   document.removeEventListener('keydown', onDocumentKeydown)
+  if (templateStateEmitTimer) window.clearTimeout(templateStateEmitTimer)
 })
 </script>
 
@@ -1791,9 +1829,9 @@ onBeforeUnmount(() => {
 .category-panel,
 .category-module-card {
   border: 1px solid rgba(148, 163, 184, 0.26);
-  border-radius: 22px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.045);
 }
 
 .category-state {
@@ -1839,11 +1877,11 @@ onBeforeUnmount(() => {
 
 .category-month {
   display: grid;
-  gap: 0.6rem;
+  gap: 0.45rem;
   border: 1px solid rgba(148, 163, 184, 0.24);
-  border-radius: 22px;
+  border-radius: 18px;
   background: rgba(255, 255, 255, 0.9);
-  padding: 0.9rem 1rem;
+  padding: 0.72rem 0.85rem;
 }
 
 .category-month__head {
@@ -1860,7 +1898,7 @@ onBeforeUnmount(() => {
 
 .category-month__head span {
   color: #0f172a;
-  font-size: 0.8rem;
+  font-size: 0.74rem;
   font-weight: 900;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -1868,7 +1906,7 @@ onBeforeUnmount(() => {
 
 .category-month__head small {
   color: #0f766e;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 800;
 }
 
@@ -1883,11 +1921,11 @@ onBeforeUnmount(() => {
 }
 
 .category-mode-switch__button {
-  min-height: 30px;
+  min-height: 28px;
   border-radius: 999px;
-  padding: 0 0.78rem;
+  padding: 0 0.68rem;
   color: #64748b;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 900;
   transition:
     background 140ms ease,
@@ -1905,33 +1943,59 @@ onBeforeUnmount(() => {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.45rem;
 }
 
 .category-month__control button,
 .category-month__control input {
-  min-height: 44px;
+  min-height: 38px;
   border: 1px solid rgba(148, 163, 184, 0.28);
-  border-radius: 14px;
+  border-radius: 12px;
   background: #fff;
   color: #0f172a;
 }
 
-.category-month__control button {
-  width: 44px;
+.category-month__control > button:not(.category-month-field) {
+  width: 38px;
   display: inline-grid;
   place-items: center;
 }
 
-.category-month__control button:disabled {
+.category-month__control > button:not(.category-month-field):disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
 
 .category-month__control input {
   width: 100%;
-  padding: 0 0.9rem;
-  font-size: 0.95rem;
+  padding: 0 0.78rem;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.category-month__control input:focus {
+  border-color: rgba(15, 118, 110, 0.34);
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.08);
+  background: #fefefe;
+}
+
+.category-month__native-input {
+  min-width: 0;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.category-month__native-input::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.9;
+}
+
+.category-month__native-input::-webkit-datetime-edit,
+.category-month__native-input::-webkit-datetime-edit-fields-wrapper,
+.category-month__native-input::-webkit-datetime-edit-text,
+.category-month__native-input::-webkit-datetime-edit-month-field,
+.category-month__native-input::-webkit-datetime-edit-year-field {
+  color: #0f172a;
   font-weight: 800;
 }
 
@@ -1940,16 +2004,16 @@ onBeforeUnmount(() => {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 1rem;
-  padding: 0.8rem 1rem;
-  margin-bottom: 0.55rem;
+  gap: 0.8rem;
+  padding: 0.58rem 0.8rem;
+  margin-bottom: 0.2rem;
 }
 
 .category-page-nav__arrow {
-  width: 46px;
-  height: 46px;
+  width: 40px;
+  height: 40px;
   border: 1px solid rgba(148, 163, 184, 0.24);
-  border-radius: 14px;
+  border-radius: 12px;
   background: #fff;
   color: #0f172a;
 }
@@ -1962,13 +2026,19 @@ onBeforeUnmount(() => {
 .category-page-nav__center {
   display: grid;
   justify-items: center;
-  gap: 0.25rem;
+  gap: 0.2rem;
   min-width: 0;
+}
+
+.category-page-nav__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
 }
 
 .category-page-nav__count {
   color: #64748b;
-  font-size: 0.74rem;
+  font-size: 0.66rem;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -1977,18 +2047,18 @@ onBeforeUnmount(() => {
 .category-page-nav__center strong {
   min-width: 0;
   color: #111827;
-  font-size: 1.02rem;
+  font-size: 0.92rem;
   font-weight: 900;
 }
 
 .category-page-nav__dots {
   display: inline-flex;
-  gap: 0.45rem;
+  gap: 0.35rem;
 }
 
 .category-page-nav__dot {
-  width: 0.7rem;
-  height: 0.7rem;
+  width: 0.48rem;
+  height: 0.48rem;
   border-radius: 999px;
   background: rgba(148, 163, 184, 0.36);
   transition: transform 140ms ease, background 140ms ease;
@@ -2000,27 +2070,28 @@ onBeforeUnmount(() => {
 }
 
 .category-page-nav__scope-toggle {
-  position: absolute;
-  left: 50%;
-  bottom: -18px;
-  transform: translateX(-50%);
-  width: 38px;
-  height: 38px;
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
   border: 1px solid rgba(148, 163, 184, 0.24);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.98);
   color: #0f172a;
-  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
-  z-index: 2;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
   transition:
     transform 160ms ease,
+    background 160ms ease,
+    color 160ms ease,
     border-color 160ms ease,
     box-shadow 160ms ease;
 }
 
 .category-page-nav__scope-toggle.is-open {
   border-color: rgba(15, 118, 110, 0.28);
-  transform: translateX(-50%) rotate(180deg);
+  background: rgba(236, 253, 245, 0.98);
+  color: #0f766e;
+  transform: rotate(180deg);
   box-shadow: 0 14px 28px rgba(15, 118, 110, 0.14);
 }
 
@@ -2038,9 +2109,9 @@ onBeforeUnmount(() => {
 
 .category-scope-card__body {
   display: grid;
-  gap: 0.8rem;
-  padding: clamp(1.2rem, 1.6vw, 1.35rem) clamp(0.95rem, 1.4vw, 1.2rem)
-    clamp(0.95rem, 1.4vw, 1.2rem);
+  gap: 0.7rem;
+  padding: clamp(0.9rem, 1.2vw, 1rem) clamp(0.85rem, 1.1vw, 1rem)
+    clamp(0.85rem, 1.1vw, 1rem);
 }
 
 .category-scope-card__head {
@@ -2056,7 +2127,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 0.65rem;
   color: #64748b;
-  font-size: 0.84rem;
+  font-size: 0.78rem;
   font-weight: 700;
 }
 
@@ -2065,7 +2136,7 @@ onBeforeUnmount(() => {
 .category-panel__head p {
   margin: 0;
   color: #0f766e;
-  font-size: 0.74rem;
+  font-size: 0.68rem;
   font-weight: 900;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -2074,9 +2145,9 @@ onBeforeUnmount(() => {
 .category-scope-card__head h2,
 .category-page__heading h2,
 .category-panel__head h2 {
-  margin: 0.25rem 0 0;
+  margin: 0.18rem 0 0;
   color: #111827;
-  font-size: clamp(1.05rem, 1.35vw, 1.28rem);
+  font-size: clamp(0.98rem, 1.1vw, 1.14rem);
   line-height: 1.04;
   font-weight: 900;
 }
@@ -2085,20 +2156,20 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  min-height: 40px;
+  min-height: 34px;
   border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.26);
   background: #fff;
-  padding: 0 0.82rem;
+  padding: 0 0.7rem;
   color: #0f172a;
-  font-size: 0.8rem;
+  font-size: 0.74rem;
   font-weight: 800;
 }
 
 .category-toolbar {
   display: grid;
   grid-template-columns: minmax(0, 0.94fr) minmax(0, 1.06fr);
-  gap: 0.8rem;
+  gap: 0.65rem;
 }
 
 .category-picker-field {
@@ -2110,7 +2181,7 @@ onBeforeUnmount(() => {
   display: block;
   margin-bottom: 0.42rem;
   color: #0f766e;
-  font-size: 0.7rem;
+  font-size: 0.66rem;
   font-weight: 900;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -2121,12 +2192,12 @@ onBeforeUnmount(() => {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
-  gap: 0.7rem;
-  min-height: 56px;
-  border-radius: 18px;
+  gap: 0.58rem;
+  min-height: 46px;
+  border-radius: 14px;
   border: 1px solid rgba(148, 163, 184, 0.28);
   background: #fff;
-  padding: 0.72rem 0.88rem;
+  padding: 0.55rem 0.72rem;
   color: #0f172a;
   font-weight: 800;
   text-align: left;
@@ -2159,14 +2230,14 @@ onBeforeUnmount(() => {
 
 .category-picker__copy small {
   color: #64748b;
-  font-size: 0.72rem;
+  font-size: 0.66rem;
   font-weight: 800;
 }
 
 .category-picker__copy strong {
   min-width: 0;
   color: #111827;
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 900;
   white-space: nowrap;
   overflow: hidden;
@@ -2175,7 +2246,7 @@ onBeforeUnmount(() => {
 
 .category-picker__meta {
   color: #64748b;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 800;
   white-space: nowrap;
 }
@@ -2187,12 +2258,12 @@ onBeforeUnmount(() => {
   right: 0;
   z-index: 30;
   display: grid;
-  gap: 0.55rem;
+  gap: 0.45rem;
   border: 1px solid rgba(148, 163, 184, 0.24);
-  border-radius: 20px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
-  padding: 0.72rem;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.1);
+  padding: 0.58rem;
   backdrop-filter: blur(12px);
 }
 
@@ -2210,12 +2281,12 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.8rem;
-  min-height: 52px;
+  gap: 0.62rem;
+  min-height: 44px;
   border: 1px solid rgba(148, 163, 184, 0.24);
-  border-radius: 16px;
+  border-radius: 12px;
   background: #fff;
-  padding: 0.72rem 0.82rem;
+  padding: 0.58rem 0.7rem;
   text-align: left;
   transition:
     border-color 140ms ease,
@@ -2232,7 +2303,7 @@ onBeforeUnmount(() => {
 .category-picker-option span {
   min-width: 0;
   color: #111827;
-  font-size: 0.96rem;
+  font-size: 0.86rem;
   font-weight: 900;
   white-space: nowrap;
   overflow: hidden;
@@ -2241,7 +2312,7 @@ onBeforeUnmount(() => {
 
 .category-picker-option small {
   color: #64748b;
-  font-size: 0.74rem;
+  font-size: 0.7rem;
   font-weight: 700;
 }
 
@@ -2294,8 +2365,8 @@ onBeforeUnmount(() => {
 .category-panel__head span,
 .category-scope-card__summary {
   color: #64748b;
-  font-size: 0.88rem;
-  line-height: 1.45;
+  font-size: 0.82rem;
+  line-height: 1.32;
 }
 
 .category-scope-card__summary {
@@ -2318,7 +2389,7 @@ onBeforeUnmount(() => {
 
 .category-page {
   display: grid;
-  gap: 1rem;
+  gap: 0.8rem;
 }
 
 .category-page__heading,
@@ -2327,20 +2398,20 @@ onBeforeUnmount(() => {
   flex-wrap: wrap;
   align-items: start;
   justify-content: space-between;
-  gap: 0.8rem;
+  gap: 0.65rem;
 }
 
 .category-kpi-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 0.9rem;
+  gap: 0.72rem;
 }
 
 .category-main-grid,
 .category-detail-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
+  gap: 0.8rem;
 }
 
 .category-detail-grid--bottom {
@@ -2349,19 +2420,19 @@ onBeforeUnmount(() => {
 
 .category-panel {
   display: grid;
-  gap: 0.9rem;
-  padding: clamp(1rem, 1.6vw, 1.35rem);
+  gap: 0.72rem;
+  padding: clamp(0.82rem, 1.1vw, 0.96rem);
 }
 
 .category-chart {
-  min-height: 320px;
+  min-height: 280px;
 }
 
 .category-mini-empty {
   display: grid;
   place-items: center;
-  min-height: 220px;
-  border-radius: 18px;
+  min-height: 190px;
+  border-radius: 14px;
   background: var(--category-muted-bg);
   color: #64748b;
   text-align: center;
@@ -2371,13 +2442,13 @@ onBeforeUnmount(() => {
 .category-module-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 0.9rem;
+  gap: 0.72rem;
 }
 
 .category-module-card {
   display: grid;
-  gap: 0.45rem;
-  padding: 1rem 1.05rem;
+  gap: 0.35rem;
+  padding: 0.82rem 0.9rem;
 }
 
 .category-module-card span {
@@ -2391,20 +2462,21 @@ onBeforeUnmount(() => {
 .category-module-card h3 {
   margin: 0;
   color: #111827;
-  font-size: 1.02rem;
+  font-size: 0.92rem;
   font-weight: 900;
 }
 
 .category-module-card strong {
   color: #111827;
-  font-size: clamp(1.2rem, 1.8vw, 1.8rem);
+  font-size: clamp(1.08rem, 1.4vw, 1.42rem);
   font-weight: 900;
 }
 
 .category-module-card p {
   margin: 0;
   color: #64748b;
-  line-height: 1.55;
+  font-size: 0.82rem;
+  line-height: 1.35;
 }
 
 .category-module-card.is-profit strong,
@@ -2428,7 +2500,7 @@ onBeforeUnmount(() => {
 
 .category-table th,
 .category-table td {
-  padding: 0.85rem 0.5rem;
+  padding: 0.68rem 0.45rem;
   border-bottom: 1px solid rgba(226, 232, 240, 0.82);
   vertical-align: top;
   text-align: left;
@@ -2436,7 +2508,7 @@ onBeforeUnmount(() => {
 
 .category-table th {
   color: #64748b;
-  font-size: 0.74rem;
+  font-size: 0.68rem;
   font-weight: 900;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -2444,7 +2516,7 @@ onBeforeUnmount(() => {
 
 .category-table td {
   color: #0f172a;
-  font-size: 0.92rem;
+  font-size: 0.86rem;
 }
 
 .category-table strong,
@@ -2455,18 +2527,18 @@ onBeforeUnmount(() => {
 .category-table td span {
   margin-top: 0.2rem;
   color: #64748b;
-  font-size: 0.8rem;
+  font-size: 0.74rem;
 }
 
 .category-age {
   display: inline-flex;
   align-items: center;
-  min-height: 2rem;
+  min-height: 1.7rem;
   border-radius: 999px;
   background: rgba(15, 118, 110, 0.08);
   padding: 0.2rem 0.65rem;
   color: #0f766e;
-  font-size: 0.8rem;
+  font-size: 0.74rem;
   font-weight: 800;
 }
 
@@ -2477,24 +2549,24 @@ onBeforeUnmount(() => {
 
 .category-segment-list {
   display: grid;
-  gap: 0.7rem;
+  gap: 0.58rem;
 }
 
 .category-segment-card {
   display: flex;
   align-items: start;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.8rem;
   border: 1px solid rgba(226, 232, 240, 0.9);
-  border-radius: 18px;
+  border-radius: 14px;
   background: var(--category-muted-bg);
-  padding: 0.9rem 1rem;
+  padding: 0.72rem 0.82rem;
 }
 
 .category-segment-card strong {
   display: block;
   color: #111827;
-  font-size: 0.98rem;
+  font-size: 0.88rem;
   font-weight: 900;
 }
 
@@ -2512,7 +2584,7 @@ onBeforeUnmount(() => {
 
 .category-segment-card__values b {
   color: #047857;
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 900;
 }
 
@@ -2541,16 +2613,16 @@ onBeforeUnmount(() => {
 
   .category-dashboard :deep(.dashboard-layout__inner) {
     width: min(100%, 1760px);
-    padding-top: 0.85rem;
+    padding-top: 0.68rem;
     padding-right: clamp(0.9rem, 1.2vw, 1.3rem);
-    padding-bottom: 1rem;
+    padding-bottom: 0.82rem;
     padding-left: clamp(0.9rem, 1.2vw, 1.25rem);
-    gap: 0.9rem;
+    gap: 0.72rem;
   }
 
   .category-dashboard :deep(.dashboard-layout__header) {
     grid-template-columns: minmax(0, 1fr) minmax(300px, 400px);
-    gap: 0.95rem;
+    gap: 0.8rem;
     align-items: start;
   }
 
@@ -2570,16 +2642,16 @@ onBeforeUnmount(() => {
   }
 
   .category-dashboard :deep(.dashboard-layout__copy h1) {
-    font-size: clamp(1.9rem, 2.35vw, 2.65rem);
+    font-size: clamp(1.7rem, 2.05vw, 2.3rem);
     line-height: 0.94;
     letter-spacing: -0.05em;
   }
 
   .category-dashboard :deep(.dashboard-layout__description) {
-    margin-top: 0.46rem;
+    margin-top: 0.34rem;
     max-width: 50rem;
-    font-size: 0.92rem;
-    line-height: 1.35;
+    font-size: 0.84rem;
+    line-height: 1.26;
   }
 
   .category-dashboard :deep(.dashboard-layout__selector) {
@@ -2587,66 +2659,66 @@ onBeforeUnmount(() => {
   }
 
   .category-month {
-    gap: 0.5rem;
-    padding: 0.78rem 0.88rem;
-    border-radius: 20px;
+    gap: 0.42rem;
+    padding: 0.64rem 0.76rem;
+    border-radius: 16px;
   }
 
   .category-month__head span {
-    font-size: 0.74rem;
+    font-size: 0.7rem;
   }
 
   .category-month__head small {
-    font-size: 0.72rem;
+    font-size: 0.68rem;
   }
 
   .category-mode-switch__button {
-    min-height: 28px;
-    padding: 0 0.68rem;
-    font-size: 0.74rem;
+    min-height: 26px;
+    padding: 0 0.62rem;
+    font-size: 0.7rem;
   }
 
   .category-month__control {
-    gap: 0.5rem;
+    gap: 0.42rem;
   }
 
   .category-month__control button,
   .category-month__control input {
-    min-height: 40px;
-    border-radius: 13px;
+    min-height: 36px;
+    border-radius: 11px;
   }
 
-  .category-month__control button {
-    width: 40px;
+  .category-month__control > button:not(.category-month-field) {
+    width: 36px;
   }
 
   .category-month__control input {
-    padding: 0 0.8rem;
-    font-size: 0.9rem;
+    padding: 0 0.72rem;
+    font-size: 0.84rem;
   }
 
   .category-page-nav {
-    padding: 0.68rem 0.88rem;
-    gap: 0.8rem;
-    border-radius: 20px;
+    padding: 0.54rem 0.76rem;
+    gap: 0.65rem;
+    border-radius: 16px;
   }
 
   .category-page-nav__arrow {
-    width: 42px;
-    height: 42px;
+    width: 36px;
+    height: 36px;
   }
 
   .category-page-nav__count {
-    font-size: 0.68rem;
+    font-size: 0.62rem;
   }
 
   .category-page-nav__center strong {
-    font-size: 0.94rem;
+    font-size: 0.86rem;
   }
 
   .category-scope-card__body,
   .category-panel {
-    padding: 1rem 1.08rem;
+    padding: 0.84rem 0.92rem;
   }
 
   .category-toolbar {
@@ -2706,7 +2778,7 @@ onBeforeUnmount(() => {
     grid-template-columns: 1fr;
   }
 
-  .category-month__control button {
+  .category-month__control > button:not(.category-month-field) {
     width: 100%;
   }
 

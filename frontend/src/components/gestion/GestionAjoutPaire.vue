@@ -4,7 +4,10 @@
       <div v-if="visible" class="fixed inset-0 z-[9999]">
         <div class="absolute inset-0 bg-slate-950/48 backdrop-blur-[2px]" @click.self="handleClose"></div>
 
-        <div class="relative z-10 flex min-h-full items-center justify-center p-4">
+        <div
+          class="relative z-10 flex min-h-full items-center justify-center p-4"
+          @click.self="handleClose"
+        >
           <section
             class="modal-card w-full max-w-4xl max-h-[92vh] rounded-2xl border bg-white shadow-2xl"
             role="dialog"
@@ -128,6 +131,8 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .modal-card {
+  position: relative;
+  isolation: isolate;
   border-color: rgba(125, 211, 252, 0.38);
   background:
     linear-gradient(135deg, rgba(14, 165, 233, 0.08), transparent 42%),
@@ -144,7 +149,7 @@ onBeforeUnmount(() => {
   content: '';
   position: sticky;
   top: 0;
-  z-index: 4;
+  z-index: 90;
   display: block;
   height: 4px;
   background: linear-gradient(90deg, #0ea5e9, #14b8a6, #f59e0b);
@@ -153,12 +158,26 @@ onBeforeUnmount(() => {
 .modal-card-header {
   position: sticky;
   top: 4px;
-  z-index: 3;
+  z-index: 80;
   border-color: rgba(125, 211, 252, 0.26);
   background:
-    linear-gradient(135deg, rgba(236, 253, 245, 0.94), rgba(224, 242, 254, 0.78)),
-    rgba(255, 255, 255, 0.96);
-  backdrop-filter: blur(10px);
+    linear-gradient(135deg, rgba(236, 253, 245, 0.985), rgba(224, 242, 254, 0.965)),
+    rgba(255, 255, 255, 0.992);
+  backdrop-filter: blur(18px);
+  box-shadow:
+    0 1px 0 rgba(125, 211, 252, 0.22),
+    0 18px 26px -26px rgba(15, 23, 42, 0.46);
+}
+
+.modal-card-header::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -18px;
+  height: 18px;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(248, 250, 252, 0));
 }
 
 .modal-card-header h3 {
@@ -193,6 +212,8 @@ onBeforeUnmount(() => {
 }
 
 .modal-form {
+  position: relative;
+  z-index: 1;
   padding: 1rem;
 }
 

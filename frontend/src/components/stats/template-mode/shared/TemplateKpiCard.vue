@@ -46,15 +46,15 @@ function partClasses(part: 'head' | 'label' | 'icon' | 'value' | 'detail') {
 <style scoped>
 .template-kpi {
   min-width: 0;
-  min-height: clamp(112px, 11.8vw, 156px);
+  min-height: clamp(104px, 10.8vw, 136px);
   border: 1px solid rgba(148, 163, 184, 0.28);
-  border-radius: 8px;
+  border-radius: 7px;
   background: #fbfaf7;
-  box-shadow: 0 6px 16px rgba(31, 41, 55, 0.045);
-  padding: clamp(15px, 1.75vw, 20px);
+  box-shadow: 0 4px 12px rgba(31, 41, 55, 0.04);
+  padding: clamp(12px, 1.2vw, 15px);
   display: grid;
   align-content: start;
-  gap: 12px;
+  gap: 8px;
   overflow: hidden;
   container-type: inline-size;
 }
@@ -70,7 +70,7 @@ function partClasses(part: 'head' | 'label' | 'icon' | 'value' | 'detail') {
 .template-kpi__label {
   min-width: 0;
   color: #64748b;
-  font-size: 0.76rem;
+  font-size: 0.68rem;
   font-weight: 760;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -80,8 +80,8 @@ function partClasses(part: 'head' | 'label' | 'icon' | 'value' | 'detail') {
 }
 
 .template-kpi__icon {
-  width: 19px;
-  height: 19px;
+  width: 17px;
+  height: 17px;
   flex: 0 0 auto;
   color: #6d5dfc;
 }
@@ -89,7 +89,7 @@ function partClasses(part: 'head' | 'label' | 'icon' | 'value' | 'detail') {
 .template-kpi__value {
   min-width: 0;
   color: #243b53;
-  font-size: clamp(1.56rem, 2.85vw, 2.44rem);
+  font-size: clamp(1.42rem, 2.3vw, 2rem);
   line-height: 1.05;
   font-weight: 820;
   overflow-wrap: anywhere;
@@ -98,8 +98,8 @@ function partClasses(part: 'head' | 'label' | 'icon' | 'value' | 'detail') {
 .template-kpi__detail {
   min-width: 0;
   color: #64748b;
-  font-size: 0.86rem;
-  line-height: 1.38;
+  font-size: 0.8rem;
+  line-height: 1.28;
   overflow-wrap: anywhere;
 }
 

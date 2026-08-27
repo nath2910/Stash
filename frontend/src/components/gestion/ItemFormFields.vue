@@ -293,6 +293,7 @@ const props = defineProps({
   detailsDefaultOpen: { type: Boolean, default: false },
   autoInferFromName: { type: Boolean, default: false },
   autoFocusFirstField: { type: Boolean, default: false },
+  autoFillSaleDateOnEdit: { type: Boolean, default: false },
   submitLabel: { type: String, default: 'Enregistrer' },
   savingLabel: { type: String, default: 'Enregistrement...' },
   cancelLabel: { type: String, default: 'Annuler' },
@@ -459,13 +460,14 @@ function emptyForm(prefill = {}) {
 function formFromItem(item) {
   if (!item) return emptyForm()
   const itemType = normalizeItemType(typeOf(item))
+  const saleDate = String(getField(item, 'dateVente', '') || '').slice(0, 10)
   return emptyForm({
     id: item.id,
     nomItem: getField(item, 'nomItem', ''),
     prixRetail: getField(item, 'prixRetail', '') ?? null,
     prixResell: getField(item, 'prixResell', '') ?? null,
     dateAchat: String(getField(item, 'dateAchat', '') || '').slice(0, 10),
-    dateVente: String(getField(item, 'dateVente', '') || '').slice(0, 10),
+    dateVente: saleDate || (props.autoFillSaleDateOnEdit ? toYmdLocal(new Date()) : ''),
     description: getField(item, 'description', ''),
     categorie: getField(item, 'categorie', ''),
     type: itemType,
@@ -772,13 +774,18 @@ function validate() {
 
 function buildPayload() {
   const itemType = normalizeItemType(form.value.type || resolveDefaultType())
+  const resalePrice = numberOrNull(form.value.prixResell)
+  const saleDate =
+    props.autoFillSaleDateOnEdit && resalePrice === null
+      ? null
+      : form.value.dateVente || null
   writeLastType(itemType)
   return {
     nomItem: form.value.nomItem.trim(),
     prixRetail: numberOrNull(form.value.prixRetail),
-    prixResell: numberOrNull(form.value.prixResell),
+    prixResell: resalePrice,
     dateAchat: form.value.dateAchat || null,
-    dateVente: form.value.dateVente || null,
+    dateVente: saleDate,
     description: form.value.description.trim(),
     categorie: form.value.categorie.trim() || null,
     type: itemType,
