@@ -6,6 +6,11 @@ import {
   normalizeItemTypeValue,
 } from './CategorieItem'
 import { legacyScopedStorageKeys, scopedStorageKey } from './storageScope'
+import {
+  INVENTORY_ITEM_CATEGORIES_SETTINGS_KEY,
+  saveInventoryPreference,
+  syncInventoryPreference,
+} from '@/services/inventoryPreferencesService'
 
 const STORAGE_PREFIX = 'snk_item_categories_v2'
 const LEGACY_STORAGE_PREFIX = 'snk_item_categories_v1'
@@ -132,6 +137,32 @@ function persistCategories(target, userId, value) {
   }
 }
 
+function dispatchCategoriesChange(userId, labels) {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(
+    new CustomEvent('snk:item-categories-change', {
+      detail: { userId: String(userId || 'guest'), labels },
+    }),
+  )
+}
+
+function syncCategoriesWithServer(target, userId, localValue, defaults) {
+  if (!target || typeof window === 'undefined') return
+
+  void syncInventoryPreference(userId, INVENTORY_ITEM_CATEGORIES_SETTINGS_KEY, localValue, {
+    applyRemote(remoteValue) {
+      const sanitized = sanitizeItemCategoryLabels(remoteValue)
+      const serialized = JSON.stringify(sanitized)
+      if (target.getItem(itemCategoryStorageKey(userId)) === serialized) return
+      if (!persistCategories(target, userId, sanitized)) return
+      dispatchCategoriesChange(userId, sanitized)
+    },
+    shouldSeed(value) {
+      return JSON.stringify(sanitizeItemCategoryLabels(value)) !== JSON.stringify(defaults)
+    },
+  })
+}
+
 export function readStoredItemCategories(userId, storage) {
   const target = getStorage(storage)
   const defaults = sanitizeItemCategoryLabels(DEFAULT_ITEM_TYPE_LABELS)
@@ -147,6 +178,7 @@ export function readStoredItemCategories(userId, storage) {
         if (key !== currentKey || raw !== JSON.stringify(sanitized)) {
           persistCategories(target, userId, sanitized)
         }
+        if (!storage) syncCategoriesWithServer(target, userId, sanitized, defaults)
         return sanitized
       } catch {
         target.removeItem?.(key)
@@ -154,9 +186,11 @@ export function readStoredItemCategories(userId, storage) {
     }
 
     persistCategories(target, userId, defaults)
+    if (!storage) syncCategoriesWithServer(target, userId, defaults, defaults)
     return defaults
   } catch {
     persistCategories(target, userId, defaults)
+    if (!storage) syncCategoriesWithServer(target, userId, defaults, defaults)
     return defaults
   }
 }
@@ -167,11 +201,8 @@ export function writeStoredItemCategories(userId, value, storage) {
   if (!target) return sanitized
   const persisted = persistCategories(target, userId, sanitized)
   if (persisted && typeof window !== 'undefined' && !storage) {
-    window.dispatchEvent(
-      new CustomEvent('snk:item-categories-change', {
-        detail: { userId: String(userId || 'guest'), labels: sanitized },
-      }),
-    )
+    dispatchCategoriesChange(userId, sanitized)
+    void saveInventoryPreference(userId, INVENTORY_ITEM_CATEGORIES_SETTINGS_KEY, sanitized)
   }
   return sanitized
 }

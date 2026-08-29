@@ -5,6 +5,11 @@ import {
   resolveItemTypeOptions,
 } from './itemCategoryStore'
 import { legacyScopedStorageKeys, scopedStorageKey } from './storageScope'
+import {
+  INVENTORY_SUBCATEGORIES_SETTINGS_KEY,
+  saveInventoryPreference,
+  syncInventoryPreference,
+} from '@/services/inventoryPreferencesService'
 
 const STORAGE_PREFIX = 'snk_item_subcategories_v2'
 const LEGACY_STORAGE_PREFIX = 'snk_item_subcategories_v1'
@@ -117,6 +122,35 @@ function persistSubcategories(target, userId, value) {
   }
 }
 
+function dispatchSubcategoriesChange(userId, subcategories) {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(
+    new CustomEvent('snk:item-subcategories-change', {
+      detail: { userId: String(userId || 'guest'), subcategories },
+    }),
+  )
+}
+
+function syncSubcategoriesWithServer(target, userId, localValue, defaults, categoryLabels) {
+  if (!target || typeof window === 'undefined') return
+
+  void syncInventoryPreference(userId, INVENTORY_SUBCATEGORIES_SETTINGS_KEY, localValue, {
+    applyRemote(remoteValue) {
+      const sanitized = sanitizeSubcategoryMap(remoteValue, DEFAULT_SUBCATEGORIES, categoryLabels)
+      const serialized = JSON.stringify(sanitized)
+      if (target.getItem(subcategoryStorageKey(userId)) === serialized) return
+      if (!persistSubcategories(target, userId, sanitized)) return
+      dispatchSubcategoriesChange(userId, sanitized)
+    },
+    shouldSeed(value) {
+      return (
+        JSON.stringify(sanitizeSubcategoryMap(value, DEFAULT_SUBCATEGORIES, categoryLabels)) !==
+        JSON.stringify(defaults)
+      )
+    },
+  })
+}
+
 export function readStoredSubcategories(userId, storage, categoryLabels) {
   const target = getStorage(storage)
   const defaults = sanitizeSubcategoryMap(DEFAULT_SUBCATEGORIES, DEFAULT_SUBCATEGORIES, categoryLabels)
@@ -132,6 +166,9 @@ export function readStoredSubcategories(userId, storage, categoryLabels) {
         if (key !== currentKey || raw !== JSON.stringify(sanitized)) {
           persistSubcategories(target, userId, sanitized)
         }
+        if (!storage) {
+          syncSubcategoriesWithServer(target, userId, sanitized, defaults, categoryLabels)
+        }
         return sanitized
       } catch {
         target.removeItem?.(key)
@@ -139,9 +176,11 @@ export function readStoredSubcategories(userId, storage, categoryLabels) {
     }
 
     persistSubcategories(target, userId, defaults)
+    if (!storage) syncSubcategoriesWithServer(target, userId, defaults, defaults, categoryLabels)
     return defaults
   } catch {
     persistSubcategories(target, userId, defaults)
+    if (!storage) syncSubcategoriesWithServer(target, userId, defaults, defaults, categoryLabels)
     return defaults
   }
 }
@@ -152,11 +191,8 @@ export function writeStoredSubcategories(userId, value, storage, categoryLabels)
   if (!target) return sanitized
   const persisted = persistSubcategories(target, userId, sanitized)
   if (persisted && typeof window !== 'undefined' && !storage) {
-    window.dispatchEvent(
-      new CustomEvent('snk:item-subcategories-change', {
-        detail: { userId: String(userId || 'guest'), subcategories: sanitized },
-      }),
-    )
+    dispatchSubcategoriesChange(userId, sanitized)
+    void saveInventoryPreference(userId, INVENTORY_SUBCATEGORIES_SETTINGS_KEY, sanitized)
   }
   return sanitized
 }
