@@ -7,7 +7,9 @@ import backend.repository.SnkVenteRepository;
 import backend.repository.UserRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -113,6 +115,63 @@ class SnkVenteServiceGroupTest {
     Assertions.assertTrue(String.valueOf(error.getReason()).contains("meme type"));
   }
 
+  @Test
+  void updateVenteDuParentRepartitLesMontantsEtDatesSurChaqueSousItem() {
+    SnkVente parent = standalone(50, "Lot tickets", null, "TICKET");
+    parent.setGroupParent(true);
+
+    SnkVente first = standalone(11, "ticket A", null, "TICKET");
+    first.setParentId(50);
+    SnkVente second = standalone(12, "ticket B", null, "TICKET");
+    second.setParentId(50);
+    SnkVente third = standalone(13, "ticket C", null, "TICKET");
+    third.setParentId(50);
+
+    Mockito.when(venteRepo.findById(50)).thenReturn(Optional.of(parent));
+    Mockito.when(venteRepo.findByParent_IdOrderByUnitIndexAscIdAsc(50)).thenReturn(List.of(first, second, third));
+
+    SnkVente payload = new SnkVente();
+    payload.setNomItem("Lot final Roland Garros");
+    payload.setType("TICKET");
+    payload.setCategorie("Tickets");
+    payload.setPrixRetail(new BigDecimal("100.00"));
+    payload.setPrixResell(new BigDecimal("200.00"));
+    payload.setDateAchat(LocalDate.of(2026, 2, 9));
+    payload.setDateVente(LocalDate.of(2026, 2, 18));
+    payload.setDescription("Vente groupee");
+    payload.setMetadata(Map.of("venue", "Roland Garros"));
+
+    SnkVente saved = service.updateVente(1L, 50, payload);
+
+    Assertions.assertEquals(50, saved.getId());
+    Assertions.assertEquals(new BigDecimal("100.00"), parent.getPrixRetail());
+    Assertions.assertEquals(new BigDecimal("200.00"), parent.getPrixResell());
+    Assertions.assertEquals(LocalDate.of(2026, 2, 18), parent.getDateVente());
+
+    Assertions.assertEquals(new BigDecimal("33.34"), first.getPrixRetail());
+    Assertions.assertEquals(new BigDecimal("33.33"), second.getPrixRetail());
+    Assertions.assertEquals(new BigDecimal("33.33"), third.getPrixRetail());
+    Assertions.assertEquals(new BigDecimal("66.67"), first.getPrixResell());
+    Assertions.assertEquals(new BigDecimal("66.67"), second.getPrixResell());
+    Assertions.assertEquals(new BigDecimal("66.66"), third.getPrixResell());
+    Assertions.assertEquals(LocalDate.of(2026, 2, 18), first.getDateVente());
+    Assertions.assertEquals(LocalDate.of(2026, 2, 18), second.getDateVente());
+    Assertions.assertEquals(LocalDate.of(2026, 2, 18), third.getDateVente());
+    Assertions.assertNull(first.getCategorie());
+    Assertions.assertNull(second.getCategorie());
+    Assertions.assertNull(third.getCategorie());
+
+    Mockito.verify(venteRepo).saveAll(Mockito.argThat(rows -> {
+      if (rows == null) return false;
+      List<SnkVente> savedRows = new ArrayList<>();
+      rows.forEach(savedRows::add);
+      return savedRows.size() == 3
+          && savedRows.stream().allMatch(child ->
+              child.getParentId() == 50 || (child.getParent() != null && Integer.valueOf(50).equals(child.getParent().getId()))
+          );
+    }));
+  }
+
   private SnkVente standalone(int id, String name, String category, String type) {
     SnkVente vente = new SnkVente();
     vente.setId(id);
@@ -134,15 +193,21 @@ class SnkVenteServiceGroupTest {
             && "SNEAKER".equals(parent.getType());
   }
 
-  private ArgumentMatcher<List<SnkVente>> childrenMatcher(int parentId) {
+  private ArgumentMatcher<Iterable<SnkVente>> childrenMatcher(int parentId) {
     return rows ->
         rows != null
-            && rows.size() == 2
-            && rows.stream().allMatch(child ->
-                child.getParent() != null
-                    && Integer.valueOf(parentId).equals(child.getParent().getId())
-                    && child.getUnitIndex() != null
-                    && child.getUnitIndex() >= 1
-            );
+            && iterableMatchesParent(rows, parentId);
+  }
+
+  private boolean iterableMatchesParent(Iterable<SnkVente> rows, int parentId) {
+    List<SnkVente> savedRows = new ArrayList<>();
+    rows.forEach(savedRows::add);
+    return savedRows.size() == 2
+        && savedRows.stream().allMatch(child ->
+            child.getParent() != null
+                && Integer.valueOf(parentId).equals(child.getParent().getId())
+                && child.getUnitIndex() != null
+                && child.getUnitIndex() >= 1
+        );
   }
 }

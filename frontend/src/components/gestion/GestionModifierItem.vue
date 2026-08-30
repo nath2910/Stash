@@ -216,7 +216,7 @@ const headerSubtitle = computed(() => {
     return 'Ouvre la ligne principale ou une ligne precise sans surcharger le reste.'
   }
   if (showBackToGroup.value && editorItem.value?.id === groupState.value?.id) {
-    return 'Mets a jour la ligne principale sans ecraser les lignes deja modifiees.'
+    return 'Les dates et montants du parent sont repercutes sur les sous-items au moment de l enregistrement.'
   }
   if (showBackToGroup.value) {
     return 'Mets a jour cette ligne puis reviens a la liste du groupe.'
@@ -346,6 +346,28 @@ function applySavedItem(saved) {
   }
 }
 
+async function refreshGroupState(groupId, fallbackSaved = null) {
+  if (!groupId) {
+    if (fallbackSaved) applySavedItem(fallbackSaved)
+    return
+  }
+
+  try {
+    const { data } = await SnkVenteServices.getGroupedSnkVente()
+    const nextGroup = Array.isArray(data)
+      ? data.find((item) => Number(item?.id) === Number(groupId))
+      : null
+    if (nextGroup) {
+      groupState.value = cloneVente(nextGroup)
+      return
+    }
+  } catch (err) {
+    console.error('Refresh grouped item failed', err)
+  }
+
+  if (fallbackSaved) applySavedItem(fallbackSaved)
+}
+
 async function save({ id, payload }) {
   if (!id) {
     error.value = 'Item introuvable.'
@@ -357,13 +379,17 @@ async function save({ id, payload }) {
   error.value = null
 
   try {
+    const currentGroupId = groupState.value?.id
+    const editingParent = Boolean(groupState.value) && Number(id) === Number(currentGroupId)
     const { data } = await SnkVenteServices.update(id, payload)
     success.value = true
-    successMessage.value = 'Modifications enregistrees.'
+    successMessage.value = editingParent
+      ? 'Parent enregistre et sous-items mis a jour.'
+      : 'Modifications enregistrees.'
     emit('saved', data)
 
     if (groupState.value) {
-      applySavedItem(data || { id, ...payload })
+      await refreshGroupState(currentGroupId, data || { id, ...payload })
       backToGroup()
       return
     }

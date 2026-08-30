@@ -461,11 +461,12 @@ function formFromItem(item) {
   if (!item) return emptyForm()
   const itemType = normalizeItemType(typeOf(item))
   const saleDate = String(getField(item, 'dateVente', '') || '').slice(0, 10)
+  const isGroupedParent = Boolean(item?.groupParent) && Array.isArray(item?.children) && item.children.length > 0
   return emptyForm({
     id: item.id,
     nomItem: getField(item, 'nomItem', ''),
-    prixRetail: getField(item, 'prixRetail', '') ?? null,
-    prixResell: getField(item, 'prixResell', '') ?? null,
+    prixRetail: getField(item, isGroupedParent ? 'totalRetail' : 'prixRetail', '') ?? null,
+    prixResell: getField(item, isGroupedParent ? 'totalResell' : 'prixResell', '') ?? null,
     dateAchat: String(getField(item, 'dateAchat', '') || '').slice(0, 10),
     dateVente: saleDate || (props.autoFillSaleDateOnEdit ? toYmdLocal(new Date()) : ''),
     description: getField(item, 'description', ''),

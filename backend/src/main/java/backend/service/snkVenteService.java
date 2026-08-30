@@ -365,8 +365,13 @@ public class snkVenteService {
       throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Acces interdit");
     }
 
+    if (existing.isGroupParent()) {
+      return updateGroupParent(userId, existing, payload);
+    }
+
     applyFields(existing, payload);
     SnkVente saved = snkVenteRepository.save(existing);
+    syncGroupParentAggregates(userId, saved.getParentId());
     statsCacheEviction.evictUser(userId);
     return saved;
   }
@@ -507,6 +512,106 @@ public class snkVenteService {
         .filter(Objects::nonNull)
         .min(LocalDate::compareTo)
         .orElse(null);
+  }
+
+  private SnkVente updateGroupParent(Long userId, SnkVente existing, SnkVente payload) {
+    List<SnkVente> children = snkVenteRepository.findByParent_IdOrderByUnitIndexAscIdAsc(existing.getId()).stream()
+        .filter(child -> child.getUser() != null && userId.equals(child.getUser().getId()))
+        .collect(Collectors.toCollection(ArrayList::new));
+
+    applyFields(existing, payload);
+    existing.setGroupParent(true);
+    existing.setParent(null);
+    existing.setUnitIndex(null);
+
+    propagateParentFieldsToChildren(existing, children);
+
+    SnkVente saved = snkVenteRepository.save(existing);
+    if (!children.isEmpty()) {
+      snkVenteRepository.saveAll(children);
+    }
+    syncGroupParentAggregates(userId, existing.getId());
+    return saved;
+  }
+
+  private void propagateParentFieldsToChildren(SnkVente parent, List<SnkVente> children) {
+    if (children == null || children.isEmpty()) return;
+
+    List<BigDecimal> retailShares = splitAmountAcrossChildren(parent.getPrixRetail(), children.size());
+    List<BigDecimal> resellShares = splitAmountAcrossChildren(parent.getPrixResell(), children.size());
+    String childCategory = normalizeGroupParentCategory(parent.getCategorie(), parent.getType());
+
+    for (int index = 0; index < children.size(); index += 1) {
+      SnkVente child = children.get(index);
+      child.setType(parent.getType());
+      child.setCategorie(childCategory);
+      child.setDateAchat(parent.getDateAchat());
+      child.setDateVente(parent.getDateVente());
+      child.setPrixRetail(retailShares.get(index));
+      child.setPrixResell(resellShares.get(index));
+    }
+  }
+
+  private void syncGroupParentAggregates(Long userId, Integer parentId) {
+    if (parentId == null) return;
+
+    SnkVente parent = snkVenteRepository.findById(parentId)
+        .filter(candidate -> candidate.getUser() != null && userId.equals(candidate.getUser().getId()))
+        .filter(SnkVente::isGroupParent)
+        .orElse(null);
+    if (parent == null) return;
+
+    List<SnkVente> children = snkVenteRepository.findByParent_IdOrderByUnitIndexAscIdAsc(parentId).stream()
+        .filter(child -> child.getUser() != null && userId.equals(child.getUser().getId()))
+        .toList();
+    if (children.isEmpty()) return;
+
+    parent.setDateAchat(resolveParentDateAchat(children));
+    parent.setPrixRetail(sumNullableAmounts(children, SnkVente::getPrixRetail));
+    parent.setPrixResell(sumNullableAmounts(children, SnkVente::getPrixResell));
+    parent.setDateVente(children.stream()
+        .map(SnkVente::getDateVente)
+        .filter(Objects::nonNull)
+        .max(LocalDate::compareTo)
+        .orElse(null));
+    snkVenteRepository.save(parent);
+  }
+
+  private List<BigDecimal> splitAmountAcrossChildren(BigDecimal total, int count) {
+    if (count <= 0) return List.of();
+    if (total == null) {
+      return java.util.stream.IntStream.range(0, count)
+          .mapToObj(index -> (BigDecimal) null)
+          .toList();
+    }
+
+    BigDecimal scaled = total.setScale(2, java.math.RoundingMode.HALF_UP);
+    long totalCents = scaled.movePointRight(2).longValueExact();
+    long sign = Long.compare(totalCents, 0L);
+    long absoluteCents = Math.abs(totalCents);
+    long baseCents = absoluteCents / count;
+    long remainder = absoluteCents % count;
+
+    List<BigDecimal> out = new ArrayList<>(count);
+    for (int index = 0; index < count; index += 1) {
+      long cents = baseCents + (index < remainder ? 1L : 0L);
+      out.add(BigDecimal.valueOf(cents * sign, 2));
+    }
+    return out;
+  }
+
+  private BigDecimal sumNullableAmounts(List<SnkVente> rows, java.util.function.Function<SnkVente, BigDecimal> getter) {
+    BigDecimal total = BigDecimal.ZERO;
+    boolean hasValue = false;
+
+    for (SnkVente row : rows) {
+      BigDecimal value = getter.apply(row);
+      if (value == null) continue;
+      total = total.add(value);
+      hasValue = true;
+    }
+
+    return hasValue ? total : null;
   }
 
   private String defaultGroupName(List<SnkVente> rows, String type) {
