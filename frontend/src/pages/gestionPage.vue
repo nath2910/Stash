@@ -110,6 +110,19 @@
                   </div>
 
                   <div class="inventory-toolbar-actions">
+                    <button
+                      v-if="unifySelectionState.visible"
+                      type="button"
+                      class="inventory-unify-button"
+                      :disabled="!unifySelectionState.enabled || groupingSelection"
+                      :title="unifySelectionButtonTitle"
+                      @click="unifySelectedItems"
+                    >
+                      <GitMerge class="h-3.5 w-3.5" aria-hidden="true" />
+                      <span>{{
+                        groupingSelection ? 'Unification...' : `Unifier (${unifySelectionState.count})`
+                      }}</span>
+                    </button>
                     <GestionActionsPanel
                       :items="allInventoryUnits"
                       @vente-ajoutee="handleVenteAjouteeFromActions"
@@ -127,6 +140,12 @@
                     </button>
                   </div>
                 </div>
+                <p
+                  v-if="unifySelectionState.visible && !unifySelectionState.enabled"
+                  class="inventory-toolbar-hint"
+                >
+                  {{ unifySelectionState.reason }}
+                </p>
 
                 <div class="inventory-control-row">
                   <SearchBarre v-model="searchTerm" />
@@ -368,6 +387,7 @@ import {
   ArrowUp,
   CalendarDays,
   ClipboardList,
+  GitMerge,
   Layers3,
   PackageSearch,
   RotateCcw,
@@ -417,6 +437,7 @@ const GestionMarketplacePanel = defineAsyncComponent(() => import('@/components/
 const snkVentes = ref([])
 const searchTerm = ref('')
 const selectedIds = ref([])
+const groupingSelection = ref(false)
 
 const showEditModal = ref(false)
 const venteToEdit = ref(null)
@@ -617,6 +638,112 @@ const discoveredSubcategories = computed(() =>
 const allInventoryUnits = computed(() =>
   snkVentes.value.flatMap((vente) => (isGroupedItem(vente) ? childItemsOf(vente) : [vente])),
 )
+const inventoryRowsById = computed(() => {
+  const rows = new Map()
+
+  const registerRow = (row) => {
+    if (!row || row.id === null || row.id === undefined) return
+    rows.set(row.id, row)
+    rows.set(String(row.id), row)
+    const numericId = Number(row.id)
+    if (!Number.isNaN(numericId)) rows.set(numericId, row)
+  }
+
+  snkVentes.value.forEach((vente) => {
+    registerRow(vente)
+    childItemsOf(vente).forEach(registerRow)
+  })
+
+  return rows
+})
+const selectedRows = computed(() => {
+  const uniqueIds = Array.from(
+    new Set(
+      selectedIds.value
+        .map((id) => Number(id))
+        .filter((id) => Number.isInteger(id) && id > 0),
+    ),
+  )
+  return uniqueIds
+    .map((id) => inventoryRowsById.value.get(id) ?? inventoryRowsById.value.get(String(id)))
+    .filter(Boolean)
+})
+const unifySelectionState = computed(() => {
+  const uniqueIds = Array.from(
+    new Set(
+      selectedIds.value
+        .map((id) => Number(id))
+        .filter((id) => Number.isInteger(id) && id > 0),
+    ),
+  )
+
+  if (uniqueIds.length < 2) {
+    return {
+      visible: false,
+      enabled: false,
+      count: uniqueIds.length,
+      ids: [],
+      reason: '',
+    }
+  }
+
+  const rows = selectedRows.value
+
+  if (rows.length !== uniqueIds.length) {
+    return {
+      visible: true,
+      enabled: false,
+      count: uniqueIds.length,
+      ids: uniqueIds,
+      reason: 'La selection a change. Recharge la liste puis recommence.',
+    }
+  }
+
+  if (rows.some((row) => row?.groupParent || (row?.parentId !== null && row?.parentId !== undefined))) {
+    return {
+      visible: true,
+      enabled: false,
+      count: uniqueIds.length,
+      ids: uniqueIds,
+      reason: 'L unification ne marche que sur des lignes simples, pas sur un groupe existant.',
+    }
+  }
+
+  const typeKeys = new Set(rows.map((row) => normalizeItemType(row?.type || 'SNEAKER')))
+  if (typeKeys.size > 1) {
+    return {
+      visible: true,
+      enabled: false,
+      count: uniqueIds.length,
+      ids: uniqueIds,
+      reason: 'Selection incompatible: garde uniquement des lignes du meme type.',
+    }
+  }
+
+  const categoryKeys = new Set(rows.map((row) => normalizeText(categoryValueOf(row))))
+  if (categoryKeys.size > 1) {
+    return {
+      visible: true,
+      enabled: false,
+      count: uniqueIds.length,
+      ids: uniqueIds,
+      reason: 'Selection incompatible: garde uniquement la meme sous-categorie.',
+    }
+  }
+
+  return {
+    visible: true,
+    enabled: true,
+    count: uniqueIds.length,
+    ids: uniqueIds,
+    reason: '',
+  }
+})
+const unifySelectionButtonTitle = computed(() => {
+  if (groupingSelection.value) return 'Creation du groupe en cours'
+  if (!unifySelectionState.value.enabled) return unifySelectionState.value.reason
+  return 'Creer une ligne mere a partir de la selection'
+})
 
 const categoryOptions = computed(() => {
   if (!selectedItemType.value) return []
@@ -1197,6 +1324,32 @@ const handleVenteAjoutee = async () => {
 
 const handleVenteAjouteeFromActions = async () => {
   await handleVenteAjoutee()
+}
+
+const unifySelectedItems = async () => {
+  const selection = unifySelectionState.value
+  if (!selection.enabled || groupingSelection.value) return
+
+  groupingSelection.value = true
+  try {
+    const { data } = await SnkVenteServices.regrouperSelection(selection.ids)
+    selectedIds.value = []
+    await reloadVentes()
+
+    const createdGroupId = Number(data?.id)
+    const createdGroup = Number.isNaN(createdGroupId)
+      ? data
+      : snkVentes.value.find((vente) => Number(vente?.id) === createdGroupId) || data
+
+    if (createdGroup) openEditModal(createdGroup)
+  } catch (error) {
+    console.error('Erreur unification selection', error)
+    window.alert(
+      error?.response?.data?.message || "Impossible d'unifier cette selection pour le moment.",
+    )
+  } finally {
+    groupingSelection.value = false
+  }
 }
 
 // Edition
@@ -2406,6 +2559,42 @@ onBeforeUnmount(() => {
   background: #fef2f2;
 }
 
+.inventory-unify-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  width: auto;
+  max-width: 100%;
+  min-width: 10.4rem;
+  min-height: 40px;
+  border: 1px solid rgba(13, 148, 136, 0.22);
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(240, 253, 250, 0.98), rgba(236, 254, 255, 0.98));
+  color: #0f766e;
+  padding-inline: 0.92rem;
+  font-size: 0.78rem;
+  font-weight: 900;
+  line-height: 1.1;
+  text-align: center;
+  white-space: normal;
+}
+
+.inventory-unify-button:hover:not(:disabled) {
+  border-color: rgba(13, 148, 136, 0.4);
+  background: linear-gradient(135deg, rgba(204, 251, 241, 0.98), rgba(224, 242, 254, 0.98));
+  color: #115e59;
+  box-shadow: 0 10px 24px rgba(15, 118, 110, 0.12);
+}
+
+.inventory-unify-button:disabled {
+  cursor: not-allowed;
+  border-color: rgba(148, 163, 184, 0.24);
+  background: linear-gradient(135deg, rgba(248, 250, 252, 0.96), rgba(241, 245, 249, 0.96));
+  color: #94a3b8;
+  box-shadow: none;
+}
+
 .gestion-import-widget {
   border: 1px solid rgba(125, 211, 252, 0.28);
   border-radius: 14px;
@@ -3099,6 +3288,7 @@ onBeforeUnmount(() => {
 .filter-panel-toggle,
 .filter-reset-button,
 .filter-control,
+.inventory-unify-button,
 .inventory-danger-button {
   transition:
     border-color 170ms ease,
@@ -3111,6 +3301,7 @@ onBeforeUnmount(() => {
 .gestion-tab-button:hover,
 .filter-panel-toggle:hover,
 .filter-reset-button:not(:disabled):hover,
+.inventory-unify-button:hover:not(:disabled),
 .inventory-danger-button:hover {
   transform: translateY(-1px);
 }
@@ -3478,6 +3669,14 @@ onBeforeUnmount(() => {
   line-height: 1.15;
   text-align: center;
   white-space: normal;
+}
+
+.inventory-toolbar-hint {
+  padding: 0 clamp(1rem, 1.8vw, 1.3rem) 0.2rem;
+  color: #0f766e;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1.35;
 }
 
 .inventory-toolbar-actions :deep(button) {

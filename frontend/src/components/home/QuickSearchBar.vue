@@ -61,10 +61,10 @@ import { Search, X } from 'lucide-vue-next'
 import SearchResultsDropdown from './SearchResultsDropdown.vue'
 import { useClickOutside } from '@/composables/useClickOutside'
 import { useAuthStore } from '@/store/authStore'
-import { itemTypeLabel, readStoredItemCategories } from '@/RegleItem/itemCategoryStore'
+import { readStoredItemCategories } from '@/RegleItem/itemCategoryStore'
 import { formatNumber } from '@/utils/formatters'
-import { getField, typeOf } from '@/utils/snkVente'
-import { matchesSearchQuery, normalizeSearchText } from '@/utils/homeDashboard'
+import { normalizeSearchText } from '@/utils/homeDashboard'
+import { searchInventoryItems } from '@/utils/inventorySearch'
 
 const props = defineProps({
   items: { type: Array, default: () => [] },
@@ -103,25 +103,13 @@ const stockLabel = computed(() => {
   return `${formatNumber(count)} item${count > 1 ? 's' : ''}`
 })
 
-const searchableText = (item) => {
-  const metadata = item?.metadata || {}
-  return [
-    item?.id,
-    getField(item, 'nomItem', ''),
-    getField(item, 'categorie', ''),
-    getField(item, 'description', ''),
-    itemTypeLabel(typeOf(item), categoryLabels.value),
-    typeOf(item),
-    ...Object.values(metadata),
-  ]
-}
-
 const filteredItems = computed(() => {
   const q = debouncedQuery.value
   if (!q) return []
-  return props.items
-    .filter((item) => matchesSearchQuery(searchableText(item), q))
-    .slice(0, 9)
+  return searchInventoryItems(props.items, q, {
+    categoryLabels: categoryLabels.value,
+    limit: 9,
+  })
 })
 
 const dropdownOpen = computed(() => focused.value && Boolean(query.value.trim()))

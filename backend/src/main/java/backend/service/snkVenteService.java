@@ -274,6 +274,73 @@ public class snkVenteService {
     return matches.size();
   }
 
+  @Transactional
+  public SnkVenteGroupViewDto regrouperSelection(Long userId, List<Integer> ids) {
+    List<Integer> uniqueIds = ids == null
+        ? List.of()
+        : ids.stream().filter(Objects::nonNull).distinct().toList();
+    if (uniqueIds.size() < 2 || uniqueIds.size() > 50) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Selection invalide pour le regroupement");
+    }
+
+    List<SnkVente> matches = snkVenteRepository.findByUser_IdAndIdIn(userId, uniqueIds);
+    if (matches.size() != uniqueIds.size()) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Certaines lignes sont introuvables");
+    }
+    if (matches.stream().anyMatch(vente -> vente.isGroupParent() || vente.getParentId() != null)) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choisis uniquement des lignes simples hors groupe");
+    }
+
+    String expectedType = normalizeItemType(matches.get(0).getType());
+    String expectedCategory = normalizeCategoryKey(matches.get(0).getCategorie(), expectedType);
+    boolean sameShape = matches.stream().allMatch(vente ->
+        expectedType.equals(normalizeItemType(vente.getType()))
+            && expectedCategory.equals(
+                normalizeCategoryKey(vente.getCategorie(), normalizeItemType(vente.getType()))));
+    if (!sameShape) {
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST,
+          "Les lignes doivent partager le meme type et la meme sous-categorie"
+      );
+    }
+
+    List<SnkVente> ordered = matches.stream()
+        .sorted(Comparator
+            .comparing(SnkVente::getDateAchat, Comparator.nullsLast(LocalDate::compareTo))
+            .thenComparing(SnkVente::getId))
+        .collect(Collectors.toCollection(ArrayList::new));
+
+    User user = getUserOrThrow(userId);
+    SnkVente parent = new SnkVente();
+    parent.setUser(user);
+    parent.setGroupParent(true);
+    parent.setParent(null);
+    parent.setUnitIndex(null);
+    parent.setType(expectedType);
+    parent.setCategorie(normalizeGroupParentCategory(ordered.get(0).getCategorie(), expectedType));
+    parent.setNomItem(defaultGroupName(ordered, expectedType));
+    parent.setDescription(null);
+    parent.setDateAchat(resolveParentDateAchat(ordered));
+    parent.setDateVente(null);
+    parent.setPrixRetail(null);
+    parent.setPrixResell(null);
+    parent.setMetadata(new HashMap<>());
+    parent = snkVenteRepository.save(parent);
+
+    List<SnkVente> children = new ArrayList<>();
+    for (int index = 0; index < ordered.size(); index += 1) {
+      SnkVente child = ordered.get(index);
+      child.setParent(parent);
+      child.setGroupParent(false);
+      child.setUnitIndex(index + 1);
+      children.add(child);
+    }
+    parent.setChildren(children);
+    snkVenteRepository.saveAll(children);
+    statsCacheEviction.evictUser(userId);
+    return toGroupView(parent, children);
+  }
+
   private void cleanupEmptyGroupParent(Long userId, Integer parentId) {
     if (parentId == null) return;
     if (snkVenteRepository.countByUser_IdAndParent_Id(userId, parentId) > 0) return;
@@ -432,6 +499,80 @@ public class snkVenteService {
 
   private BigDecimal profitOf(SnkVente vente) {
     return safeResell(vente).subtract(safeRetail(vente));
+  }
+
+  private LocalDate resolveParentDateAchat(List<SnkVente> rows) {
+    return rows.stream()
+        .map(SnkVente::getDateAchat)
+        .filter(Objects::nonNull)
+        .min(LocalDate::compareTo)
+        .orElse(null);
+  }
+
+  private String defaultGroupName(List<SnkVente> rows, String type) {
+    String category = normalizeGroupParentCategory(rows.isEmpty() ? null : rows.get(0).getCategorie(), type);
+    String firstName = trimToNull(rows.isEmpty() ? null : rows.get(0).getNomItem());
+    String base = firstNonBlank(category, firstName, typeDisplayLabel(type), "Lot");
+    return "Lot " + rows.size() + " - " + base;
+  }
+
+  private String firstNonBlank(String... values) {
+    if (values == null) return "";
+    for (String value : values) {
+      String cleaned = trimToNull(value);
+      if (cleaned != null) return cleaned;
+    }
+    return "";
+  }
+
+  private String trimToNull(String value) {
+    if (value == null) return null;
+    String cleaned = value.trim().replaceAll("\\s+", " ");
+    return cleaned.isEmpty() ? null : cleaned;
+  }
+
+  private String normalizeCategoryKey(String value, String type) {
+    String cleaned = trimToNull(value);
+    if (cleaned == null) return "";
+    if (isMainCategoryAlias(cleaned, type)) return "";
+    return Normalizer.normalize(cleaned, Normalizer.Form.NFD)
+        .replaceAll("\\p{M}", "")
+        .toLowerCase(Locale.ROOT);
+  }
+
+  private String normalizeGroupParentCategory(String value, String type) {
+    String cleaned = trimToNull(value);
+    if (cleaned == null || isMainCategoryAlias(cleaned, type)) return null;
+    return cleaned;
+  }
+
+  private boolean isMainCategoryAlias(String value, String type) {
+    String cleaned = trimToNull(value);
+    if (cleaned == null) return false;
+    String normalizedValue = Normalizer.normalize(cleaned, Normalizer.Form.NFD)
+        .replaceAll("\\p{M}", "")
+        .toLowerCase(Locale.ROOT);
+    String normalizedType = normalizeItemType(type).toLowerCase(Locale.ROOT);
+    String normalizedLabel = Normalizer.normalize(typeDisplayLabel(type), Normalizer.Form.NFD)
+        .replaceAll("\\p{M}", "")
+        .toLowerCase(Locale.ROOT);
+    return normalizedValue.equals(normalizedType) || normalizedValue.equals(normalizedLabel);
+  }
+
+  private String typeDisplayLabel(String type) {
+    return switch (normalizeItemType(type)) {
+      case "SNEAKER" -> "Sneakers";
+      case "CLOTHING" -> "Vetements";
+      case "ACCESSORY" -> "Accessoires";
+      case "WATCH" -> "Montres";
+      case "ELECTRONICS" -> "Electronique";
+      case "COLLECTIBLE" -> "Collection";
+      case "HOME" -> "Maison";
+      case "POKEMON_CARD" -> "Pokemon";
+      case "TICKET" -> "Tickets";
+      case "OTHER" -> "Autre";
+      default -> normalizeItemType(type).replace('_', ' ');
+    };
   }
 
   private SnkVenteImportDto trimDto(SnkVenteImportDto dto) {

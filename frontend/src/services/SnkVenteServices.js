@@ -79,6 +79,17 @@ class SnkVenteServices {
     return api.get('/snkVente/grouped', { params })
   }
 
+  regrouperSelection(ids = []) {
+    return api.post('/snkVente/group-selection', { ids }).then((response) => {
+      syncAfterInventoryMutation({
+        source: 'inventory-service',
+        action: 'group-selection',
+        count: Array.isArray(ids) ? ids.length : undefined,
+      })
+      return response
+    })
+  }
+
   recent(limit = 8) {
     return api.get('/snkVente/recent', { params: { limit } })
   }

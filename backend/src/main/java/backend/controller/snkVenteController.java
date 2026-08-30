@@ -28,6 +28,7 @@ import org.springframework.web.multipart.MultipartFile;
 import backend.dto.SnkVenteCreateDto;
 import backend.dto.SnkVenteChildViewDto;
 import backend.dto.SnkVenteGroupViewDto;
+import backend.dto.SnkVenteGroupSelectionDto;
 import backend.dto.SnkVenteImportDto;
 import backend.dto.TopVenteProjection;
 import backend.dto.AttachmentDto;
@@ -91,6 +92,14 @@ public class snkVenteController {
       @RequestParam(required = false) Integer limit
   ) {
     return snkVenteService.rechercherGroupesParUser(userId(currentUser), limit);
+  }
+
+  @PostMapping(path = "/group-selection", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+  public SnkVenteGroupViewDto regrouperSelection(
+      @AuthenticationPrincipal User currentUser,
+      @RequestBody @jakarta.validation.Valid SnkVenteGroupSelectionDto payload
+  ) {
+    return snkVenteService.regrouperSelection(userId(currentUser), payload.ids());
   }
 
   @GetMapping(path = "{id}/children", produces = APPLICATION_JSON_VALUE)

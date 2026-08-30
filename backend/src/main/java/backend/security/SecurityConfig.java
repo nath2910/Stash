@@ -5,16 +5,19 @@ import java.util.List;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.CorsUtils;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.Arrays;
 import java.util.stream.Collectors;
@@ -58,6 +61,7 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
       .cors(Customizer.withDefaults())
       .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)) // ✅
       .authorizeHttpRequests(auth -> auth
+          .requestMatchers(CorsUtils::isPreFlightRequest).permitAll()
           .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
           .requestMatchers(
               "/auth/register",
@@ -76,6 +80,17 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
               "/error"
           ).permitAll()
           .anyRequest().authenticated()
+      )
+      .exceptionHandling(exceptions -> exceptions
+          .defaultAuthenticationEntryPointFor(
+              new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
+              request -> {
+                String path = request.getServletPath();
+                if (path == null || path.isBlank()) path = request.getRequestURI();
+                if (path == null || path.isBlank()) return false;
+                return !path.startsWith("/oauth2/") && !path.startsWith("/login");
+              }
+          )
       )
       .oauth2Login(oauth -> oauth
           .successHandler(oAuth2SuccessHandler)
