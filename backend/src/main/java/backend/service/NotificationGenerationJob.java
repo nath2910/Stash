@@ -16,7 +16,10 @@ public class NotificationGenerationJob {
     this.notificationService = notificationService;
   }
 
-  @Scheduled(cron = "${app.notifications.generation-cron:0 15 3 * * *}", zone = "UTC")
+  @Scheduled(
+      cron = "${app.notifications.generation-cron:0 15 7 * * *}",
+      zone = "${app.notifications.time-zone:Europe/Paris}"
+  )
   public void generateDaily() {
     int created = notificationService.generateTimedNotificationsForAllUsers();
     log.info("Notification generation done: {} notifications created", created);

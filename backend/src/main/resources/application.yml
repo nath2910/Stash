@@ -6,9 +6,10 @@ spring:
   datasource:
     hikari:
       maximum-pool-size: ${APP_DB_MAX_POOL:10}
-      minimum-idle: ${APP_DB_MIN_IDLE:2}
+      # Do not keep PostgreSQL awake when the backend has no real work to do.
+      minimum-idle: ${APP_DB_MIN_IDLE:0}
       connection-timeout: 30000
-      idle-timeout: 600000
+      idle-timeout: ${APP_DB_IDLE_TIMEOUT_MS:60000}
       max-lifetime: 1800000
       validation-timeout: 5000
   jpa:
@@ -91,8 +92,13 @@ app:
     root: ${APP_STORAGE_ROOT:uploads}
     max-size-bytes: ${APP_STORAGE_MAX_BYTES:10485760}
   notifications:
-    generation-cron: ${APP_NOTIFICATIONS_GENERATION_CRON:0 15 3 * * *}
+    # Runs after the daytime Koyeb warm-up and follows French daylight-saving time.
+    generation-cron: ${APP_NOTIFICATIONS_GENERATION_CRON:0 15 7 * * *}
+    time-zone: ${APP_NOTIFICATIONS_TIME_ZONE:Europe/Paris}
   delivery:
+    # Disabled by default: each task queries PostgreSQL regularly and prevents Neon scale-to-zero.
+    mail-scan-enabled: ${APP_DELIVERY_MAIL_SCAN_ENABLED:false}
+    tracking-refresh-enabled: ${APP_DELIVERY_TRACKING_REFRESH_ENABLED:false}
     scan-fixed-delay-ms: ${APP_DELIVERY_SCAN_FIXED_DELAY_MS:300000}
     scan-batch-size: ${APP_DELIVERY_SCAN_BATCH_SIZE:25}
     gmail-max-results: ${APP_DELIVERY_GMAIL_MAX_RESULTS:${app.delivery.scan-batch-size}}
