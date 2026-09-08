@@ -166,4 +166,35 @@ class EmailVerificationServiceTest {
     Assertions.assertEquals("Lien invalide ou expire", exception.getReason());
     Mockito.verify(userRepository, Mockito.never()).save(Mockito.any());
   }
+
+  @Test
+  void sendVerificationCreatesTokenForUser() {
+    EmailVerificationTokenRepository tokenRepository = Mockito.mock(EmailVerificationTokenRepository.class);
+    UserRepository userRepository = Mockito.mock(UserRepository.class);
+    JavaMailSender mailSender = Mockito.mock(JavaMailSender.class);
+    MockEnvironment environment = new MockEnvironment()
+        .withProperty("spring.mail.host", "smtp.example.com")
+        .withProperty("spring.mail.username", "noreply@example.com");
+
+    EmailVerificationService service = new EmailVerificationService(
+        tokenRepository,
+        userRepository,
+        mailSender,
+        environment,
+        60,
+        "https://mystash.fr/verify-email",
+        ""
+    );
+
+    User user = Mockito.mock(User.class);
+    Mockito.when(user.getId()).thenReturn(42L);
+    Mockito.when(user.getEmail()).thenReturn("test@example.com");
+    Mockito.when(user.getProvider()).thenReturn("LOCAL");
+    Mockito.when(user.isEmailVerified()).thenReturn(false);
+
+    Assertions.assertDoesNotThrow(() -> service.sendVerification(user));
+    Mockito.verify(tokenRepository).deleteByUserIdAndUsedAtIsNull(42L);
+    Mockito.verify(tokenRepository).save(Mockito.any());
+    Mockito.verify(mailSender).send(Mockito.any(org.springframework.mail.SimpleMailMessage.class));
+  }
 }
