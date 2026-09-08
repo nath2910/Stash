@@ -63,21 +63,21 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
       .requestCache(cache -> cache.requestCache(new org.springframework.security.web.savedrequest.NullRequestCache()))
       .logout(logout -> logout.disable())
       .headers(headers -> headers
-          .contentSecurityPolicy(csp -> csp
-              .policyDirectives(
-                  "default-src 'none'",
-                  "script-src 'self'",
-                  "style-src 'self' 'unsafe-inline'",
-                  "img-src 'self' data: blob:",
-                  "font-src 'self' data:",
-                  "connect-src 'self' ws: wss:",
-                  "frame-ancestors 'none'",
-                  "base-uri 'none'"
-              )
-          )
-          .referrerPolicy(referrer -> referrer.policy(org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER))
-          .permissionsPolicyHeader(policy -> policy.policy("camera=(), microphone=(), geolocation=()")))
-      .cors(Customizer.withDefaults())
+                .contentSecurityPolicy(csp -> csp
+                    .policyDirectives(String.join("; ",
+                        "default-src 'none'",
+                        "script-src 'self'",
+                        "style-src 'self' 'unsafe-inline'",
+                        "img-src 'self' data: blob:",
+                        "font-src 'self' data:",
+                        "connect-src 'self' ws: wss:",
+                        "frame-ancestors 'none'",
+                        "base-uri 'none'"
+                    ))
+                )
+                .referrerPolicy(referrer -> referrer.policy(org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER))
+                .permissionsPolicyHeader(policy -> policy.policy("camera=(), microphone=(), geolocation=()")))
+            .cors(Customizer.withDefaults())
       .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)) // ✅
       .authorizeHttpRequests(auth -> auth
           .requestMatchers(CorsUtils::isPreFlightRequest).permitAll()
