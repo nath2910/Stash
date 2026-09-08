@@ -1,6 +1,7 @@
 package backend.security;
 
 import backend.entity.User;
+import backend.service.DiscordAccessService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -8,8 +9,17 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class SubscriptionAccessService {
 
+  private final DiscordAccessService discordAccessService;
+
+  public SubscriptionAccessService(DiscordAccessService discordAccessService) {
+    this.discordAccessService = discordAccessService;
+  }
+
   public boolean hasActiveSubscription(User user) {
-    return user != null && isActiveStatus(user.getSubscriptionStatus())
+    if (user == null) return false;
+    // Bypass: Discord-eligible users get access even without Stripe subscription
+    if (isDiscordEligible(user)) return true;
+    return isActiveStatus(user.getSubscriptionStatus())
         && user.getSubscriptionCurrentPeriodEnd() != null
         && user.getSubscriptionCurrentPeriodEnd().isAfter(java.time.OffsetDateTime.now());
   }
@@ -20,6 +30,14 @@ public class SubscriptionAccessService {
     }
     if (!hasActiveSubscription(user)) {
       throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED, "Abonnement actif requis");
+    }
+  }
+
+  boolean isDiscordEligible(User user) {
+    try {
+      return discordAccessService.isEligible(user);
+    } catch (Exception e) {
+      return false;
     }
   }
 

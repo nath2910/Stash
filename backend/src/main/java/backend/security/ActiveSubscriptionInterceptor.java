@@ -1,6 +1,7 @@
 package backend.security;
 
 import backend.entity.User;
+import backend.service.DiscordAccessService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.core.annotation.AnnotatedElementUtils;
@@ -14,9 +15,11 @@ import org.springframework.web.servlet.HandlerInterceptor;
 public class ActiveSubscriptionInterceptor implements HandlerInterceptor {
 
   private final SubscriptionAccessService subscriptionAccessService;
+  private final DiscordAccessService discordAccessService;
 
-  public ActiveSubscriptionInterceptor(SubscriptionAccessService subscriptionAccessService) {
+  public ActiveSubscriptionInterceptor(SubscriptionAccessService subscriptionAccessService, DiscordAccessService discordAccessService) {
     this.subscriptionAccessService = subscriptionAccessService;
+    this.discordAccessService = discordAccessService;
   }
 
   @Override
