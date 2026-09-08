@@ -1,7 +1,6 @@
-﻿version: '3.9'
 services:
   db:
-    image: postgres:16
+    image: postgres:17
     environment:
       POSTGRES_DB: snkProjet_docker
       POSTGRES_USER: myuser
@@ -28,12 +27,12 @@ services:
       # SMTP (Brevo)
       SPRING_MAIL_HOST: ${SPRING_MAIL_HOST:-smtp-relay.brevo.com}
       SPRING_MAIL_PORT: ${SPRING_MAIL_PORT:-587}
-      SPRING_MAIL_USERNAME: ${SPRING_MAIL_USERNAME:?Set SPRING_MAIL_USERNAME in .env}
-      SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD:?Set SPRING_MAIL_PASSWORD in .env}
+      SPRING_MAIL_USERNAME: ${SPRING_MAIL_USERNAME:-}
+      SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD:-}
       SPRING_MAIL_SMTP_AUTH: ${SPRING_MAIL_SMTP_AUTH:-true}
       SPRING_MAIL_SMTP_STARTTLS: ${SPRING_MAIL_SMTP_STARTTLS:-true}
       # App
-      APP_MAIL_FROM: ${APP_MAIL_FROM:?Set APP_MAIL_FROM in .env}
+      APP_MAIL_FROM: ${APP_MAIL_FROM:-}
       APP_FRONTEND_RESET_PASSWORD_URL: ${APP_FRONTEND_RESET_PASSWORD_URL:-http://localhost:5173/reset-password}
       APP_FRONTEND_VERIFY_EMAIL_URL: ${APP_FRONTEND_VERIFY_EMAIL_URL:-http://localhost:5173/verify-email}
       APP_PASSWORD_RESET_EXP_MINUTES: ${APP_PASSWORD_RESET_EXP_MINUTES:-60}
@@ -42,7 +41,6 @@ services:
       APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS:-http://localhost:5173}
       APP_DELIVERY_MAIL_SCAN_ENABLED: ${APP_DELIVERY_MAIL_SCAN_ENABLED:-false}
       APP_DELIVERY_TRACKING_REFRESH_ENABLED: ${APP_DELIVERY_TRACKING_REFRESH_ENABLED:-false}
-      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
     depends_on:
       db:
         condition: service_healthy
@@ -68,4 +66,6 @@ services:
 
 volumes:
   db-data:
+    # Stable name: keeps the historical local database even if the project folder is renamed.
+    name: ${POSTGRES_VOLUME_NAME:-pg17-data}
   uploads-data:

@@ -145,10 +145,6 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
       return;
     }
 
-    // Set subscription active for Discord-eligible users BEFORE creating/finding user
-    // (probe is temporary, so this only matters if we're about to create a new user)
-    // For existing users, handleDiscord sets status below when user is created/updated
-
     Optional<User> byDiscord = userRepository.findByProviderAndProviderId("DISCORD", discordId);
 
     User user = byDiscord.orElseGet(() -> {
@@ -175,7 +171,6 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
       u.setEmail(safeEmail);
       u.setEmailVerified(Boolean.TRUE.equals(emailVerified));
       u.setPassword(""); // OAuth users n'ont pas de mot de passe local
-      u.setSubscriptionStatus("active"); // Discord users get active access
       return userRepository.save(u);
     });
 
@@ -186,12 +181,6 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
     if (emailVerified != null && emailVerified != user.isEmailVerified()) { user.setEmailVerified(emailVerified); changed = true; }
     // Si password est null (anciennes données), on met une chaîne vide pour respecter NOT NULL.
     if (user.getPassword() == null) { user.setPassword(""); changed = true; }
-
-    // Ensure Discord-eligible users always have active subscription
-    if (!"active".equals(user.getSubscriptionStatus())) {
-      user.setSubscriptionStatus("active");
-      changed = true;
-    }
 
     if (changed) user = userRepository.save(user);
 

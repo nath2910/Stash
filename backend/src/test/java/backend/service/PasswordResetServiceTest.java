@@ -95,4 +95,99 @@ class PasswordResetServiceTest {
     Assertions.assertEquals("Lien invalide ou expire", exception.getReason());
     Mockito.verify(userRepository, Mockito.never()).save(Mockito.any());
   }
+
+  @Test
+  void requestResetSendsResetEmail() {
+    UserRepository userRepository = Mockito.mock(UserRepository.class);
+    PasswordResetTokenRepository tokenRepository = Mockito.mock(PasswordResetTokenRepository.class);
+    PasswordEncoder passwordEncoder = Mockito.mock(PasswordEncoder.class);
+    JavaMailSender mailSender = Mockito.mock(JavaMailSender.class);
+    MockEnvironment environment = new MockEnvironment()
+        .withProperty("spring.mail.host", "smtp.example.com")
+        .withProperty("spring.mail.username", "noreply@example.com");
+
+    PasswordResetService service = new PasswordResetService(
+        userRepository,
+        tokenRepository,
+        passwordEncoder,
+        mailSender,
+        environment,
+        60,
+        "https://mystash.fr/reset-password",
+        ""
+    );
+
+    User user = new User();
+    user.setEmail("test@example.com");
+    user.setPassword("old-password");
+
+    Mockito.when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(user));
+
+    Assertions.assertDoesNotThrow(() -> service.requestReset("test@example.com"));
+    Mockito.verify(tokenRepository).save(Mockito.any());
+    Mockito.verify(mailSender).send(Mockito.any(org.springframework.mail.SimpleMailMessage.class));
+  }
+
+  @Test
+  void requestResetDoesNotRevealMissingEmail() {
+    UserRepository userRepository = Mockito.mock(UserRepository.class);
+    PasswordResetTokenRepository tokenRepository = Mockito.mock(PasswordResetTokenRepository.class);
+    PasswordEncoder passwordEncoder = Mockito.mock(PasswordEncoder.class);
+    JavaMailSender mailSender = Mockito.mock(JavaMailSender.class);
+    MockEnvironment environment = new MockEnvironment()
+        .withProperty("spring.mail.host", "smtp.example.com");
+
+    PasswordResetService service = new PasswordResetService(
+        userRepository,
+        tokenRepository,
+        passwordEncoder,
+        mailSender,
+        environment,
+        60,
+        "https://mystash.fr/reset-password",
+        ""
+    );
+
+    Assertions.assertDoesNotThrow(() -> service.requestReset("unknown@example.com"));
+    Mockito.verify(tokenRepository, Mockito.never()).save(Mockito.any());
+    Mockito.verify(mailSender, Mockito.never())
+        .send(Mockito.any(org.springframework.mail.SimpleMailMessage.class));
+  }
+
+  @Test
+  void requestResetRejectsMissingMailConfig() {
+    UserRepository userRepository = Mockito.mock(UserRepository.class);
+    PasswordResetTokenRepository tokenRepository = Mockito.mock(PasswordResetTokenRepository.class);
+    PasswordEncoder passwordEncoder = Mockito.mock(PasswordEncoder.class);
+    JavaMailSender mailSender = Mockito.mock(JavaMailSender.class);
+    MockEnvironment environment = new MockEnvironment();
+
+    PasswordResetService service = new PasswordResetService(
+        userRepository,
+        tokenRepository,
+        passwordEncoder,
+        mailSender,
+        environment,
+        60,
+        "https://mystash.fr/reset-password",
+        ""
+    );
+
+    User user = new User();
+    user.setEmail("test@example.com");
+    user.setPassword("old-password");
+
+    Mockito.when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(user));
+
+    ResponseStatusException exception = Assertions.assertThrows(
+        ResponseStatusException.class,
+        () -> service.requestReset("test@example.com")
+    );
+
+    Assertions.assertEquals(503, exception.getStatusCode().value());
+    Assertions.assertEquals("Service email non configure", exception.getReason());
+    Mockito.verify(tokenRepository, Mockito.never()).save(Mockito.any());
+    Mockito.verify(mailSender, Mockito.never())
+        .send(Mockito.any(org.springframework.mail.SimpleMailMessage.class));
+  }
 }
