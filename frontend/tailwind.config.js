@@ -3,10 +3,7 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        inter: ['Inter', 'sans-serif'],
-        poppins: ['Poppins', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        sans: ['Poppins', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        'open-sans': ['Open Sans', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        sans: ['ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'Noto Sans', 'sans-serif'],
       },
     },
   },

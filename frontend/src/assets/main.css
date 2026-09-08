@@ -9,9 +9,10 @@
   --font-ui: var(--font-sans);
   --font-body: var(--font-sans);
   --font-display:
-    'Poppins', var(--font-sans);
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
+    Arial, 'Noto Sans', sans-serif;
   --font-legacy-sans:
-    'Open Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
     Arial, 'Noto Sans', sans-serif;
   --font-mono:
     'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
