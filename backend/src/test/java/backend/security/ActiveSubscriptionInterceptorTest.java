@@ -1,9 +1,11 @@
 package backend.security;
 
 import backend.entity.User;
+import backend.service.DiscordAccessService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -14,8 +16,9 @@ import org.springframework.web.server.ResponseStatusException;
 
 class ActiveSubscriptionInterceptorTest {
 
-  private final ActiveSubscriptionInterceptor interceptor =
-      new ActiveSubscriptionInterceptor(new SubscriptionAccessService());
+  private final DiscordAccessService discordAccessService = Mockito.mock(DiscordAccessService.class);
+  private final SubscriptionAccessService service = new SubscriptionAccessService(discordAccessService);
+  private final ActiveSubscriptionInterceptor interceptor = new ActiveSubscriptionInterceptor(service, discordAccessService);
 
   @AfterEach
   void clearSecurityContext() {
@@ -25,6 +28,7 @@ class ActiveSubscriptionInterceptorTest {
   @Test
   void allowsAnnotatedHandlerForActiveUser() throws Exception {
     setAuthenticatedUser("active");
+    Mockito.when(discordAccessService.isEligible(Mockito.any())).thenReturn(false);
 
     boolean allowed = interceptor.preHandle(
         new MockHttpServletRequest(),
@@ -38,6 +42,7 @@ class ActiveSubscriptionInterceptorTest {
   @Test
   void blocksAnnotatedHandlerForInactiveUser() throws Exception {
     setAuthenticatedUser("inactive");
+    Mockito.when(discordAccessService.isEligible(Mockito.any())).thenReturn(false);
 
     ResponseStatusException ex = Assertions.assertThrows(
         ResponseStatusException.class,
@@ -52,8 +57,23 @@ class ActiveSubscriptionInterceptorTest {
   }
 
   @Test
+  void allowsAnnotatedHandlerForDiscordEligibleUser() throws Exception {
+    setAuthenticatedUser("inactive");
+    Mockito.when(discordAccessService.isEligible(Mockito.any())).thenReturn(true);
+
+    boolean allowed = interceptor.preHandle(
+        new MockHttpServletRequest(),
+        new MockHttpServletResponse(),
+        new HandlerMethod(new PremiumHandler(), PremiumHandler.class.getMethod("premium"))
+    );
+
+    Assertions.assertTrue(allowed);
+  }
+
+  @Test
   void ignoresUnannotatedHandler() throws Exception {
     setAuthenticatedUser("inactive");
+    Mockito.when(discordAccessService.isEligible(Mockito.any())).thenReturn(false);
 
     boolean allowed = interceptor.preHandle(
         new MockHttpServletRequest(),

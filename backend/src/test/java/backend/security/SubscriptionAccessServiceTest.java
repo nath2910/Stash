@@ -1,19 +1,23 @@
 package backend.security;
 
 import backend.entity.User;
+import backend.service.DiscordAccessService;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 class SubscriptionAccessServiceTest {
 
-  private final SubscriptionAccessService service = new SubscriptionAccessService();
+  private final DiscordAccessService discordAccessService = Mockito.mock(DiscordAccessService.class);
+  private final SubscriptionAccessService service = new SubscriptionAccessService(discordAccessService);
 
   @Test
   void acceptsActiveSubscription() {
     User user = userWithStatus("active");
+    Mockito.when(discordAccessService.isEligible(Mockito.any())).thenReturn(false);
 
     Assertions.assertDoesNotThrow(() -> service.requireActiveSubscription(user));
   }
@@ -21,6 +25,7 @@ class SubscriptionAccessServiceTest {
   @Test
   void rejectsInactiveSubscription() {
     User user = userWithStatus("inactive");
+    Mockito.when(discordAccessService.isEligible(Mockito.any())).thenReturn(false);
 
     ResponseStatusException ex = Assertions.assertThrows(
         ResponseStatusException.class,
@@ -28,6 +33,14 @@ class SubscriptionAccessServiceTest {
     );
 
     Assertions.assertEquals(HttpStatus.PAYMENT_REQUIRED, ex.getStatusCode());
+  }
+
+  @Test
+  void allowsDiscordEligibleUserWithoutStripeSubscription() {
+    User user = userWithStatus("inactive");
+    Mockito.when(discordAccessService.isEligible(Mockito.any())).thenReturn(true);
+
+    Assertions.assertDoesNotThrow(() -> service.requireActiveSubscription(user));
   }
 
   @Test
