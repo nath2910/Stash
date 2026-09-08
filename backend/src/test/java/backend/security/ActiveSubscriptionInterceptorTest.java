@@ -66,6 +66,7 @@ class ActiveSubscriptionInterceptorTest {
 
   private void setAuthenticatedUser(String subscriptionStatus) {
     User user = new User();
+    user.setSubscriptionCurrentPeriodEnd(java.time.OffsetDateTime.now().plusDays(1));
     user.setSubscriptionStatus(subscriptionStatus);
     ReflectionTestUtils.setField(user, "id", 8L);
     SecurityContextHolder.getContext().setAuthentication(

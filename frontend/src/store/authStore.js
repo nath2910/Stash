@@ -1,6 +1,7 @@
 // src/store/authStore.js
 import { ref } from 'vue'
 import { useBillingStore } from './billingStore'
+import api from '@/services/api'
 import {
   AUTH_STORAGE_KEYS,
   AUTH_SYNC_EVENT,
@@ -65,6 +66,11 @@ function setUser(newUser) {
 }
 
 function logout() {
+  // Capture the token before clearing storage; server revokes all sessions for this account.
+  const previousToken = token.value
+  if (previousToken) {
+    api.post('/auth/logout', null, { headers: { Authorization: `Bearer ${previousToken}` } }).catch(() => {})
+  }
   setAuth(null)
 }
 

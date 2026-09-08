@@ -24,7 +24,9 @@ class DiscordControllerTest {
     controller = new DiscordController(discordAccessService, userRepository);
 
     user = new User();
-    user.setDiscordId("old-id");
+    user.setDiscordId("discord-123");
+    user.setProvider("DISCORD");
+    user.setProviderId("discord-123");
     user.setSubscriptionStatus("inactive");
     Mockito.when(userRepository.save(Mockito.any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
   }
@@ -39,7 +41,7 @@ class DiscordControllerTest {
     Assertions.assertEquals("inactive", response.status());
     Assertions.assertEquals("inactive", user.getSubscriptionStatus());
     Assertions.assertEquals("discord-123", user.getDiscordId());
-    Mockito.verify(userRepository, Mockito.times(1)).save(user);
+    Mockito.verify(userRepository, Mockito.never()).save(Mockito.any(User.class));
   }
 
   @Test

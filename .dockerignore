@@ -10,4 +10,8 @@ uploads
 frontend
 backend/target
 backend/.env
+.env
+**/.env
+**/.env.*
+**/node_modules
 *.log

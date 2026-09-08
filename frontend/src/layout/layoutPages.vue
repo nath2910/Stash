@@ -297,6 +297,8 @@
         <span class="font-jetbrains-mono">&copy; {{ new Date().getFullYear() }} - Stash</span>
         <RouterLink to="/a-propos" class="hover:underline">A propos</RouterLink>
         <RouterLink to="/confidentialite" class="hover:underline">Confidentialite</RouterLink>
+        <RouterLink to="/legal" class="hover:underline">Mentions légales</RouterLink>
+        <RouterLink to="/legal/cgv" class="hover:underline">CGV</RouterLink>
         <a href="mailto:nathantalvasson@gmail.com" class="hover:underline">contact</a>
       </div>
     </footer>
@@ -399,7 +401,7 @@ const isStats = computed(() => route.path === '/stats')
 const isStatsLight = computed(() => isStats.value)
 const isGestionRoute = computed(() => route.path === '/gestion')
 const isLightAppShell = computed(() =>
-  ['/', '/gestion', '/a-propos', '/confidentialite'].includes(route.path),
+  ['/', '/gestion', '/a-propos', '/confidentialite', '/privacy', '/legal', '/legal/cgv', '/cookies'].includes(route.path),
 )
 const isLightChrome = computed(() =>
   ![

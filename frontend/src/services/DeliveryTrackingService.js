@@ -7,7 +7,7 @@ class DeliveryTrackingService {
 
   connectGmail(emailAddress = '') {
     const payload = emailAddress ? { emailAddress } : {}
-    return api.post('/delivery/mail-accounts/gmail/connect', payload)
+    return api.post('/delivery/mail-accounts/gmail/connect', payload, { withCredentials: true })
   }
 
   deleteMailAccount(id) {

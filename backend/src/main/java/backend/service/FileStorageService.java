@@ -39,11 +39,15 @@ public class FileStorageService {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Fichier trop volumineux (max " + maxBytes + " octets)");
     }
 
-    String originalName = StringUtils.cleanPath(Objects.requireNonNull(file.getOriginalFilename(), "filename"));
-    if (originalName.contains("..")) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Nom de fichier invalide");
+    String originalName = file.getOriginalFilename();
+    if (originalName == null || originalName.length() > 180 || originalName.contains("..")
+        || originalName.contains("/") || originalName.contains("\\")) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Nom de fichier invalide");
+    }
+    String mime = validateContent(file);
 
     String safeBase = originalName.replaceAll("[^a-zA-Z0-9_.-]", "_");
-    String filename = System.currentTimeMillis() + "_" + safeBase;
+    String filename = java.util.UUID.randomUUID() + "_" + safeBase;
     Path userDir = root.resolve(String.valueOf(userId)).resolve(String.valueOf(itemId));
     try {
       Files.createDirectories(userDir);
@@ -52,7 +56,6 @@ public class FileStorageService {
         Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
       }
 
-      String mime = detectMime(target, file.getContentType());
       return new StoredFile(target, mime, file.getSize(),
           root.relativize(target).toString().replace('\\', '/'), filename);
     } catch (IOException e) {
@@ -81,6 +84,40 @@ public class FileStorageService {
       return Files.deleteIfExists(file);
     } catch (IOException e) {
       return false;
+    }
+  }
+
+  public void deleteUserFiles(Long userId) {
+    if (userId == null || userId <= 0) throw new IllegalArgumentException("Invalid user");
+    Path directory = root.resolve(userId.toString()).normalize();
+    if (!directory.startsWith(root) || directory.equals(root)) throw new IllegalArgumentException("Invalid path");
+    if (!Files.exists(directory)) return;
+    try (var paths = Files.walk(directory)) {
+      for (Path path : paths.sorted(java.util.Comparator.reverseOrder()).toList()) Files.deleteIfExists(path);
+    } catch (IOException ex) {
+      org.slf4j.LoggerFactory.getLogger(FileStorageService.class).error("Account file cleanup requires retry for user {}", userId);
+    }
+  }
+
+  static String validateContent(MultipartFile file) {
+    String name = String.valueOf(file.getOriginalFilename()).toLowerCase(java.util.Locale.ROOT);
+    try (InputStream input = file.getInputStream()) {
+      byte[] bytes = input.readNBytes(16);
+      String ascii = new String(bytes, java.nio.charset.StandardCharsets.ISO_8859_1);
+      String mime = null;
+      if (name.endsWith(".pdf") && ascii.startsWith("%PDF-")) mime = "application/pdf";
+      else if ((name.endsWith(".jpg") || name.endsWith(".jpeg")) && bytes.length >= 3
+          && (bytes[0] & 255) == 255 && (bytes[1] & 255) == 216 && (bytes[2] & 255) == 255) mime = "image/jpeg";
+      else if (name.endsWith(".png") && bytes.length >= 8 && java.util.Arrays.equals(java.util.Arrays.copyOf(bytes, 8),
+          new byte[] {(byte)137, 80, 78, 71, 13, 10, 26, 10})) mime = "image/png";
+      else if (name.endsWith(".webp") && ascii.startsWith("RIFF") && ascii.substring(8).startsWith("WEBP")) mime = "image/webp";
+      if (mime == null || (file.getContentType() != null && !mime.equalsIgnoreCase(file.getContentType())
+          && !"application/octet-stream".equals(file.getContentType()))) {
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Fichier invalide : PDF, JPEG, PNG ou WebP requis");
+      }
+      return mime;
+    } catch (IOException ex) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Fichier illisible");
     }
   }
 

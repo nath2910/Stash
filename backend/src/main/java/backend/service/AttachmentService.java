@@ -48,7 +48,12 @@ public class AttachmentService {
         .sizeBytes(stored.sizeBytes())
         .storageKey(stored.storageKey())
         .build();
-    return attachmentRepository.save(att);
+    try {
+      return attachmentRepository.save(att);
+    } catch (RuntimeException ex) {
+      storageService.delete(stored.storageKey());
+      throw ex;
+    }
   }
 
   public void delete(Long userId, Integer venteId, Long attachmentId) {

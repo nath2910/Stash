@@ -22,12 +22,13 @@ public class GlobalExceptionHandler {
         ex.getStatusCode().value(),
         request == null ? "UNKNOWN" : request.getMethod(),
         request == null ? "UNKNOWN" : request.getRequestURI(),
-        ex.getReason()
+        "Request rejected"
     );
     return ResponseEntity.status(ex.getStatusCode())
         .body(Map.of(
-            "error", ex.getClass().getSimpleName(),
-            "message", ex.getReason() == null ? "No message" : ex.getReason()
+            "error", "request_failed",
+            "message", ex.getStatusCode().is5xxServerError() ? "Service temporairement indisponible"
+                : ex.getReason() == null ? "Requête refusée" : ex.getReason()
         ));
   }
 
@@ -37,12 +38,28 @@ public class GlobalExceptionHandler {
         "Unhandled API error on {} {}",
         request == null ? "UNKNOWN" : request.getMethod(),
         request == null ? "UNKNOWN" : request.getRequestURI(),
-        ex
+        ex.getClass().getSimpleName()
     );
     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
         .body(Map.of(
-            "error", ex.getClass().getSimpleName(),
+            "error", "internal_error",
             "message", "Une erreur interne est survenue. Merci de reessayer plus tard."
         ));
+  }
+
+  @ExceptionHandler({org.springframework.web.bind.MethodArgumentNotValidException.class,
+      org.springframework.http.converter.HttpMessageNotReadableException.class,
+      org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class,
+      org.springframework.web.bind.MissingServletRequestParameterException.class,
+      org.springframework.web.bind.MissingRequestHeaderException.class,
+      jakarta.validation.ConstraintViolationException.class,
+      org.springframework.web.method.annotation.HandlerMethodValidationException.class})
+  public ResponseEntity<?> invalidInput(Exception ex) {
+    return ResponseEntity.badRequest().body(Map.of("error", "invalid_input", "message", "Données invalides ou incomplètes"));
+  }
+
+  @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+  public ResponseEntity<?> oversizedUpload(Exception ex) {
+    return ResponseEntity.status(413).body(Map.of("message", "Fichier trop volumineux"));
   }
 }

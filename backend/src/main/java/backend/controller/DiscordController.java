@@ -32,8 +32,9 @@ public class DiscordController {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "discordId manquant");
     }
 
-    user.setDiscordId(body.discordId().trim());
-    userRepository.save(user);
+    if (!"DISCORD".equals(user.getProvider()) || !body.discordId().trim().equals(user.getProviderId())) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Connectez-vous avec Discord pour vérifier cette identité");
+    }
 
     boolean eligible = discordService.isEligible(user);
     return new DiscordEligibilityResponse(

@@ -76,9 +76,9 @@ class BillingControllerTest {
     Mockito.when(billingService.isConfigured()).thenReturn(true);
     com.stripe.model.checkout.Session session = Mockito.mock(com.stripe.model.checkout.Session.class);
     Mockito.when(session.getUrl()).thenReturn("https://stripe.test/checkout");
-    Mockito.when(billingService.createCheckout(user, "PROMO", "123")).thenReturn(session);
+    Mockito.when(billingService.createCheckout(user, new CheckoutRequest("monthly", true))).thenReturn(session);
 
-    CheckoutResponse response = controller.checkout(user, new CheckoutRequest("PROMO", "123"));
+    CheckoutResponse response = controller.checkout(user, new CheckoutRequest("monthly", true));
 
     Assertions.assertEquals("https://stripe.test/checkout", response.url());
   }
@@ -86,7 +86,7 @@ class BillingControllerTest {
   @Test
   void checkoutSanitizesUnexpectedProviderFailures() throws Exception {
     Mockito.when(billingService.isConfigured()).thenReturn(true);
-    Mockito.when(billingService.createCheckout(user, null, null))
+    Mockito.when(billingService.createCheckout(user, new CheckoutRequest(null, null)))
         .thenThrow(new IllegalStateException("Stripe low-level error"));
 
     ResponseStatusException ex = Assertions.assertThrows(

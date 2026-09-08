@@ -52,6 +52,7 @@
             </div>
           </div>
 
+          <AccountDataActions />
           <div class="account-profile-panel account-profile-panel--legal mt-6">
             <div class="account-profile-head">
               <div class="min-w-0">
@@ -97,7 +98,9 @@
 
           <div class="mt-6 rounded-2xl border border-red-500/20 bg-red-500/5 p-4 sm:p-5">
             <p class="text-sm text-slate-400">
-              Cette action supprime definitivement ton compte et tes donnees.
+              Cette action ferme votre compte, arrête le renouvellement et l’accès à l’abonnement,
+              puis supprime vos données de service. Les pièces comptables soumises à conservation
+              restent dans une archive à accès restreint. Exportez vos documents avant de continuer.
             </p>
 
             <form class="mt-4" @submit.prevent="submitDelete">
@@ -209,6 +212,7 @@
 </template>
 
 <script setup>
+import AccountDataActions from '@/components/legal/AccountDataActions.vue'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { RefreshCw, UserRoundCheck } from 'lucide-vue-next'

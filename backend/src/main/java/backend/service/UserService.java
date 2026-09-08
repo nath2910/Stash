@@ -125,6 +125,7 @@ public class UserService {
         return user;
     }
 
+    @org.springframework.transaction.annotation.Transactional
     public void changePassword(Long userId, ChangePasswordRequest request) {
         if (request == null || request.getCurrentPassword() == null || request.getNewPassword() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Champs manquants");
@@ -149,20 +150,10 @@ public class UserService {
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
+        userRepository.revokeSessions(userId);
     }
 
-    @org.springframework.transaction.annotation.Transactional
-    public void deleteAccount(Long userId) {
-        if (userId == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Utilisateur introuvable");
-        }
-
-        passwordResetTokenRepository.deleteByUser_Id(userId);
-        emailVerificationTokenRepository.deleteByUserId(userId);
-        userStatsLayoutRepository.deleteByUserId(userId);
-        snkVenteRepository.deleteByUser_Id(userId);
-        userRepository.deleteById(userId);
-    }
+    public void revokeSessions(Long userId) { userRepository.revokeSessions(userId); }
 
     private void rollbackPendingRegistration(Long userId) {
         if (userId == null) {

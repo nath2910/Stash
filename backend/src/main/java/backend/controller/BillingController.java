@@ -43,10 +43,9 @@ public class BillingController {
         var portal = billingService.createPortal(user);
         portalUrl = portal.getUrl();
       }
-      return new BillingStatusResponse(user.getSubscriptionStatus(), portalUrl);
+      return snapshot(user, portalUrl);
     } catch (Exception e) {
-      log.warn("Billing status refresh failed for user {}", user != null ? user.getId() : null, e);
-      return new BillingStatusResponse(user.getSubscriptionStatus(), "");
+      throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Facturation temporairement indisponible");
     }
   }
 
@@ -55,19 +54,17 @@ public class BillingController {
   }
 
   @PostMapping("/checkout")
-  public CheckoutResponse checkout(@AuthenticationPrincipal User user, @RequestBody CheckoutRequest request) {
+  public CheckoutResponse checkout(@AuthenticationPrincipal User user, @RequestBody @jakarta.validation.Valid CheckoutRequest request) {
     if (!billingService.isConfigured()) {
       throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Stripe non configuré");
     }
     try {
-      String promo = request != null ? request.promoCode() : null;
-      String discord = request != null ? request.discord() : null;
-      var session = billingService.createCheckout(user, promo, discord);
+      var session = billingService.createCheckout(user, request);
       return new CheckoutResponse(session.getUrl());
     } catch (ResponseStatusException ex) {
       throw ex;
     } catch (Exception e) {
-      log.warn("Billing checkout failed for user {}", user != null ? user.getId() : null, e);
+      log.warn("Billing checkout failed");
       throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Session de paiement indisponible", e);
     }
   }
@@ -78,10 +75,27 @@ public class BillingController {
     return ResponseEntity.ok().build();
   }
 
+  @GetMapping("/plans")
+  public java.util.List<BillingService.Plan> plans() throws Exception { return billingService.plans(); }
+
+  @PostMapping("/cancel")
+  public BillingStatusResponse cancel(@AuthenticationPrincipal User user) throws Exception {
+    billingService.cancelAtPeriodEnd(user);
+    return snapshot(user, "");
+  }
+
+  @PostMapping("/portal")
+  public CheckoutResponse portal(@AuthenticationPrincipal User user) throws Exception {
+    return new CheckoutResponse(billingService.createPortal(user).getUrl());
+  }
+
+  private BillingStatusResponse snapshot(User user, String portalUrl) {
+    return new BillingStatusResponse(user.getSubscriptionStatus(), portalUrl,
+        user.getSubscriptionCurrentPeriodEnd(), user.isSubscriptionCancelAtPeriodEnd());
+  }
+
   private boolean isPortalEligibleStatus(String status) {
     if (status == null) return false;
-    return "active".equalsIgnoreCase(status)
-        || "past_due".equalsIgnoreCase(status)
-        || "canceled".equalsIgnoreCase(status);
+    return !"inactive".equalsIgnoreCase(status);
   }
 }

@@ -49,6 +49,10 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
   @Override
   public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
+    // OAuth state uses a temporary session; API access is exclusively a bearer JWT.
+    var session = request == null ? null : request.getSession(false);
+    if (session != null) session.invalidate();
+    org.springframework.security.core.context.SecurityContextHolder.clearContext();
     Object principal = authentication.getPrincipal();
 
     if (principal instanceof OidcUser oidcUser) {
@@ -72,7 +76,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
     String picture = oidcUser.getPicture();
     Boolean emailVerified = oidcUser.getEmailVerified();
 
-    if (sub == null || email == null) {
+    if (sub == null || email == null || !Boolean.TRUE.equals(emailVerified)) {
       response.sendError(400, "Google login missing sub/email");
       return;
     }
@@ -85,6 +89,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
       Optional<User> byEmail = userRepository.findByEmail(emailNorm);
       if (byEmail.isPresent()) {
         User u = byEmail.get();
+        if (!u.isEmailVerified()) { u.setPassword(""); u.setSessionVersion(u.getSessionVersion() + 1); }
         u.setProvider("GOOGLE");
         u.setProviderId(sub);
         u.setEmailVerified(Boolean.TRUE.equals(emailVerified));
@@ -102,7 +107,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
       u.setProviderId(sub);
       u.setEmailVerified(Boolean.TRUE.equals(emailVerified));
       if (!isBlank(picture)) u.setPictureUrl(norm(picture));
-      u.setPassword(null);
+      u.setPassword("");
       return userRepository.save(u);
     });
 
@@ -124,7 +129,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
     String globalName = (String) oauthUser.getAttributes().get("global_name");
     String username = !isBlank(globalName) ? globalName : (String) oauthUser.getAttributes().get("username");
 
-    if (isBlank(discordId)) {
+    if (isBlank(discordId) || "null".equals(discordId) || isBlank(email) || !Boolean.TRUE.equals(emailVerified)) {
       response.sendError(400, "Discord login missing id");
       return;
     }
@@ -147,6 +152,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         Optional<User> byEmail = userRepository.findByEmail(emailNorm);
         if (byEmail.isPresent()) {
           User u = byEmail.get();
+          if (!u.isEmailVerified()) { u.setPassword(""); u.setSessionVersion(u.getSessionVersion() + 1); }
           u.setProvider("DISCORD");
           u.setProviderId(discordId);
           u.setDiscordId(discordId);
@@ -182,7 +188,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
   }
 
   private void redirectWithSession(User user, HttpServletResponse response) throws IOException {
-    String jwt = jwtService.generateToken(user.getId());
+    String jwt = jwtService.generateToken(user);
     String token = URLEncoder.encode(jwt, StandardCharsets.UTF_8);
     String userPayload = Base64.getUrlEncoder()
         .withoutPadding()

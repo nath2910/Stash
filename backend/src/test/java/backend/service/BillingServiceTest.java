@@ -14,10 +14,11 @@ class BillingServiceTest {
     StripeProperties properties = new StripeProperties();
     properties.setSecretKey("sk_test_123");
     properties.setPriceId("price_123");
+    properties.setWebhookSecret("whsec_test");
     properties.setSuccessUrl("https://mystash.fr/abo?success=1");
 
     UserRepository userRepository = Mockito.mock(UserRepository.class);
-    BillingService service = new BillingService(properties, userRepository);
+    BillingService service = new BillingService(properties, userRepository, Mockito.mock(org.springframework.jdbc.core.JdbcTemplate.class), new com.fasterxml.jackson.databind.ObjectMapper());
 
     User user = Mockito.mock(User.class);
     Mockito.when(user.getSubscriptionStatus()).thenReturn("inactive");

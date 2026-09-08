@@ -9,12 +9,8 @@ import org.springframework.boot.autoconfigure.flyway.FlywayMigrationStrategy;
 public class FlywayConfig {
 
   @Bean
-  public FlywayMigrationStrategy repairThenMigrateStrategy() {
-    return flyway -> {
-      try {
-        flyway.repair();
-      } catch (Exception ignored) {}
-      flyway.migrate();
-    };
+  public FlywayMigrationStrategy migrateStrategy() {
+    // A checksum mismatch is a deployment error. Repair requires a reviewed operator action.
+    return Flyway::migrate;
   }
 }

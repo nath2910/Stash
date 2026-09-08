@@ -96,15 +96,14 @@
             class="overflow-hidden rounded-xl border border-slate-800 bg-slate-950/60"
           >
             <div class="aspect-video border-b border-slate-800 bg-slate-950">
-              <iframe
+              <a
                 v-if="video.embedUrl"
                 class="h-full w-full"
-                :src="video.embedUrl"
+                :href="video.embedUrl"
                 :title="`Video: ${video.title}`"
-                loading="lazy"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowfullscreen
-              ></iframe>
+                target="_blank"
+                rel="noopener noreferrer"
+              >Voir la vidéo sur YouTube</a>
               <div v-else class="flex h-full items-center justify-center px-4 text-center">
                 <p class="text-sm text-slate-400">
                   Ajoute une URL YouTube dans

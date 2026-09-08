@@ -29,7 +29,10 @@ COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh
 
 ENV PORT=8080
+ENV SPRING_PROFILES_ACTIVE=prod
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 EXPOSE 8080
+RUN useradd --system --uid 10001 --create-home stash && mkdir -p /app/uploads && chown -R stash:stash /app
+USER stash
 
 ENTRYPOINT ["/app/docker-entrypoint.sh"]

@@ -46,7 +46,7 @@
                 <span
                   class="inline-flex items-center rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1 text-slate-200"
                 >
-                  Sans engagement
+                  Résiliable en ligne
                 </span>
                 <span
                   class="inline-flex items-center rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1 text-slate-200"
@@ -88,11 +88,28 @@
                 <span
                   class="rounded-full border border-slate-700 bg-slate-900/80 px-3 py-1 text-[11px] text-slate-300"
                 >
-                  Mensuel
+                  {{ selectedPlan === 'annual' ? 'Annuel' : 'Mensuel' }}
                 </span>
               </div>
             </div>
 
+            <label class="mt-4 block text-sm text-slate-200">
+              Périodicité
+              <select v-model="selectedPlan" class="mt-2 w-full rounded-xl bg-slate-800 p-3" @change="termsAccepted = false">
+                <option v-for="plan in plans" :key="plan.id" :value="plan.id">
+                  {{ plan.id === 'annual' ? 'Annuel' : 'Mensuel' }} — {{ formatPrice(plan.amount) }} TTC
+                </option>
+              </select>
+            </label>
+            <p class="mt-3 text-sm text-slate-300">
+              {{ priceLabel }}. Renouvellement automatique à chaque échéance.
+              Résiliation depuis « Mon abonnement », effective à la fin de la période payée.
+            </p>
+            <label class="mt-4 flex items-start gap-2 text-sm text-slate-200">
+              <input v-model="termsAccepted" type="checkbox" class="mt-1" />
+              <span>J’ai lu et j’accepte les <RouterLink to="/legal/cgv" target="_blank" class="underline">Conditions générales de vente</RouterLink>.</span>
+            </label>
+            <p class="mt-2 text-xs text-slate-400">L’accès commence après confirmation du paiement. Vous conservez votre droit de rétractation de 14 jours.</p>
             <button
               type="button"
               class="mt-4 h-11 w-full rounded-xl bg-emerald-500 font-semibold text-slate-900 shadow-lg shadow-emerald-500/25 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
@@ -176,7 +193,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { scopedStorageKey } from '@/RegleItem/storageScope'
 import BillingService from '@/services/BillingService'
 import { useAuthStore } from '@/store/authStore'
@@ -193,7 +210,15 @@ const portalUrl = ref('')
 const loading = ref(false)
 const error = ref('')
 const stripeReady = ref(true)
-const priceLabel = '9,90 EUR / mois'
+type Plan = { id: string; amount: number; available: boolean }
+const plans = ref<Plan[]>([])
+const selectedPlan = ref('monthly')
+const termsAccepted = ref(false)
+const selectedOffer = computed(() => plans.value.find((plan) => plan.id === selectedPlan.value))
+const formatPrice = (amount: number) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount / 100)
+const priceLabel = computed(() => selectedOffer.value
+  ? formatPrice(selectedOffer.value.amount) + ' TTC / ' + (selectedPlan.value === 'annual' ? 'an' : 'mois')
+  : 'Tarif indisponible')
 const returnTo = computed(() => (route.query.returnTo as string) || '')
 const successRedirect = computed(
   () => (route.query.successRedirect as string) || returnTo.value || '/',
@@ -261,13 +286,13 @@ const policies = [
   },
 ]
 
-const ctaDisabled = computed(() => loading.value || status.value === 'active' || !stripeReady.value)
+const ctaDisabled = computed(() => loading.value || status.value === 'active' || !stripeReady.value || !termsAccepted.value || !selectedOffer.value?.available)
 
 const ctaLabel = computed(() => {
   if (status.value === 'active') return 'Deja abonne'
   if (loading.value) return 'Redirection...'
   if (!stripeReady.value) return 'Paiement indisponible'
-  return 'Passer Premium'
+  return selectedOffer.value?.available ? 'S’abonner et payer ' + formatPrice(selectedOffer.value.amount) : 'Souscriptions bientôt disponibles'
 })
 
 const stripeStatusCopy = computed(() =>
@@ -338,13 +363,13 @@ const goToLogin = () => {
 }
 
 const startCheckout = async () => {
-  if (!stripeReady.value || status.value === 'active') return
+  if (ctaDisabled.value) return
 
   loading.value = true
   error.value = ''
 
   try {
-    const res = await BillingService.checkout(undefined, undefined)
+    const res = await BillingService.checkout(selectedPlan.value, termsAccepted.value)
     const url = res?.data?.url
 
     if (url) {
@@ -374,11 +399,22 @@ const redirectIfActive = () => {
 }
 
 onMounted(async () => {
+  try {
+    plans.value = (await BillingService.plans()).data
+  } catch {
+    error.value = 'Les tarifs sont temporairement indisponibles.'
+  }
   await fetchStatus(false, shouldPollAfterCheckout.value)
   redirectIfActive()
 
   if (shouldPollAfterCheckout.value) {
+    let attempts = 0
     poll = window.setInterval(async () => {
+      if (++attempts > 12 || status.value === 'active') {
+        if (poll) window.clearInterval(poll)
+        return
+      }
+      if (document.visibilityState === 'hidden') return
       await fetchStatus(false, true)
       redirectIfActive()
     }, 15000)

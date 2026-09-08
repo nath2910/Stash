@@ -42,6 +42,7 @@ class SubscriptionAccessServiceTest {
 
   private User userWithStatus(String status) {
     User user = new User();
+    user.setSubscriptionCurrentPeriodEnd(java.time.OffsetDateTime.now().plusDays(1));
     user.setSubscriptionStatus(status);
     ReflectionTestUtils.setField(user, "id", 5L);
     return user;

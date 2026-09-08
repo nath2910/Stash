@@ -135,7 +135,6 @@
           </button>
 
           <button
-            type="button"
             class="legal-profile-button is-primary"
             :type="step === 'micro' ? 'submit' : 'button'"
             :form="step === 'micro' ? detailFormId : undefined"

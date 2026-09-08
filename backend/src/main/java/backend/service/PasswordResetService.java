@@ -123,6 +123,7 @@ public class PasswordResetService {
 
     user.setPassword(passwordEncoder.encode(request.getNewPassword()));
     userRepository.save(user);
+    userRepository.revokeSessions(user.getId());
 
     token.setUsedAt(Instant.now());
     tokenRepository.save(token);

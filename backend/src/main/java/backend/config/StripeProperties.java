@@ -9,6 +9,12 @@ public class StripeProperties {
   private String webhookSecret;
   private String successUrl;
   private String cancelUrl;
+  private String annualPriceId;
+  private boolean salesEnabled;
+  public String getAnnualPriceId() { return annualPriceId; }
+  public void setAnnualPriceId(String value) { annualPriceId = value; }
+  public boolean isSalesEnabled() { return salesEnabled; }
+  public void setSalesEnabled(boolean value) { salesEnabled = value; }
 
   public String getSecretKey() {
     return secretKey;

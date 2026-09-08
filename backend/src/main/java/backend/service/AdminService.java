@@ -334,6 +334,7 @@ public class AdminService {
     String text = value instanceof BigDecimal decimal
         ? decimal.toPlainString()
         : String.valueOf(value == null ? "" : value);
+    if (value instanceof String && text.stripLeading().matches("^[=+@\\-].*")) text = "'" + text;
     return "\"" + text.replace("\"", "\"\"").replace("\r", " ").replace("\n", " ") + "\"";
   }
 }

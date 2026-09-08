@@ -507,6 +507,7 @@ async function syncNow() {
 function startPolling() {
   if (pollTimer || !activeToken) return
   pollTimer = window.setInterval(() => {
+    if (document.visibilityState === 'hidden') return
     refreshUnreadCount().catch(() => {})
   }, POLL_INTERVAL_MS)
 }

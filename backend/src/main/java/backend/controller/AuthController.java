@@ -32,15 +32,18 @@ public class AuthController {
     private final JwtService jwtService;
     private final PasswordResetService passwordResetService;
     private final EmailVerificationService emailVerificationService;
+    private final backend.service.AccountDeletionService accountDeletionService;
 
     public AuthController(UserService userService,
                           JwtService jwtService,
                           PasswordResetService passwordResetService,
-                          EmailVerificationService emailVerificationService) {
+                          EmailVerificationService emailVerificationService,
+                          backend.service.AccountDeletionService accountDeletionService) {
         this.userService = userService;
         this.jwtService = jwtService;
         this.passwordResetService = passwordResetService;
         this.emailVerificationService = emailVerificationService;
+        this.accountDeletionService = accountDeletionService;
     }
 
     @PostMapping("/register")
@@ -63,7 +66,7 @@ public class AuthController {
     @PostMapping("/login")
     public LoginResponse login(@RequestBody @jakarta.validation.Valid LoginRequest request) {
         User user = userService.login(request);
-        String token = jwtService.generateToken(user.getId());
+        String token = jwtService.generateToken(user);
         return new LoginResponse(UserMapper.toMe(user), token);
     }
 
@@ -91,7 +94,7 @@ public class AuthController {
     @GetMapping("/verify-email")
     public LoginResponse verifyEmail(@RequestParam("token") String token) {
         User user = emailVerificationService.verifyToken(token);
-        String tokenJwt = jwtService.generateToken(user.getId());
+        String tokenJwt = jwtService.generateToken(user);
         return new LoginResponse(UserMapper.toMe(user), tokenJwt);
     }
 
@@ -106,9 +109,14 @@ public class AuthController {
         return UserMapper.toMe(currentUser);
     }
 
+    @PostMapping("/logout")
+    public void logout(@AuthenticationPrincipal User currentUser) {
+        userService.revokeSessions(currentUser.getId());
+    }
+
     @DeleteMapping("/me")
-    public String deleteMe(@AuthenticationPrincipal User currentUser) {
-        userService.deleteAccount(currentUser.getId());
+    public String deleteMe(@AuthenticationPrincipal User currentUser) throws Exception {
+        accountDeletionService.delete(currentUser.getId());
         return "Compte supprim\u00e9";
     }
 }

@@ -26,12 +26,13 @@ public class JwtService {
         this.expirationMs = expirationMinutes * 60_000L;
     }
 
-    public String generateToken(Long userId) {
+    public String generateToken(backend.entity.User user) {
         Date now = new Date();
         Date exp = new Date(now.getTime() + expirationMs);
 
         return Jwts.builder()
-                .subject(String.valueOf(userId))   // on met l'userId dans le "sub"
+                .subject(String.valueOf(user.getId()))
+                .claim("sv", user.getSessionVersion())
                 .issuedAt(now)
                 .expiration(exp)
                 .signWith(key)
@@ -47,6 +48,12 @@ public class JwtService {
                 .getSubject();
 
         return Long.valueOf(sub);
+    }
+
+    public boolean matchesSession(String token, backend.entity.User user) {
+        var claims = Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
+        Number version = claims.get("sv", Number.class);
+        return version != null && version.longValue() == user.getSessionVersion() && user.isEmailVerified();
     }
 
     public boolean isValid(String token) {

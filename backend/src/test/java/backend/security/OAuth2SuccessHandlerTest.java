@@ -29,7 +29,7 @@ class OAuth2SuccessHandlerTest {
     discordAccessService = Mockito.mock(DiscordAccessService.class);
     handler = new OAuth2SuccessHandler(userRepository, jwtService, discordAccessService, new ObjectMapper());
     ReflectionTestUtils.setField(handler, "successRedirect", "https://mystash.test/auth/callback");
-    Mockito.when(jwtService.generateToken(Mockito.anyLong())).thenReturn("jwt-token");
+    Mockito.when(jwtService.generateToken(Mockito.any(User.class))).thenReturn("jwt-token");
     Mockito.when(userRepository.save(Mockito.any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
   }
 

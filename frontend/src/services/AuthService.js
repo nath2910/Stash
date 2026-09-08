@@ -31,8 +31,8 @@ class AuthService {
     return { user, token }
   }
 
-  logout() {
-    clearAuthState()
+  async logout() {
+    try { await api.post('/auth/logout') } finally { clearAuthState() }
   }
 
   async changePassword(payload) {

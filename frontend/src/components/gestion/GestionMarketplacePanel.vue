@@ -214,6 +214,7 @@
 </template>
 
 <script setup>
+import { safeExternalUrl } from '@/utils/safeExternalUrl'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import {
   Check,
@@ -299,7 +300,7 @@ const previewMessage = computed(
 const discordCharacterCount = computed(() => previewMessage.value.length)
 const activeTabData = computed(() => tabs.find((tab) => tab.id === activeTab.value) || tabs[0])
 const primarySourceListing = computed(() => sourcedListings.value[0] ?? null)
-const primarySourceUrl = computed(() => primarySourceListing.value?.marketUrl || '')
+const primarySourceUrl = computed(() => safeExternalUrl(primarySourceListing.value?.marketUrl))
 const primarySourceLabel = computed(() => {
   const listing = primarySourceListing.value
   if (!listing) return ''

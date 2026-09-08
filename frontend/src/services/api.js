@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { clearAuthState, readAuthToken } from '@/utils/authStorage'
+import { clearAuthState, readAuthToken } from '../utils/authStorage.js'
 
 const metaEnv = typeof import.meta !== 'undefined' ? import.meta.env : {}
 const LOCAL_BACKEND_ORIGIN = 'http://localhost:8080'
@@ -78,7 +78,7 @@ api.interceptors.response.use(
     }
 
     // Token expirÃ© ou non autorisÃ©
-    if ((status === 401 || status === 403) && !url.startsWith('/auth')) {
+    if (status === 401 && !url.startsWith('/auth')) {
       clearAuthState()
       redirectToLogin('unauthorized')
     }

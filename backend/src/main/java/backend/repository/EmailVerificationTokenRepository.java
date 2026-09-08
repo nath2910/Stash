@@ -11,6 +11,7 @@ import backend.entity.EmailVerificationToken;
 
 public interface EmailVerificationTokenRepository extends JpaRepository<EmailVerificationToken, Long> {
   @EntityGraph(attributePaths = "user")
+  @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
   Optional<EmailVerificationToken> findByToken(String token);
 
   @Transactional

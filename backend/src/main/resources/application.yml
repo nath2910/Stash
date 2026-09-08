@@ -3,6 +3,10 @@ spring:
     import: optional:file:.env[.properties],optional:file:backend/.env[.properties]
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 11MB
   datasource:
     hikari:
       maximum-pool-size: ${APP_DB_MAX_POOL:10}
@@ -115,6 +119,8 @@ app:
     aftership-webhook-secret: ${AFTERSHIP_WEBHOOK_SECRET:}
 
 stripe:
+  sales-enabled: ${STRIPE_SALES_ENABLED:false}
+  annual-price-id: ${STRIPE_ANNUAL_PRICE_ID:}
   secret-key: ${STRIPE_SECRET_KEY:}
   price-id: ${STRIPE_PRICE_ID:}
   webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
@@ -126,6 +132,16 @@ logging:
     root: INFO
 
 server:
+  error:
+    include-message: never
+    include-stacktrace: never
+    include-binding-errors: never
+  servlet:
+    session:
+      timeout: 10m
+      cookie:
+        http-only: true
+        same-site: lax
   compression:
     enabled: true
     mime-types: application/json,application/xml,text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/octet-stream
@@ -268,3 +284,7 @@ app:
 
 server:
   forward-headers-strategy: framework
+  servlet:
+    session:
+      cookie:
+        secure: true

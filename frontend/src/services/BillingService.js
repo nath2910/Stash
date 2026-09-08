@@ -11,8 +11,11 @@ const BillingService = {
       timeout: includePortal || forceRefresh ? BILLING_REFRESH_TIMEOUT_MS : BILLING_STATUS_TIMEOUT_MS,
     })
   },
-  checkout(promoCode, discord) {
-    return api.post('/billing/checkout', { promoCode, discord }, { timeout: BILLING_CHECKOUT_TIMEOUT_MS })
+  plans() { return api.get('/billing/plans') },
+  cancel() { return api.post('/billing/cancel') },
+  portal() { return api.post('/billing/portal') },
+  checkout(plan, termsAccepted) {
+    return api.post('/billing/checkout', { plan, termsAccepted }, { timeout: BILLING_CHECKOUT_TIMEOUT_MS })
   },
 }
 

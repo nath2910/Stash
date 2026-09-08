@@ -1,3 +1,4 @@
 package backend.dto;
 
-public record BillingStatusResponse(String status, String portalUrl) {}
+public record BillingStatusResponse(String status, String portalUrl,
+    java.time.OffsetDateTime currentPeriodEnd, boolean cancelAtPeriodEnd) {}

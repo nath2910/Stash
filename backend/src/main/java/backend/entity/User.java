@@ -15,6 +15,23 @@ public class User {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
+  @JsonIgnore
+  @Column(name = "session_version", nullable = false)
+  private long sessionVersion;
+
+  @Column(name = "stripe_subscription_id")
+  private String stripeSubscriptionId;
+
+  @Column(name = "subscription_cancel_at_period_end", nullable = false)
+  private boolean subscriptionCancelAtPeriodEnd;
+
+  public long getSessionVersion() { return sessionVersion; }
+  public void setSessionVersion(long value) { sessionVersion = value; }
+  public String getStripeSubscriptionId() { return stripeSubscriptionId; }
+  public void setStripeSubscriptionId(String value) { stripeSubscriptionId = value; }
+  public boolean isSubscriptionCancelAtPeriodEnd() { return subscriptionCancelAtPeriodEnd; }
+  public void setSubscriptionCancelAtPeriodEnd(boolean value) { subscriptionCancelAtPeriodEnd = value; }
+
   @Column(name = "first_name", length = 100, nullable = false)
   private String firstName = "";
 

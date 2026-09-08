@@ -58,6 +58,14 @@ public SecurityConfig(JwtAuthFilter jwtAuthFilter, OAuth2SuccessHandler oAuth2Su
 public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
   return http
       .csrf(csrf -> csrf.disable())
+      .securityContext(context -> context.securityContextRepository(
+          new org.springframework.security.web.context.NullSecurityContextRepository()))
+      .requestCache(cache -> cache.requestCache(new org.springframework.security.web.savedrequest.NullRequestCache()))
+      .logout(logout -> logout.disable())
+      .headers(headers -> headers
+          .contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'none'; frame-ancestors 'none'; base-uri 'none'"))
+          .referrerPolicy(referrer -> referrer.policy(org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER))
+          .permissionsPolicyHeader(policy -> policy.policy("camera=(), microphone=(), geolocation=()")))
       .cors(Customizer.withDefaults())
       .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)) // ✅
       .authorizeHttpRequests(auth -> auth
@@ -98,13 +106,23 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
               .accessTokenResponseClient(retryingTokenClient())
           )
           .failureHandler((req, res, ex) -> {
-            log.warn("OAuth2 login failed: {}", ex.getMessage());
+            log.warn("OAuth2 login failed");
+            var session = req.getSession(false);
+            if (session != null) session.invalidate();
             res.sendRedirect(oauthFailureRedirect("oauth_error"));
           })
       )
       .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+      .addFilterBefore(new RequestProtectionFilter(), JwtAuthFilter.class)
       .build();
 }
+
+ @Bean
+ public org.springframework.boot.web.servlet.FilterRegistrationBean<JwtAuthFilter> jwtFilterRegistration() {
+   var registration = new org.springframework.boot.web.servlet.FilterRegistrationBean<>(jwtAuthFilter);
+   registration.setEnabled(false);
+   return registration;
+ }
 
  @Bean
  public OAuth2AccessTokenResponseClient<OAuth2AuthorizationCodeGrantRequest> retryingTokenClient() {
@@ -146,7 +164,9 @@ public CorsConfigurationSource corsConfigurationSource() {
   config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
   config.setAllowedHeaders(List.of("*"));
   config.setExposedHeaders(List.of("Authorization", "Content-Disposition"));
-  config.setAllowCredentials(false);
+  // Needed only to bind the optional Gmail OAuth flow to its initiating browser.
+  // API authorization still requires a bearer JWT, never this cookie.
+  config.setAllowCredentials(true);
 
   UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
   source.registerCorsConfiguration("/**", config);

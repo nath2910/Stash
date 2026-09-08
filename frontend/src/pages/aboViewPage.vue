@@ -63,6 +63,15 @@
           <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Etat</p>
           <p class="text-lg font-semibold text-white">{{ statusMeta.label }}</p>
           <p class="text-sm text-slate-400">{{ statusMeta.note }}</p>
+          <p v-if="periodEnd" class="text-sm text-slate-200">
+            {{ cancelAtPeriodEnd ? 'Votre abonnement reste actif jusqu’au' : 'Prochaine échéance le' }} {{ periodEnd }}.
+          </p>
+          <button v-if="canCancel" type="button" class="mt-3 rounded-xl border border-red-300/40 px-4 py-3 text-red-100" @click="cancelConfirm = true">Résilier mon abonnement</button>
+          <div v-if="cancelConfirm" class="mt-3 space-y-3 text-sm">
+            <p>Confirmer la résiliation ? L’accès reste ouvert jusqu’à la fin de la période payée. Votre compte et vos données sont conservés.</p>
+            <button type="button" :disabled="portalBusy" class="rounded-xl bg-red-500 px-4 py-3 text-white" @click="cancelSubscription">Confirmer la résiliation</button>
+            <button type="button" class="ml-3 underline" @click="cancelConfirm = false">Revenir</button>
+          </div>
         </div>
         <div class="rounded-2xl border border-slate-800/80 bg-slate-900/70 p-4 space-y-1">
           <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Plan</p>
@@ -120,6 +129,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useBillingStore } from '@/store/billingStore'
 import { describeBillingError } from '@/utils/billingErrors'
+import BillingService from '@/services/BillingService'
 
 const router = useRouter()
 const billing = useBillingStore()
@@ -128,6 +138,24 @@ const status = computed(() => billing.status.value)
 const portalUrl = computed(() => billing.portalUrl.value)
 const portalBusy = ref(false)
 const portalError = ref('')
+const cancelConfirm = ref(false)
+const cancelAtPeriodEnd = ref(false)
+const periodEnd = ref('')
+const canCancel = computed(() => ['active', 'trialing', 'past_due', 'unpaid', 'paused'].includes(status.value) && !cancelAtPeriodEnd.value)
+const applySnapshot = (data: { status: string; currentPeriodEnd?: string; cancelAtPeriodEnd?: boolean }) => {
+  billing.seedStatus(data.status)
+  cancelAtPeriodEnd.value = Boolean(data.cancelAtPeriodEnd)
+  periodEnd.value = data.currentPeriodEnd ? new Date(data.currentPeriodEnd).toLocaleDateString('fr-FR') : ''
+}
+const cancelSubscription = async () => {
+  portalBusy.value = true
+  try {
+    applySnapshot((await BillingService.cancel()).data)
+    cancelConfirm.value = false
+  } catch (error) {
+    portalError.value = describeBillingError(error, 'Résiliation temporairement indisponible. Réessayez.')
+  } finally { portalBusy.value = false }
+}
 
 const statusMeta = computed(() => {
   switch (status.value) {
@@ -163,7 +191,7 @@ const statusMeta = computed(() => {
   }
 })
 
-const canOpenPortal = computed(() => ['active', 'past_due', 'canceled'].includes(status.value))
+const canOpenPortal = computed(() => status.value !== 'inactive' && status.value !== 'unknown')
 
 const openPortal = async () => {
   portalError.value = ''
@@ -199,6 +227,7 @@ const goToUpgrade = () => {
 }
 
 onMounted(async () => {
-  await billing.fetchStatus(true, false)
+  try { applySnapshot((await BillingService.status(false, true)).data) }
+  catch (error) { portalError.value = describeBillingError(error, 'État temporairement indisponible.') }
 })
 </script>

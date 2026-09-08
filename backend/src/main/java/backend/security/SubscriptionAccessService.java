@@ -9,7 +9,9 @@ import org.springframework.web.server.ResponseStatusException;
 public class SubscriptionAccessService {
 
   public boolean hasActiveSubscription(User user) {
-    return user != null && isActiveStatus(user.getSubscriptionStatus());
+    return user != null && isActiveStatus(user.getSubscriptionStatus())
+        && user.getSubscriptionCurrentPeriodEnd() != null
+        && user.getSubscriptionCurrentPeriodEnd().isAfter(java.time.OffsetDateTime.now());
   }
 
   public void requireActiveSubscription(User user) {
@@ -22,6 +24,7 @@ public class SubscriptionAccessService {
   }
 
   static boolean isActiveStatus(String status) {
-    return "active".equalsIgnoreCase(String.valueOf(status).trim());
+    return "active".equalsIgnoreCase(String.valueOf(status).trim())
+        || "trialing".equalsIgnoreCase(String.valueOf(status).trim());
   }
 }

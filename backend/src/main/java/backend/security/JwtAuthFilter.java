@@ -31,6 +31,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     }
 
     @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getServletPath();
+        return "/health".equals(path) || "/ping".equals(path);
+    }
+
+    @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
@@ -52,14 +58,14 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         try {
             userId = jwtService.extractUserId(token);
         } catch (RuntimeException ex) {
-            log.debug("JWT ignored: invalid token payload", ex);
+            log.debug("JWT ignored: invalid token");
             SecurityContextHolder.clearContext();
             filterChain.doFilter(request, response);
             return;
         }
 
         User user = userRepository.findById(userId).orElse(null);
-        if (user == null) {
+        if (user == null || !jwtService.matchesSession(token, user)) {
             SecurityContextHolder.clearContext();
             filterChain.doFilter(request, response);
             return;

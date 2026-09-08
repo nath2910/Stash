@@ -179,7 +179,8 @@ final class TrackingCarrierRules {
       URI uri = URI.create(rawUrl.trim());
       String scheme = uri.getScheme();
       String host = uri.getHost();
-      if (scheme == null || host == null || !scheme.toLowerCase(Locale.ROOT).startsWith("http")) {
+      if (!"https".equalsIgnoreCase(scheme) || host == null || uri.getUserInfo() != null
+          || (uri.getPort() != -1 && uri.getPort() != 443)) {
         return null;
       }
       return new ParsedTrackingUrl(uri, host.toLowerCase(Locale.ROOT), normalizePath(uri.getPath()));

@@ -73,7 +73,7 @@ final class BrowserTrackingScriptRunner {
       }
       return Optional.of(OBJECT_MAPPER.readValue(output, BrowserPagePayload.class));
     } catch (Exception ex) {
-      log.warn("Browser tracking script {} failed for {}", scriptFileName, trackingUrl, ex);
+      log.warn("Browser tracking script {} failed", scriptFileName);
       return Optional.empty();
     }
   }
