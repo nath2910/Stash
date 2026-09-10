@@ -62,7 +62,13 @@ public class BillingService {
     List<Plan> result = new ArrayList<>();
     for (String plan : List.of("monthly", "annual")) {
       if (!present(priceId(plan))) continue;
-      Price price = priceFor(plan);
+      Price price;
+      try {
+        price = priceFor(plan);
+      } catch (ResponseStatusException ex) {
+        if ("monthly".equals(plan)) throw ex;
+        continue;
+      }
       result.add(new Plan(plan, price.getUnitAmount(), price.getCurrency(),
           price.getRecurring().getInterval(), checkoutEnabled(), isTestMode()));
     }

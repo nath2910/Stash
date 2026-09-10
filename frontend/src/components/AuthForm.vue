@@ -35,6 +35,8 @@
               class="inline-flex items-center rounded-full bg-slate-950/70 p-1 border border-slate-800"
             >
               <button
+                type="button"
+                :disabled="loading"
                 class="px-4 py-1.5 text-sm font-medium rounded-full transition"
                 :class="
                   mode === 'login'
@@ -46,6 +48,8 @@
                 Connexion
               </button>
               <button
+                type="button"
+                :disabled="loading"
                 class="px-4 py-1.5 text-sm font-medium rounded-full transition"
                 :class="
                   mode === 'signup'
@@ -84,6 +88,10 @@
                 id="loginEmail"
                 v-model="loginForm.email"
                 required
+                autocomplete="email"
+                autocapitalize="none"
+                spellcheck="false"
+                inputmode="email"
                 class="mt-2 block w-full rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-2 text-sm text-slate-100 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-violet-400"
               />
             </div>
@@ -99,6 +107,9 @@
                   id="loginPassword"
                   v-model="loginForm.password"
                   required
+                  autocomplete="current-password"
+                  autocapitalize="none"
+                  spellcheck="false"
                   class="block w-full rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-2 pr-20 text-sm text-slate-100 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-violet-400"
                 />
 
@@ -115,6 +126,9 @@
                   </span>
                 </button>
               </div>
+              <p v-if="loginPasswordHasOuterSpaces" class="mt-2 text-xs font-medium text-amber-200">
+                Ton mot de passe contient un espace au debut ou a la fin.
+              </p>
               <div class="mt-2 flex justify-end">
                 <router-link
                   class="text-xs text-slate-400 transition hover:text-slate-200"
@@ -126,8 +140,9 @@
               <div class="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <button
                   type="button"
+                  :disabled="loading"
                   @click="loginWithGoogle"
-                  class="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-700 bg-white/90 px-3 py-2 text-xs font-semibold text-slate-900 shadow-sm transition hover:bg-white focus:outline-none focus:ring-2 focus:ring-violet-400"
+                  class="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-700 bg-white/90 px-3 py-2 text-xs font-semibold text-slate-900 shadow-sm transition hover:bg-white focus:outline-none focus:ring-2 focus:ring-violet-400 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <svg
                     class="h-4 w-4"
@@ -158,8 +173,9 @@
                 </button>
                 <button
                   type="button"
+                  :disabled="loading"
                   @click="loginWithDiscord"
-                  class="inline-flex items-center justify-center gap-2 rounded-lg bg-[#5865F2] px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#4752C4] focus:outline-none focus:ring-2 focus:ring-[#5865F2]/60"
+                  class="inline-flex items-center justify-center gap-2 rounded-lg bg-[#5865F2] px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#4752C4] focus:outline-none focus:ring-2 focus:ring-[#5865F2]/60 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <svg
                     class="h-4 w-4"
@@ -230,6 +246,10 @@
                 id="signupEmail"
                 v-model="signupForm.email"
                 required
+                autocomplete="email"
+                autocapitalize="none"
+                spellcheck="false"
+                inputmode="email"
                 class="mt-2 block w-full rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-2 text-sm text-slate-100 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-violet-400"
               />
             </div>
@@ -245,6 +265,9 @@
                   id="signupPassword"
                   v-model="signupForm.password"
                   required
+                  autocomplete="new-password"
+                  autocapitalize="none"
+                  spellcheck="false"
                   class="block w-full rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-2 pr-20 text-sm text-slate-100 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-violet-400"
                 />
 
@@ -287,6 +310,9 @@
                   id="confirmPassword"
                   v-model="signupForm.confirmPassword"
                   required
+                  autocomplete="new-password"
+                  autocapitalize="none"
+                  spellcheck="false"
                   class="block w-full rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-2 pr-20 text-sm text-slate-100 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-violet-400"
                 />
 
@@ -420,6 +446,13 @@ const signupStrengthBarColor = computed(() => {
   return 'bg-emerald-400/80'
 })
 
+const normalizeEmail = (value) => String(value || '').trim().toLowerCase()
+const normalizeName = (value) => String(value || '').trim()
+const loginPasswordHasOuterSpaces = computed(() => {
+  const password = loginForm.value.password
+  return password.length > 0 && password !== password.trim()
+})
+
 const resetMessages = () => {
   notice.value = null
 }
@@ -483,6 +516,13 @@ const authErrorNotice = (err, fallbackTitle, fallbackMessage) => {
     }
   }
 
+  if (raw.includes('timeout')) {
+    return {
+      title: 'Service trop lent',
+      message: 'Le serveur met trop de temps a repondre. Reessaie dans quelques secondes.',
+    }
+  }
+
   if (raw.includes('network error') || !raw) {
     return {
       title: 'Service indisponible',
@@ -524,13 +564,29 @@ watch(
 )
 
 const submitLogin = async () => {
+  if (loading.value) return
   resetMessages()
+
+  const email = normalizeEmail(loginForm.value.email)
+  const password = loginForm.value.password
+
+  loginForm.value.email = email
+
+  if (!email || !password) {
+    setNotice(
+      'error',
+      'Champs manquants',
+      'Entre ton email et ton mot de passe pour te connecter.',
+    )
+    return
+  }
+
   loading.value = true
 
   try {
     const { user, token } = await AuthService.login({
-      email: loginForm.value.email,
-      password: loginForm.value.password,
+      email,
+      password,
     })
 
     setAuth({ user, token })
@@ -538,7 +594,6 @@ const submitLogin = async () => {
     setNotice('success', 'Connexion réussie', 'Redirection vers ton espace.')
     await router.replace({ name: 'home' })
   } catch (err) {
-    console.error(err)
     const nextNotice = authErrorNotice(
       err,
       'Connexion impossible',
@@ -551,7 +606,18 @@ const submitLogin = async () => {
 }
 
 const submitSignup = async () => {
+  if (loading.value) return
   resetMessages()
+
+  const email = normalizeEmail(signupForm.value.email)
+  const firstName = normalizeName(signupForm.value.firstName)
+  const lastName = normalizeName(signupForm.value.lastName)
+  const password = signupForm.value.password
+  const confirmPassword = signupForm.value.confirmPassword
+
+  signupForm.value.email = email
+  signupForm.value.firstName = firstName
+  signupForm.value.lastName = lastName
 
   if (!signupForm.value.acceptTerms) {
     setNotice(
@@ -562,12 +628,12 @@ const submitSignup = async () => {
     return
   }
 
-  if (signupForm.value.password !== signupForm.value.confirmPassword) {
+  if (password !== confirmPassword) {
     setNotice('error', 'Mots de passe différents', 'Les deux mots de passe doivent être identiques.')
     return
   }
 
-  if (signupForm.value.password.length < 10) {
+  if (password.length < 10) {
     setNotice('error', 'Mot de passe trop court', 'Choisis un mot de passe d’au moins 10 caractères.')
     return
   }
@@ -575,10 +641,10 @@ const submitSignup = async () => {
   loading.value = true
   try {
     const response = await AuthService.register({
-      email: signupForm.value.email,
-      firstName: signupForm.value.firstName,
-      lastName: signupForm.value.lastName,
-      password: signupForm.value.password,
+      email,
+      firstName,
+      lastName,
+      password,
       acceptTerms: signupForm.value.acceptTerms,
     })
 
@@ -592,11 +658,9 @@ const submitSignup = async () => {
     )
     router.replace({
       name: 'verify-email',
-      query: { email: signupForm.value.email, existing: reusedExistingAccount ? '1' : undefined },
+      query: { email, existing: reusedExistingAccount ? '1' : undefined },
     })
   } catch (err) {
-    console.error(err)
-
     const nextNotice = authErrorNotice(
       err,
       'Création impossible',
@@ -616,6 +680,7 @@ const googleAuthUrl =
   import.meta.env.VITE_GOOGLE_OAUTH_URL || `${apiBase}/oauth2/authorization/google`
 
 const loginWithGoogle = () => {
+  if (loading.value) return
   window.location.href = googleAuthUrl
 }
 
@@ -623,6 +688,7 @@ const discordAuthUrl =
   import.meta.env.VITE_DISCORD_OAUTH_URL || `${apiBase}/oauth2/authorization/discord`
 
 const loginWithDiscord = () => {
+  if (loading.value) return
   window.location.href = discordAuthUrl
 }
 

@@ -166,6 +166,7 @@ const error = ref('')
 const stripeReady = ref(true)
 type Plan = { id: string; amount: number; available: boolean; testMode: boolean }
 const plans = ref<Plan[]>([])
+const plansVerified = ref(false)
 const termsAccepted = ref(false)
 const PLANS_CACHE_KEY = 'snk_billing_plans_v1'
 const PLANS_CACHE_TTL_MS = 24 * 60 * 60 * 1000
@@ -190,7 +191,7 @@ const formatPrice = (amount: number) =>
   new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount / 100)
 
 const priceLabel = computed(() => {
-  if (!monthlyOffer.value) return 'Tarif indisponible'
+  if (!monthlyOffer.value) return 'Chargement du tarif...'
   return `${formatPrice(monthlyOffer.value.amount)} / mois`
 })
 
@@ -250,15 +251,28 @@ const saveCachedPlans = (nextPlans: Plan[]) => {
   }
 }
 
+const clearCachedPlans = () => {
+  try {
+    localStorage.removeItem(PLANS_CACHE_KEY)
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
 const fetchPlans = async () => {
   try {
     const nextPlans = (await BillingService.plans()).data
     if (validPlans(nextPlans)) {
       plans.value = nextPlans
       saveCachedPlans(nextPlans)
+      plansVerified.value = true
+      error.value = ''
+    } else {
+      throw new Error('Invalid billing plans response')
     }
-    error.value = ''
   } catch {
+    plansVerified.value = false
+    clearCachedPlans()
     if (!monthlyOffer.value) {
       error.value =
         'Tarif Stripe indisponible : verifie que le prix mensuel Stripe est actif, en EUR et mensuel.'
@@ -281,6 +295,7 @@ const ctaDisabled = computed(
     loading.value ||
     status.value === 'active' ||
     !stripeReady.value ||
+    !plansVerified.value ||
     !termsAccepted.value ||
     !monthlyOffer.value?.available,
 )
@@ -289,6 +304,7 @@ const ctaLabel = computed(() => {
   if (status.value === 'active') return 'Abonnement actif'
   if (loading.value) return 'Redirection...'
   if (!stripeReady.value) return 'Paiement indisponible'
+  if (!plansVerified.value) return monthlyOffer.value ? 'Verification du tarif...' : 'Tarif indisponible'
   if (!monthlyOffer.value?.available) return 'Tarif indisponible'
   if (!termsAccepted.value) return 'Accepte les conditions'
   return stripeTestMode.value ? 'Tester le checkout' : `S'abonner - ${formatPrice(monthlyOffer.value.amount)}`

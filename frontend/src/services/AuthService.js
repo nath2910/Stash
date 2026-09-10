@@ -1,16 +1,18 @@
 import api from './api'
 import { clearAuthState, writeAuthState } from '@/utils/authStorage'
 
+const AUTH_REQUEST_TIMEOUT_MS = 30000
+
 // permet d'envoyer des requetes concernant les comptes et l'authetification vers le back
 class AuthService {
   async register(payload) {
     // payload = { email, password, firstName, lastName, ... } selon ton RegisterRequest
-    const res = await api.post('/auth/register', payload)
+    const res = await api.post('/auth/register', payload, { timeout: AUTH_REQUEST_TIMEOUT_MS })
     return res.data
   }
 
   async login(payload) {
-    const res = await api.post('/auth/login', payload)
+    const res = await api.post('/auth/login', payload, { timeout: AUTH_REQUEST_TIMEOUT_MS })
 
     const headerAuth = res.headers?.authorization || res.headers?.Authorization
     let token = null
@@ -36,17 +38,17 @@ class AuthService {
   }
 
   async changePassword(payload) {
-    const res = await api.post('/auth/change-password', payload)
+    const res = await api.post('/auth/change-password', payload, { timeout: AUTH_REQUEST_TIMEOUT_MS })
     return res.data
   }
 
   async requestPasswordReset(payload) {
-    const res = await api.post('/auth/forgot-password', payload)
+    const res = await api.post('/auth/forgot-password', payload, { timeout: AUTH_REQUEST_TIMEOUT_MS })
     return res.data
   }
 
   async resetPassword(payload) {
-    const res = await api.post('/auth/reset-password', payload)
+    const res = await api.post('/auth/reset-password', payload, { timeout: AUTH_REQUEST_TIMEOUT_MS })
     return res.data
   }
 
@@ -62,7 +64,9 @@ class AuthService {
 
   // Renvoie l'email de verification sans exposer l'existence du compte.
   async resendVerification(payload) {
-    const res = await api.post('/auth/resend-verification', payload)
+    const res = await api.post('/auth/resend-verification', payload, {
+      timeout: AUTH_REQUEST_TIMEOUT_MS,
+    })
     return res.data
   }
 
