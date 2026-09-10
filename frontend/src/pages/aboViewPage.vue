@@ -1,5 +1,5 @@
 <template>
-  <div class="subscription-view-page min-h-full overflow-x-hidden bg-slate-950 text-slate-100">
+  <div class="subscription-view-page min-h-full overflow-x-visible bg-slate-950 text-slate-100">
     <div class="app-shell app-page-stack max-w-5xl pb-8">
       <div class="app-topbar">
         <button

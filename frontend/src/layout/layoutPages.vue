@@ -234,7 +234,7 @@
         v-if="route.meta.fullBleed"
         class="layout-fullbleed"
         :class="[
-          fullBleedAllowsScroll ? 'overflow-auto' : 'overflow-hidden',
+          fullBleedAllowsScroll ? 'layout-fullbleed--scroll' : 'layout-fullbleed--no-scroll',
           fullBleedHeaderOffsetClass,
           isStatsTemplateScroll ? 'layout-fullbleed--template-scroll' : '',
         ]"
@@ -1106,9 +1106,8 @@ body.layout-light-document-scroll::-webkit-scrollbar {
 
 .app-layout-root {
   min-height: 100vh;
-  height: 100dvh;
+  min-height: 100dvh;
   min-width: 0;
-  overflow: hidden;
 }
 
 .app-layout-root.layout-home-bg {
@@ -1206,11 +1205,21 @@ body.layout-light-document-scroll::-webkit-scrollbar {
   min-width: 0;
 }
 
+.layout-fullbleed--scroll {
+  overflow-x: visible;
+  overflow-y: auto;
+}
+
+.layout-fullbleed--no-scroll {
+  overflow-x: clip;
+  overflow-y: hidden;
+}
+
 .layout-fullbleed--template-scroll {
   height: auto;
   min-height: 100dvh;
-  overflow-x: clip !important;
-  overflow-y: auto !important;
+  overflow-x: visible;
+  overflow-y: auto;
   background: #f7f4ee;
 }
 
@@ -1225,7 +1234,7 @@ body.layout-light-document-scroll::-webkit-scrollbar {
 }
 
 .layout-scroll {
-  overflow-x: hidden;
+  overflow-x: visible;
   overflow-y: auto;
   overscroll-behavior-y: contain;
   overscroll-behavior-x: none;

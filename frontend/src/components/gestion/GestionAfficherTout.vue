@@ -19,7 +19,7 @@
       </button>
     </div>
 
-    <div v-if="!isDesktop && snkVentes.length" class="gestion-mobile-list space-y-3 lg:hidden">
+    <div v-if="!isDesktop && snkVentes.length" class="gestion-mobile-list space-y-3 md:hidden">
       <article
         v-for="vente in snkVentes"
         :key="vente.id"
@@ -204,12 +204,12 @@
 
     <div
       v-else-if="!isDesktop"
-      class="rounded-xl border border-gray-700/70 bg-gray-900/40 px-4 py-8 text-center text-sm text-gray-400 lg:hidden"
+      class="rounded-xl border border-gray-700/70 bg-gray-900/40 px-4 py-8 text-center text-sm text-gray-400 md:hidden"
     >
       Aucun item a afficher pour le moment.
     </div>
 
-    <div v-if="isDesktop" class="hidden lg:block">
+    <div v-if="isDesktop" class="hidden md:block">
       <table class="gestion-desktop-table w-full text-sm text-gray-100">
         <colgroup>
           <col v-if="selectable" class="gestion-col-select" />
@@ -522,7 +522,7 @@ const authStore = useAuthStore()
 const currentUserId = computed(() => authStore.user?.value?.id ?? authStore.user?.id ?? 'guest')
 const categoryLabels = ref(readStoredItemCategories(currentUserId.value))
 const isDesktop = ref(
-  typeof window === 'undefined' ? true : window.matchMedia('(min-width: 1024px)').matches,
+  typeof window === 'undefined' ? true : window.matchMedia('(min-width: 768px)').matches,
 )
 const expandedIds = ref([])
 let desktopMediaQuery = null
@@ -699,7 +699,7 @@ function onCategoryLabelsChange(event) {
 
 onMounted(() => {
   window.addEventListener('snk:item-categories-change', onCategoryLabelsChange)
-  desktopMediaQuery = window.matchMedia('(min-width: 1024px)')
+  desktopMediaQuery = window.matchMedia('(min-width: 768px)')
   isDesktop.value = desktopMediaQuery.matches
   desktopMediaQuery.addEventListener('change', onDesktopChange)
 })
@@ -1002,7 +1002,8 @@ onBeforeUnmount(() => {
   width: 100%;
   min-width: 0;
   table-layout: fixed;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: visible;
   border: 1px solid rgba(148, 163, 184, 0.18);
   border-radius: 18px;
   background:

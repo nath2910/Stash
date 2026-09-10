@@ -441,7 +441,7 @@ function handleVisibilityChange() {
   margin-inline: calc(clamp(16px, 2.2vw, 32px) * -1);
   margin-top: clamp(0.75rem, 1vw, 1.25rem);
   margin-bottom: 4rem;
-  overflow-x: clip;
+  overflow-x: visible;
   background: #f7f4ee;
   color: #0f172a;
 }

@@ -2202,7 +2202,7 @@ onBeforeUnmount(() => {
   width: 100%;
   min-width: 0;
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: visible;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
@@ -2212,7 +2212,6 @@ onBeforeUnmount(() => {
   width: 100%;
   min-width: 0;
   max-width: 100%;
-  overflow-x: hidden;
 }
 
 .gestion-page-stack > * {
@@ -2237,7 +2236,7 @@ onBeforeUnmount(() => {
 
 .gestion-hero-panel,
 .inventory-list-panel {
-  overflow: hidden;
+  overflow: visible;
 }
 
 .gestion-hero-panel {
@@ -2318,7 +2317,7 @@ onBeforeUnmount(() => {
   min-width: 0;
   max-width: 100%;
   justify-content: center;
-  overflow-x: hidden;
+  overflow-x: visible;
   overflow-y: visible;
   padding-bottom: 0.25rem;
   scrollbar-width: none;
@@ -2965,6 +2964,8 @@ onBeforeUnmount(() => {
 
   .inventory-list-scroll {
     max-height: none;
+    overflow-x: auto;
+    overflow-y: visible;
   }
 }
 
@@ -2972,7 +2973,7 @@ onBeforeUnmount(() => {
   min-height: 100%;
   width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: visible;
   background: #f7f4ee;
 }
 
@@ -3067,13 +3068,13 @@ onBeforeUnmount(() => {
 }
 
 .inventory-list-panel {
-  overflow-x: hidden;
+  overflow-x: visible;
   overflow-y: visible;
 }
 
 .inventory-list-scroll {
   max-height: clamp(420px, 56dvh, 690px);
-  overflow-x: hidden;
+  overflow-x: auto;
   overflow-y: scroll;
   overscroll-behavior: contain;
   padding-right: 0.15rem;
@@ -3659,7 +3660,6 @@ onBeforeUnmount(() => {
   min-width: 0;
   max-width: 100%;
   padding: 0.58rem clamp(1rem, 1.8vw, 1.3rem) 1rem;
-  overflow-x: hidden;
 }
 
 @media (max-width: 920px) {
@@ -3715,7 +3715,7 @@ onBeforeUnmount(() => {
   }
 
   .inventory-list-scroll {
-    overflow-x: hidden;
+    overflow-x: auto;
   }
 }
 
@@ -3745,7 +3745,7 @@ onBeforeUnmount(() => {
   .gestion-page-light,
   .gestion-page-stack,
   .gestion-page-stack > * {
-    overflow-x: hidden;
+    overflow-x: visible;
   }
 
   .gestion-hero-panel > div:first-child {
@@ -3828,7 +3828,7 @@ onBeforeUnmount(() => {
 
   .inventory-list-scroll {
     max-height: none !important;
-    overflow-x: hidden !important;
+    overflow-x: auto !important;
     overflow-y: visible !important;
     overscroll-behavior: auto;
     padding-right: 0;
@@ -3873,7 +3873,7 @@ onBeforeUnmount(() => {
 @media (max-width: 1023px) {
   .inventory-list-scroll {
     max-height: none;
-    overflow-x: hidden;
+    overflow-x: auto;
     overflow-y: visible;
     padding-right: 0;
     scrollbar-gutter: auto;
@@ -4042,7 +4042,7 @@ onBeforeUnmount(() => {
 
   .inventory-list-scroll {
     max-height: none !important;
-    overflow-x: hidden !important;
+    overflow-x: auto !important;
     overflow-y: visible !important;
     overscroll-behavior: auto;
     padding-right: 0;

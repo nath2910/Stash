@@ -1,5 +1,5 @@
 <template>
-  <div class="auth-screen flex min-h-dvh items-stretch overflow-y-auto overflow-x-hidden bg-slate-950 px-4 py-5 pb-20 sm:items-center sm:py-6 sm:pb-6">
+  <div class="auth-screen flex min-h-dvh items-stretch overflow-y-auto overflow-x-visible bg-slate-950 px-4 py-5 pb-20 sm:items-center sm:py-6 sm:pb-6">
     <router-link
       :to="{ name: 'discover' }"
       class="auth-discover-link fixed bottom-4 left-4 right-4 z-20 mx-auto inline-flex w-max max-w-[calc(100vw-2rem)] items-center justify-center whitespace-nowrap rounded-lg border border-violet-400/50 bg-violet-500/15 px-3 py-1.5 text-xs font-medium text-violet-100 shadow-lg shadow-black/25 transition hover:border-violet-300/80 hover:bg-violet-500/25 sm:bottom-6 sm:left-6 sm:right-auto sm:mx-0"

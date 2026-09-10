@@ -158,6 +158,23 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  .app-layout-root,
+  .gestion-page-light,
+  .gestion-page-stack,
+  .gestion-hero-panel,
+  .inventory-list-panel,
+  .layout-fullbleed,
+  .layout-scroll,
+  .gestion-list,
+  .home-page-light {
+    overflow-x: visible;
+  }
+
+  body {
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
   img,
   video,
   canvas,
@@ -341,7 +358,6 @@
     min-width: 0;
     max-width: 100%;
     gap: clamp(1rem, 1.8vw, 2rem);
-    overflow-x: hidden;
     padding-block: clamp(1rem, 2.2vw, 2.2rem);
   }
 
