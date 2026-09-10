@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-full overflow-x-hidden bg-slate-950 text-slate-100">
+  <div class="subscription-view-page min-h-full overflow-x-hidden bg-slate-950 text-slate-100">
     <div class="app-shell app-page-stack max-w-5xl pb-8">
       <div class="app-topbar">
         <button
@@ -231,3 +231,48 @@ onMounted(async () => {
   catch (error) { portalError.value = describeBillingError(error, 'État temporairement indisponible.') }
 })
 </script>
+
+<style scoped>
+@media (max-width: 640px) {
+  .subscription-view-page {
+    min-height: 100dvh;
+  }
+
+  .subscription-view-page :deep(.app-shell) {
+    padding-inline: max(0.85rem, env(safe-area-inset-left)) max(0.85rem, env(safe-area-inset-right));
+  }
+
+  .subscription-view-page :deep(.app-page-stack) {
+    gap: 1rem;
+    padding-block: 0.9rem calc(1.25rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .subscription-view-page :deep(header),
+  .subscription-view-page :deep(section),
+  .subscription-view-page :deep(section > div) {
+    border-radius: 18px !important;
+  }
+
+  .subscription-view-page :deep(button) {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+    margin-left: 0 !important;
+  }
+
+  .subscription-view-page :deep(.app-topbar) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .subscription-view-page h1 {
+    font-size: clamp(2rem, 10vw, 2.6rem);
+  }
+}
+
+@media (max-width: 420px) {
+  .subscription-view-page :deep(.app-shell) {
+    padding-inline: max(0.65rem, env(safe-area-inset-left)) max(0.65rem, env(safe-area-inset-right));
+  }
+}
+</style>

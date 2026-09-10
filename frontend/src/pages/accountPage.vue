@@ -547,6 +547,33 @@ const goAdminProfile = () => {
 }
 
 @media (max-width: 640px) {
+  .account-page-dark {
+    min-height: 100dvh;
+  }
+
+  .account-page-dark :deep(.app-shell) {
+    padding-inline: max(0.85rem, env(safe-area-inset-left)) max(0.85rem, env(safe-area-inset-right));
+  }
+
+  .account-page-dark :deep(.app-page-stack) {
+    gap: 1rem;
+    padding-block: 0.9rem calc(1.25rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .account-page-dark :deep(section),
+  .account-profile-panel {
+    border-radius: 18px !important;
+  }
+
+  .account-page-dark :deep(input:not([type='checkbox'])) {
+    min-height: 48px;
+    font-size: 16px;
+  }
+
+  .account-page-dark :deep(button) {
+    min-height: 44px;
+  }
+
   .account-profile-head {
     flex-direction: column;
     align-items: stretch;
@@ -555,7 +582,22 @@ const goAdminProfile = () => {
   .account-profile-change {
     width: 100%;
   }
+}
 
+@media (max-width: 420px) {
+  .account-page-dark :deep(.app-shell) {
+    padding-inline: max(0.65rem, env(safe-area-inset-left)) max(0.65rem, env(safe-area-inset-right));
+  }
+
+  .account-profile-panel {
+    padding: 0.85rem;
+  }
+
+  .account-profile-traits span {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
 }
 </style>
 

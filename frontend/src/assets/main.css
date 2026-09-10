@@ -204,6 +204,14 @@
 
   input,
   select,
+  textarea,
+  button,
+  a {
+    touch-action: manipulation;
+  }
+
+  input,
+  select,
   textarea {
     transition:
       border-color 140ms ease,
@@ -499,6 +507,33 @@
     min-width: 2.5rem;
   }
 
+  @media (max-width: 768px) {
+    .layout-fullbleed:has(.app-page-stack--abo) {
+      overflow-x: hidden !important;
+      overflow-y: auto !important;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .app-shell {
+      padding-inline-start: max(14px, env(safe-area-inset-left));
+      padding-inline-end: max(14px, env(safe-area-inset-right));
+    }
+
+    .app-page-stack {
+      gap: 1rem;
+      padding-block: 0.9rem calc(4.75rem + env(safe-area-inset-bottom, 0px));
+    }
+
+    .app-topbar {
+      align-items: stretch;
+    }
+
+    .app-touch-btn,
+    .app-button {
+      min-height: 2.75rem;
+    }
+  }
+
   @media (max-width: 640px) {
     .app-shell {
       padding-inline-start: max(12px, env(safe-area-inset-left));
@@ -507,7 +542,11 @@
 
     .app-page-stack {
       gap: 0.9rem;
-      padding-block: 0.8rem 5rem;
+      padding-block: 0.7rem calc(4.5rem + env(safe-area-inset-bottom, 0px));
+    }
+
+    .app-topbar {
+      gap: 0.6rem;
     }
 
     .app-topbar-actions {
@@ -534,6 +573,11 @@
     .app-status-badge {
       padding-inline: 0.7rem;
       font-size: 0.78rem;
+    }
+
+    .app-shell {
+      padding-inline-start: max(10px, env(safe-area-inset-left));
+      padding-inline-end: max(10px, env(safe-area-inset-right));
     }
   }
 }

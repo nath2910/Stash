@@ -26,6 +26,13 @@ const baseUrl = process.argv[2] || 'http://127.0.0.1:4173'
 const mockCorsOrigin = new URL(baseUrl).origin
 const outputDir = path.resolve(process.cwd(), '..', 'tmp', 'mobile-audit')
 
+const viewportConfigs = [
+  { name: 'phone-360', width: 360, height: 800, deviceScaleFactor: 3 },
+  { name: 'phone-390', width: 390, height: 844, deviceScaleFactor: 3 },
+  { name: 'phone-430', width: 430, height: 932, deviceScaleFactor: 3 },
+  { name: 'tablet-768', width: 768, height: 1024, deviceScaleFactor: 2 },
+]
+
 const fixtureItems = Array.from({ length: 12 }, (_, index) => ({
   id: index + 1,
   nomItem: [
@@ -212,10 +219,34 @@ const routeConfigs = [
     selector: 'main',
   },
   {
+    name: 'about',
+    path: '/a-propos',
+    auth: false,
+    selector: 'main',
+  },
+  {
     name: 'auth-signup',
     path: '/auth?mode=signup',
     auth: false,
     selector: 'form',
+  },
+  {
+    name: 'forgot-password',
+    path: '/forgot-password',
+    auth: false,
+    selector: '.auth-utility-page',
+  },
+  {
+    name: 'reset-password',
+    path: '/reset-password?token=test-token',
+    auth: false,
+    selector: '.auth-utility-page',
+  },
+  {
+    name: 'verify-email',
+    path: '/verify-email',
+    auth: false,
+    selector: '.verify-email-page',
   },
   {
     name: 'legal',
@@ -365,6 +396,20 @@ async function setSessionState(page, routeConfig) {
         'snk_billing_status_cache',
         JSON.stringify({ status: subscriptionStatus, fetchedAt: Date.now() }),
       )
+      ;[
+        'home',
+        'stats',
+        'gestion-inventory',
+        'gestion-delivery',
+        'gestion-admin',
+        'account',
+        'abo-view',
+      ].forEach((introKey) => {
+        localStorage.setItem(`snk_quick_intro_seen_1_${introKey}`, '1')
+        localStorage.setItem(`snk_quick_intro_seen_user:1_${introKey}`, '1')
+      })
+      localStorage.setItem('snk_onboarding_seen_user:1', '1')
+      localStorage.removeItem('snk_onboarding_pending_user:1')
     },
     routeConfig.auth,
     token,
@@ -373,7 +418,7 @@ async function setSessionState(page, routeConfig) {
   )
 }
 
-async function auditRoute(browser, routeConfig) {
+async function auditRoute(browser, routeConfig, viewportConfig) {
   const page = await browser.newPage()
   const runtimeErrors = []
   page.on('pageerror', (error) => runtimeErrors.push(error.message))
@@ -381,10 +426,10 @@ async function auditRoute(browser, routeConfig) {
     if (message.type() === 'error') runtimeErrors.push(message.text())
   })
   await page.setViewport({
-    width: 390,
-    height: 844,
+    width: viewportConfig.width,
+    height: viewportConfig.height,
     isMobile: true,
-    deviceScaleFactor: 3,
+    deviceScaleFactor: viewportConfig.deviceScaleFactor,
     hasTouch: true,
   })
   await page.setRequestInterception(true)
@@ -423,7 +468,7 @@ async function auditRoute(browser, routeConfig) {
   }
   await sleep(1200)
 
-  const screenshotPath = path.join(outputDir, `${routeConfig.name}.png`)
+  const screenshotPath = path.join(outputDir, `${viewportConfig.name}-${routeConfig.name}.png`)
   await page.screenshot({ path: screenshotPath, fullPage: true })
 
   const report = await page.evaluate(() => {
@@ -459,6 +504,7 @@ async function auditRoute(browser, routeConfig) {
 
   await page.close()
   return {
+    viewport: viewportConfig.name,
     name: routeConfig.name,
     screenshotPath,
     selectorFound,
@@ -477,9 +523,11 @@ try {
   fs.mkdirSync(outputDir, { recursive: true })
   const results = []
   for (const routeConfig of routeConfigs) {
-    // sequential on purpose to keep screenshots and request mocks deterministic
-    process.stderr.write(`Auditing ${routeConfig.name}\n`)
-    results.push(await auditRoute(browser, routeConfig))
+    for (const viewportConfig of viewportConfigs) {
+      // sequential on purpose to keep screenshots and request mocks deterministic
+      process.stderr.write(`Auditing ${routeConfig.name} ${viewportConfig.name}\n`)
+      results.push(await auditRoute(browser, routeConfig, viewportConfig))
+    }
   }
 
   const failed = results.filter(
@@ -488,7 +536,13 @@ try {
       result.report.hasHorizontalOverflow ||
       result.runtimeErrors.length > 0,
   )
-  process.stdout.write(JSON.stringify({ baseUrl, results, failed: failed.map((item) => item.name) }, null, 2))
+  process.stdout.write(
+    JSON.stringify(
+      { baseUrl, viewports: viewportConfigs.map((item) => item.name), results, failed: failed.map((item) => `${item.viewport}:${item.name}`) },
+      null,
+      2,
+    ),
+  )
   if (failed.length) {
     process.exitCode = 1
   }

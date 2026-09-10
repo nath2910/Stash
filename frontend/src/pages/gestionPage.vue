@@ -3754,15 +3754,17 @@ onBeforeUnmount(() => {
 
   .gestion-tab-nav {
     display: grid;
-    grid-template-columns: 1fr;
-    gap: 0.55rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.45rem;
     width: 100%;
   }
 
   .gestion-tab-button {
-    justify-content: flex-start;
-    border-radius: 16px;
-    padding: 0.8rem 0.9rem;
+    min-height: 54px;
+    justify-content: center;
+    border-radius: 14px;
+    padding: 0.55rem 0.35rem;
+    text-align: center;
   }
 
   .gestion-tab-button strong,
@@ -3773,7 +3775,16 @@ onBeforeUnmount(() => {
   }
 
   .gestion-tab-button small {
-    display: block;
+    display: none;
+  }
+
+  .gestion-tab-button > span {
+    gap: 0;
+  }
+
+  .gestion-tab-button strong {
+    font-size: 0.76rem;
+    line-height: 1.12;
   }
 
   .inventory-toolbar-copy h2 {
@@ -3809,13 +3820,31 @@ onBeforeUnmount(() => {
   .inventory-filter-shell.is-open .filter-compact-grid.is-open {
     grid-template-columns: 1fr;
   }
+
+  .inventory-sticky-tools {
+    position: static;
+    top: auto;
+  }
+
+  .inventory-list-scroll {
+    max-height: none !important;
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
+    overscroll-behavior: auto;
+    padding-right: 0;
+    scrollbar-width: none !important;
+  }
+
+  .inventory-list-scroll::-webkit-scrollbar {
+    display: none !important;
+  }
 }
 
 @media (max-width: 480px) {
   .gestion-page-stack {
     width: 100%;
     max-width: 100%;
-    padding-inline: 0.7rem;
+    padding-inline: 0.6rem;
   }
 
   .gestion-title {
@@ -3829,8 +3858,8 @@ onBeforeUnmount(() => {
   }
 
   .gestion-tab-button {
-    gap: 0.6rem;
-    padding: 0.78rem 0.82rem;
+    gap: 0.35rem;
+    padding: 0.52rem 0.26rem;
   }
 
   .gestion-tab-button > span,
@@ -4004,6 +4033,28 @@ onBeforeUnmount(() => {
 
   .date-range-separator {
     display: none;
+  }
+
+  .inventory-sticky-tools {
+    position: static;
+    top: auto;
+  }
+
+  .inventory-list-scroll {
+    max-height: none !important;
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
+    overscroll-behavior: auto;
+    padding-right: 0;
+    scrollbar-gutter: auto;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+
+  .inventory-list-scroll::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
   }
 }
 

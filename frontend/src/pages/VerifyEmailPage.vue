@@ -1,5 +1,5 @@
 <template>
-  <div class="relative flex min-h-dvh items-center overflow-x-hidden bg-slate-950 px-4 py-8 sm:py-14">
+  <div class="verify-email-page relative flex min-h-dvh items-center overflow-x-hidden bg-slate-950 px-4 py-8 sm:py-14">
     <div class="mx-auto w-full max-w-2xl">
       <div
         class="rounded-2xl border border-slate-800 bg-gradient-to-b from-slate-900/90 to-slate-900/60 p-6 shadow-2xl sm:rounded-3xl sm:p-8"
@@ -218,6 +218,27 @@ watch(token, verify)
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 640px) {
+  .verify-email-page {
+    align-items: flex-start;
+    padding:
+      max(1rem, env(safe-area-inset-top))
+      max(0.85rem, env(safe-area-inset-left))
+      calc(1rem + env(safe-area-inset-bottom))
+      max(0.85rem, env(safe-area-inset-right));
+  }
+
+  .verify-email-page h1 {
+    font-size: clamp(1.45rem, 7vw, 2rem);
+    line-height: 1.05;
+  }
+
+  .verify-email-page :deep(button),
+  .verify-email-page :deep(a) {
+    min-height: 44px;
   }
 }
 </style>

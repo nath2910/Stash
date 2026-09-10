@@ -1,14 +1,14 @@
 <template>
-  <div class="flex min-h-dvh items-stretch overflow-y-auto overflow-x-hidden bg-slate-950 px-4 py-5 pb-20 sm:items-center sm:py-6 sm:pb-6">
+  <div class="auth-screen flex min-h-dvh items-stretch overflow-y-auto overflow-x-hidden bg-slate-950 px-4 py-5 pb-20 sm:items-center sm:py-6 sm:pb-6">
     <router-link
       :to="{ name: 'discover' }"
-      class="fixed bottom-4 left-4 right-4 z-20 mx-auto inline-flex w-max max-w-[calc(100vw-2rem)] items-center justify-center whitespace-nowrap rounded-lg border border-violet-400/50 bg-violet-500/15 px-3 py-1.5 text-xs font-medium text-violet-100 shadow-lg shadow-black/25 transition hover:border-violet-300/80 hover:bg-violet-500/25 sm:bottom-6 sm:left-6 sm:right-auto sm:mx-0"
+      class="auth-discover-link fixed bottom-4 left-4 right-4 z-20 mx-auto inline-flex w-max max-w-[calc(100vw-2rem)] items-center justify-center whitespace-nowrap rounded-lg border border-violet-400/50 bg-violet-500/15 px-3 py-1.5 text-xs font-medium text-violet-100 shadow-lg shadow-black/25 transition hover:border-violet-300/80 hover:bg-violet-500/25 sm:bottom-6 sm:left-6 sm:right-auto sm:mx-0"
     >
       Decouvrir l'offre
     </router-link>
-    <div class="mx-auto w-full max-w-5xl">
-      <div class="grid min-w-0 items-center gap-5 md:grid-cols-[0.9fr_1.1fr] md:gap-6">
-        <div class="text-slate-200">
+    <div class="auth-shell mx-auto w-full max-w-5xl">
+      <div class="auth-grid grid min-w-0 items-center gap-5 md:grid-cols-[0.9fr_1.1fr] md:gap-6">
+        <div class="auth-copy text-slate-200">
           <p class="text-xs uppercase tracking-[0.3em] text-violet-300/80">Compte</p>
           <h1 class="mt-2 text-2xl font-semibold text-white sm:text-3xl">
             {{ mode === 'login' ? 'Connexion' : 'Inscription' }}
@@ -28,7 +28,7 @@
         </div>
 
         <div
-          class="w-full rounded-3xl border border-slate-800/80 bg-gradient-to-b from-slate-900/95 via-slate-900/80 to-slate-950/70 p-4 shadow-2xl backdrop-blur sm:p-6"
+          class="auth-card w-full rounded-3xl border border-slate-800/80 bg-gradient-to-b from-slate-900/95 via-slate-900/80 to-slate-950/70 p-4 shadow-2xl backdrop-blur sm:p-6"
         >
           <div class="mb-3 flex items-center justify-center">
             <div
@@ -785,5 +785,86 @@ onMounted(() => {
 .auth-notice--success .auth-notice__icon {
   background: rgba(52, 211, 153, 0.14);
   color: #6ee7b7;
+}
+
+@media (max-width: 767px) {
+  .auth-screen {
+    flex-direction: column;
+    align-items: flex-start;
+    min-height: 100dvh;
+    padding:
+      max(1rem, env(safe-area-inset-top))
+      max(1rem, env(safe-area-inset-left))
+      calc(1rem + env(safe-area-inset-bottom))
+      max(1rem, env(safe-area-inset-right));
+  }
+
+  .auth-shell {
+    order: 1;
+    width: 100%;
+    max-width: 28rem;
+    margin-inline: auto;
+  }
+
+  .auth-grid {
+    align-items: start;
+    gap: 1rem;
+  }
+
+  .auth-copy {
+    display: grid;
+    gap: 0.35rem;
+  }
+
+  .auth-copy h1 {
+    margin-top: 0;
+    font-size: clamp(1.9rem, 10vw, 2.55rem);
+  }
+
+  .auth-copy p:last-child {
+    margin-top: 0;
+    font-size: 1rem;
+  }
+
+  .auth-card {
+    border-radius: 22px;
+    padding: 1rem;
+  }
+
+  .auth-card input:not([type='checkbox']) {
+    min-height: 48px;
+    font-size: 16px;
+  }
+
+  .auth-card button[type='submit'],
+  .auth-card button[type='button'] {
+    min-height: 44px;
+  }
+
+  .auth-discover-link {
+    position: static;
+    order: 2;
+    margin-top: 1.1rem;
+    width: 100%;
+    max-width: none;
+    min-height: 44px;
+    border-radius: 14px;
+  }
+}
+
+@media (max-width: 420px) {
+  .auth-screen {
+    padding-inline: max(0.75rem, env(safe-area-inset-left)) max(0.75rem, env(safe-area-inset-right));
+  }
+
+  .auth-card {
+    border-radius: 18px;
+    padding: 0.85rem;
+  }
+
+  .auth-notice {
+    gap: 0.55rem;
+    padding: 0.7rem;
+  }
 }
 </style>

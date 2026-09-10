@@ -331,7 +331,7 @@
 
     <div
       v-if="showNotificationSystem"
-      class="fixed right-3 bottom-3 sm:right-6 sm:bottom-5 z-[84] transition-all duration-300"
+      class="layout-notification-fab fixed right-3 bottom-3 sm:right-6 sm:bottom-5 z-[84] transition-all duration-300"
     >
       <button
         type="button"
@@ -1366,6 +1366,17 @@ body.layout-light-document-scroll::-webkit-scrollbar {
   .layout-shell-row {
     padding-inline-start: max(12px, env(safe-area-inset-left));
     padding-inline-end: max(12px, env(safe-area-inset-right));
+  }
+
+  .layout-notification-fab {
+    top: calc(4.25rem + env(safe-area-inset-top, 0px));
+    right: max(12px, env(safe-area-inset-right));
+    bottom: auto !important;
+  }
+
+  .layout-notification-fab :deep(.notification-trigger) {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
   }
 
   .layout-page-content {

@@ -212,5 +212,21 @@ h2 {
   .panel-error {
     text-align: left;
   }
+
+  .kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.7rem;
+  }
+
+  .home-panel {
+    border-radius: 16px;
+    padding: 0.9rem;
+  }
+}
+
+@media (max-width: 340px) {
+  .kpi-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

@@ -156,4 +156,27 @@ const toneClass = computed(() => `kpi-card--${props.tone}`)
   }
 }
 
+@media (max-width: 620px) {
+  .kpi-card {
+    min-height: 96px;
+    border-radius: 14px;
+    gap: 0.55rem;
+    padding: 0.85rem;
+  }
+
+  .kpi-title {
+    font-size: 0.66rem;
+    line-height: 1.2;
+    white-space: normal;
+  }
+
+  .kpi-value {
+    min-height: 1.7rem;
+    font-size: clamp(1.25rem, 8vw, 1.65rem);
+  }
+
+  .kpi-subtitle {
+    white-space: normal;
+  }
+}
 </style>

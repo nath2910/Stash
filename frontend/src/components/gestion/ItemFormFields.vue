@@ -1155,6 +1155,10 @@ defineExpose({
   padding-top: 0;
 }
 
+.item-form--quick .item-field--grouping.is-inactive {
+  display: none;
+}
+
 .item-primary-button {
   border: 1px solid rgba(15, 118, 110, 0.2);
   background: linear-gradient(135deg, #0f766e, #0e7490);

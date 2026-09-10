@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-dvh overflow-x-hidden bg-slate-950 px-4 py-6 sm:py-12">
+  <div class="auth-utility-page min-h-dvh overflow-x-hidden bg-slate-950 px-4 py-6 sm:py-12">
     <div class="mx-auto flex w-full max-w-xl flex-col items-center">
       <div class="mb-7 flex w-full items-start justify-between text-slate-300">
         <div>
@@ -92,3 +92,26 @@ const submitRequest = async () => {
   }
 }
 </script>
+
+<style scoped>
+@media (max-width: 640px) {
+  .auth-utility-page {
+    padding:
+      max(1rem, env(safe-area-inset-top))
+      max(0.85rem, env(safe-area-inset-left))
+      calc(1rem + env(safe-area-inset-bottom))
+      max(0.85rem, env(safe-area-inset-right));
+  }
+
+  .auth-utility-page h1 {
+    font-size: clamp(2rem, 10vw, 2.6rem);
+    line-height: 1;
+  }
+
+  .auth-utility-page :deep(input:not([type='checkbox'])),
+  .auth-utility-page :deep(button) {
+    min-height: 48px;
+    font-size: 16px;
+  }
+}
+</style>

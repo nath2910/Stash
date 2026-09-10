@@ -434,3 +434,48 @@ onBeforeUnmount(() => {
   if (poll) window.clearInterval(poll)
 })
 </script>
+
+<style scoped>
+@media (max-width: 767px) {
+  .app-page-stack--abo {
+    height: auto !important;
+    min-height: 100dvh;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+  }
+
+  .app-page-stack--abo > div {
+    height: auto !important;
+    min-height: 100dvh;
+    padding: max(0.9rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-left))
+      calc(1.25rem + env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-right));
+  }
+
+  .app-page-stack--abo main {
+    align-items: start;
+    gap: 1.25rem;
+    padding-block: 1.25rem;
+  }
+
+  .app-page-stack--abo h1 {
+    font-size: clamp(2.6rem, 13vw, 3.35rem);
+    line-height: 0.98;
+  }
+
+  .app-page-stack--abo h2 {
+    font-size: clamp(2rem, 10vw, 2.7rem);
+    line-height: 1;
+  }
+}
+
+@media (max-width: 420px) {
+  .app-page-stack--abo > div {
+    padding-inline: max(0.75rem, env(safe-area-inset-left)) max(0.75rem, env(safe-area-inset-right));
+  }
+
+  .app-page-stack--abo main {
+    gap: 1rem;
+    padding-block: 1rem;
+  }
+}
+</style>
