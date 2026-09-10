@@ -71,7 +71,7 @@ function buildAlerts(metrics) {
     push('medium', 'Marge sous objectif', 'La marge moyenne est sous 24%. Ajuster pricing et remises.')
   }
   if (metrics.netProfitDelta < 0) {
-    push('medium', 'Profit en recul', 'Le benefice net recule vs periode precedente. Verifier mix et couts.')
+    push('medium', 'Profit en recul', 'Le bénéfice net recule par rapport à la période précédente. Vérifie la répartition et les coûts.')
   }
   if (metrics.roi >= 35) {
     push('info', 'ROI solide', 'Le ROI reste au-dessus de 35%. Maintenir les references performantes.')

@@ -6,7 +6,7 @@
     <div v-else-if="empty" class="dropdown-state dropdown-state--empty">
       <span class="dropdown-empty-icon" aria-hidden="true">?</span>
       <strong>Aucun item ne correspond a cette recherche.</strong>
-      <span>Ajoute un article ou essaye une categorie voisine.</span>
+      <span>Ajoute un article ou essaie une catégorie voisine.</span>
       <button type="button" class="dropdown-empty-action" @mousedown.prevent="$emit('add-requested')">
         Ajouter un item
       </button>

@@ -17,7 +17,7 @@
   - dateAchat/dateVente,
   - categorie,
   - description,
-  - type (`ItemType`),
+  - type item,
   - metadata JSON,
   - createdAt,
   - relation user.
@@ -41,10 +41,6 @@
 
 ### `entity/DiscordAllowedGuild.java`
 - Guild Discord autorisee + role premium optionnel.
-
-### `entity/ItemType.java`
-- Enum type item.
-- Supporte extension metier (sneaker/ticket/card/etc.).
 
 ---
 

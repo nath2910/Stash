@@ -36,7 +36,7 @@ describe('stockImportExport', () => {
 
     expect(preview.validItems).toBe(1)
     expect(preview.duplicateRows).toBe(0)
-    expect(preview.rows[0].warnings).toContain('Ressemble a un item deja present')
+    expect(preview.rows[0].warnings).toContain('Ressemble à un item déjà présent')
   })
 
   it('keeps duplicates from the imported file as valid rows', () => {
@@ -54,7 +54,7 @@ describe('stockImportExport', () => {
     expect(preview.duplicateRows).toBe(1)
     expect(preview.rows[1].status).toBe('valid')
     expect(preview.rows[1].errors).toEqual([])
-    expect(preview.rows[1].warnings).toContain('Doublon detecte dans le fichier')
+    expect(preview.rows[1].warnings).toContain('Doublon détecté dans le fichier')
   })
 
   it('keeps custom item types when importing rows', () => {

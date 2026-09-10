@@ -23,6 +23,32 @@ import java.util.Optional;
 class UserServiceTest {
 
   @Test
+  void registerRejectsMissingTermsAcceptanceBeforePersistence() {
+    UserRepository userRepository = Mockito.mock(UserRepository.class);
+    UserService service = new UserService(
+        userRepository,
+        Mockito.mock(PasswordEncoder.class),
+        Mockito.mock(EmailVerificationService.class),
+        Mockito.mock(EmailVerificationTokenRepository.class),
+        Mockito.mock(PasswordResetTokenRepository.class),
+        Mockito.mock(UserStatsLayoutRepository.class),
+        Mockito.mock(SnkVenteRepository.class)
+    );
+    RegisterRequest request = new RegisterRequest();
+    request.setEmail("test@example.com");
+    request.setPassword("secret1234");
+
+    ResponseStatusException exception = Assertions.assertThrows(
+        ResponseStatusException.class,
+        () -> service.register(request)
+    );
+
+    Assertions.assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+    Assertions.assertEquals("Conditions d’utilisation non acceptées", exception.getReason());
+    Mockito.verifyNoInteractions(userRepository);
+  }
+
+  @Test
   void registerRollsBackUserWhenVerificationEmailFails() {
     UserRepository userRepository = Mockito.mock(UserRepository.class);
     PasswordEncoder passwordEncoder = Mockito.mock(PasswordEncoder.class);
@@ -47,6 +73,7 @@ class UserServiceTest {
     request.setPassword("secret1234");
     request.setFirstName("Ada");
     request.setLastName("Lovelace");
+    request.setAcceptTerms(true);
 
     Mockito.when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.empty());
     Mockito.when(passwordEncoder.encode("secret1234")).thenReturn("hashed-password");
@@ -114,6 +141,6 @@ class UserServiceTest {
     );
 
     Assertions.assertEquals(HttpStatus.FORBIDDEN, exception.getStatusCode());
-    Assertions.assertTrue(exception.getReason().contains("Email non verifie"));
+    Assertions.assertTrue(exception.getReason().contains("Email non vérifié"));
   }
 }

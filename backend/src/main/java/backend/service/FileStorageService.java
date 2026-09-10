@@ -87,15 +87,18 @@ public class FileStorageService {
     }
   }
 
-  public void deleteUserFiles(Long userId) {
+  public boolean deleteUserFiles(Long userId) {
     if (userId == null || userId <= 0) throw new IllegalArgumentException("Invalid user");
     Path directory = root.resolve(userId.toString()).normalize();
     if (!directory.startsWith(root) || directory.equals(root)) throw new IllegalArgumentException("Invalid path");
-    if (!Files.exists(directory)) return;
+    if (!Files.exists(directory)) return true;
     try (var paths = Files.walk(directory)) {
       for (Path path : paths.sorted(java.util.Comparator.reverseOrder()).toList()) Files.deleteIfExists(path);
+      return true;
     } catch (IOException ex) {
-      org.slf4j.LoggerFactory.getLogger(FileStorageService.class).error("Account file cleanup requires retry for user {}", userId);
+      org.slf4j.LoggerFactory.getLogger(FileStorageService.class)
+          .error("Account file cleanup requires retry for user {}", userId, ex);
+      return false;
     }
   }
 

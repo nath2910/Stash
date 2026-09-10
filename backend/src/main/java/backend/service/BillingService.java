@@ -55,7 +55,7 @@ public class BillingService {
         && present(props.getSuccessUrl()) && present(props.getWebhookSecret());
   }
 
-  public record Plan(String id, long amount, String currency, String interval, boolean available) {}
+  public record Plan(String id, long amount, String currency, String interval, boolean available, boolean testMode) {}
 
   public List<Plan> plans() throws Exception {
     requireConfigured();
@@ -64,7 +64,7 @@ public class BillingService {
       if (!present(priceId(plan))) continue;
       Price price = priceFor(plan);
       result.add(new Plan(plan, price.getUnitAmount(), price.getCurrency(),
-          price.getRecurring().getInterval(), props.isSalesEnabled()));
+          price.getRecurring().getInterval(), checkoutEnabled(), isTestMode()));
     }
     return result;
   }
@@ -92,9 +92,11 @@ public class BillingService {
     requireConfigured();
     if (request == null || !Boolean.TRUE.equals(request.termsAccepted())
         || !("monthly".equals(request.plan()) || "annual".equals(request.plan()))) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Formule et acceptation des CGV requises");
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Formule et acceptation des CGU requises");
     }
-    if (!props.isSalesEnabled()) throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Souscriptions bientôt disponibles");
+    if (!checkoutEnabled()) {
+      throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Souscriptions bientôt disponibles");
+    }
     User user = lockUser(principal);
     if (!user.isEmailVerified()) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Vérifiez votre email");
     Price price = priceFor(request.plan());
@@ -250,6 +252,12 @@ public class BillingService {
   private boolean terminal(String status) { return "canceled".equals(status) || "incomplete_expired".equals(status); }
   private boolean accessStatus(String status) { return "active".equals(status) || "trialing".equals(status); }
   private boolean present(String value) { return value != null && !value.isBlank(); }
+  private boolean checkoutEnabled() {
+    return isTestMode() || (props.isSalesEnabled() && props.isCommercialRegistrationComplete());
+  }
+  private boolean isTestMode() {
+    return present(props.getSecretKey()) && props.getSecretKey().startsWith("sk_test_");
+  }
   private void requireConfigured() { if (!isConfigured()) throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Paiement indisponible"); }
   private String successUrl() {
     String base = props.getSuccessUrl();

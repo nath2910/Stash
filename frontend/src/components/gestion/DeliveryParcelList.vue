@@ -64,7 +64,7 @@
       <div class="rounded-2xl border border-dashed border-slate-300 bg-white/70 p-6 text-center">
         <PackageSearch class="mx-auto h-8 w-8 text-slate-400" />
         <p class="mt-3 text-sm font-medium text-slate-800">Aucun colis</p>
-        <p class="mt-1 text-xs text-slate-500">Ajoute un suivi manuel ou lance un scan Gmail.</p>
+        <p class="mt-1 text-xs text-slate-500">Ajoute un suivi manuellement ou lance un scan Gmail.</p>
       </div>
     </div>
 
@@ -136,7 +136,7 @@
                 v-if="parcel.id === selectedId"
                 class="rounded-full border border-teal-300/60 bg-white px-2.5 py-1 text-[11px] font-semibold text-teal-700 shadow-sm"
               >
-                Selectionne
+                Sélectionné
               </span>
               <span
                 class="rounded-full border px-2.5 py-1 text-[11px] font-semibold"

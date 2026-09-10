@@ -17,7 +17,7 @@
           <span class="dp-pill dp-pill--static">Age des paires</span>
         </div>
         <div class="period-chip">
-          <span class="period-label">Periode</span>
+          <span class="period-label">Période</span>
           <span class="period-value">{{ fromLabel }} -> {{ toLabel }}</span>
         </div>
       </div>
@@ -41,7 +41,7 @@
         </div>
 
         <div class="dp-legend">
-          <div v-if="!rows.length" class="dp-empty">Aucune donnee sur la periode.</div>
+          <div v-if="!rows.length" class="dp-empty">Aucune donnée sur la période.</div>
           <div v-else class="dp-list" :style="legendListStyle">
             <div v-for="row in rows" :key="row.label" class="dp-row">
               <span class="dp-dot" :style="{ background: row.color }"></span>

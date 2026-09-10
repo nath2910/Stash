@@ -28,7 +28,7 @@
           </div>
 
           <div class="header-actions">
-            <div class="period-controls" aria-label="Periode administrative">
+            <div class="period-controls" aria-label="Période administrative">
               <label>
                 <span>Annee</span>
                 <select v-model.number="periodYear" @change="handlePeriodChange">
@@ -95,7 +95,7 @@
                 @click="generateUrssafSheet"
               >
                 <FileText class="button-icon" aria-hidden="true" />
-                <span>{{ generating === urssafDocumentRow?.documentType ? 'Generation...' : 'Generer fiche URSSAF' }}</span>
+                <span>{{ generating === urssafDocumentRow?.documentType ? 'Génération...' : 'Générer la fiche URSSAF' }}</span>
               </button>
 
               <a
@@ -126,7 +126,7 @@
             <section class="profile-summary-card" aria-labelledby="profile-summary-title">
               <div class="side-card-head">
                 <div>
-                  <p class="section-kicker">Profil utilise</p>
+                  <p class="section-kicker">Profil utilisé</p>
                   <h2 id="profile-summary-title">{{ legalStatusLabel }}</h2>
                   <p class="profile-mode-line">{{ profileModeSentence }}</p>
                 </div>
@@ -276,7 +276,7 @@
 
         <p v-else class="ready-line">
           <ShieldCheck class="button-icon" aria-hidden="true" />
-          <span>Donnees pretes pour cette periode.</span>
+          <span>Données prêtes pour cette période.</span>
         </p>
 
         <div class="progressive-panels" aria-label="Details administratifs">
@@ -325,8 +325,8 @@
           <details class="simple-panel disclosure-panel">
             <summary>
               <div>
-                <p class="section-kicker">Controle</p>
-                <h2>Donnees utilisees</h2>
+                <p class="section-kicker">Contrôle</p>
+                <h2>Données utilisées</h2>
               </div>
               <span class="status-pill" :class="statusClass(dataPanelStatus)">
                 {{ dataPanelStatusLabel }}
@@ -444,7 +444,7 @@
               Parametres administratifs
             </span>
             <span class="status-pill" :class="statusClass(profileNeedsAttention ? 'incomplete' : 'complete')">
-              {{ profileNeedsAttention ? 'A completer' : 'Pret' }}
+              {{ profileNeedsAttention ? 'À compléter' : 'Prêt' }}
             </span>
           </summary>
 
@@ -472,12 +472,12 @@
 
               <label>
                 <span>Nom commercial</span>
-                <input v-model.trim="profileForm.businessName" placeholder="MyStash Shop" />
+                <input v-model.trim="profileForm.businessName" placeholder="Ma boutique" />
               </label>
 
               <label>
                 <span>Nom du dirigeant</span>
-                <input v-model.trim="profileForm.ownerName" placeholder="Nom prenom" />
+                <input v-model.trim="profileForm.ownerName" placeholder="Nom et prénom" />
               </label>
 
               <label>
@@ -490,7 +490,7 @@
               </label>
 
               <label>
-                <span>Periodicite URSSAF</span>
+                <span>Périodicité URSSAF</span>
                 <select
                   v-model="profileForm.declarationFrequency"
                   :disabled="!profileFormIsMicro"
@@ -518,7 +518,7 @@
 
               <label class="span-2">
                 <span>Adresse entreprise</span>
-                <textarea v-model.trim="profileForm.address" rows="3" placeholder="Adresse utilisee sur les documents"></textarea>
+                <textarea v-model.trim="profileForm.address" rows="3" placeholder="Adresse utilisée sur les documents"></textarea>
               </label>
             </div>
 
@@ -588,18 +588,18 @@ const props = defineProps({
 const router = useRouter()
 const GENERATED_DOCUMENTS_STORAGE_KEY = 'stash_admin_generated_documents_v1'
 const STATUS_LABELS = Object.freeze({
-  complete: 'Pret',
-  checked: 'Pret',
-  ready: 'Pret',
+  complete: 'Prêt',
+  checked: 'Prêt',
+  ready: 'Prêt',
   to_verify: 'A verifier',
-  incomplete: 'Bloque',
+  incomplete: 'Bloqué',
   pending: 'A preparer',
   draft: 'Brouillon',
   archived: 'Archive',
   not_applicable: 'N/A',
-  data_missing: 'Bloque',
-  regenerable: 'A generer',
-  generated: 'Pret',
+  data_missing: 'Bloqué',
+  regenerable: 'À générer',
+  generated: 'Prêt',
   done: 'Fait',
 })
 
@@ -738,7 +738,7 @@ const missingInvoices = computed(() =>
 )
 const invoiceActionLabel = computed(() => {
   const count = missingInvoices.value.length
-  return count ? `Generer ${number(count)} facture(s)` : 'Factures a jour'
+  return count ? `Générer ${number(count)} facture(s)` : 'Factures à jour'
 })
 const isDeclarationMarked = computed(() =>
   allRecords.value.some((record) =>
@@ -758,7 +758,7 @@ const declarationStateLabel = computed(() => {
 })
 const declarationAmountLabel = computed(() => {
   if (isMicroProfile.value) return 'CA encaisse a declarer'
-  if (isCompanyProfile.value) return 'CA encaisse sur la periode'
+  if (isCompanyProfile.value) return 'CA encaissé sur la période'
   return 'Total encaisse'
 })
 const primaryCopyLabel = computed(() => (isMicroProfile.value ? 'Copier le CA URSSAF' : 'Copier le montant'))
@@ -769,21 +769,21 @@ const copyWorkbenchKicker = computed(() => {
   return 'Diagnostic administratif'
 })
 const copyWorkbenchTitle = computed(() => {
-  if (isMicroProfile.value) return 'Saisie URSSAF preparee'
+  if (isMicroProfile.value) return 'Saisie URSSAF préparée'
   if (isCompanyProfile.value) return 'Montants pre-comptables'
-  if (administrativeProfile.value.family === 'personal') return 'Donnees de ventes preparees'
-  return 'Donnees a qualifier'
+  if (administrativeProfile.value.family === 'personal') return 'Données de ventes préparées'
+  return 'Données à qualifier'
 })
 const servicesKicker = computed(() => {
   if (isMicroProfile.value) return 'Services micro'
   if (isCompanyProfile.value) return 'Services compta'
-  if (administrativeProfile.value.family === 'personal') return 'Services recap'
+  if (administrativeProfile.value.family === 'personal') return 'Récapitulatif des services'
   return 'Services de mise au propre'
 })
 const servicesTitle = computed(() => {
-  if (isMicroProfile.value) return 'Ce que MyStash peut faire maintenant'
+  if (isMicroProfile.value) return 'Ce que Stash peut faire maintenant'
   if (isCompanyProfile.value) return 'Preparer le dossier pour la compta'
-  if (administrativeProfile.value.family === 'personal') return 'Sortir un recap propre'
+  if (administrativeProfile.value.family === 'personal') return 'Créer un récapitulatif propre'
   return 'Remettre le dossier en etat'
 })
 const administrativeServices = computed(() => {
@@ -803,10 +803,10 @@ const administrativeServices = computed(() => {
       detail: hasHardBlocks
         ? 'Corrige d abord les ventes qui empechent un montant fiable.'
         : profileNeedsAttention.value
-          ? 'Complete le profil, puis MyStash prepare la fiche et le montant a saisir.'
-          : 'Copie le CA, genere la fiche URSSAF et garde la periode prete a archiver.',
+          ? 'Complète le profil, puis Stash prépare la fiche et le montant à saisir.'
+          : 'Copie le CA, génère la fiche URSSAF et garde la période prête à archiver.',
       status: profileNeedsAttention.value || hasHardBlocks ? 'incomplete' : isDeclarationMarked.value ? 'complete' : 'ready',
-      badge: isDeclarationMarked.value ? 'Archive' : profileNeedsAttention.value || hasHardBlocks ? 'A finir' : 'Pret',
+      badge: isDeclarationMarked.value ? 'Archivé' : profileNeedsAttention.value || hasHardBlocks ? 'À finir' : 'Prêt',
       action: profileNeedsAttention.value ? 'profile' : hasHardBlocks ? 'fix-sales' : 'prepare-urssaf',
       actionLabel: profileNeedsAttention.value ? 'Completer profil' : hasHardBlocks ? 'Corriger ventes' : 'Lancer',
       metrics: [amount, sales, declarationPeriodicityLabel.value],
@@ -818,12 +818,12 @@ const administrativeServices = computed(() => {
       actionIcon: ReceiptText,
       title: 'Creer les factures manquantes',
       detail: missingInvoiceCount
-        ? 'Genere les factures absentes pour les ventes encaissees de la periode.'
-        : 'Toutes les ventes detectees ont deja une facture rattachee.',
+        ? 'Génère les factures absentes pour les ventes encaissées de la période.'
+        : 'Toutes les ventes détectées ont déjà une facture rattachée.',
       status: missingInvoiceCount ? 'to_verify' : 'complete',
       badge: missingInvoiceCount ? `${number(missingInvoiceCount)} a creer` : 'A jour',
       action: missingInvoiceCount ? 'missing-invoices' : 'refresh',
-      actionLabel: missingInvoiceCount ? 'Generer' : 'Recontroler',
+      actionLabel: missingInvoiceCount ? 'Générer' : 'Recontrôler',
       metrics: [`${number(missingInvoiceCount)} facture(s)`],
       disabled: generatingInvoices.value,
     }))
@@ -831,12 +831,12 @@ const administrativeServices = computed(() => {
       id: 'micro-pack',
       icon: Download,
       actionIcon: Download,
-      title: 'Generer le dossier complet',
-      detail: 'Produit la fiche URSSAF, le livre des recettes, le registre achats et les exports utiles disponibles.',
+      title: 'Générer le dossier complet',
+      detail: 'Produit la fiche URSSAF, le livre des recettes, le registre des achats et les exports utiles.',
       status: hasHardBlocks ? 'data_missing' : 'ready',
-      badge: hasHardBlocks ? 'Bloque' : 'Pack',
+      badge: hasHardBlocks ? 'Bloqué' : 'Pack',
       action: hasHardBlocks ? 'fix-sales' : 'bundle',
-      actionLabel: hasHardBlocks ? 'Corriger ventes' : 'Generer pack',
+      actionLabel: hasHardBlocks ? 'Corriger les ventes' : 'Générer le pack',
       metrics: [`${legalFolderRows.value.length} document(s)`],
       documentTypes: ['urssaf-summary', 'receipts-register', 'purchases-register', 'accounting-export-csv', 'fiscal-summary'],
     }))
@@ -844,12 +844,12 @@ const administrativeServices = computed(() => {
       id: 'mark-declared',
       icon: CheckCircle2,
       actionIcon: CheckCircle2,
-      title: 'Archiver la periode declaree',
-      detail: 'Apres validation officielle, marque la periode comme faite dans MyStash.',
+      title: 'Archiver la période déclarée',
+      detail: 'Après validation officielle, marque la période comme terminée dans Stash.',
       status: isDeclarationMarked.value ? 'complete' : 'pending',
       badge: isDeclarationMarked.value ? 'Fait' : 'A faire',
       action: 'mark-declared',
-      actionLabel: isDeclarationMarked.value ? 'Deja archive' : 'Marquer fait',
+      actionLabel: isDeclarationMarked.value ? 'Déjà archivé' : 'Marquer comme fait',
       metrics: [periodDisplayLabel.value],
       disabled: isDeclarationMarked.value,
     }))
@@ -861,14 +861,14 @@ const administrativeServices = computed(() => {
       id: 'company-pack',
       icon: Download,
       actionIcon: Download,
-      title: 'Generer le dossier comptable',
+      title: 'Générer le dossier comptable',
       detail: hasHardBlocks
         ? 'Les exports comptables attendent la correction des ventes bloquantes.'
-        : 'Genere CSV comptable, registres ventes/achats et recap de resultat.',
+        : 'Génère le CSV comptable, les registres des ventes et achats, ainsi que le récapitulatif du résultat.',
       status: profileNeedsAttention.value || hasHardBlocks ? 'incomplete' : 'ready',
-      badge: profileNeedsAttention.value || hasHardBlocks ? 'A finir' : 'Pret',
+      badge: profileNeedsAttention.value || hasHardBlocks ? 'À finir' : 'Prêt',
       action: profileNeedsAttention.value ? 'profile' : hasHardBlocks ? 'fix-sales' : 'bundle',
-      actionLabel: profileNeedsAttention.value ? 'Completer profil' : hasHardBlocks ? 'Corriger ventes' : 'Generer pack',
+      actionLabel: profileNeedsAttention.value ? 'Compléter le profil' : hasHardBlocks ? 'Corriger les ventes' : 'Générer le pack',
       metrics: [amount, sales, money(summary.value?.periodPurchaseTotal)],
       documentTypes: ['accounting-export-csv', 'receipts-register', 'purchases-register', 'fiscal-summary'],
       primary: true,
@@ -879,22 +879,22 @@ const administrativeServices = computed(() => {
       actionIcon: ReceiptText,
       title: 'Creer les factures clients',
       detail: missingInvoiceCount
-        ? 'Genere les factures de vente manquantes avant transmission comptable.'
-        : 'Les factures de la periode sont a jour.',
+        ? 'Génère les factures de vente manquantes avant la transmission comptable.'
+        : 'Les factures de la période sont à jour.',
       status: missingInvoiceCount ? 'to_verify' : 'complete',
       badge: missingInvoiceCount ? `${number(missingInvoiceCount)} a creer` : 'A jour',
       action: missingInvoiceCount ? 'missing-invoices' : 'refresh',
-      actionLabel: missingInvoiceCount ? 'Generer' : 'Recontroler',
+      actionLabel: missingInvoiceCount ? 'Générer' : 'Recontrôler',
       metrics: [`${number(missingInvoiceCount)} facture(s)`],
     }))
     services.push(serviceCard({
       id: 'company-control',
       icon: ShieldCheck,
       actionIcon: hasIssues ? ArrowRight : RefreshCw,
-      title: 'Controler les donnees comptables',
+      title: 'Contrôler les données comptables',
       detail: hasIssues
         ? 'Va directement aux ventes ou parametres qui empechent un dossier propre.'
-        : 'Relance le calcul pour verifier que la periode reste propre.',
+        : 'Relance le calcul pour vérifier que la période reste propre.',
       status: hasIssues ? 'to_verify' : 'complete',
       badge: hasIssues ? `${number(visibleBlockingIssues.value.length)} point(s)` : 'OK',
       action: hasIssues ? 'first-issue' : 'refresh',
@@ -909,12 +909,12 @@ const administrativeServices = computed(() => {
       id: 'personal-recap',
       icon: FileText,
       actionIcon: Download,
-      title: 'Generer un recap de ventes',
-      detail: 'Sort un document simple des ventes de la periode pour garder une trace propre.',
+      title: 'Générer un récapitulatif des ventes',
+      detail: 'Crée un document simple des ventes de la période pour conserver une trace propre.',
       status: hasHardBlocks ? 'data_missing' : 'ready',
-      badge: hasHardBlocks ? 'Bloque' : 'Pret',
+      badge: hasHardBlocks ? 'Bloqué' : 'Prêt',
       action: hasHardBlocks ? 'fix-sales' : 'bundle',
-      actionLabel: hasHardBlocks ? 'Corriger ventes' : 'Generer recap',
+      actionLabel: hasHardBlocks ? 'Corriger les ventes' : 'Générer le récapitulatif',
       metrics: [amount, sales],
       documentTypes: ['receipts-register'],
       primary: true,
@@ -968,14 +968,14 @@ const servicesStatus = computed(() => {
   return 'complete'
 })
 const servicesStatusLabel = computed(() => {
-  if (servicesStatus.value === 'complete') return 'Services prets'
+  if (servicesStatus.value === 'complete') return 'Services prêts'
   if (servicesStatus.value === 'incomplete') return 'A debloquer'
   return 'Action possible'
 })
 const profileModeSentence = computed(() => {
   if (isMicroProfile.value) return 'Priorite URSSAF, factures et registres en support.'
   if (isCompanyProfile.value) return 'Priorite exports comptables, TVA et justificatifs.'
-  if (administrativeProfile.value.family === 'personal') return 'Priorite recap ventes et verification du cadre.'
+  if (administrativeProfile.value.family === 'personal') return 'Priorité au récapitulatif des ventes et à la vérification du cadre.'
   return 'Choisir le bon statut avant de declarer.'
 })
 const profilePlanTitle = computed(() => {
@@ -997,7 +997,7 @@ const profilePlanStatus = computed(() => {
   return 'complete'
 })
 const profilePlanStatusLabel = computed(() => {
-  if (profilePlanStatus.value === 'complete') return 'Pret'
+  if (profilePlanStatus.value === 'complete') return 'Prêt'
   if (profilePlanStatus.value === 'incomplete') return 'A completer'
   return 'A verifier'
 })
@@ -1006,7 +1006,7 @@ const dataSummaryRows = computed(() => {
   const purchases = Number(summary.value?.periodPurchaseTotal || 0)
   const rows = [
     {
-      label: 'CA periode',
+      label: 'CA de la période',
       value: money(revenue),
       detail: `${number(summary.value?.periodSaleCount)} vente(s) retenue(s)`,
     },
@@ -1020,12 +1020,12 @@ const dataSummaryRows = computed(() => {
   if (isCompanyProfile.value) {
     rows.push(
       {
-        label: 'Achats periode',
+        label: 'Achats de la période',
         value: money(purchases),
         detail: `${number(summary.value?.periodPurchaseCount)} achat(s) rattache(s)`,
       },
       {
-        label: 'Resultat estime',
+        label: 'Résultat estimé',
         value: money(revenue - purchases),
         detail: 'Avant validation comptable',
       },
@@ -1033,7 +1033,7 @@ const dataSummaryRows = computed(() => {
   } else if (isMicroProfile.value) {
     rows.push(
       {
-        label: 'Periodicite',
+        label: 'Périodicité',
         value: declarationPeriodicityLabel.value,
         detail: normalizedProfile.value.urssafCategory || 'Rubrique a verifier',
       },
@@ -1073,8 +1073,8 @@ const dataQualityItems = computed(() => {
   if (!checks.length) {
     return [{
       id: 'data-clean',
-      title: 'Controle des donnees',
-      message: 'Aucun point bloquant detecte sur cette periode.',
+      title: 'Contrôle des données',
+      message: 'Aucun point bloquant détecté sur cette période.',
       status: 'complete',
       action: '',
     }]
@@ -1107,7 +1107,7 @@ const profileSummaryRows = computed(() => {
   if (isMicroProfile.value) {
     return [
       { label: 'SIRET', value: normalizedProfile.value.siret || 'A completer' },
-      { label: 'Periodicite', value: declarationPeriodicityLabel.value },
+      { label: 'Périodicité', value: declarationPeriodicityLabel.value },
       { label: 'Rubrique', value: normalizedProfile.value.urssafCategory || 'A verifier' },
     ]
   }
@@ -1122,7 +1122,7 @@ const profileSummaryRows = computed(() => {
 
   return [
     { label: 'Statut', value: legalStatusLabel.value },
-    { label: 'Periode', value: periodDisplayLabel.value },
+    { label: 'Période', value: periodDisplayLabel.value },
     { label: 'Ventes', value: `${number(summary.value?.periodSaleCount)} retenue(s)` },
   ]
 })
@@ -1138,7 +1138,7 @@ const declarationSteps = computed(() => [
   {
     id: 'data',
     index: 2,
-    title: 'Donnees',
+    title: 'Données',
     detail: visibleBlockingIssues.value.length
       ? `${number(visibleBlockingIssues.value.length)} point(s) a corriger`
       : `${number(summary.value?.periodSaleCount)} vente(s) retenue(s)`,
@@ -1149,7 +1149,7 @@ const declarationSteps = computed(() => [
     id: 'amount',
     index: 3,
     title: 'Montant',
-    detail: isDeclarationMarked.value ? 'Declaration marquee faite' : `${money(declarationSummary.value.amount)} pret a copier`,
+    detail: isDeclarationMarked.value ? 'Déclaration marquée comme faite' : `${money(declarationSummary.value.amount)} prêt à copier`,
     status: hardBlockingCount.value ? 'incomplete' : isDeclarationMarked.value ? 'complete' : 'to_verify',
     action: hardBlockingCount.value ? '' : 'copy',
   },
@@ -1157,7 +1157,7 @@ const declarationSteps = computed(() => [
     id: 'archive',
     index: 4,
     title: 'Archive',
-    detail: isDeclarationMarked.value ? 'Periode archivee' : 'A marquer apres validation',
+    detail: isDeclarationMarked.value ? 'Période archivée' : 'À marquer après validation',
     status: isDeclarationMarked.value ? 'complete' : 'pending',
     action: isMicroProfile.value && !isDeclarationMarked.value && !hardBlockingCount.value ? 'mark-done' : '',
   },
@@ -1170,21 +1170,21 @@ const nextAction = computed(() => {
   if (visibleBlockingIssues.value.length) {
     return {
       title: 'Corriger les blocages avant declaration',
-      detail: `${periodDisplayLabel.value} : MyStash a repere ${number(visibleBlockingIssues.value.length)} point(s) qui empechent un dossier fiable.`,
+      detail: `${periodDisplayLabel.value} : Stash a repéré ${number(visibleBlockingIssues.value.length)} point(s) qui empêchent d’obtenir un dossier fiable.`,
     }
   }
 
   if (isDeclarationMarked.value) {
     return {
-      title: `Declaration ${periodDisplayLabel.value} archivee`,
-      detail: `${amount} a ete marque comme declare. Les documents restent disponibles dans le dossier legal.`,
+      title: `Déclaration ${periodDisplayLabel.value} archivée`,
+      detail: `${amount} a été marqué comme déclaré. Les documents restent disponibles dans le dossier légal.`,
     }
   }
 
   if (isMicroProfile.value) {
     return {
       title: 'Declarer le CA URSSAF',
-      detail: `${periodDisplayLabel.value} : ${amount} pret a recopier, ${sales} vente(s) retenue(s), rubrique ${category}.`,
+      detail: `${periodDisplayLabel.value} : ${amount} prêt à recopier, ${sales} vente(s) retenue(s), rubrique ${category}.`,
     }
   }
 
@@ -1197,7 +1197,7 @@ const nextAction = computed(() => {
 
   return {
     title: 'Preparer le dossier de ventes',
-    detail: `${periodDisplayLabel.value} : MyStash rassemble les montants, documents et erreurs a corriger.`,
+    detail: `${periodDisplayLabel.value} : Stash rassemble les montants, les documents et les erreurs à corriger.`,
   }
 })
 const amountInstruction = computed(() => {
@@ -1210,7 +1210,7 @@ const amountInstruction = computed(() => {
   }
 
   if (isCompanyProfile.value) {
-    return 'Montant utilise pour les exports comptables et les registres de la periode.'
+    return 'Montant utilisé pour les exports comptables et les registres de la période.'
   }
 
   return 'Montant calcule a partir des ventes encaissees connues.'
@@ -1278,7 +1278,7 @@ async function loadSummary() {
       profile.value = summary.value.profile
     }
   } catch (err) {
-    error.value = errorMessage(err, 'Impossible de calculer les donnees administratives.')
+    error.value = errorMessage(err, 'Impossible de calculer les données administratives.')
   } finally {
     summaryLoading.value = false
   }
@@ -1490,9 +1490,9 @@ async function generateAdministrativeExport(documentId) {
     const filename = await AdminService.generateAdministrativeExport(documentId, payload)
     rememberGeneratedDocument(documentId, filename)
     await loadDocumentRecords()
-    feedback.value = `Document genere : ${filename}.`
+    feedback.value = `Document généré : ${filename}.`
   } catch (err) {
-    error.value = errorMessage(err, 'Impossible de generer le document.')
+    error.value = errorMessage(err, 'Impossible de générer le document.')
   } finally {
     generating.value = ''
   }
@@ -1512,7 +1512,7 @@ async function generateMissingInvoices() {
     const count = result?.generatedCount ?? result?.count ?? missingInvoices.value.length
     feedback.value = `${number(count)} facture(s) generee(s).`
   } catch (err) {
-    error.value = errorMessage(err, 'Impossible de generer les factures manquantes.')
+    error.value = errorMessage(err, 'Impossible de générer les factures manquantes.')
   } finally {
     generatingInvoices.value = false
   }
@@ -1532,7 +1532,7 @@ async function markDeclarationDone() {
       profileId: administrativeProfile.value.id,
     })
     documentRecords.value = mergeRecords([record, ...documentRecords.value])
-    feedback.value = 'Declaration archivee pour cette periode.'
+    feedback.value = 'Déclaration archivée pour cette période.'
   } catch (err) {
     error.value = errorMessage(err, "Impossible d'archiver la declaration.")
   } finally {
@@ -1597,7 +1597,7 @@ async function handleAdministrativeService(service) {
     try {
       await copyDeclarationAmount()
       await generateUrssafSheet()
-      feedback.value = 'Declaration URSSAF preparee : montant copie et fiche generee.'
+      feedback.value = 'Déclaration URSSAF préparée : montant copié et fiche générée.'
     } finally {
       generatingService.value = ''
     }
@@ -1627,8 +1627,8 @@ async function generateDocumentBundle(service) {
     }
     if (!error.value) {
       feedback.value = generatedCount
-        ? `${number(generatedCount)} document(s) genere(s) pour le dossier.`
-        : 'Aucun document disponible a generer pour cette periode.'
+        ? `${number(generatedCount)} document(s) généré(s) pour le dossier.`
+        : 'Aucun document disponible à générer pour cette période.'
     }
   } finally {
     generatingService.value = ''
@@ -1638,30 +1638,30 @@ async function generateDocumentBundle(service) {
 function fallbackProfileObligations() {
   if (isMicroProfile.value) {
     return [
-      fallbackObligation('micro-profile', 'Profil URSSAF', 'SIRET, periodicite et rubrique doivent etre prets avant la saisie officielle.', 'profile'),
-      fallbackObligation('micro-invoices', 'Factures et justificatifs', 'Les ventes de la periode doivent avoir des pieces propres pour l archive.', 'invoices'),
-      fallbackObligation('micro-registers', 'Registres', 'Livre des recettes, registre des achats et recap annuel restent disponibles en exports.', 'document', 'receipts-register'),
+      fallbackObligation('micro-profile', 'Profil URSSAF', 'Le SIRET, la périodicité et la rubrique doivent être prêts avant la saisie officielle.', 'profile'),
+      fallbackObligation('micro-invoices', 'Factures et justificatifs', 'Les ventes de la période doivent avoir des pièces propres pour l’archive.', 'invoices'),
+      fallbackObligation('micro-registers', 'Registres', 'Le livre des recettes, le registre des achats et le récapitulatif annuel restent disponibles dans les exports.', 'document', 'receipts-register'),
     ]
   }
 
   if (isCompanyProfile.value) {
     return [
       fallbackObligation('company-profile', 'Profil comptable', 'SIRET, TVA et cloture fiscale structurent les exports.', 'profile'),
-      fallbackObligation('company-package', 'Dossier comptable', 'Regrouper ventes, achats, justificatifs et resultat estime pour le comptable.', 'document', 'fiscal-summary'),
-      fallbackObligation('company-invoices', 'Factures et pieces', 'Generer les factures manquantes et garder les justificatifs rattaches.', 'invoices'),
+      fallbackObligation('company-package', 'Dossier comptable', 'Regrouper les ventes, achats, justificatifs et le résultat estimé pour le comptable.', 'document', 'fiscal-summary'),
+      fallbackObligation('company-invoices', 'Factures et pièces', 'Générer les factures manquantes et conserver les justificatifs rattachés.', 'invoices'),
     ]
   }
 
   if (administrativeProfile.value.family === 'personal') {
     return [
-      fallbackObligation('personal-recap', 'Recap ventes', 'Garder un resume clair des ventes sans presenter cela comme une declaration officielle.', 'document', 'receipts-register'),
+      fallbackObligation('personal-recap', 'Récapitulatif des ventes', 'Conserver un résumé clair des ventes sans le présenter comme une déclaration officielle.', 'document', 'receipts-register'),
       fallbackObligation('personal-bic', 'Cadre a verifier', 'Verifier si les ventes restent personnelles ou relevent d une activite imposable.', ''),
     ]
   }
 
   return [
     fallbackObligation('regularization-profile', 'Statut a choisir', 'Configurer le statut avant de preparer une declaration professionnelle.', 'profile'),
-    fallbackObligation('regularization-data', 'Donnees a nettoyer', 'Corriger les ventes incompletes avant d utiliser les montants.', 'sales'),
+    fallbackObligation('regularization-data', 'Données à nettoyer', 'Corriger les ventes incomplètes avant d’utiliser les montants.', 'sales'),
   ]
 }
 
@@ -1700,7 +1700,7 @@ function normalizeQualityItem(check) {
   const action = qualityActionFor(check)
   return {
     id: check?.id || check?.title || 'quality-check',
-    title: check?.title || 'Controle des donnees',
+    title: check?.title || 'Contrôle des données',
     message: check?.message || 'Point a verifier.',
     status: normalizeItemStatus(check?.status, check?.severity),
     target: check?.target || '',
@@ -1752,14 +1752,14 @@ function profilePlanActionLabel(item) {
   if (item?.action === 'profile') return 'Modifier le profil'
   if (item?.action === 'invoices') return item.actionLabel || invoiceActionLabel.value
   if (item?.action === 'sales') return 'Corriger les ventes'
-  if (item?.action === 'document') return item.actionLabel || 'Generer'
+  if (item?.action === 'document') return item.actionLabel || 'Générer'
   return item?.actionLabel || 'Ouvrir'
 }
 
 function qualityActionLabel(item) {
   if (item?.action === 'invoices' && generatingInvoices.value) return 'Generation...'
   if (item?.action === 'profile') return 'Configurer'
-  if (item?.action === 'period') return 'Changer la periode'
+  if (item?.action === 'period') return 'Changer la période'
   if (item?.action === 'sales') return 'Corriger dans Gestion'
   if (item?.action === 'invoices') return item.actionLabel || invoiceActionLabel.value
   return item?.actionLabel || 'Corriger'
@@ -1843,8 +1843,8 @@ function handleDeclarationStep(step) {
 
 function issueActionLabel(issue) {
   if (issue?.target === 'profile') return 'Configurer'
-  if (issue?.target === 'invoices') return 'Generer les factures'
-  if (issue?.target === 'period') return 'Changer la periode'
+  if (issue?.target === 'invoices') return 'Générer les factures'
+  if (issue?.target === 'period') return 'Changer la période'
   return 'Corriger dans Gestion'
 }
 
@@ -1888,7 +1888,7 @@ function rememberGeneratedDocument(documentId, filename) {
 }
 
 function documentActionLabel(row) {
-  return documentFormat(row) === 'CSV' ? 'Telecharger CSV' : 'Generer PDF'
+  return documentFormat(row) === 'CSV' ? 'Télécharger le CSV' : 'Générer le PDF'
 }
 
 function documentFormat(row) {
@@ -1896,9 +1896,9 @@ function documentFormat(row) {
 }
 
 function simpleDocumentStatus(row) {
-  if (row?.disabled) return 'Bloque'
-  if (row?.status === 'generated') return 'Pret'
-  return 'A generer'
+  if (row?.disabled) return 'Bloqué'
+  if (row?.status === 'generated') return 'Prêt'
+  return 'À générer'
 }
 
 function statusLabel(status) {

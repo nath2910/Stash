@@ -41,8 +41,11 @@ l'API dans `APP_FRONTEND_BASE_URL`, `APP_BACKEND_PUBLIC_BASE_URL` et
 `APP_CORS_ALLOWED_ORIGINS`. Les redirections OAuth doivent correspondre
 exactement à ces URL chez Google et Discord.
 
-Les paiements restent désactivés tant que `STRIPE_SALES_ENABLED=false`. Avant
-de le passer à `true`, configurer `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID`,
+Les paiements live restent désactivés tant que `STRIPE_SALES_ENABLED=false`.
+Une clé `sk_test_` autorise néanmoins les simulations sans débit réel. Pour une
+clé `sk_live_`, ne passer `STRIPE_SALES_ENABLED` et
+`STRIPE_COMMERCIAL_REGISTRATION_COMPLETE` à `true` qu’après déclaration de
+l’activité. Configurer également `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID`,
 `STRIPE_ANNUAL_PRICE_ID`, `STRIPE_WEBHOOK_SECRET`, créer le webhook Stripe et
 vérifier une souscription mensuelle, annuelle, l'annulation, le portail client
 et les remboursements avec le compte de production.
@@ -57,7 +60,6 @@ leur fréquence sont acceptés.
   personnelles ni jetons, et la connexion TLS vers la base Neon.
 * Vérifier les en-têtes HTTPS, CSP, CORS depuis les seuls domaines autorisés,
   les flux inscription/connexion/réinitialisation/OAuth, puis les rôles admin.
-* Conserver la preuve de version des CGV et de l'acceptation Stripe. Compléter
-  les champs `[À RENSEIGNER]` des mentions légales, de la politique de
-  confidentialité et des CGV avec l'identité, l'adresse et les contacts réels
-  de l'éditeur avant ouverture au public.
+* Vérifier la version publiée des CGU, des mentions légales, de la politique de
+  confidentialité et de la politique de cookies. Avant toute activation du mode
+  live Stripe, publier les informations professionnelles et les CGV applicables.

@@ -1,27 +1,103 @@
 <template>
-  <LegalDocument title="Politique de confidentialité">
-    <h2>Responsable et contact</h2>
-    <p>Responsable du traitement : [À RENSEIGNER : identité et adresse de l’éditeur]. Contact pour exercer vos droits : [À RENSEIGNER : email dédié].</p>
-    <h2>Données, finalités et bases légales</h2>
-    <p>Pour exécuter le contrat, nous traitons votre email, vos noms, l’identifiant et la photo éventuellement transmis par Google ou Discord, votre mot de passe haché pour les comptes locaux, ainsi que vos stocks, ventes, achats, documents, réglages et données de suivi des colis. Les identifiants de facturation Stripe, l’état de l’abonnement et ses échéances servent à gérer l’accès au service. Stash ne conserve pas les numéros complets de carte bancaire.</p>
-    <p>Les coordonnées professionnelles, SIREN/SIRET, régime fiscal et informations de clients figurant dans vos documents sont traités lorsque vous utilisez les fonctions administratives. Vous êtes responsable des données de tiers que vous y ajoutez ; ne saisissez que les informations nécessaires.</p>
-    <p>La sécurité et la prévention des abus reposent sur notre intérêt légitime : jetons temporaires de vérification et de récupération, sessions, compteurs de requêtes et journaux techniques. L’adresse IP peut être traitée par l’hébergement et les protections réseau. Les justificatifs comptables sont conservés pour répondre aux obligations légales.</p>
-    <h2>Connexion optionnelle à Gmail</h2>
-    <p>Si vous reliez Gmail, le service demande un accès en lecture à votre boîte afin de rechercher les messages utiles au suivi des livraisons. Les corps des messages sont analysés pour extraire des numéros de suivi ; des identifiants de messages, dates, candidats et informations de colis sont conservés. Les jetons d’accès et de renouvellement sont chiffrés sur le serveur. Aucune donnée Gmail n’est utilisée pour la publicité.</p>
-    <p>Vous pouvez retirer cette connexion dans la gestion des livraisons et révoquer l’accès depuis les autorisations de votre compte Google. L’accès cesse lorsque vous retirez l’autorisation ou supprimez le compte Stash.</p>
-    <h2>Destinataires et transferts</h2>
-    <p>Les prestataires concernés sont Koyeb (API), Neon (PostgreSQL), Stripe (paiement), Google et Discord (connexion demandée), le fournisseur SMTP [À RENSEIGNER] et, selon les fonctions utilisées, les transporteurs et AfterShip. L’hébergeur frontend, le stockage de fichiers, leurs régions et les entités contractantes sont [À RENSEIGNER].</p>
-    <p>Les prestataires ne reçoivent que les données utiles à leur fonction. Pays de traitement, sous-traitants ultérieurs, accords de sous-traitance et garanties des transferts éventuels hors Espace économique européen : [À RENSEIGNER après vérification des contrats].</p>
-    <h2>Conservation et suppression</h2>
-    <p>Les données de service sont conservées pendant l’utilisation du compte. Le compte peut être supprimé depuis l’espace personnel : les abonnements sont arrêtés, les données actives et jetons Gmail sont supprimés et les fichiers sont effacés, avec reprise technique en cas d’échec. Les factures émises et éléments de vente requis sont isolés dans une archive comptable, conservée dix ans à compter de la clôture de l’exercice concerné. Renseignez votre clôture d’exercice dans le profil administratif ; le 31 décembre est utilisé par défaut. Les justificatifs Stripe restent soumis à la conservation comptable.</p>
-    <p>Durées et procédure effectives de purge des comptes inactifs, journaux, archives et sauvegardes : [À RENSEIGNER]. Les sauvegardes doivent avoir une durée définie et les suppressions doivent être réappliquées après une restauration. Une restriction légale, un litige ou une obligation comptable peut justifier une conservation limitée, distincte des données actives.</p>
-    <h2>Vos droits</h2>
-    <p>Vous pouvez demander l’accès, la rectification, l’effacement, la limitation, la portabilité et, selon la base légale, vous opposer à un traitement ou retirer votre consentement. Contactez [À RENSEIGNER]. Une réponse est apportée dans un mois, sauf prolongation motivée prévue par le RGPD. Une preuve d’identité proportionnée n’est demandée qu’en cas de doute raisonnable.</p>
-    <p>Les préférences et informations administratives se modifient dans le compte. Les exports d’inventaire sont accessibles dans la gestion ; un export des données de compte est également disponible. Vous pouvez adresser une réclamation à la <a href="https://www.cnil.fr/fr/plaintes" target="_blank" rel="noopener noreferrer">CNIL</a>.</p>
-    <h2>Cookies et stockage local</h2>
-    <p>Consultez la <RouterLink to="/cookies">politique cookies et stockage</RouterLink> pour les sessions, jetons et réglages du navigateur. Aucun outil publicitaire ou de mesure d’audience n’est chargé par le site.</p>
+  <LegalDocument title="Politique de confidentialité" description="Comment Stash collecte, utilise, protège et supprime vos données personnelles.">
+    <div class="legal-summary">
+      <strong>Nos principes</strong>
+      <p>Pas de publicité ciblée, pas de revente de données et pas de lecture de Gmail sans action explicite de votre part.</p>
+    </div>
+
+    <h2>1. Responsable du traitement</h2>
+    <p>
+      Le responsable du traitement est Nathan Talvasson, éditeur non professionnel de Stash.
+      Pour toute question ou demande relative à vos données :
+      <a href="mailto:nathantalvasson@gmail.com">nathantalvasson@gmail.com</a>.
+    </p>
+
+    <h2>2. Données traitées</h2>
+    <table>
+      <thead><tr><th>Données</th><th>Utilisation</th><th>Fondement</th></tr></thead>
+      <tbody>
+        <tr><td>Email, nom, prénom, mot de passe haché</td><td>Créer, sécuriser et administrer votre compte</td><td>Exécution des conditions d’utilisation</td></tr>
+        <tr><td>Identifiants et photo Google ou Discord</td><td>Permettre la connexion externe demandée</td><td>Exécution du service demandé</td></tr>
+        <tr><td>Inventaire, achats, ventes, statistiques, réglages et fichiers</td><td>Fournir les fonctions de gestion et d’export</td><td>Exécution du service demandé</td></tr>
+        <tr><td>Informations administratives facultatives</td><td>Adapter les outils et documents à votre profil</td><td>Exécution du service demandé</td></tr>
+        <tr><td>Numéros et événements de suivi</td><td>Afficher l’avancement des livraisons</td><td>Exécution du service demandé</td></tr>
+        <tr><td>Identifiants techniques Stripe, le cas échéant</td><td>Tester le parcours ou gérer un abonnement déjà existant sans conserver les données de carte</td><td>Exécution du service concerné</td></tr>
+        <tr><td>Journaux techniques et données de sécurité</td><td>Prévenir les abus, diagnostiquer les erreurs et protéger le service</td><td>Intérêt légitime à sécuriser Stash</td></tr>
+      </tbody>
+    </table>
+
+    <h2>3. Connexion facultative à Gmail</h2>
+    <p>
+      Si vous activez cette fonction, Stash obtient un accès en lecture limité à votre compte Gmail afin de
+      rechercher les messages récents liés aux livraisons Colissimo et Chronopost. Le contenu utile est
+      analysé pour extraire les numéros de suivi. Stash conserve les identifiants techniques nécessaires pour
+      éviter les doublons, les candidats détectés et les informations de colis, mais n’utilise pas vos emails
+      à des fins publicitaires.
+    </p>
+    <p>
+      Les jetons Google sont chiffrés côté serveur. Vous pouvez déconnecter Gmail depuis la gestion des
+      livraisons et révoquer Stash depuis les autorisations de votre compte Google.
+    </p>
+
+    <h2>4. Destinataires et prestataires</h2>
+    <p>Vos données sont accessibles uniquement lorsque cela est nécessaire au fonctionnement du service :</p>
+    <ul>
+      <li>Koyeb pour l’API et Neon pour la base PostgreSQL ;</li>
+      <li>Cloudflare pour la diffusion, la sécurité réseau et la protection du domaine ;</li>
+      <li>Google et Discord lorsque vous choisissez leur connexion ;</li>
+      <li>Brevo pour l’envoi des emails de vérification et de récupération du compte ;</li>
+      <li>Stripe pour les simulations de paiement et, le cas échéant, l’administration d’un abonnement existant ;</li>
+      <li>les transporteurs ou services de suivi lorsque vous demandez l’actualisation d’un colis.</li>
+    </ul>
+    <p>
+      Certains prestataires peuvent traiter des données hors de l’Espace économique européen selon leur
+      organisation et leurs garanties contractuelles. Leurs politiques sont disponibles sur leurs sites.
+      Stash ne vend ni ne loue vos données personnelles.
+    </p>
+
+    <h2>5. Durées de conservation</h2>
+    <table>
+      <thead><tr><th>Catégorie</th><th>Durée ou critère</th></tr></thead>
+      <tbody>
+        <tr><td>Compte et données de service</td><td>Pendant la vie du compte, puis suppression à votre demande</td></tr>
+        <tr><td>Jeton de connexion</td><td>Une heure au maximum</td></tr>
+        <tr><td>Sessions temporaires OAuth</td><td>Dix minutes au maximum</td></tr>
+        <tr><td>Jetons de vérification et de réinitialisation</td><td>Jusqu’à expiration ou utilisation, puis purge technique</td></tr>
+        <tr><td>Connexion Gmail</td><td>Jusqu’à sa révocation, sa suppression ou la suppression du compte</td></tr>
+        <tr><td>Journaux techniques</td><td>Durée nécessaire au diagnostic et à la sécurité, selon la rotation des hébergeurs</td></tr>
+        <tr><td>Sauvegardes</td><td>Jusqu’à leur rotation technique ; une suppression est réappliquée en cas de restauration</td></tr>
+      </tbody>
+    </table>
+
+    <h2>6. Suppression et export</h2>
+    <p>
+      Vous pouvez télécharger un export JSON depuis votre compte. La suppression du compte efface le profil,
+      l’inventaire, les documents, les suivis, les connexions Gmail et les réglages enregistrés sur le serveur.
+      Les fichiers associés sont placés dans une procédure de suppression technique après validation de la
+      transaction. Les données présentes uniquement dans votre navigateur doivent être effacées depuis ce navigateur.
+    </p>
+
+    <h2>7. Vos droits</h2>
+    <p>
+      Vous pouvez demander l’accès, la rectification, l’effacement, la limitation ou la portabilité de vos
+      données. Vous pouvez également vous opposer aux traitements fondés sur l’intérêt légitime et retirer
+      votre autorisation Gmail à tout moment. Une réponse est apportée en principe sous un mois. Une preuve
+      d’identité peut être demandée uniquement en cas de doute raisonnable.
+    </p>
+    <p>
+      Adressez votre demande à <a href="mailto:nathantalvasson@gmail.com">nathantalvasson@gmail.com</a>.
+      Vous pouvez aussi déposer une réclamation auprès de la
+      <a href="https://www.cnil.fr/fr/plaintes" target="_blank" rel="noopener noreferrer">CNIL</a>.
+    </p>
+
+    <h2>8. Stockage dans le navigateur</h2>
+    <p>
+      Stash n’intègre actuellement aucun outil publicitaire ni mesure d’audience. Les stockages nécessaires
+      à la connexion et aux préférences sont détaillés dans la <RouterLink to="/cookies">politique cookies et stockage local</RouterLink>.
+    </p>
   </LegalDocument>
 </template>
+
 <script setup>
 import { RouterLink } from 'vue-router'
 import LegalDocument from '@/components/legal/LegalDocument.vue'

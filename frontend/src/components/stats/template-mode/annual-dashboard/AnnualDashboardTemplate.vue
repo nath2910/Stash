@@ -161,7 +161,7 @@
                     <div v-if="dashboard.topCategories.length" class="annual-chart-wrap">
                       <VChart class="annual-chart" :option="categoryOption" autoresize />
                     </div>
-                    <div v-else class="annual-mini-empty">Aucune categorie vendue sur cette annee.</div>
+                    <div v-else class="annual-mini-empty">Aucune catégorie vendue cette année.</div>
                   </section>
                 </div>
               </article>
@@ -519,7 +519,7 @@ const resellerSignals = computed(() => {
   const holdDays = Number(summary.value.averageHoldDays || 0)
   const rotation =
     holdDays <= 0
-      ? { value: 'A suivre', detail: 'Ajoute les dates d achat/vente pour mesurer la rotation.', tone: 'neutral' }
+      ? { value: 'À suivre', detail: 'Ajoute les dates d’achat et de vente pour mesurer la rotation.', tone: 'neutral' }
       : holdDays <= 45
         ? { value: 'Rapide', detail: `${formatDays(holdDays)} en moyenne avant revente. Continue sur ces formats.`, tone: 'positive' }
         : holdDays <= 120
@@ -536,18 +536,18 @@ const resellerSignals = computed(() => {
     },
     {
       badge: 'Stock',
-      title: oldStock.length ? 'Stock dormant' : 'Stock sous controle',
+      title: oldStock.length ? 'Stock dormant' : 'Stock sous contrôle',
       value: oldStock.length ? `${oldStock.length} a traiter` : 'RAS',
       detail: oldStock.length ? 'Articles a relister, remiser ou sortir en bundle.' : 'Pas d alerte agee dans les articles les plus anciens.',
       tone: oldStock.length ? 'warning' : 'positive',
     },
     {
       badge: 'Sourcing',
-      title: bestCategory?.name ? 'Categorie forte' : 'Categorie a identifier',
+      title: bestCategory?.name ? 'Catégorie forte' : 'Catégorie à identifier',
       value: bestCategory?.name || 'Aucune',
       detail: bestCategory?.name
         ? `${formatMoney(bestCategory.profit)} de profit: a prioriser si le stock tourne.`
-        : 'Ajoute categories/marques pour voir ce qui rapporte vraiment.',
+        : 'Ajoute des catégories et des marques pour voir ce qui rapporte vraiment.',
       tone: bestCategory?.profit && bestCategory.profit > 0 ? 'positive' : 'neutral',
     },
     {

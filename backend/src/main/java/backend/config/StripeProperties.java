@@ -11,10 +11,13 @@ public class StripeProperties {
   private String cancelUrl;
   private String annualPriceId;
   private boolean salesEnabled;
+  private boolean commercialRegistrationComplete;
   public String getAnnualPriceId() { return annualPriceId; }
   public void setAnnualPriceId(String value) { annualPriceId = value; }
   public boolean isSalesEnabled() { return salesEnabled; }
   public void setSalesEnabled(boolean value) { salesEnabled = value; }
+  public boolean isCommercialRegistrationComplete() { return commercialRegistrationComplete; }
+  public void setCommercialRegistrationComplete(boolean value) { commercialRegistrationComplete = value; }
 
   public String getSecretKey() {
     return secretKey;

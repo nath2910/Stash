@@ -7,7 +7,7 @@
       </div>
 
       <div class="grid grid-cols-1 gap-3 text-center text-xs min-[420px]:grid-cols-2">
-        <StatBadge label="Benefice du mois" :tone="beneficeTone" :value="formattedBenefice" />
+        <StatBadge label="Bénéfice du mois" :tone="beneficeTone" :value="formattedBenefice" />
         <StatBadge label="C.A. du mois" tone="default" :value="formattedCA" />
         <StatBadge label="Items vendus (mois)" tone="accent" :value="loading ? '...' : nbVendues" />
         <StatBadge label="Items en stock" tone="default" :value="loading ? '...' : nbEnStock" />

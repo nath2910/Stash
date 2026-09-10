@@ -58,7 +58,7 @@
       </div>
     </template>
 
-    <div v-else class="category-grid" role="radiogroup" aria-label="Categorie principale">
+    <div v-else class="category-grid" role="radiogroup" aria-label="Catégorie principale">
       <button
         v-for="option in itemTypeOptions"
         :key="option.value"
@@ -94,7 +94,7 @@
               <p class="manager-kicker">Organisation</p>
               <h3 class="manager-title">Categories principales</h3>
               <p class="manager-subtitle">
-                Ajoute tes familles globales et renomme les categories existantes.
+                Ajoute tes familles globales et renomme les catégories existantes.
               </p>
             </div>
             <button
@@ -113,7 +113,7 @@
               type="text"
               maxlength="40"
               class="manager-input"
-              placeholder="Nouvelle categorie principale"
+              placeholder="Nouvelle catégorie principale"
             />
             <button
               type="submit"
@@ -236,13 +236,13 @@ import {
 import { typeOf } from '@/utils/snkVente'
 
 const props = defineProps({
-  label: { type: String, default: 'Categorie principale' },
+  label: { type: String, default: 'Catégorie principale' },
   modelValue: { type: String, default: 'SNEAKER' },
   items: { type: Array, default: () => [] },
   userId: { type: [String, Number], default: 'guest' },
   labels: { type: Object, default: null },
   display: { type: String, default: 'grid' },
-  placeholder: { type: String, default: 'Choisir une categorie' },
+  placeholder: { type: String, default: 'Choisir une catégorie' },
 })
 
 const emit = defineEmits(['update:modelValue', 'labelsChange'])
@@ -360,30 +360,30 @@ function categoryUseCount(option) {
 
 function categoryMeta(option) {
   const count = categoryUseCount(option)
-  if (count) return `Utilisee par ${count} item${count > 1 ? 's' : ''}`
+  if (count) return `Utilisée par ${count} item${count > 1 ? 's' : ''}`
   return option.custom ? 'Personnalisee' : `Base ${option.defaultLabel}`
 }
 
 function deleteCategoryTitle(option) {
-  if (!canDeleteCategory(option)) return 'Garde au moins une categorie'
+  if (!canDeleteCategory(option)) return 'Garde au moins une catégorie'
   const count = categoryUseCount(option)
-  if (count) return `Categorie utilisee par ${count} item${count > 1 ? 's' : ''}`
-  return `Supprimer ${option?.label || 'la categorie'}`
+  if (count) return `Catégorie utilisée par ${count} item${count > 1 ? 's' : ''}`
+  return `Supprimer ${option?.label || 'la catégorie'}`
 }
 
 function deleteCategory(option) {
   if (!canDeleteCategory(option)) {
-    managerMessage.value = 'Garde au moins une categorie principale.'
+    managerMessage.value = 'Garde au moins une catégorie principale.'
     return
   }
   const count = categoryUseCount(option)
   if (count) {
     managerMessage.value =
-      `Categorie utilisee par ${count} item${count > 1 ? 's' : ''}. ` +
+      `Catégorie utilisée par ${count} item${count > 1 ? 's' : ''}. ` +
       'Modifie ou reassigne ces items avant de la supprimer.'
     return
   }
-  const label = option?.label || 'cette categorie'
+  const label = option?.label || 'cette catégorie'
   if (typeof window !== 'undefined' && !window.confirm(`Supprimer "${label}" ?`)) return
   const nextLabels = removeItemCategory(effectiveLabels.value, option.value)
   persist(nextLabels)
@@ -392,7 +392,7 @@ function deleteCategory(option) {
     emit('update:modelValue', nextOptions[0]?.value || '')
   }
   if (editingType.value === option.value) cancelEdit()
-  managerMessage.value = 'Categorie supprimee.'
+  managerMessage.value = 'Catégorie supprimée.'
 }
 
 function modelValueIs(type) {

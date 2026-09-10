@@ -34,9 +34,6 @@ const InventoryValueWidget = defineAsyncComponent(
 const SellThroughWidget = defineAsyncComponent(() => import('./widgets/SellThroughWidget.vue'))
 const AvgDaysToSellWidget = defineAsyncComponent(() => import('./widgets/AvgDaysToSellWidget.vue'))
 const DeathPileWidget = defineAsyncComponent(() => import('./widgets/DeathPileWidget.vue'))
-const ActiveListingsWidget = defineAsyncComponent(
-  () => import('./widgets/ActiveListingsWidget.vue'),
-)
 const TopProfitDriversWidget = defineAsyncComponent(
   () => import('./widgets/TopProfitDriversWidget.vue'),
 )
@@ -79,7 +76,6 @@ const KPI_TILE_SIZE = 180
 const KPI_TILE_MIN_SIZE = 160
 const KPI_TILE_MAX_SIZE = 260
 export const KPI_TILE_WIDGET_TYPES = [
-  'activeListings',
   'asp',
   'avgDaysToSell',
   'avgMargin',
@@ -428,22 +424,6 @@ export const WIDGET_DEFS = [
     settings: [],
     categoryFilter: true,
   },
-  {
-    type: 'activeListings',
-    title: 'Annonces actives',
-    category: 'Stock',
-    help: 'Nb annonces actives',
-    icon: Activity,
-    component: ActiveListingsWidget,
-    forms: ['number'],
-    defaultSize: { w: KPI_TILE_SIZE, h: KPI_TILE_SIZE },
-    minSize: { w: KPI_TILE_MIN_SIZE, h: KPI_TILE_MIN_SIZE },
-    maxSize: { w: KPI_TILE_MAX_SIZE, h: KPI_TILE_MAX_SIZE },
-    defaultProps: { bucket: 'week', autoHeight: false, categories: [], types: [] },
-    settings: [],
-    categoryFilter: true,
-  },
-
   // 🚀 Performance
   {
     type: 'topProfitDrivers',
@@ -595,7 +575,7 @@ export const WIDGET_DEFS = [
   },
   {
     type: 'periodComparison',
-    title: 'Comparaison periode',
+    title: 'Comparaison de périodes',
     category: 'Decision',
     help: 'Comparer deux periodes',
     icon: GitCompareArrows,

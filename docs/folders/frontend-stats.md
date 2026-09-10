@@ -72,7 +72,6 @@ Ce module implemente un dashboard stats tres flexible avec:
 ## 5) Sous-dossier `widgets/`
 
 ### 5.1 Widgets KPI/sparkline
-- `ActiveListingsWidget.vue`
 - `AspWidget.vue`
 - `AvgDaysToSellWidget.vue`
 - `AvgMarginWidget.vue`

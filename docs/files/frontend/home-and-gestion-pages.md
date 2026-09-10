@@ -42,7 +42,7 @@ Dashboard d'action rapide.
 - Utilise les stats API au chargement puis la synthese locale si le stock est charge.
 
 ## 6) Legacy accueil
-- `AcceuilWidgetLateral.vue` et `AcceuilDernierItem.vue` restent presents mais ne sont plus utilises par la route `/`.
+- `AcceuilWidgetLateral.vue` reste present mais n'est plus utilise par la route `/`.
 
 ---
 

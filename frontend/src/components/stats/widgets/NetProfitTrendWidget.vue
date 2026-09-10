@@ -18,7 +18,7 @@
       <VChart ref="chartRef" class="npt-chart" :option="option" autoresize />
       <div v-if="props.metrics.series.length <= 1" class="npt-chart-overlay">
         <p class="npt-overlay__title">Pas assez de points</p>
-        <p class="npt-overlay__copy">Elargis la periode pour afficher une tendance fiable.</p>
+        <p class="npt-overlay__copy">Élargis la période pour afficher une tendance fiable.</p>
       </div>
     </section>
 
@@ -395,7 +395,7 @@ const importantPointMap = computed(() => {
   if (!points.length) return map
 
   const peak = points.reduce((best, point) => (point.value > best.value ? point : best), points[0])
-  addImportantPoint(map, peak, 'Pic', 'Meilleur point de la periode', palette.value.line)
+  addImportantPoint(map, peak, 'Pic', 'Meilleur point de la période', palette.value.line)
 
   let strongestMove: (IndexedPoint & { delta: number }) | null = null
   for (let index = 1; index < points.length; index += 1) {

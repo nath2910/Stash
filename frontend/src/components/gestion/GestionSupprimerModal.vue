@@ -48,7 +48,7 @@
           <input
             v-model.trim="query"
             type="text"
-            placeholder="Jordan, Dunk, SKU, categorie..."
+            placeholder="Jordan, Dunk, SKU, catégorie…"
             autocomplete="off"
             @focus="openList = true"
           />
@@ -75,7 +75,7 @@
           <Trash2 class="h-4 w-4" aria-hidden="true" />
           <p>
             <strong>{{ selectedIds.length }}</strong>
-            item(s) selectionne(s)
+            item(s) sélectionné(s)
           </p>
         </div>
         <span>La liste se mettra a jour tout de suite, puis tu pourras annuler.</span>

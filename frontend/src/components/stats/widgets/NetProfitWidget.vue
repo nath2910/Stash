@@ -42,12 +42,12 @@
 
       <div v-else-if="dataState === 'empty'" class="npw-state">
         <p class="npw-state__title">Aucune donnee exploitable</p>
-        <p class="npw-state__copy">Aucune vente nette sur la periode selectionnee.</p>
+        <p class="npw-state__copy">Aucune vente nette sur la période sélectionnée.</p>
       </div>
 
       <div v-else class="npw-state">
-        <p class="npw-state__title">Periode invalide</p>
-        <p class="npw-state__copy">Selectionne une plage de dates valide.</p>
+        <p class="npw-state__title">Période invalide</p>
+        <p class="npw-state__copy">Sélectionne une plage de dates valide.</p>
       </div>
     </div>
   </WidgetCard>
@@ -265,7 +265,7 @@ async function load() {
   } catch (e: unknown) {
     if (id !== req) return
     const err = e as { response?: { data?: { message?: string } }; message?: string }
-    error.value = err?.response?.data?.message ?? err?.message ?? 'Impossible de charger les donnees.'
+    error.value = err?.response?.data?.message ?? err?.message ?? 'Impossible de charger les données.'
   } finally {
     if (id === req) loading.value = false
   }

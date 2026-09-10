@@ -178,6 +178,12 @@
                   <span>Discord</span>
                 </button>
               </div>
+              <p class="mt-2 text-[11px] leading-relaxed text-slate-500">
+                En continuant avec Google ou Discord, tu acceptes les
+                <router-link to="/legal/cgu" target="_blank" class="text-violet-300 underline">conditions d’utilisation</router-link>
+                et reconnais avoir lu la
+                <router-link to="/privacy" target="_blank" class="text-violet-300 underline">politique de confidentialité</router-link>.
+              </p>
             </div>
 
             <button
@@ -193,7 +199,7 @@
             <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <label for="firstName" class="block text-sm font-medium text-slate-200"
-                  >Prenom</label
+                  >Prénom</label
                 >
                 <input
                   type="text"
@@ -298,6 +304,21 @@
                 </button>
               </div>
             </div>
+
+            <label class="flex items-start gap-2 text-xs leading-relaxed text-slate-300">
+              <input
+                v-model="signupForm.acceptTerms"
+                type="checkbox"
+                required
+                class="mt-0.5 h-4 w-4 rounded border-slate-600 bg-slate-900"
+              />
+              <span>
+                J’accepte les
+                <router-link to="/legal/cgu" target="_blank" class="text-violet-300 underline">conditions d’utilisation</router-link>
+                et j’ai pris connaissance de la
+                <router-link to="/privacy" target="_blank" class="text-violet-300 underline">politique de confidentialité</router-link>.
+              </span>
+            </label>
 
             <button
               type="submit"
@@ -415,19 +436,22 @@ const readErrorMessage = (err) => {
 
 const authErrorNotice = (err, fallbackTitle, fallbackMessage) => {
   const status = err?.response?.status
-  const raw = readErrorMessage(err).toLowerCase()
+  const raw = readErrorMessage(err)
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
 
   if (status === 401 || raw.includes('email ou mot de passe invalide')) {
     return {
       title: 'Connexion impossible',
-      message: 'Email ou mot de passe incorrect. Verifie tes informations ou utilise mot de passe oublie.',
+      message: 'Email ou mot de passe incorrect. Vérifie tes informations ou utilise « mot de passe oublié ».',
     }
   }
 
   if (status === 403 || raw.includes('email non verifie')) {
     return {
-      title: 'Email non verifie',
-      message: "Valide ton adresse email avant de te connecter. Un nouveau lien peut etre renvoye depuis l'ecran de verification.",
+      title: 'Email non vérifié',
+      message: 'Valide ton adresse email avant de te connecter. Un nouveau lien peut être renvoyé depuis l’écran de vérification.',
     }
   }
 
@@ -447,22 +471,22 @@ const authErrorNotice = (err, fallbackTitle, fallbackMessage) => {
 
   if (status === 409 || raw.includes('email deja utilise') || raw.includes('compte deja')) {
     return {
-      title: 'Compte deja existant',
-      message: 'Un compte existe deja avec cet email. Connecte-toi ou verifie ta boite mail.',
+      title: 'Compte déjà existant',
+      message: 'Un compte existe déjà avec cet email. Connecte-toi ou vérifie ta boîte mail.',
     }
   }
 
   if (raw.includes('mot de passe trop court')) {
     return {
       title: 'Mot de passe trop court',
-      message: "Choisis un mot de passe d'au moins 10 caracteres.",
+      message: 'Choisis un mot de passe d’au moins 10 caractères.',
     }
   }
 
   if (raw.includes('network error') || !raw) {
     return {
       title: 'Service indisponible',
-      message: 'Impossible de joindre le serveur. Reessaie dans un instant.',
+      message: 'Impossible de joindre le serveur. Réessaie dans un instant.',
     }
   }
 
@@ -475,12 +499,12 @@ const authErrorNotice = (err, fallbackTitle, fallbackMessage) => {
 // Gestion des erreurs SSO (callback /auth/callback#error=...)
 const ssoErrorMessages = {
   discord_not_allowed: {
-    title: 'Acces Discord refuse',
-    message: "Ce compte Discord n'est pas autorise pour acceder a Stash.",
+    title: 'Accès Discord refusé',
+    message: 'Ce compte Discord n’est pas autorisé à accéder à Stash.',
   },
   oauth_error: {
     title: 'Connexion externe impossible',
-    message: "Google ou Discord n'a pas pu finaliser la connexion. Reessaie dans un instant.",
+    message: 'Google ou Discord n’a pas pu finaliser la connexion. Réessaie dans un instant.',
   },
 }
 
@@ -511,14 +535,14 @@ const submitLogin = async () => {
 
     setAuth({ user, token })
 
-    setNotice('success', 'Connexion reussie', 'Redirection vers ton espace.')
+    setNotice('success', 'Connexion réussie', 'Redirection vers ton espace.')
     await router.replace({ name: 'home' })
   } catch (err) {
     console.error(err)
     const nextNotice = authErrorNotice(
       err,
       'Connexion impossible',
-      'La connexion a echoue. Verifie tes informations puis reessaie.',
+      'La connexion a échoué. Vérifie tes informations puis réessaie.',
     )
     setNotice('error', nextNotice.title, nextNotice.message)
   } finally {
@@ -529,13 +553,22 @@ const submitLogin = async () => {
 const submitSignup = async () => {
   resetMessages()
 
+  if (!signupForm.value.acceptTerms) {
+    setNotice(
+      'error',
+      'Conditions non acceptées',
+      'Lis et accepte les conditions d’utilisation pour créer ton compte.',
+    )
+    return
+  }
+
   if (signupForm.value.password !== signupForm.value.confirmPassword) {
-    setNotice('error', 'Mots de passe differents', 'Les deux mots de passe doivent etre identiques.')
+    setNotice('error', 'Mots de passe différents', 'Les deux mots de passe doivent être identiques.')
     return
   }
 
   if (signupForm.value.password.length < 10) {
-    setNotice('error', 'Mot de passe trop court', "Choisis un mot de passe d'au moins 10 caracteres.")
+    setNotice('error', 'Mot de passe trop court', 'Choisis un mot de passe d’au moins 10 caractères.')
     return
   }
 
@@ -546,6 +579,7 @@ const submitSignup = async () => {
       firstName: signupForm.value.firstName,
       lastName: signupForm.value.lastName,
       password: signupForm.value.password,
+      acceptTerms: signupForm.value.acceptTerms,
     })
 
     const apiMessage = String(response?.message || '').trim()
@@ -553,8 +587,8 @@ const submitSignup = async () => {
 
     setNotice(
       'success',
-      reusedExistingAccount ? 'Compte deja existant' : 'Compte cree',
-      apiMessage || "Un email de verification vient de t'etre envoye.",
+      reusedExistingAccount ? 'Compte déjà existant' : 'Compte créé',
+      apiMessage || 'Un email de vérification vient de t’être envoyé.',
     )
     router.replace({
       name: 'verify-email',
@@ -565,8 +599,8 @@ const submitSignup = async () => {
 
     const nextNotice = authErrorNotice(
       err,
-      'Creation impossible',
-      "Le compte n'a pas pu etre cree. Verifie les champs puis reessaie.",
+      'Création impossible',
+      'Le compte n’a pas pu être créé. Vérifie les champs puis réessaie.',
     )
     setNotice('error', nextNotice.title, nextNotice.message)
   } finally {

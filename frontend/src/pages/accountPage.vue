@@ -37,13 +37,13 @@
               class="w-full rounded-xl border border-emerald-300/40 bg-emerald-300/10 px-3 py-2 text-xs font-semibold text-emerald-100 transition hover:bg-emerald-300/15 sm:w-auto"
               @click="goAbo"
             >
-              Gerer l'abonnement
+              Gérer l’abonnement
             </button>
           </div>
 
           <div class="mt-5 grid gap-3 text-sm text-slate-200 sm:mt-6 sm:grid-cols-2">
             <div class="rounded-xl border border-slate-800/80 bg-slate-900/55 px-4 py-3">
-              <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Prenom</p>
+              <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Prénom</p>
               <p class="mt-1 break-words font-medium">{{ currentUser.firstName || '-' }}</p>
             </div>
             <div class="rounded-xl border border-slate-800/80 bg-slate-900/55 px-4 py-3">
@@ -57,7 +57,7 @@
             <div class="account-profile-head">
               <div class="min-w-0">
                 <p class="account-profile-eyebrow">Administratif</p>
-                <h2>Profil legal</h2>
+                <h2>Profil légal</h2>
               </div>
               <button
                 type="button"
@@ -67,7 +67,7 @@
               >
                 <RefreshCw v-if="legalProfileLoading" class="h-4 w-4 animate-spin" aria-hidden="true" />
                 <UserRoundCheck v-else class="h-4 w-4" aria-hidden="true" />
-                <span>{{ legalProfileCompleted ? 'Gerer dans admin' : 'Completer dans admin' }}</span>
+                <span>{{ legalProfileCompleted ? 'Gérer dans admin' : 'Compléter dans admin' }}</span>
               </button>
             </div>
 
@@ -80,7 +80,7 @@
                     class="account-profile-level"
                     :class="legalProfileCompleted ? 'low' : 'medium'"
                   >
-                    {{ legalProfileCompleted ? 'Valide' : 'A completer' }}
+                    {{ legalProfileCompleted ? 'Valide' : 'À compléter' }}
                   </span>
                 </div>
                 <p>{{ legalProfileDescription }}</p>
@@ -99,15 +99,15 @@
           <div class="mt-6 rounded-2xl border border-red-500/20 bg-red-500/5 p-4 sm:p-5">
             <p class="text-sm text-slate-400">
               Cette action ferme votre compte, arrête le renouvellement et l’accès à l’abonnement,
-              puis supprime vos données de service. Les pièces comptables soumises à conservation
-              restent dans une archive à accès restreint. Exportez vos documents avant de continuer.
+              puis supprime définitivement vos données de service et les fichiers associés. Exportez
+              vos documents avant de continuer.
             </p>
 
             <form class="mt-4" @submit.prevent="submitDelete">
               <div class="space-y-3 text-sm text-slate-200">
                 <label class="flex items-start gap-2">
                   <input v-model="deleteConfirmChecked" type="checkbox" class="mt-0.5 h-4 w-4" />
-                  <span>Je comprends que cette action est irreversible.</span>
+                  <span>Je comprends que cette action est irréversible.</span>
                 </label>
 
                 <div>
@@ -146,7 +146,7 @@
         >
           <div class="grid gap-6">
             <div>
-              <h2 class="text-lg font-semibold text-white">Securite</h2>
+              <h2 class="text-lg font-semibold text-white">Sécurité</h2>
               <p class="mt-1 text-sm text-slate-400">Modifie ton mot de passe.</p>
 
               <div
@@ -297,7 +297,7 @@ const loadLegalProfile = async () => {
     applyLegalProfile(await LegalProfileService.getLegalProfile())
   } catch {
     legalProfile.value = normalizeLegalProfile(currentUser.value || {})
-    legalProfileError.value = 'Profil administratif charge depuis le compte local.'
+    legalProfileError.value = 'Profil administratif chargé depuis le compte local.'
   } finally {
     legalProfileLoading.value = false
   }
@@ -310,8 +310,8 @@ const submitChangePassword = async () => {
     error.value = 'Les nouveaux mots de passe ne correspondent pas.'
     return
   }
-  if (form.value.newPassword.length < 6) {
-    error.value = 'Le nouveau mot de passe doit faire au moins 6 caracteres.'
+  if (form.value.newPassword.length < 10) {
+    error.value = 'Le nouveau mot de passe doit faire au moins 10 caractères.'
     return
   }
 
@@ -322,7 +322,7 @@ const submitChangePassword = async () => {
       newPassword: form.value.newPassword,
     })
 
-    success.value = 'Mot de passe modifie avec succes.'
+    success.value = 'Mot de passe modifié avec succès.'
     form.value.currentPassword = ''
     form.value.newPassword = ''
     form.value.confirmPassword = ''

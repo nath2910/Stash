@@ -17,7 +17,7 @@ export function describeBillingError(
   const normalizedMessage = message.toLowerCase()
 
   if (code === 'ECONNABORTED' || normalizedMessage.includes('timeout')) {
-    return 'Le service de paiement met trop de temps a repondre. Reessaie dans quelques instants.'
+    return 'Le service de paiement met trop de temps à répondre. Réessaie dans quelques instants.'
   }
 
   if (!error?.response && normalizedMessage.includes('network')) {

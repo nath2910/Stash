@@ -71,7 +71,6 @@ Ce document cartographie les fichiers utiles du repository (hors `node_modules`,
 - `Attachment.java`
 - `DiscordAllowedGuild.java`
 - `EmailVerificationToken.java`
-- `ItemType.java`
 - `PasswordResetToken.java`
 - `SnkVente.java`
 - `User.java`
@@ -170,7 +169,6 @@ Ce document cartographie les fichiers utiles du repository (hors `node_modules`,
 - `assets/main.css`
 
 #### components (racine)
-- `AcceuilDernierItem.vue`
 - `AcceuilWidgetLateral.vue`
 - `AuthForm.vue`
 - `StatBadge.vue`
@@ -210,7 +208,6 @@ Ce document cartographie les fichiers utiles du repository (hors `node_modules`,
 - `WidgetPreview.vue`
 
 ##### components/stats/widgets
-- `ActiveListingsWidget.vue`
 - `ActionChecklistWidget.vue`
 - `AlertFeedWidget.vue`
 - `AspWidget.vue`

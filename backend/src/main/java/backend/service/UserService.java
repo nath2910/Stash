@@ -52,17 +52,20 @@ public class UserService {
         if (request == null || request.getEmail() == null || request.getEmail().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email manquant");
         }
+        if (!Boolean.TRUE.equals(request.getAcceptTerms())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Conditions d’utilisation non acceptées");
+        }
         if (PasswordPolicy.isTooShort(request.getPassword())) {
             throw new ResponseStatusException(
                 HttpStatus.BAD_REQUEST,
-                "Mot de passe trop court (minimum " + PasswordPolicy.MIN_LENGTH + " caracteres)"
+                "Mot de passe trop court (minimum " + PasswordPolicy.MIN_LENGTH + " caractères)"
             );
         }
 
         String email = request.getEmail().trim().toLowerCase();
         userRepository.findByEmail(email)
                 .ifPresent(u -> {
-                    throw new ResponseStatusException(HttpStatus.CONFLICT, "Email deja utilise");
+                    throw new ResponseStatusException(HttpStatus.CONFLICT, "Email déjà utilisé");
                 });
 
         String hashedPassword = passwordEncoder.encode(request.getPassword());
@@ -79,8 +82,8 @@ public class UserService {
         try {
             savedUser = userRepository.save(user);
         } catch (DataIntegrityViolationException ex) {
-            // Si une contrainte d'unicite est levee (course condition ou compte deja existant)
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email deja utilise");
+            // Si une contrainte d’unicité est levée (course condition ou compte déjà existant)
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email déjà utilisé");
         }
 
         try {
@@ -117,11 +120,11 @@ public class UserService {
         if ("LOCAL".equalsIgnoreCase(user.getProvider()) && !user.isEmailVerified()) {
             throw new ResponseStatusException(
                 HttpStatus.FORBIDDEN,
-                "Email non verifie. Verifie ton adresse email avant de te connecter"
+                "Email non vérifié. Vérifie ton adresse email avant de te connecter"
             );
         }
 
-        // Pour l'instant, on renvoie juste le user (sans le hash dans la version front)
+        // Pour l’instant, on renvoie seulement l’utilisateur (sans le hash dans la version front).
         return user;
     }
 
@@ -133,7 +136,7 @@ public class UserService {
 
         if (PasswordPolicy.isTooShort(request.getNewPassword())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                "Le nouveau mot de passe doit faire au moins " + PasswordPolicy.MIN_LENGTH + " caracteres");
+                "Le nouveau mot de passe doit faire au moins " + PasswordPolicy.MIN_LENGTH + " caractères");
         }
 
         User user = userRepository.findById(userId)

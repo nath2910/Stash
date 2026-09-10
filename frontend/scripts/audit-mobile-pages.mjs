@@ -210,6 +210,36 @@ const routeConfigs = [
     auth: false,
     selector: 'main',
   },
+  {
+    name: 'auth-signup',
+    path: '/auth?mode=signup',
+    auth: false,
+    selector: 'form',
+  },
+  {
+    name: 'legal',
+    path: '/legal',
+    auth: false,
+    selector: '.legal-document',
+  },
+  {
+    name: 'terms',
+    path: '/legal/cgu',
+    auth: false,
+    selector: '.legal-document',
+  },
+  {
+    name: 'privacy',
+    path: '/privacy',
+    auth: false,
+    selector: '.legal-document',
+  },
+  {
+    name: 'cookies',
+    path: '/cookies',
+    auth: false,
+    selector: '.legal-document',
+  },
 ]
 
 function createFakeUser(subscriptionStatus = 'active') {
@@ -219,6 +249,7 @@ function createFakeUser(subscriptionStatus = 'active') {
     lastName: 'Test',
     email: 'test@example.com',
     subscriptionStatus,
+    createdAt: '2026-01-01T00:00:00Z',
   }
 }
 
@@ -284,6 +315,12 @@ function createResponseBody(url, method, routeConfig) {
       portalUrl: routeConfig.subscriptionStatus === 'active' ? 'https://billing.stripe.test/portal' : '',
     }
   }
+  if (url.includes('/billing/plans')) {
+    return [
+      { id: 'monthly', amount: 999, available: true, testMode: true },
+      { id: 'annual', amount: 9990, available: true, testMode: true },
+    ]
+  }
   if (url.includes('/user/legal-profile')) return legalProfile
   if (url.includes('/snkVente/recent')) return fixtureItems.slice(0, 5)
   if (url.includes('/snkVente/topVentes')) return topSales
@@ -337,6 +374,11 @@ async function setSessionState(page, routeConfig) {
 
 async function auditRoute(browser, routeConfig) {
   const page = await browser.newPage()
+  const runtimeErrors = []
+  page.on('pageerror', (error) => runtimeErrors.push(error.message))
+  page.on('console', (message) => {
+    if (message.type() === 'error') runtimeErrors.push(message.text())
+  })
   await page.setViewport({
     width: 390,
     height: 844,
@@ -348,13 +390,22 @@ async function auditRoute(browser, routeConfig) {
 
   page.on('request', async (request) => {
     const url = request.url()
-    if (url.startsWith('http://localhost:8080') || url.startsWith('http://127.0.0.1:8080')) {
+    if (
+      url.startsWith('http://localhost:8080') ||
+      url.startsWith('http://127.0.0.1:8080') ||
+      url.startsWith('https://api.mystash.fr')
+    ) {
       const body = createResponseBody(url, request.method(), routeConfig)
       return request.respond({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify(body),
-        headers: { 'Access-Control-Allow-Origin': '*' },
+        headers: {
+          'Access-Control-Allow-Origin': 'http://127.0.0.1:4173',
+          'Access-Control-Allow-Credentials': 'true',
+          'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
+        },
       })
     }
     return request.continue()
@@ -362,9 +413,12 @@ async function auditRoute(browser, routeConfig) {
 
   await setSessionState(page, routeConfig)
   const targetUrl = new URL(routeConfig.path, `${baseUrl}/`).toString()
-  await page.goto(targetUrl, { waitUntil: 'networkidle0', timeout: 60000 })
+  await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 30000 })
+  let selectorFound = true
   if (routeConfig.selector) {
-    await page.waitForSelector(routeConfig.selector, { timeout: 30000 }).catch(() => {})
+    selectorFound = Boolean(
+      await page.waitForSelector(routeConfig.selector, { timeout: 5000 }).catch(() => null),
+    )
   }
   await sleep(1200)
 
@@ -406,6 +460,8 @@ async function auditRoute(browser, routeConfig) {
   return {
     name: routeConfig.name,
     screenshotPath,
+    selectorFound,
+    runtimeErrors,
     report,
   }
 }
@@ -421,11 +477,16 @@ try {
   const results = []
   for (const routeConfig of routeConfigs) {
     // sequential on purpose to keep screenshots and request mocks deterministic
-     
+    process.stderr.write(`Auditing ${routeConfig.name}\n`)
     results.push(await auditRoute(browser, routeConfig))
   }
 
-  const failed = results.filter((result) => result.report.hasHorizontalOverflow)
+  const failed = results.filter(
+    (result) =>
+      !result.selectorFound ||
+      result.report.hasHorizontalOverflow ||
+      result.runtimeErrors.length > 0,
+  )
   process.stdout.write(JSON.stringify({ baseUrl, results, failed: failed.map((item) => item.name) }, null, 2))
   if (failed.length) {
     process.exitCode = 1

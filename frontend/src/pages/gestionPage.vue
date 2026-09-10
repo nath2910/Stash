@@ -6,7 +6,6 @@
         :class="{
           'is-admin-context': activeGestionTab === 'admin',
           'is-delivery-context': activeGestionTab === 'delivery',
-          'is-marketplace-context': activeGestionTab === 'other',
         }"
       >
         <div class="flex flex-wrap items-end gap-4">
@@ -58,18 +57,6 @@
               <small>Declaration et docs</small>
             </span>
           </button>
-          <button
-            type="button"
-            class="gestion-tab-button"
-            :class="{ 'is-active': activeGestionTab === 'other' }"
-            @click="setGestionTab('other')"
-          >
-            <Layers3 class="h-4 w-4" aria-hidden="true" />
-            <span>
-              <strong>Autre</strong>
-              <small>Marketplace</small>
-            </span>
-          </button>
         </nav>
       </div>
 
@@ -99,12 +86,12 @@
                   <div class="inventory-toolbar-copy">
                     <h2>Liste des items</h2>
                     <p>
-                      {{ filteredVentes.length }} resultat(s)
+                      {{ filteredVentes.length }} résultat(s)
                       <span v-if="hasMoreFilteredVentes">
                         - {{ visibleFilteredVentes.length }} affiche(s)
                       </span>
                       <span v-if="selectedIds.length">
-                        - {{ selectedIds.length }} selectionne(s)
+                        – {{ selectedIds.length }} sélectionné(s)
                       </span>
                     </p>
                   </div>
@@ -210,7 +197,7 @@
                     <GestionFilterDropdown
                       class="filter-dropdown filter-dropdown--subcategory"
                       v-model="filters.category"
-                      label="Sous-categorie"
+                      label="Sous-catégorie"
                       :options="filterCategoryOptions"
                       :disabled="!selectedItemType"
                       icon-mode="subcategory"
@@ -313,7 +300,6 @@
 
           <DeliveryTrackingPanel v-else-if="activeGestionTab === 'delivery'" />
           <AdminPage v-else-if="activeGestionTab === 'admin'" embedded />
-          <GestionMarketplacePanel v-else :items="allInventoryUnits" />
         </div>
       </Transition>
 
@@ -388,7 +374,6 @@ import {
   CalendarDays,
   ClipboardList,
   GitMerge,
-  Layers3,
   PackageSearch,
   RotateCcw,
   SlidersHorizontal,
@@ -432,7 +417,6 @@ const SupprimerModal = defineAsyncComponent(() => import('@/components/gestion/G
 const CsvImportExportWidget = defineAsyncComponent(() => import('@/components/gestion/CsvImportExportWidget.vue'))
 const DeliveryTrackingPanel = defineAsyncComponent(() => import('@/components/gestion/DeliveryTrackingPanel.vue'))
 const AdminPage = defineAsyncComponent(() => import('@/pages/adminPage.vue'))
-const GestionMarketplacePanel = defineAsyncComponent(() => import('@/components/gestion/GestionMarketplacePanel.vue'))
 
 const snkVentes = ref([])
 const searchTerm = ref('')
@@ -458,7 +442,6 @@ const router = useRouter()
 const tabFromRoute = () => {
   if (route.query?.tab === 'delivery') return 'delivery'
   if (route.query?.tab === 'admin') return 'admin'
-  if (route.query?.tab === 'other') return 'other'
   return 'inventory'
 }
 const activeGestionTab = ref(tabFromRoute())
@@ -513,12 +496,12 @@ const sortOptions = [
 ]
 
 const setGestionTab = (tab) => {
-  const nextTab = tab === 'delivery' || tab === 'admin' || tab === 'other' ? tab : 'inventory'
+  const nextTab = tab === 'delivery' || tab === 'admin' ? tab : 'inventory'
   activeGestionTab.value = nextTab
   filtersPanelOpen.value = false
 
   const nextQuery = { ...route.query }
-  if (nextTab === 'delivery' || nextTab === 'admin' || nextTab === 'other') {
+  if (nextTab === 'delivery' || nextTab === 'admin') {
     nextQuery.tab = nextTab
   } else {
     delete nextQuery.tab
@@ -727,7 +710,7 @@ const unifySelectionState = computed(() => {
       enabled: false,
       count: uniqueIds.length,
       ids: uniqueIds,
-      reason: 'Selection incompatible: garde uniquement la meme sous-categorie.',
+      reason: 'Sélection incompatible : garde uniquement la même sous-catégorie.',
     }
   }
 
@@ -753,7 +736,7 @@ const categoryOptions = computed(() => {
       EMPTY_CATEGORY_VALUE,
       {
         value: EMPTY_CATEGORY_VALUE,
-        label: 'Sans sous-categorie',
+        label: 'Sans sous-catégorie',
       },
     ],
   ])
@@ -1245,32 +1228,24 @@ const valeurStock = computed(() => inventorySummary.value.valeurStock)
 const gestionHero = computed(() => {
   if (activeGestionTab.value === 'admin') {
     return {
-      eyebrow: 'Dossier legal',
-      title: 'Declaration URSSAF et documents',
-      subtitle: 'Un ecran de travail pour copier le CA a declarer, corriger les blocages et sortir les registres.',
+      eyebrow: 'Dossier légal',
+      title: 'Déclaration URSSAF et documents',
+      subtitle: 'Un écran de travail pour copier le CA à déclarer, corriger les blocages et exporter les registres.',
     }
   }
 
   if (activeGestionTab.value === 'delivery') {
     return {
-      eyebrow: 'Suivi operationnel',
+      eyebrow: 'Suivi opérationnel',
       title: 'Suivi livraison',
-      subtitle: 'Centralise les colis, les mails de transporteurs et les actions a faire sur les livraisons.',
-    }
-  }
-
-  if (activeGestionTab.value === 'other') {
-    return {
-      eyebrow: 'Diffusion ventes',
-      title: 'Discord et marketplaces',
-      subtitle: 'Prepare des messages a copier et garde un espace reserve pour les futurs templates Vinted, Le Bon Coin et eBay.',
+      subtitle: 'Centralise les colis, les emails des transporteurs et les actions à effectuer sur les livraisons.',
     }
   }
 
   return {
-    eyebrow: 'Inventaire centralise',
+    eyebrow: 'Inventaire centralisé',
     title: 'Gestion',
-    subtitle: "Ajoute, modifie, filtre et suis tes items dans un espace coherent avec l'accueil.",
+    subtitle: 'Ajoute, modifie, filtre et suis tes items dans un espace cohérent avec l’accueil.',
   }
 })
 
@@ -1448,7 +1423,7 @@ const commitPendingDelete = async (toastId) => {
         updatePendingDeleteToast(toastId, {
           state: 'error',
           title: 'Suppression partielle',
-          message: `${toast.ids.length - deleted} item(s) n'ont pas pu etre supprime(s).`,
+          message: `${toast.ids.length - deleted} item(s) n’ont pas pu être supprimé(s).`,
         })
         window.setTimeout(() => removePendingDeleteToast(toastId), 3600)
         return
@@ -1462,7 +1437,7 @@ const commitPendingDelete = async (toastId) => {
     updatePendingDeleteToast(toastId, {
       state: 'error',
       title: 'Suppression annulee',
-      message: "L'appel serveur a echoue. Les items sont revenus dans la liste.",
+      message: 'L’appel au serveur a échoué. Les items sont revenus dans la liste.',
     })
     window.setTimeout(() => removePendingDeleteToast(toastId), 4200)
   }
@@ -2301,13 +2276,6 @@ onBeforeUnmount(() => {
 
 .gestion-hero-panel.is-delivery-context {
   border-color: rgba(14, 116, 144, 0.24);
-}
-
-.gestion-hero-panel.is-marketplace-context {
-  border-color: rgba(15, 118, 110, 0.2);
-  background:
-    linear-gradient(135deg, rgba(20, 184, 166, 0.08), transparent 34%),
-    #ffffff;
 }
 
 .gestion-hero-panel::before,

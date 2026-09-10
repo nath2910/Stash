@@ -18,14 +18,14 @@
           <span class="tm-chip-value">{{ metricLabel }}</span>
         </div>
         <div class="tm-chip">
-          <span class="tm-chip-label">Periode</span>
+          <span class="tm-chip-label">Période</span>
           <span class="tm-chip-value">{{ fromLabel }} -> {{ toLabel }}</span>
         </div>
       </div>
 
       <div v-if="view === 'pie'" class="tm-split">
         <div class="tm-legend">
-          <div v-if="!rows.length" class="tm-empty">Aucune donnee sur la periode.</div>
+          <div v-if="!rows.length" class="tm-empty">Aucune donnée sur la période.</div>
           <div v-else class="tm-list">
             <div v-for="row in rows" :key="row.label" class="tm-row">
               <span class="tm-dot" :style="{ background: row.color }"></span>
@@ -43,7 +43,7 @@
       <div v-else class="tm-stack">
         <VChart class="tm-chart" :style="chartStyle" :option="option" autoresize />
         <div class="tm-legend">
-          <div v-if="!rows.length" class="tm-empty">Aucune donnee sur la periode.</div>
+          <div v-if="!rows.length" class="tm-empty">Aucune donnée sur la période.</div>
           <div v-else class="tm-list">
             <div v-for="row in rows" :key="row.label" class="tm-row">
               <span class="tm-dot" :style="{ background: row.color }"></span>

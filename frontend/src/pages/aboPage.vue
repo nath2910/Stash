@@ -1,192 +1,135 @@
 <template>
   <div class="min-h-full overflow-x-hidden bg-slate-950 text-slate-100">
-    <div class="app-shell app-page-stack app-page-stack--abo max-w-6xl">
-      <div class="app-topbar">
+    <div class="mx-auto flex min-h-dvh w-full max-w-6xl flex-col px-4 py-5 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between gap-3">
         <button
           type="button"
-          class="app-touch-btn inline-flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-xs font-medium text-slate-200 transition hover:border-emerald-300/40 hover:text-white"
+          class="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/80 px-3 text-sm font-semibold text-slate-200 transition hover:border-emerald-300/50 hover:text-white"
           @click="goToLogin"
         >
-          <span class="text-sm">&lt;-</span>
-          <span>Retour a la connexion</span>
+          <ArrowLeft class="h-4 w-4" />
+          Connexion
         </button>
 
-        <span class="app-pill border-slate-700 bg-slate-900/70 text-slate-300">
+        <span
+          class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold"
+          :class="statusMeta.badge"
+        >
+          <span class="h-2 w-2 rounded-full" :class="statusMeta.dot"></span>
           {{ statusMeta.label }}
         </span>
       </div>
 
-      <header
-        class="rounded-3xl border border-slate-800/80 bg-slate-900/85 p-6 shadow-[0_30px_90px_rgba(0,0,0,0.45)] backdrop-blur sm:p-7"
-      >
-        <div class="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-          <section class="space-y-5">
-            <div class="space-y-4">
-              <p class="text-xs uppercase tracking-[0.32em] text-emerald-200/80">Abonnement</p>
-              <div class="flex flex-wrap items-center gap-3">
-                <h1 class="text-3xl font-semibold text-white sm:text-4xl">Passe en Premium</h1>
-                <span
-                  class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs"
-                  :class="statusMeta.badge"
-                >
-                  <span class="h-2 w-2 rounded-full" :class="statusMeta.dot"></span>
-                  {{ statusMeta.label }}
-                </span>
-              </div>
-              <p class="max-w-3xl text-base text-slate-300">
-                Une version plus simple a piloter: stats en temps reel, sauvegarde cloud,
-                export et support prioritaire dans une seule formule.
-              </p>
-              <div class="flex flex-wrap items-center gap-2 text-xs">
-                <span
-                  class="inline-flex items-center rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1 text-slate-200"
-                >
-                  {{ priceLabel }}
-                </span>
-                <span
-                  class="inline-flex items-center rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1 text-slate-200"
-                >
-                  Résiliable en ligne
-                </span>
-                <span
-                  class="inline-flex items-center rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1 text-slate-200"
-                >
-                  Activation immediate
-                </span>
-              </div>
-            </div>
+      <main class="grid flex-1 items-center gap-6 py-8 lg:grid-cols-[1fr_420px] lg:py-10">
+        <section class="min-w-0">
+          <p class="text-xs font-bold uppercase tracking-[0.24em] text-emerald-300">
+            {{ stripeTestMode ? 'Checkout test' : 'Abonnement mensuel' }}
+          </p>
+          <h1 class="mt-4 max-w-3xl text-3xl font-bold leading-tight text-white sm:text-5xl">
+            MyStash Premium
+          </h1>
+          <p class="mt-4 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">
+            Debloque les fonctions avancees pour suivre ton stock, tes ventes et tes performances sans gestion manuelle.
+          </p>
 
-            <div class="grid gap-3 sm:grid-cols-3">
-              <div
-                v-for="highlight in highlights"
-                :key="highlight.title"
-                class="rounded-2xl border border-slate-800/80 bg-slate-900/70 p-4"
-              >
-                <p class="text-xs uppercase tracking-[0.2em] text-slate-500">{{ highlight.eyebrow }}</p>
-                <p class="mt-2 text-sm font-semibold text-white">{{ highlight.title }}</p>
-                <p class="mt-1 text-sm text-slate-300">{{ highlight.desc }}</p>
-              </div>
-            </div>
-          </section>
-
-          <aside class="rounded-2xl border border-slate-800/80 bg-slate-900/75 p-5 shadow-2xl">
-            <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Activation rapide</p>
-            <p class="mt-2 text-lg font-semibold text-white">1 minute pour activer</p>
-            <p class="mt-2 text-sm text-slate-400">
-              Paiement CB, Apple Pay ou Google Pay. Factures, carte et annulation sont
-              ensuite geres dans le portail Stripe.
-            </p>
-
-            <div class="mt-4 rounded-2xl border border-emerald-300/15 bg-emerald-300/5 p-4">
-              <div class="flex items-start justify-between gap-4">
-                <div>
-                  <p class="text-sm font-semibold text-white">{{ priceLabel }}</p>
-                  <p class="mt-1 text-xs text-slate-400">
-                    Acces immediat apres paiement, sans etape supplementaire.
-                  </p>
-                </div>
-                <span
-                  class="rounded-full border border-slate-700 bg-slate-900/80 px-3 py-1 text-[11px] text-slate-300"
-                >
-                  {{ selectedPlan === 'annual' ? 'Annuel' : 'Mensuel' }}
-                </span>
-              </div>
-            </div>
-
-            <label class="mt-4 block text-sm text-slate-200">
-              Périodicité
-              <select v-model="selectedPlan" class="mt-2 w-full rounded-xl bg-slate-800 p-3" @change="termsAccepted = false">
-                <option v-for="plan in plans" :key="plan.id" :value="plan.id">
-                  {{ plan.id === 'annual' ? 'Annuel' : 'Mensuel' }} — {{ formatPrice(plan.amount) }} TTC
-                </option>
-              </select>
-            </label>
-            <p class="mt-3 text-sm text-slate-300">
-              {{ priceLabel }}. Renouvellement automatique à chaque échéance.
-              Résiliation depuis « Mon abonnement », effective à la fin de la période payée.
-            </p>
-            <label class="mt-4 flex items-start gap-2 text-sm text-slate-200">
-              <input v-model="termsAccepted" type="checkbox" class="mt-1" />
-              <span>J’ai lu et j’accepte les <RouterLink to="/legal/cgv" target="_blank" class="underline">Conditions générales de vente</RouterLink>.</span>
-            </label>
-            <p class="mt-2 text-xs text-slate-400">L’accès commence après confirmation du paiement. Vous conservez votre droit de rétractation de 14 jours.</p>
-            <button
-              type="button"
-              class="mt-4 h-11 w-full rounded-xl bg-emerald-500 font-semibold text-slate-900 shadow-lg shadow-emerald-500/25 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
-              :disabled="ctaDisabled"
-              @click="startCheckout"
-            >
-              {{ ctaLabel }}
-            </button>
-
-            <p v-if="error" class="mt-3 text-sm text-red-300">{{ error }}</p>
-            <div v-else class="mt-3 flex items-center gap-2 text-xs text-slate-400">
-              <span
-                class="h-2.5 w-2.5 rounded-full"
-                :class="stripeReady ? 'bg-emerald-400' : 'bg-amber-300'"
-              ></span>
-              <span>{{ stripeStatusCopy }}</span>
-            </div>
-
-            <div
-              v-if="status === 'active'"
-              class="mt-4 flex items-center gap-2 rounded-xl border border-emerald-300/20 bg-slate-800/60 px-3 py-2"
-            >
-              <span class="text-sm text-slate-200">Deja abonne ?</span>
-              <button
-                type="button"
-                class="text-sm font-semibold text-emerald-300 hover:text-emerald-200"
-                @click="openPortal"
-              >
-                Ouvrir le portail Stripe
-              </button>
-            </div>
-          </aside>
-        </div>
-      </header>
-
-      <section class="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-        <div class="rounded-3xl border border-slate-800/80 bg-slate-900/70 p-6 shadow-2xl space-y-5">
-          <div>
-            <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Premium</p>
-            <h2 class="mt-2 text-lg font-semibold text-white">
-              Ce que tu debloques
-            </h2>
-            <p class="mt-2 max-w-2xl text-sm text-slate-400">
-              L'essentiel, sans doublons: plus de suivi, plus de sauvegarde et une gestion plus simple.
-            </p>
-          </div>
-
-          <div class="grid gap-3 sm:grid-cols-2">
+          <div class="mt-7 grid gap-3 sm:grid-cols-2">
             <div
               v-for="feature in features"
               :key="feature.title"
-              class="rounded-2xl border border-slate-800/80 bg-slate-950/40 p-4"
+              class="flex gap-3 rounded-xl border border-slate-800 bg-slate-900/65 p-4"
             >
-              <p class="text-sm font-semibold text-white">{{ feature.title }}</p>
-              <p class="mt-1 text-sm text-slate-300">{{ feature.desc }}</p>
+              <span class="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-400/10 text-emerald-300">
+                <component :is="feature.icon" class="h-4 w-4" />
+              </span>
+              <span class="min-w-0">
+                <strong class="block text-sm font-semibold text-white">{{ feature.title }}</strong>
+                <span class="mt-1 block text-sm leading-6 text-slate-400">{{ feature.desc }}</span>
+              </span>
             </div>
           </div>
-        </div>
 
-        <aside class="rounded-3xl border border-slate-800/80 bg-slate-900/60 p-5 space-y-4">
-          <div class="space-y-2">
-            <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Conditions</p>
-            <h3 class="text-base font-semibold text-white">Simple a gerer</h3>
-            <p class="text-sm text-slate-400">
-              Paiement, factures et annulation restent centralises dans le portail Stripe.
-            </p>
+          <div class="mt-6 flex flex-wrap items-center gap-3 text-sm text-slate-400">
+            <span class="inline-flex items-center gap-2">
+              <ShieldCheck class="h-4 w-4 text-emerald-300" />
+              Paiement securise par Stripe
+            </span>
+            <span class="inline-flex items-center gap-2">
+              <RefreshCcw class="h-4 w-4 text-emerald-300" />
+              Resiliable en ligne
+            </span>
           </div>
-          <div
-            v-for="policy in policies"
-            :key="policy.title"
-            class="rounded-2xl border border-slate-800/80 bg-slate-950/30 p-4"
+        </section>
+
+        <aside class="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-2xl shadow-black/30 sm:p-6">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <p class="text-sm font-semibold text-slate-400">Offre mensuelle</p>
+              <p class="mt-2 text-3xl font-bold text-white">{{ priceLabel }}</p>
+            </div>
+            <span
+              class="rounded-full border px-3 py-1 text-xs font-semibold"
+              :class="monthlyOfferAvailable ? 'border-emerald-300/30 bg-emerald-300/10 text-emerald-100' : 'border-amber-300/30 bg-amber-300/10 text-amber-100'"
+            >
+              {{ monthlyOfferAvailable ? 'Disponible' : 'Indisponible' }}
+            </span>
+          </div>
+
+          <p class="mt-4 text-sm leading-6 text-slate-300">
+            Acces immediat apres paiement. Renouvellement automatique chaque mois, annulable depuis le portail Stripe.
+          </p>
+
+          <div class="mt-5 space-y-3 border-y border-slate-800 py-4">
+            <div
+              v-for="item in checkoutDetails"
+              :key="item"
+              class="flex items-start gap-2 text-sm text-slate-300"
+            >
+              <CheckCircle2 class="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
+              <span>{{ item }}</span>
+            </div>
+          </div>
+
+          <label class="mt-5 flex items-start gap-3 text-sm leading-6 text-slate-300">
+            <input
+              v-model="termsAccepted"
+              type="checkbox"
+              class="mt-1 h-4 w-4 rounded border-slate-700 bg-slate-950 text-emerald-400"
+            />
+            <span>
+              J'accepte les
+              <RouterLink to="/legal/cgv" target="_blank" class="font-semibold text-emerald-300 underline underline-offset-4">
+                conditions de vente
+              </RouterLink>.
+            </span>
+          </label>
+
+          <button
+            type="button"
+            class="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-emerald-400 px-4 text-sm font-bold text-slate-950 shadow-lg shadow-emerald-500/20 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-55"
+            :disabled="ctaDisabled"
+            @click="startCheckout"
           >
-            <p class="text-sm font-semibold text-white">{{ policy.title }}</p>
-            <p class="mt-1 text-sm text-slate-300">{{ policy.desc }}</p>
-          </div>
+            <CreditCard class="h-4 w-4" />
+            {{ ctaLabel }}
+          </button>
+
+          <button
+            v-if="status === 'active'"
+            type="button"
+            class="mt-3 inline-flex h-11 w-full items-center justify-center rounded-xl border border-slate-700 bg-slate-950/50 px-4 text-sm font-semibold text-slate-100 transition hover:border-emerald-300/40"
+            @click="openPortal"
+          >
+            Gerer mon abonnement
+          </button>
+
+          <p v-if="error" class="mt-4 rounded-lg border border-red-400/25 bg-red-400/10 px-3 py-2 text-sm text-red-200">
+            {{ error }}
+          </p>
+          <p v-else class="mt-4 text-xs leading-5 text-slate-500">
+            {{ stripeStatusCopy }}
+          </p>
         </aside>
-      </section>
+      </main>
     </div>
   </div>
 </template>
@@ -194,6 +137,16 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
+import {
+  ArrowLeft,
+  BarChart3,
+  CheckCircle2,
+  CreditCard,
+  DatabaseBackup,
+  Headphones,
+  RefreshCcw,
+  ShieldCheck,
+} from 'lucide-vue-next'
 import { scopedStorageKey } from '@/RegleItem/storageScope'
 import BillingService from '@/services/BillingService'
 import { useAuthStore } from '@/store/authStore'
@@ -210,117 +163,110 @@ const portalUrl = ref('')
 const loading = ref(false)
 const error = ref('')
 const stripeReady = ref(true)
-type Plan = { id: string; amount: number; available: boolean }
+type Plan = { id: string; amount: number; available: boolean; testMode: boolean }
 const plans = ref<Plan[]>([])
-const selectedPlan = ref('monthly')
 const termsAccepted = ref(false)
-const selectedOffer = computed(() => plans.value.find((plan) => plan.id === selectedPlan.value))
-const formatPrice = (amount: number) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount / 100)
-const priceLabel = computed(() => selectedOffer.value
-  ? formatPrice(selectedOffer.value.amount) + ' TTC / ' + (selectedPlan.value === 'annual' ? 'an' : 'mois')
-  : 'Tarif indisponible')
+
+const monthlyOffer = computed(() => plans.value.find((plan) => plan.id === 'monthly'))
+const monthlyOfferAvailable = computed(() => Boolean(monthlyOffer.value?.available))
+const stripeTestMode = computed(() => Boolean(monthlyOffer.value?.testMode))
 const returnTo = computed(() => (route.query.returnTo as string) || '')
-const successRedirect = computed(
-  () => (route.query.successRedirect as string) || returnTo.value || '/',
-)
+const successRedirect = computed(() => (route.query.successRedirect as string) || returnTo.value || '/')
 const currentUserId = computed(() => auth.user.value?.id ?? 'guest')
 const onboardingPendingStorageKey = computed(() =>
   scopedStorageKey('snk_onboarding_pending', currentUserId.value),
 )
-
-let poll: number | null = null
-let previousStatus: string | null = null
 const shouldPollAfterCheckout = computed(
   () => route.query.success === '1' || typeof route.query.session_id === 'string',
 )
 
-const highlights = [
-  {
-    eyebrow: 'Pilotage',
-    title: 'Stats en temps reel',
-    desc: 'Vue claire sur ventes, marges et stocks sans attendre un export.',
-  },
-  {
-    eyebrow: 'Cloud',
-    title: 'Sauvegarde continue',
-    desc: 'Tes donnees restent restaurees et synchronisees sans manipulation manuelle.',
-  },
-  {
-    eyebrow: 'Support',
-    title: 'Acces prioritaire',
-    desc: 'Traitement plus rapide si tu bloques sur un point de config ou d usage.',
-  },
-]
+let poll: number | null = null
+let previousStatus: string | null = null
+
+const formatPrice = (amount: number) =>
+  new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount / 100)
+
+const priceLabel = computed(() => {
+  if (!monthlyOffer.value) return 'Tarif indisponible'
+  return `${formatPrice(monthlyOffer.value.amount)} / mois`
+})
 
 const features = [
   {
-    title: 'Exports et suivi',
-    desc: 'Exports CSV, filtres multi-profils et lecture plus rapide des performances.',
+    icon: BarChart3,
+    title: 'Stats avancees',
+    desc: 'Ventes, marges, stock et performances au meme endroit.',
   },
   {
-    title: 'Role Discord Premium',
-    desc: 'Application automatique apres activation, sans etape manuelle cote utilisateur.',
+    icon: DatabaseBackup,
+    title: 'Sauvegarde cloud',
+    desc: 'Tes donnees restent accessibles et synchronisees.',
   },
   {
-    title: 'Restauration instantanee',
-    desc: 'Recuperation rapide des donnees en cas de besoin ou de changement de poste.',
+    icon: Headphones,
+    title: 'Support prioritaire',
+    desc: 'Aide plus rapide si tu bloques sur un point important.',
   },
   {
-    title: 'Gestion autonome',
-    desc: 'Carte, factures et annulation directement disponibles dans le portail Stripe.',
+    icon: ShieldCheck,
+    title: 'Gestion Stripe',
+    desc: 'Factures, carte et annulation dans un portail securise.',
   },
 ]
 
-const policies = [
-  {
-    title: 'Sans engagement',
-    desc: 'Tu peux annuler ou re-activer quand tu veux depuis le portail de paiement.',
-  },
-  {
-    title: 'Paiement securise',
-    desc: 'Le paiement est traite par Stripe. Les donnees carte ne sont pas stockees ici.',
-  },
-  {
-    title: 'Factures accessibles',
-    desc: 'Les factures PDF et les informations de paiement restent au meme endroit.',
-  },
-]
+const checkoutDetails = computed(() =>
+  stripeTestMode.value
+    ? ['Mode test Stripe : aucun debit reel.', 'Activation simulee apres le checkout.', 'Webhook et portail testes de bout en bout.']
+    : [
+        `${priceLabel.value} TTC si ton tarif Stripe est actif.`,
+        'Carte bancaire, Apple Pay ou Google Pay selon Stripe.',
+        'Aucune donnee de carte stockee par MyStash.',
+      ],
+)
 
-const ctaDisabled = computed(() => loading.value || status.value === 'active' || !stripeReady.value || !termsAccepted.value || !selectedOffer.value?.available)
+const ctaDisabled = computed(
+  () =>
+    loading.value ||
+    status.value === 'active' ||
+    !stripeReady.value ||
+    !termsAccepted.value ||
+    !monthlyOffer.value?.available,
+)
 
 const ctaLabel = computed(() => {
-  if (status.value === 'active') return 'Deja abonne'
+  if (status.value === 'active') return 'Abonnement actif'
   if (loading.value) return 'Redirection...'
   if (!stripeReady.value) return 'Paiement indisponible'
-  return selectedOffer.value?.available ? 'S’abonner et payer ' + formatPrice(selectedOffer.value.amount) : 'Souscriptions bientôt disponibles'
+  if (!monthlyOffer.value?.available) return 'Tarif indisponible'
+  if (!termsAccepted.value) return 'Accepte les conditions'
+  return stripeTestMode.value ? 'Tester le checkout' : `S'abonner - ${formatPrice(monthlyOffer.value.amount)}`
 })
 
-const stripeStatusCopy = computed(() =>
-  stripeReady.value
-    ? 'Checkout Stripe securise, redirection immediatement apres paiement.'
-    : 'Service de paiement indisponible. Reessaie dans quelques minutes ou contacte le support.',
-)
+const stripeStatusCopy = computed(() => {
+  if (!stripeReady.value) return 'Stripe est temporairement indisponible. Reessaie dans quelques minutes.'
+  if (!monthlyOffer.value?.available) return "Le prix mensuel Stripe n'est pas disponible pour le moment."
+  return stripeTestMode.value
+    ? 'Tu es en mode test Stripe : aucun paiement reel ne sera debite.'
+    : 'Tu seras redirige vers Stripe pour finaliser le paiement.'
+})
 
 const statusMeta = computed(() => {
   switch (status.value) {
     case 'active':
       return {
         label: 'Actif',
-        note: 'Acces total debloque.',
         badge: 'border-emerald-300/30 bg-emerald-300/10 text-emerald-100',
         dot: 'bg-emerald-300',
       }
     case 'past_due':
       return {
         label: 'Paiement en attente',
-        note: 'Mets a jour ta carte dans Stripe.',
         badge: 'border-amber-300/40 bg-amber-300/10 text-amber-100',
         dot: 'bg-amber-300',
       }
     case 'canceled':
       return {
         label: 'Annule',
-        note: 'Relance un checkout pour reactiver.',
         badge: 'border-red-300/40 bg-red-300/10 text-red-100',
         dot: 'bg-red-300',
       }
@@ -328,7 +274,6 @@ const statusMeta = computed(() => {
     default:
       return {
         label: 'Inactif',
-        note: 'Souscris pour debloquer les pages protegees.',
         badge: 'border-slate-700 bg-slate-900/70 text-slate-200',
         dot: 'bg-slate-400',
       }
@@ -369,7 +314,7 @@ const startCheckout = async () => {
   error.value = ''
 
   try {
-    const res = await BillingService.checkout(selectedPlan.value, termsAccepted.value)
+    const res = await BillingService.checkout('monthly', termsAccepted.value)
     const url = res?.data?.url
 
     if (url) {
@@ -425,9 +370,3 @@ onBeforeUnmount(() => {
   if (poll) window.clearInterval(poll)
 })
 </script>
-
-<style scoped>
-.app-page-stack--abo {
-  padding-top: clamp(0.45rem, 1vw, 0.95rem);
-}
-</style>

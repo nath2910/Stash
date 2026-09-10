@@ -1,5 +1,5 @@
 <template>
-  <section class="category-dashboard" aria-label="Dashboard par categorie">
+  <section class="category-dashboard" aria-label="Tableau de bord par catégorie">
     <div v-if="loading && !hasLoadedOnce" class="category-state category-state--loading" role="status">
       <div class="category-state__pulse"></div>
       <h2>Chargement du template</h2>
@@ -13,16 +13,16 @@
     </div>
 
     <div v-else-if="!availableTypeOptions.length" class="category-state category-state--empty" role="status">
-      <h2>Aucune categorie exploitable pour le moment.</h2>
+      <h2>Aucune catégorie exploitable pour le moment.</h2>
       <p>
-        Ajoute d'abord des items dans Gestion. Le template construira ensuite un univers principal
+        Ajoute d’abord des items dans Gestion. Le modèle construira ensuite un univers principal
         puis ses sous-categories associees.
       </p>
     </div>
 
     <DashboardLayout
       v-else
-      title="Dashboard par categorie"
+      title="Tableau de bord par catégorie"
       description=""
       analytics-kicker="Lecture par univers"
       analytics-title="Selection active"
@@ -34,10 +34,10 @@
         <div class="category-month">
           <div class="category-month__head">
             <div class="category-month__meta">
-              <span>{{ selectedPeriodMode === 'month' ? 'Mois selectionne' : 'Annee selectionnee' }}</span>
+              <span>{{ selectedPeriodMode === 'month' ? 'Mois sélectionné' : 'Année sélectionnée' }}</span>
               <small>{{ periodShortLabel }}</small>
             </div>
-            <div class="category-mode-switch" role="tablist" aria-label="Mode de periode">
+            <div class="category-mode-switch" role="tablist" aria-label="Mode de période">
               <button
                 type="button"
                 class="category-mode-switch__button"
@@ -104,7 +104,7 @@
       </template>
 
       <template #navigation>
-        <nav class="category-page-nav" aria-label="Navigation du dashboard categorie">
+        <nav class="category-page-nav" aria-label="Navigation du tableau de bord par catégorie">
           <button
             type="button"
             class="category-page-nav__arrow"
@@ -137,7 +137,7 @@
                 class="category-page-nav__scope-toggle"
                 :class="{ 'is-open': isScopeExpanded }"
                 :aria-expanded="isScopeExpanded"
-                aria-label="Afficher les filtres categorie"
+                aria-label="Afficher les filtres de catégorie"
                 @click="toggleScopePanel"
               >
                 <ChevronDown aria-hidden="true" />
@@ -157,7 +157,7 @@
         </nav>
       </template>
 
-      <section class="category-scope-card" aria-label="Selection categorie et sous-categories">
+      <section class="category-scope-card" aria-label="Sélection de la catégorie et des sous-catégories">
         <div class="category-scope-card__launcher">
           <button
             type="button"
@@ -197,7 +197,7 @@
               </div>
             </div>
 
-            <div class="category-toolbar" aria-label="Filtres du dashboard categorie">
+            <div class="category-toolbar" aria-label="Filtres du tableau de bord par catégorie">
               <div ref="typePickerRef" class="category-picker-field">
                 <span class="category-picker-field__label">Univers</span>
                 <button
@@ -319,14 +319,14 @@
       <div v-if="!filteredItems.length" class="category-state category-state--empty" role="status">
         <h2>Aucun item dans cette selection.</h2>
         <p>
-          Change d'univers ou retire le filtre de sous-categorie pour revenir a une vue plus large.
+          Change d’univers ou retire le filtre de sous-catégorie pour revenir à une vue plus large.
         </p>
       </div>
 
       <div v-else-if="!hasPeriodData" class="category-state category-state--empty" role="status">
         <h2>Aucune donnee visible pour {{ selectedMonthLabel }}.</h2>
         <p>
-          L'univers selectionne existe bien, mais il n'a ni achat, ni vente, ni stock exploitable
+          L’univers sélectionné existe bien, mais il ne contient aucun achat, aucune vente et aucun stock exploitable
           sur ce mois.
         </p>
         <button
@@ -339,7 +339,7 @@
       </div>
 
       <template v-else>
-        <article v-if="activePage === 0" class="category-page" aria-label="Vue d'ensemble categorie">
+        <article v-if="activePage === 0" class="category-page" aria-label="Vue d’ensemble de la catégorie">
           <div class="category-page__heading">
             <div>
               <p>Vue d'ensemble</p>
@@ -371,13 +371,13 @@
                 <span>{{ formatNumber(dailyRows.length) }} {{ selectedPeriodMode === 'year' ? 'mois' : 'jour(s)' }}</span>
               </div>
               <VChart v-if="hasDailyChart" class="category-chart" :option="dailyTrendOption" autoresize />
-              <div v-else class="category-mini-empty">Aucune vente visible sur cette periode.</div>
+              <div v-else class="category-mini-empty">Aucune vente visible sur cette période.</div>
             </section>
 
             <section class="category-panel">
               <div class="category-panel__head">
                 <div>
-                  <p>Lecture par sous-categorie</p>
+                  <p>Lecture par sous-catégorie</p>
                   <h2>{{ segmentPanelTitle }}</h2>
                 </div>
                 <span>{{ formatNumber(segmentRows.length) }} segment(s)</span>
@@ -407,7 +407,7 @@
           </section>
         </article>
 
-        <article v-else class="category-page" aria-label="Details categorie">
+        <article v-else class="category-page" aria-label="Détails de la catégorie">
           <div class="category-page__heading">
             <div>
               <p>Details</p>
@@ -431,7 +431,7 @@
                   <thead>
                     <tr>
                       <th>Produit</th>
-                      <th>Sous-categorie</th>
+                      <th>Sous-catégorie</th>
                       <th>Vente</th>
                       <th>Profit</th>
                     </tr>
@@ -449,7 +449,7 @@
                   </tbody>
                 </table>
               </div>
-              <div v-else class="category-mini-empty">Aucune vente sur cette periode.</div>
+              <div v-else class="category-mini-empty">Aucune vente sur cette période.</div>
             </section>
 
             <section class="category-panel category-table-card">
@@ -466,7 +466,7 @@
                   <thead>
                     <tr>
                       <th>Produit</th>
-                      <th>Sous-categorie</th>
+                      <th>Sous-catégorie</th>
                       <th>Valeur</th>
                       <th>Age</th>
                     </tr>
@@ -526,7 +526,7 @@
                   </div>
                 </article>
               </div>
-              <div v-else class="category-mini-empty">Aucune sous-categorie a afficher.</div>
+              <div v-else class="category-mini-empty">Aucune sous-catégorie à afficher.</div>
             </section>
           </div>
         </article>
@@ -641,7 +641,7 @@ const monthLabels = ['Jan', 'Fev', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aout', 
 const today = new Date()
 const currentMonthKey = formatMonthKey(today)
 const currentYear = today.getFullYear()
-const UNKNOWN_SCOPE_LABEL = 'Sans sous-categorie'
+const UNKNOWN_SCOPE_LABEL = 'Sans sous-catégorie'
 const TEMPLATE_STATE_EMIT_DEBOUNCE_MS = 140
 
 const selectedPeriodMode = ref(normalizeInitialPeriodMode(props.initialState))
@@ -748,7 +748,7 @@ const typeItemCount = computed(() => typeItems.value.length)
 const selectedTypeLabel = computed(() => {
   const current = availableTypeOptions.value.find((option) => option.value === selectedType.value)
   if (current) return current.label
-  return availableTypeOptions.value[0]?.label || 'Categorie'
+  return availableTypeOptions.value[0]?.label || 'Catégorie'
 })
 
 const subcategoryOptions = computed<SubcategoryOption[]>(() => {
@@ -995,7 +995,7 @@ const kpiCards = computed(() => [
     icon: BadgeEuro,
   },
   {
-    label: 'Benefice',
+    label: 'Bénéfice',
     value: formatMoney(totals.value.profit),
     detail: `${formatMoney(totals.value.averageProfit)} par vente`,
     tone: totals.value.profit >= 0 ? ('profit' as const) : ('warning' as const),
@@ -1004,7 +1004,7 @@ const kpiCards = computed(() => [
   {
     label: 'Marge',
     value: formatRatio(totals.value.marginRate),
-    detail: 'Profit / CA sur la periode',
+    detail: 'Profit / CA sur la période',
     tone: totals.value.marginRate >= 0 ? ('profit' as const) : ('warning' as const),
     icon: CirclePercent,
   },
@@ -1027,7 +1027,7 @@ const kpiCards = computed(() => [
 const insightCards = computed(() => [
   {
     badge: 'Leader',
-    title: 'Sous-categorie forte',
+    title: 'Sous-catégorie forte',
     value: bestSegment.value?.label ?? selectedTypeLabel.value,
     detail: bestSegment.value
       ? `${formatMoney(bestSegment.value.profit)} de profit sur ${formatNumber(bestSegment.value.sold)} vente(s).`
@@ -1040,8 +1040,8 @@ const insightCards = computed(() => [
     value: formatMoney(totals.value.cashNet),
     detail:
       totals.value.cashNet >= 0
-        ? 'Les ventes couvrent les achats sur cette periode.'
-        : 'Les achats depassent encore les ventes sur cette periode.',
+        ? 'Les ventes couvrent les achats sur cette période.'
+        : 'Les achats dépassent encore les ventes sur cette période.',
     tone: totals.value.cashNet >= 0 ? 'positive' : 'warning',
   },
   {

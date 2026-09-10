@@ -192,7 +192,7 @@ const submitReset = async () => {
   }
 
   if (newPassword.value.length < 10) {
-    error.value = "Choisis un mot de passe d'au moins 10 caracteres."
+    error.value = 'Choisis un mot de passe d’au moins 10 caractères.'
     return
   }
 

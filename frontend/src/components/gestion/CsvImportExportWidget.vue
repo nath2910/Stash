@@ -170,7 +170,7 @@
                   class="min-h-9 rounded-lg border border-slate-700 bg-slate-950 px-2 text-xs text-slate-100"
                   @change="rebuildPreviewFromMapping"
                 >
-                  <option value="">Non utilise</option>
+                  <option value="">Non utilisé</option>
                   <option v-for="header in headerOptions" :key="`${field.key}-${header}`" :value="header">
                     {{ header }}
                   </option>
@@ -379,12 +379,12 @@ const previewErrors = computed(() =>
     .map((row) => `Ligne ${row.rowNumber} : ${row.errors.join(' | ')}`),
 )
 const mappingLabels: Record<string, string> = {
-  name: 'Modele',
-  brand: 'Marque / categorie',
+  name: 'Modèle',
+  brand: 'Marque / catégorie',
   size: 'Taille',
   retail: "Prix d'achat",
-  resell: 'Prix vente reel/estime',
-  quantity: 'Quantite',
+  resell: 'Prix de vente réel/estimé',
+  quantity: 'Quantité',
   condition: 'Etat',
   sku: 'SKU',
   dateAchat: "Date d'achat",

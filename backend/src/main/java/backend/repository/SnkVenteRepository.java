@@ -60,6 +60,11 @@ public interface SnkVenteRepository extends JpaRepository<SnkVente, Integer> {
     long getValue();
   }
 
+  public interface BucketLongRow {
+    java.time.LocalDate getBucket();
+    long getValue();
+  }
+
 
 
   // Liste de tout les items dans la liste
@@ -156,7 +161,7 @@ public interface SnkVenteRepository extends JpaRepository<SnkVente, Integer> {
 
 
 
-  // Delete sÃ©curisÃ© : un user ne peut supprimer que ses ventes
+  // Suppression sécurisée : un utilisateur ne peut supprimer que ses ventes
     void deleteByIdAndUser_Id(Integer id, Long userId);
 
   @Modifying
@@ -263,7 +268,7 @@ public interface SnkVenteRepository extends JpaRepository<SnkVente, Integer> {
 
     
 
-    // Top ventes par nom dâ€™item sur une pÃ©riode + user
+    // Top ventes par nom d’item sur une période et par utilisateur
 @Query(value = """
     SELECT 
       t.nom_item AS nomItem,
@@ -287,6 +292,33 @@ List<TopVenteProjection> topVentesBetween(
         @Param("categoriesAll") boolean categoriesAll,
         @Param("types") String[] types,
         @Param("typesAll") boolean typesAll
+);
+
+@Query(value = """
+    SELECT 
+      t.nom_item AS nomItem,
+      SUM(COALESCE(t.prix_resell, 0) - COALESCE(t.prix_retail, 0)) AS benefice
+    FROM public.tableauventes t
+    WHERE t.user_id = :userId
+      AND t.date_vente IS NOT NULL
+      AND t.date_vente BETWEEN :start AND :end
+      AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Sans sous-categorie') = ANY(:categories))
+      AND (:typesAll = true OR COALESCE(t.type, 'OTHER') = ANY(:types))
+      AND t.prix_resell IS NOT NULL
+      AND t.prix_retail IS NOT NULL
+    GROUP BY t.nom_item
+    ORDER BY benefice DESC
+    LIMIT :limit
+    """, nativeQuery = true)
+List<TopVenteProjection> topVentesBetweenLimited(
+        @Param("userId") Long userId,
+        @Param("start") LocalDate start,
+        @Param("end") LocalDate end,
+        @Param("categories") String[] categories,
+        @Param("categoriesAll") boolean categoriesAll,
+        @Param("types") String[] types,
+        @Param("typesAll") boolean typesAll,
+        @Param("limit") int limit
 );
     
 default List<TopVenteProjection> topVentesYear(Long userId, int year) {
@@ -606,7 +638,28 @@ List<TimePointFullRow> timeseriesMonthFull(@Param("userId") Long userId,
                                            @Param("categories") String[] categories,
                       @Param("categoriesAll") boolean categoriesAll,
                                            @Param("types") String[] types,
-                      @Param("typesAll") boolean typesAll);
+                                           @Param("typesAll") boolean typesAll);
+
+@Query(value = """
+  SELECT b.bucket AS bucket,
+         COUNT(t.id) AS value
+  FROM unnest(CAST(:buckets AS date[])) AS b(bucket)
+  LEFT JOIN public.tableauventes t
+    ON t.user_id = :userId
+   AND t.date_achat IS NOT NULL
+   AND t.date_achat <= b.bucket
+   AND (t.date_vente IS NULL OR t.date_vente > b.bucket)
+   AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Sans sous-categorie') = ANY(:categories))
+   AND (:typesAll = true OR COALESCE(t.type, 'OTHER') = ANY(:types))
+  GROUP BY b.bucket
+  ORDER BY b.bucket
+""", nativeQuery = true)
+List<BucketLongRow> countInStockAtBuckets(@Param("userId") Long userId,
+                                          @Param("buckets") LocalDate[] buckets,
+                                          @Param("categories") String[] categories,
+                                          @Param("categoriesAll") boolean categoriesAll,
+                                          @Param("types") String[] types,
+                                          @Param("typesAll") boolean typesAll);
 
 @Query(value = """
   SELECT (date_trunc('day', t.date_vente))::date AS bucket,

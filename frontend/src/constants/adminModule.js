@@ -30,7 +30,6 @@ export const ADMIN_ACTIVITY_OPTIONS = Object.freeze([
   { value: 'consignment', label: 'Depot-vente' },
   { value: 'ecommerce', label: 'E-commerce' },
   { value: 'physical_shop', label: 'Boutique' },
-  { value: 'marketplaces', label: 'Marketplaces' },
   { value: 'events', label: 'Evenements' },
 ])
 

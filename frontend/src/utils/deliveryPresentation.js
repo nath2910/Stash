@@ -17,8 +17,8 @@ const STATUS_META = {
     stage: 'pending',
   },
   DELIVERED: {
-    label: 'Livre',
-    shortLabel: 'Livre',
+    label: 'Livré',
+    shortLabel: 'Livré',
     badgeClass: 'border-emerald-400/50 bg-emerald-500/10 text-emerald-200',
     lightBadgeClass: 'border-emerald-300/50 bg-emerald-500/10 text-emerald-800',
     accentClass: 'text-emerald-700',
@@ -170,7 +170,7 @@ export const getDeliveryStatusMeta = (input, statusLabelOverride = '') => {
   }
 
   if (status === 'DELIVERED' && normalizedLabel.includes('boite aux lettres')) {
-    return { ...base, label: 'Livre boite', shortLabel: 'Livre' }
+    return { ...base, label: 'Livré en boîte', shortLabel: 'Livré' }
   }
 
   if (status === 'OUT_FOR_DELIVERY') {
@@ -200,7 +200,7 @@ export const getDeliveryStatusMeta = (input, statusLabelOverride = '') => {
 export const getDeliveryStageMeta = (stage) =>
   STAGE_META[stage] || {
     label: 'En attente',
-    description: 'Suivi sans categorie',
+    description: 'Suivi sans catégorie',
     accentClass: 'border-slate-200/80 bg-slate-50/80 text-slate-950',
   }
 
@@ -278,7 +278,7 @@ export const getDeliveryTrackingHealth = (parcel) => {
     ) {
       return {
         tone: 'info',
-        title: 'Suivi live La Poste bloque en production',
+        title: 'Suivi La Poste en direct bloqué en production',
         message:
           "La Poste refuse actuellement les requetes serveur depuis l'infrastructure de production. Ouvre le lien Transporteur pour voir le suivi detaille directement chez La Poste.",
       }
@@ -291,7 +291,7 @@ export const getDeliveryTrackingHealth = (parcel) => {
         tone: 'warning',
         title: 'Source La Poste indisponible',
         message:
-          "Le suivi Colissimo n'a pas pu etre relu automatiquement. Verifie le navigateur local utilise par le scraper.",
+          'Le suivi Colissimo n’a pas pu être relu automatiquement. Vérifie le navigateur local utilisé par le scraper.',
       }
     }
     if (statusLabel.includes('non trouve')) {
@@ -299,7 +299,7 @@ export const getDeliveryTrackingHealth = (parcel) => {
         tone: 'info',
         title: 'Suivi non trouve',
         message:
-          "Le colis a ete enregistre, mais le transporteur n'a renvoye aucune donnee exploitable pour ce numero.",
+          'Le colis a été enregistré, mais le transporteur n’a renvoyé aucune donnée exploitable pour ce numéro.',
       }
     }
     if (statusLabel.includes('indisponible')) {
@@ -313,9 +313,9 @@ export const getDeliveryTrackingHealth = (parcel) => {
     if (statusLabel.includes('cloudflare') || statusLabel.includes('bloque la requete') || statusLabel.includes('bloque la page')) {
       return {
         tone: 'info',
-        title: 'Chronopost bloque le scraping',
+        title: 'Chronopost bloque la récupération automatique',
         message:
-          "La page Chronopost repond avec une protection anti-bot au lieu du vrai suivi. Le refresh part bien, mais le serveur ne recoit pas encore les donnees de statut.",
+          'La page Chronopost répond avec une protection anti-bot au lieu du vrai suivi. L’actualisation démarre bien, mais le serveur ne reçoit pas encore les données de statut.',
       }
     }
   }
@@ -325,7 +325,7 @@ export const getDeliveryTrackingHealth = (parcel) => {
       tone: 'info',
       title: 'Suivi en attente de retour agregateur',
       message:
-        "Le colis est enregistre chez l'agregateur, mais aucun checkpoint detaille n'est encore revenu.",
+        'Le colis est enregistré chez l’agrégateur, mais aucun événement détaillé n’est encore disponible.',
     }
   }
 

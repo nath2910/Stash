@@ -146,7 +146,7 @@
                         </div>
                         <div class="attachment-row-actions">
                           <button type="button" class="attachment-action" @click="download(att)">
-                            Telecharger
+                            Télécharger
                           </button>
                           <button type="button" class="attachment-action is-danger" @click="removeAttachment(att)">
                             Supprimer
@@ -384,7 +384,7 @@ async function save({ id, payload }) {
     const { data } = await SnkVenteServices.update(id, payload)
     success.value = true
     successMessage.value = editingParent
-      ? 'Parent enregistre et sous-items mis a jour.'
+      ? 'Parent enregistré et sous-items mis à jour.'
       : 'Modifications enregistrees.'
     emit('saved', data)
 

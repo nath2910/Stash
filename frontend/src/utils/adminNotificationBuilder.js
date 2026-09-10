@@ -117,8 +117,8 @@ function buildDeadlineReminder(summary, adminProfile, period, now) {
     type: 'ADMIN_DEADLINE',
     title,
     message: overdue
-      ? `Echeance estimee depassee depuis ${Math.abs(diffDays)} jour(s). ${salesLabel}`.trim()
-      : `Echeance estimee au ${formatDate(deadline)}${diffDays > 0 ? `, J-${diffDays}.` : '.'} ${salesLabel}`.trim(),
+      ? `Échéance estimée dépassée depuis ${Math.abs(diffDays)} jour(s). ${salesLabel}`.trim()
+      : `Échéance estimée au ${formatDate(deadline)}${diffDays > 0 ? `, J-${diffDays}.` : '.'} ${salesLabel}`.trim(),
     severity,
     ctaRoute: ADMIN_NOTIFICATION_ROUTE,
     ctaLabel: 'Voir admin',

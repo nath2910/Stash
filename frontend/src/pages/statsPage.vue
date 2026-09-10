@@ -31,7 +31,7 @@ let rangeRefreshTimer: number | null = null
 let inventoryRefreshTimer: number | null = null
 
 const rangeLabel = computed(() => {
-  if (!from.value || !to.value) return 'Chargement de la nouvelle periode...'
+  if (!from.value || !to.value) return 'Chargement de la nouvelle période…'
   return `${formatDateLabel(from.value)} -> ${formatDateLabel(to.value)}`
 })
 

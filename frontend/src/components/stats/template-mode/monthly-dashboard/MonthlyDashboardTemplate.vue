@@ -23,7 +23,7 @@
           <h2>Aucune donnee disponible pour {{ selectedMonthLabel }}.</h2>
           <p>
             Les statistiques apparaitront des qu'une vente, un achat ou un article en stock sera
-            present sur cette periode.
+            présent sur cette période.
           </p>
         </div>
 
@@ -42,7 +42,7 @@
             <template #selector>
               <div class="monthly-month">
                 <div class="monthly-month__head">
-                  <span>Mois selectionne</span>
+                  <span>Mois sélectionné</span>
                   <small>{{ periodShortLabel }}</small>
                 </div>
                 <div class="monthly-month__control">
@@ -163,7 +163,7 @@
                       <div v-if="categoryProfit.length" class="monthly-chart-wrap">
                         <VChart class="monthly-chart" :option="categoryProfitOption" autoresize />
                       </div>
-                      <div v-else class="monthly-mini-empty">Aucune categorie rentable sur ce mois.</div>
+                      <div v-else class="monthly-mini-empty">Aucune catégorie rentable ce mois-ci.</div>
                     </section>
 
                     <section class="monthly-insights monthly-insights--flow" aria-label="Indicateurs rapides">
@@ -247,7 +247,7 @@
                           <tr>
                             <th>#</th>
                             <th>Produit</th>
-                            <th>Benefice</th>
+                            <th>Bénéfice</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -544,7 +544,7 @@ const kpiCards = computed(() => [
     icon: BadgeEuro,
   },
   {
-    label: 'Benefice net',
+    label: 'Bénéfice net',
     value: formatMoney(monthTotals.value.profit),
     detail: `${formatMoney(monthTotals.value.averageProfit)} par vente`,
     tone: monthTotals.value.profit >= 0 ? ('profit' as const) : ('warning' as const),

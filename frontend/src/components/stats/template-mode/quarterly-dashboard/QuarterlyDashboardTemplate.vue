@@ -23,7 +23,7 @@
           <h2>Aucune donnee disponible pour {{ selectedQuarterLabel }}.</h2>
           <p>
             Les statistiques apparaitront des qu'une vente, un achat ou un article en stock sera
-            present sur cette periode.
+            présent sur cette période.
           </p>
         </div>
 
@@ -43,7 +43,7 @@
             <template #selector>
               <div class="quarterly-quarter">
                 <div class="quarterly-quarter__head">
-                  <span>Trimestre selectionne</span>
+                  <span>Trimestre sélectionné</span>
                   <small>{{ periodShortLabel }}</small>
                 </div>
 
@@ -187,7 +187,7 @@
                       <VChart class="quarterly-chart" :option="categoryProfitOption" autoresize />
                     </div>
                     <div v-else class="quarterly-mini-empty">
-                      Aucune categorie rentable sur ce trimestre.
+                      Aucune catégorie rentable ce trimestre.
                     </div>
                   </section>
                 </div>
@@ -291,7 +291,7 @@
                           <tr>
                             <th>#</th>
                             <th>Produit</th>
-                            <th>Benefice</th>
+                            <th>Bénéfice</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -595,7 +595,7 @@ const kpiCards = computed(() => [
     icon: BadgeEuro,
   },
   {
-    label: 'Benefice net',
+    label: 'Bénéfice net',
     value: formatMoney(quarterTotals.value.profit),
     detail: `${formatMoney(quarterTotals.value.averageProfit)} par vente`,
     tone: quarterTotals.value.profit >= 0 ? ('profit' as const) : ('warning' as const),
@@ -637,11 +637,11 @@ const stockActionDetail = computed(() => {
   const { remainingStockCount, itemsSold, remainingStockValue } = quarterTotals.value
 
   if (remainingStockCount <= 0) {
-    return 'Aucun stock dormant detecte en fin de trimestre.'
+    return 'Aucun stock dormant détecté en fin de trimestre.'
   }
 
   if (itemsSold <= 0) {
-    return `${formatMoney(remainingStockValue)} immobilises sans vente sur la periode.`
+    return `${formatMoney(remainingStockValue)} immobilisés sans vente sur la période.`
   }
 
   if (remainingStockCount > itemsSold) {
@@ -654,21 +654,21 @@ const stockActionDetail = computed(() => {
 const dashboardModules = computed(() => [
   {
     badge: 'Cash',
-    title: quarterTotals.value.cashNet >= 0 ? 'Cash genere' : 'Cash sous pression',
+    title: quarterTotals.value.cashNet >= 0 ? 'Trésorerie générée' : 'Trésorerie sous pression',
     value: formatMoney(quarterTotals.value.cashNet),
     detail:
       quarterTotals.value.cashNet >= 0
-        ? `${formatMoney(quarterTotals.value.cashNet)} restants apres ${formatMoney(quarterTotals.value.purchaseSpend)} d'achats.`
+        ? `${formatMoney(quarterTotals.value.cashNet)} restants après ${formatMoney(quarterTotals.value.purchaseSpend)} d’achats.`
         : `${formatMoney(Math.abs(quarterTotals.value.cashNet))} de plus en achats que de ventes sur le trimestre.`,
     tone: quarterTotals.value.cashNet >= 0 ? 'positive' : 'warning',
   },
   {
     badge: 'Mix',
-    title: bestQuarterCategory.value?.label ? 'Categorie forte' : 'Categorie a prioriser',
+    title: bestQuarterCategory.value?.label ? 'Catégorie forte' : 'Catégorie à prioriser',
     value: bestQuarterCategory.value?.label || 'Aucune',
     detail: bestQuarterCategory.value?.label
-      ? `${formatMoney(bestQuarterCategory.value.value)} de profit cumule sur cette categorie.`
-      : 'Ajoute plus de categories pour faire ressortir un vrai axe de mix.',
+      ? `${formatMoney(bestQuarterCategory.value.value)} de profit cumulé sur cette catégorie.`
+      : 'Ajoute plus de catégories pour faire ressortir un véritable axe de répartition.',
     tone:
       bestQuarterCategory.value?.value && bestQuarterCategory.value.value > 0
         ? 'positive'
@@ -679,8 +679,8 @@ const dashboardModules = computed(() => [
     title: 'Produit le plus rentable',
     value: topQuarterSale.value?.nomItem || 'Aucune',
     detail: topQuarterSale.value
-      ? `${formatMoney(topQuarterSale.value.benefice)} de benefice sur la meilleure vente du trimestre.`
-      : 'Aucune vente rentable detectee sur la periode.',
+      ? `${formatMoney(topQuarterSale.value.benefice)} de bénéfice sur la meilleure vente du trimestre.`
+      : 'Aucune vente rentable détectée sur la période.',
     tone: topQuarterSale.value?.benefice && topQuarterSale.value.benefice > 0 ? 'positive' : 'neutral',
   },
   {
@@ -688,7 +688,7 @@ const dashboardModules = computed(() => [
     title:
       quarterTotals.value.remainingStockCount > quarterTotals.value.itemsSold
         ? 'Stock a ecouler'
-        : 'Stock sous controle',
+        : 'Stock sous contrôle',
     value: `${formatNumber(quarterTotals.value.remainingStockCount)} articles`,
     detail: stockActionDetail.value,
     tone:
@@ -707,7 +707,7 @@ const dashboardModules = computed(() => [
     value: formatMoney(quarterTotals.value.purchaseSpend),
     detail:
       quarterTotals.value.purchaseSpend > quarterTotals.value.revenue
-        ? `${formatMoney(quarterTotals.value.purchaseSpend - quarterTotals.value.revenue)} de plus en achats que de CA sur la periode.`
+        ? `${formatMoney(quarterTotals.value.purchaseSpend - quarterTotals.value.revenue)} de plus en achats que de CA sur la période.`
         : `${formatNumber(quarterTotals.value.itemsBought)} achats pour soutenir ${formatNumber(quarterTotals.value.itemsSold)} ventes.`,
     tone: quarterTotals.value.purchaseSpend > quarterTotals.value.revenue ? 'warning' : 'primary',
   },
@@ -1100,7 +1100,7 @@ function deltaPct(current: number, previous: number) {
 function formatDelta(current: number, previous: number) {
   const delta = deltaPct(current, previous)
   if (delta == null) return 'Comparaison indisponible'
-  return `${formatSignedRatio(delta)} vs periode precedente`
+  return `${formatSignedRatio(delta)} par rapport à la période précédente`
 }
 
 function profitClass(value: unknown) {

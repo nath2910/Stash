@@ -26,7 +26,7 @@
         </div>
 
         <div v-else-if="error" class="widget-card__state widget-card__state--error" role="alert">
-          <div class="widget-card__state-title">Donnees indisponibles</div>
+          <div class="widget-card__state-title">Données indisponibles</div>
           <div class="widget-card__status widget-card__status--error">{{ error }}</div>
         </div>
 

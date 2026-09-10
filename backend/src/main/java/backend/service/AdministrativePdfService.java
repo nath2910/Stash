@@ -115,7 +115,7 @@ public class AdministrativePdfService {
     lines.add("Ventes sans justificatif detectable: " + summary.missingProofCount());
     lines.add("Incoherences de dates: " + summary.periodMismatchCount());
     lines.add("");
-    lines.add("Documents a conserver ou generer depuis MyStash");
+    lines.add("Documents à conserver ou générer depuis Stash");
     lines.add("- Fiche preparatoire URSSAF si profil micro-entreprise");
     lines.add("- Livre des recettes");
     lines.add("- Registre des achats");
@@ -156,7 +156,7 @@ public class AdministrativePdfService {
 
   private void addQualityChecks(List<String> lines, AdministrativeSummaryResponse summary) {
     lines.add("");
-    lines.add("Controles MyStash");
+    lines.add("Contrôles Stash");
     if (summary.qualityChecks().isEmpty()) {
       lines.add("Aucune anomalie actionnable detectee sur la periode.");
       return;

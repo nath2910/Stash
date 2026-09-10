@@ -16,11 +16,11 @@
     <div class="item-form-grid">
       <ItemCategorySelect
         class="item-field item-field--category"
-        label="Categorie"
+        label="Catégorie"
         :model-value="form.type"
         :items="items"
         display="dropdown"
-        placeholder="Choisir une categorie"
+        placeholder="Choisir une catégorie"
         :user-id="currentUserId"
         :labels="categoryLabels"
         @update:modelValue="setType"
@@ -34,7 +34,7 @@
           v-model.trim="form.nomItem"
           type="text"
           autocomplete="off"
-          placeholder="Nom, modele, reference..."
+          placeholder="Nom, modèle, référence…"
           required
         />
       </label>
@@ -42,9 +42,9 @@
       <ItemSubcategorySelect
         :model-value="form.categorie"
         class="item-field item-field--subcategory"
-        label="Sous-categorie"
+        label="Sous-catégorie"
         placeholder="Marque, famille..."
-        empty-label="Aucune sous-categorie"
+        empty-label="Aucune sous-catégorie"
         :type="form.type"
         :user-id="currentUserId"
         :discovered="discoveredSubcategories"
@@ -72,13 +72,13 @@
       </div>
 
       <div v-if="quantityEnabled && (!showDetails || isQuickSurface)" class="item-field item-field--quantity">
-        <span>Quantite</span>
+        <span>Quantité</span>
         <div class="quantity-stepper">
           <button
             type="button"
             class="quantity-button"
             :disabled="Number(form.quantity) <= 1"
-            aria-label="Diminuer la quantite"
+            aria-label="Diminuer la quantité"
             @click="decreaseQuantity"
           >
             <Minus class="h-4 w-4" aria-hidden="true" />
@@ -91,14 +91,14 @@
             max="50"
             step="1"
             required
-            aria-label="Quantite"
+            aria-label="Quantité"
             @blur="setQuantity(form.quantity)"
           />
           <button
             type="button"
             class="quantity-button"
             :disabled="Number(form.quantity) >= 50"
-            aria-label="Augmenter la quantite"
+            aria-label="Augmenter la quantité"
             @click="increaseQuantity"
           >
             <Plus class="h-4 w-4" aria-hidden="true" />
@@ -157,7 +157,7 @@
           <span>Adaptes au type {{ currentTypeLabel.toLowerCase() }}</span>
         </div>
 
-        <label v-for="field in coreMetadataFields" :key="field.key" class="item-field">
+        <label v-for="field in metadataFields" :key="field.key" class="item-field">
           <span>{{ field.label }}</span>
           <input
             v-model.trim="form.metadata[field.key]"
@@ -165,36 +165,16 @@
             :placeholder="field.placeholder"
           />
         </label>
-
-        <div v-if="marketReferenceFields.length" class="item-field item-field--section item-field--market-section">
-          <p>Fiche source</p>
-          <span>Optionnel. Colle l'URL Amazon, eBay ou autre fiche produit de reference.</span>
-        </div>
-
-        <label
-          v-for="field in marketReferenceFields"
-          :key="field.key"
-          class="item-field item-field--market"
-        >
-          <span>{{ field.label }}</span>
-          <input
-            v-model.trim="form.metadata[field.key]"
-            type="url"
-            inputmode="url"
-            autocomplete="off"
-            :placeholder="field.placeholder"
-          />
-        </label>
       </template>
 
       <div v-if="quantityEnabled && showInlineDetails" class="item-field item-field--quantity">
-        <span>Quantite</span>
+        <span>Quantité</span>
         <div class="quantity-stepper">
           <button
             type="button"
             class="quantity-button"
             :disabled="Number(form.quantity) <= 1"
-            aria-label="Diminuer la quantite"
+            aria-label="Diminuer la quantité"
             @click="decreaseQuantity"
           >
             <Minus class="h-4 w-4" aria-hidden="true" />
@@ -207,14 +187,14 @@
             max="50"
             step="1"
             required
-            aria-label="Quantite"
+            aria-label="Quantité"
             @blur="setQuantity(form.quantity)"
           />
           <button
             type="button"
             class="quantity-button"
             :disabled="Number(form.quantity) >= 50"
-            aria-label="Augmenter la quantite"
+            aria-label="Augmenter la quantité"
             @click="increaseQuantity"
           >
             <Plus class="h-4 w-4" aria-hidden="true" />
@@ -329,12 +309,6 @@ const isQuickSurface = computed(() => props.surface === 'quick')
 const showInlineDetails = computed(() => showDetails.value)
 const mainCategoryAliases = computed(() => buildItemCategoryAliases(categoryLabels.value))
 const metadataFields = computed(() => METADATA_FIELDS[form.value.type] || [])
-const marketReferenceFields = computed(() =>
-  metadataFields.value.filter((field) => field.key === 'marketUrl'),
-)
-const coreMetadataFields = computed(() =>
-  metadataFields.value.filter((field) => field.key !== 'marketUrl'),
-)
 const currentTypeLabel = computed(() => itemTypeLabel(form.value.type, categoryLabels.value))
 
 const suggestedFromHistory = computed(() => {
@@ -745,30 +719,30 @@ function increaseQuantity() {
 
 function validate() {
   const today = toYmdLocal(new Date())
-  if (!form.value.type) return 'Choisis une categorie.'
+  if (!form.value.type) return 'Choisis une catégorie.'
   if (!form.value.nomItem.trim()) return "Le nom de l'item est obligatoire."
   const retail = numberOrNull(form.value.prixRetail)
   if (retail === null) return "Le prix d'achat est obligatoire."
-  if (retail < 0) return "Le prix d'achat doit etre positif."
+  if (retail < 0) return 'Le prix d’achat doit être positif.'
   const resell = numberOrNull(form.value.prixResell)
-  if (resell !== null && resell < 0) return 'Le prix de vente doit etre positif.'
+  if (resell !== null && resell < 0) return 'Le prix de vente doit être positif.'
   if (resell !== null && !form.value.dateVente) {
     return 'Ajoute une date de vente si tu saisis un prix de revente.'
   }
   if (props.quantityEnabled) {
     const quantity = Number(form.value.quantity)
     if (!Number.isInteger(quantity) || quantity < 1 || quantity > 50) {
-      return 'La quantite doit etre comprise entre 1 et 50.'
+      return 'La quantité doit être comprise entre 1 et 50.'
     }
   }
   if (form.value.dateAchat && form.value.dateAchat > today) {
-    return "La date d'achat ne peut pas etre apres aujourd'hui."
+    return 'La date d’achat ne peut pas être après aujourd’hui.'
   }
   if (form.value.dateVente && form.value.dateVente > today) {
-    return "La date de vente ne peut pas etre apres aujourd'hui."
+    return 'La date de vente ne peut pas être après aujourd’hui.'
   }
   if (form.value.dateAchat && form.value.dateVente && form.value.dateVente < form.value.dateAchat) {
-    return "La date de vente doit etre apres la date d'achat."
+    return 'La date de vente doit être après la date d’achat.'
   }
   return ''
 }
@@ -912,14 +886,6 @@ defineExpose({
 .item-field--grouping.is-inactive {
   visibility: hidden;
   pointer-events: none;
-}
-
-.item-field--market-section {
-  grid-column: span 12;
-}
-
-.item-field--market {
-  grid-column: span 6;
 }
 
 .item-field--notes,

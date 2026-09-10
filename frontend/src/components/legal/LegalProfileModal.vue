@@ -69,7 +69,7 @@
           </label>
 
           <label class="legal-profile-field">
-            <span>Periodicite URSSAF</span>
+            <span>Périodicité URSSAF</span>
             <select v-model="form.declarationFrequency">
               <option value="MONTHLY">Mensuelle</option>
               <option value="QUARTERLY">Trimestrielle</option>

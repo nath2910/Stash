@@ -97,7 +97,7 @@ onMounted(async () => {
     auth.setAuth({ user: me, token })
     await navigateAfterSso(resolvePostAuthTarget(me))
   } catch (e) {
-    console.error('Erreur /auth/me apres SSO', e)
+    console.error('Erreur /auth/me après SSO', e)
     auth.logout()
     router.replace({ name: 'auth', query: { mode: 'login' } })
     return

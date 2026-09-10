@@ -34,7 +34,7 @@
       <span class="home-empty-state__icon" aria-hidden="true">+</span>
       <div class="home-empty-state__copy">
         <strong>Aucune vente enregistree pour l'instant.</strong>
-        <span>Ajoute un premier item pour lancer les KPI de l'accueil.</span>
+        <span>Ajoute un premier item pour lancer les KPI de l’accueil.</span>
       </div>
       <button type="button" class="home-empty-state__action" @click="$emit('add-requested')">
         Ajouter une vente

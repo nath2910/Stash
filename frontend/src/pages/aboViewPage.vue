@@ -23,7 +23,7 @@
             <p class="text-xs uppercase tracking-[0.32em] text-emerald-200/80">Abonnement</p>
             <h1 class="text-3xl font-semibold text-white sm:text-4xl">Mon abonnement</h1>
             <p class="text-sm text-slate-300">
-              Resume rapide de ton offre actuelle et acces au portail Stripe.
+              Résumé rapide de ton offre actuelle et accès au portail Stripe.
             </p>
             <div class="flex flex-wrap items-center gap-2 text-xs">
               <span
@@ -81,7 +81,7 @@
         <div class="rounded-2xl border border-slate-800/80 bg-slate-900/70 p-4 space-y-1">
           <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Support</p>
           <p class="text-lg font-semibold text-white">Discord + email</p>
-          <p class="text-sm text-slate-400">Role Premium applique automatiquement apres lien.</p>
+          <p class="text-sm text-slate-400">Rôle Premium appliqué automatiquement après liaison.</p>
         </div>
       </section>
 
@@ -105,7 +105,7 @@
             :disabled="portalBusy || !canOpenPortal"
             @click="openPortal"
           >
-            Telecharger mes factures
+            Télécharger mes factures
           </button>
         </div>
         <button
@@ -162,7 +162,7 @@ const statusMeta = computed(() => {
     case 'active':
       return {
         label: 'Actif',
-        note: 'Acces total debloque.',
+        note: 'Accès total débloqué.',
         badge: 'border-emerald-300/30 bg-emerald-300/10 text-emerald-100',
         dot: 'bg-emerald-300',
       }
@@ -175,7 +175,7 @@ const statusMeta = computed(() => {
       }
     case 'canceled':
       return {
-        label: 'Annule',
+        label: 'Annulé',
         note: 'Relance un checkout pour reactiver.',
         badge: 'border-red-300/40 bg-red-300/10 text-red-100',
         dot: 'bg-red-300',

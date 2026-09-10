@@ -19,7 +19,7 @@
   >
     <div v-if="showPeriodChip" class="mt-0.5 pb-0.5">
       <div class="period-chip">
-        <span class="period-label">Periode</span>
+        <span class="period-label">Période</span>
         <span class="period-value">{{ periodText }}</span>
       </div>
     </div>
@@ -40,7 +40,7 @@
       </div>
     </div>
     <div v-else-if="!loading && !error && !topItems.length" class="margin-empty">
-      Aucun article sur la periode.
+      Aucun article sur la période.
     </div>
   </KpiCard>
 </template>

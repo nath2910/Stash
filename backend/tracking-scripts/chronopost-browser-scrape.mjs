@@ -55,7 +55,7 @@ try {
         document.querySelector('.ch-suivi-colis-light-info')
           || document.querySelector('tr.toggleElmt')
           || document.body?.innerText?.includes('En cours d')
-          || document.body?.innerText?.includes('LivrÃ©')
+          || document.body?.innerText?.includes('Livré')
           || document.body?.innerText?.includes('Pris en charge'),
       )
     },

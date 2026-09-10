@@ -5,7 +5,7 @@ const NOTIFICATION_DOMAINS = {
   },
   subscription: {
     label: 'Abonnement',
-    description: 'Facturation et acces',
+    description: 'Facturation et accès',
   },
   administrative: {
     label: 'Administratif',
@@ -45,11 +45,11 @@ export function getNotificationDomainMeta(notification = {}) {
 export function getNotificationTypeLabel(notification = {}) {
   const type = String(notification?.type || '').toUpperCase()
 
-  if (type === 'SUBSCRIPTION_EXPIRING') return 'Echeance'
+  if (type === 'SUBSCRIPTION_EXPIRING') return 'Échéance'
   if (type === 'STOCK_AGING') return 'Stock dormant'
   if (type === 'ADMIN_PROFILE') return 'Profil'
   if (type === 'ADMIN_DEADLINE') return 'Rappel'
-  if (type === 'ADMIN_DATA') return 'Controle'
+  if (type === 'ADMIN_DATA') return 'Contrôle'
   if (type === 'ADMIN_INVOICES') return 'Factures'
 
   const domain = getNotificationDomain(notification)

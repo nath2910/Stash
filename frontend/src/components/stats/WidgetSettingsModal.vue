@@ -287,7 +287,7 @@ const TEXT_FIELD_ORDER = {
 }
 
 const SECTION_ORDER = {
-  Donnees: 0,
+  Données: 0,
   Filtres: 1,
   Apparence: 2,
   Comportement: 3,

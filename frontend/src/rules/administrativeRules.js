@@ -105,7 +105,7 @@ export function getDeclarationSummary(profile = {}, summary = {}, period = {}) {
     title: titleForProfile(adminProfile, period),
     amountLabel: adminProfile.family === 'micro' ? 'CA encaisse a declarer' : 'CA encaisse',
     amount: revenue,
-    resultLabel: adminProfile.family === 'company' ? 'Resultat estime' : 'Benefice estime',
+    resultLabel: adminProfile.family === 'company' ? 'Résultat estimé' : 'Bénéfice estimé',
     estimatedResult: revenue - purchases,
     saleCount,
     status: blockedCount > 0 ? 'incomplete' : saleCount > 0 ? 'ready' : 'pending',
@@ -118,7 +118,7 @@ export function getDeclarationFields(profile = {}, summary = {}, period = {}) {
   const revenue = amount(summary?.periodRevenue)
   const purchases = amount(summary?.periodPurchaseTotal)
   const fields = [
-    field('period', 'Periode', period.label || '-', period.label || ''),
+    field('period', 'Période', period.label || '-', period.label || ''),
     field('revenue', 'CA encaisse', formatMoney(revenue), formatAmountForCopy(revenue)),
     field('included-sales', 'Ventes incluses', formatNumber(summary?.periodSaleCount), String(count(summary?.periodSaleCount))),
   ]
@@ -131,7 +131,7 @@ export function getDeclarationFields(profile = {}, summary = {}, period = {}) {
   } else if (adminProfile.family === 'company') {
     fields.push(
       field('purchases', 'Achats rattaches', formatMoney(purchases), formatAmountForCopy(purchases)),
-      field('estimated-result', 'Resultat estime', formatMoney(revenue - purchases), formatAmountForCopy(revenue - purchases)),
+      field('estimated-result', 'Résultat estimé', formatMoney(revenue - purchases), formatAmountForCopy(revenue - purchases)),
       field('vat', 'TVA', vatPreparationLabel(normalized), ''),
     )
   }
@@ -182,7 +182,7 @@ export function getBlockingIssues(profile = {}, summary = {}, period = {}) {
   }
 
   if ((adminProfile.family === 'micro' || adminProfile.family === 'company') && missingInvoice > 0) {
-    issues.push(issue('missing-invoices', 'warning', `${formatNumber(missingInvoice)} factures manquantes`, 'Ces ventes encaissees n ont pas encore de facture rattachee.', 'Generer les factures', 'invoices'))
+    issues.push(issue('missing-invoices', 'warning', `${formatNumber(missingInvoice)} factures manquantes`, 'Ces ventes encaissées n’ont pas encore de facture rattachée.', 'Générer les factures', 'invoices'))
   }
 
   if (adminProfile.family === 'company' && normalized.vatRegime === 'unknown') {
@@ -190,11 +190,11 @@ export function getBlockingIssues(profile = {}, summary = {}, period = {}) {
   }
 
   if (!count(summary?.periodSaleCount) && !issues.length) {
-    issues.push(issue('no-sales', 'info', 'Periode sans vente exploitable', 'Aucune vente exploitable n est retenue sur cette periode.', 'Verifier la periode', 'period'))
+    issues.push(issue('no-sales', 'info', 'Période sans vente exploitable', 'Aucune vente exploitable n’est retenue sur cette période.', 'Vérifier la période', 'period'))
   }
 
   if (period?.start && period?.end && period.start > period.end) {
-    issues.push(issue('period-range', 'danger', 'Periode invalide', 'La periode affichee est incoherente.', 'Changer la periode', 'period'))
+    issues.push(issue('period-range', 'danger', 'Période invalide', 'La période affichée est incohérente.', 'Changer la période', 'period'))
   }
 
   return issues
@@ -212,14 +212,14 @@ export function getDocumentRows(profile = {}, summary = {}, period = {}, documen
     addDocument(rows, documentMap, 'receipts-register', 'Livre des recettes', 'PDF', true)
     addDocument(rows, documentMap, 'purchases-register', 'Registre des achats', 'PDF', false)
     rows.push(csvRow())
-    addDocument(rows, documentMap, 'fiscal-summary', 'Recap annuel 2042-C-PRO', 'PDF', false, String(period.year || ''))
+    addDocument(rows, documentMap, 'fiscal-summary', 'Récapitulatif annuel 2042-C-PRO', 'PDF', false, String(period.year || ''))
   } else if (adminProfile.family === 'company') {
     rows.push(csvRow())
     addDocument(rows, documentMap, 'receipts-register', 'Registre ventes', 'PDF', true)
     addDocument(rows, documentMap, 'purchases-register', 'Registre achats', 'PDF', false)
-    addDocument(rows, documentMap, 'fiscal-summary', 'Recap resultat annuel', 'PDF', false, String(period.year || ''))
+    addDocument(rows, documentMap, 'fiscal-summary', 'Récapitulatif du résultat annuel', 'PDF', false, String(period.year || ''))
   } else {
-    addDocument(rows, documentMap, 'receipts-register', 'Recap ventes', 'PDF', false)
+    addDocument(rows, documentMap, 'receipts-register', 'Récapitulatif des ventes', 'PDF', false)
   }
 
   return rows.map((row) => {
@@ -231,7 +231,7 @@ export function getDocumentRows(profile = {}, summary = {}, period = {}, documen
       lines: linesForDocument(row.id, summary),
       generatedAt: record?.generatedAt || record?.createdAt || '',
       status: disabled ? 'data_missing' : record ? 'generated' : 'regenerable',
-      statusLabel: disabled ? 'Donnees manquantes' : record ? 'Document genere' : 'A generer',
+      statusLabel: disabled ? 'Données manquantes' : record ? 'Document généré' : 'À générer',
       disabled,
       missingReason: disabled ? 'Corriger les ventes bloquees avant generation.' : '',
     }
@@ -250,22 +250,22 @@ export function getAvailableActions(profile = {}, summary = {}, period = {}, doc
 
   if (adminProfile.family === 'micro') {
     if (!hasHardBlockers) {
-      actions.push(action('prepare-urssaf', 'Preparer URSSAF', 'tab', 'to_verify', { primary: true }))
+      actions.push(action('prepare-urssaf', 'Préparer la déclaration URSSAF', 'tab', 'to_verify', { primary: true }))
       actions.push(action('copy-revenue', 'Copier CA encaisse', 'copy', 'to_verify', { copyKey: 'amount' }))
     }
     if (documentIds.has('urssaf-summary')) {
-      actions.push(action('urssaf-summary', 'Generer fiche URSSAF', 'document', hasHardBlockers ? 'incomplete' : 'to_verify', { documentType: 'urssaf-summary', disabled: hasHardBlockers }))
+      actions.push(action('urssaf-summary', 'Générer la fiche URSSAF', 'document', hasHardBlockers ? 'incomplete' : 'to_verify', { documentType: 'urssaf-summary', disabled: hasHardBlockers }))
     }
-    actions.push(action('accounting-export', 'Generer export comptable', 'export', hasHardBlockers ? 'incomplete' : 'to_verify', { documentType: 'accounting-export-csv', disabled: hasHardBlockers }))
+    actions.push(action('accounting-export', 'Générer l’export comptable', 'export', hasHardBlockers ? 'incomplete' : 'to_verify', { documentType: 'accounting-export-csv', disabled: hasHardBlockers }))
   } else if (adminProfile.family === 'company') {
     if (!hasHardBlockers) {
-      actions.push(action('accounting-export', 'Generer export comptable', 'export', 'to_verify', { documentType: 'accounting-export-csv', primary: true }))
+      actions.push(action('accounting-export', 'Générer l’export comptable', 'export', 'to_verify', { documentType: 'accounting-export-csv', primary: true }))
     }
     if (VAT_ACTIVE_REGIMES.has(normalizeAdministrativeProfile(profile).vatRegime)) {
-      actions.push(action('prepare-vat', 'Preparer TVA', 'tab', 'to_verify'))
+      actions.push(action('prepare-vat', 'Préparer la TVA', 'tab', 'to_verify'))
     }
   } else if (documentIds.has('receipts-register')) {
-    actions.push(action('personal-sales-export', 'Export recap ventes', 'document', 'to_verify', { documentType: 'receipts-register' }))
+    actions.push(action('personal-sales-export', 'Exporter le récapitulatif des ventes', 'document', 'to_verify', { documentType: 'receipts-register' }))
   }
 
   return actions
@@ -280,8 +280,8 @@ export function getAdministrativeIndicators(profile = {}, summary = {}, period =
     indicator(
       'overall-status',
       'Statut dossier',
-      hardCount ? 'Bloque' : warningCount ? 'A surveiller' : 'OK',
-      hardCount ? `${formatNumber(hardCount)} blocage(s) a corriger.` : warningCount ? `${formatNumber(warningCount)} point(s) a surveiller.` : 'Aucun blocage detecte.',
+      hardCount ? 'Bloqué' : warningCount ? 'À surveiller' : 'OK',
+      hardCount ? `${formatNumber(hardCount)} blocage(s) à corriger.` : warningCount ? `${formatNumber(warningCount)} point(s) à surveiller.` : 'Aucun blocage détecté.',
       hardCount ? 'incomplete' : warningCount ? 'to_verify' : 'complete',
     ),
   ]
@@ -310,13 +310,13 @@ export function getLegalAutopilotPlan(profile = {}, summary = {}, period = {}, d
   return {
     title: legalScopeTitle(adminProfile),
     subtitle: legalScopeSubtitle(adminProfile),
-    promise: 'MyStash prepare les montants, controles et documents. La validation officielle reste manuelle.',
+    promise: 'Stash prépare les montants, les contrôles et les documents. La validation officielle reste manuelle.',
     officialTarget,
     steps: [
-      autopilotStep('collect', 'Recuperer les donnees', 'Ventes, achats et pieces disponibles.', 'complete', 'MyStash'),
-      autopilotStep('control', 'Controler les blocages', 'Dates, montants, profil et documents.', getBlockingIssues(profile, summary, period).some((item) => item.severity === 'danger') ? 'incomplete' : 'complete', 'MyStash'),
-      autopilotStep('calculate', 'Calculer les montants', `${formatMoney(summary?.periodRevenue)} de CA encaisse.`, 'complete', 'MyStash'),
-      autopilotStep('documents', 'Generer le dossier legal', `${formatNumber(documents?.length || 0)} document(s) disponible(s).`, 'to_verify', 'MyStash'),
+      autopilotStep('collect', 'Récupérer les données', 'Ventes, achats et pièces disponibles.', 'complete', 'Stash'),
+      autopilotStep('control', 'Contrôler les blocages', 'Dates, montants, profil et documents.', getBlockingIssues(profile, summary, period).some((item) => item.severity === 'danger') ? 'incomplete' : 'complete', 'Stash'),
+      autopilotStep('calculate', 'Calculer les montants', `${formatMoney(summary?.periodRevenue)} de CA encaissé.`, 'complete', 'Stash'),
+      autopilotStep('documents', 'Générer le dossier légal', `${formatNumber(documents?.length || 0)} document(s) disponible(s).`, 'to_verify', 'Stash'),
       autopilotStep('official', 'Valider sur le portail officiel', officialTarget.action, adminProfile.family === 'personal' ? 'not_applicable' : 'pending', 'Utilisateur'),
     ],
   }
@@ -340,7 +340,7 @@ function addDocument(rows, documentMap, id, fallbackName, fallbackFormat, requir
     period,
     kind: 'document',
     documentType: id,
-    actionLabel: descriptor?.format === 'CSV' ? 'Telecharger CSV' : 'Generer PDF',
+    actionLabel: descriptor?.format === 'CSV' ? 'Télécharger le CSV' : 'Générer le PDF',
     requiresCleanData,
   })
 }
@@ -353,7 +353,7 @@ function csvRow() {
     type: 'CSV',
     kind: 'export',
     documentType: 'accounting-export-csv',
-    actionLabel: 'Telecharger CSV',
+    actionLabel: 'Télécharger le CSV',
     requiresCleanData: true,
   }
 }
@@ -378,7 +378,7 @@ function urssafReminderIndicator(period, todayValue, records) {
     'urssaf-reminder',
     'Rappel URSSAF',
     done ? 'Fait' : diffDays >= 0 ? `J-${diffDays}` : `J+${Math.abs(diffDays)}`,
-    done ? 'Declaration marquee comme faite.' : `Echeance estimee au ${formatDate(deadline)}.`,
+    done ? 'Déclaration marquée comme faite.' : `Échéance estimée au ${formatDate(deadline)}.`,
     done ? 'complete' : diffDays < 0 ? 'incomplete' : 'to_verify',
   )
 }
@@ -423,14 +423,14 @@ function officialTargetForProfile(adminProfile) {
 }
 
 function legalScopeTitle(adminProfile) {
-  if (adminProfile.family === 'micro') return 'Autopilote legal micro-entreprise'
-  if (adminProfile.family === 'company') return 'Autopilote legal societe'
+  if (adminProfile.family === 'micro') return 'Assistant légal micro-entreprise'
+  if (adminProfile.family === 'company') return 'Assistant légal société'
   if (adminProfile.family === 'regularization') return 'Autopilote de regularisation'
   return 'Autopilote suivi personnel'
 }
 
 function legalScopeSubtitle(adminProfile) {
-  if (adminProfile.family === 'micro') return 'URSSAF, livre des recettes, registre achats et recap annuel.'
+  if (adminProfile.family === 'micro') return 'URSSAF, livre des recettes, registre des achats et récapitulatif annuel.'
   if (adminProfile.family === 'company') return 'Comptabilite, TVA, registres et export comptable.'
   return 'Suivi des ventes et recapitulatif exportable.'
 }

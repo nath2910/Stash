@@ -295,11 +295,11 @@
         "
       >
         <span class="font-jetbrains-mono">&copy; {{ new Date().getFullYear() }} - Stash</span>
-        <RouterLink to="/a-propos" class="hover:underline">A propos</RouterLink>
-        <RouterLink to="/confidentialite" class="hover:underline">Confidentialite</RouterLink>
+        <RouterLink to="/a-propos" class="hover:underline">À propos</RouterLink>
+        <RouterLink to="/confidentialite" class="hover:underline">Confidentialité</RouterLink>
         <RouterLink to="/legal" class="hover:underline">Mentions légales</RouterLink>
-        <RouterLink to="/legal/cgv" class="hover:underline">CGV</RouterLink>
-        <a href="mailto:nathantalvasson@gmail.com" class="hover:underline">contact</a>
+        <RouterLink to="/legal/cgu" class="hover:underline">Conditions d’utilisation</RouterLink>
+        <a href="mailto:nathantalvasson@gmail.com" class="hover:underline">Contact</a>
       </div>
     </footer>
 
@@ -401,7 +401,7 @@ const isStats = computed(() => route.path === '/stats')
 const isStatsLight = computed(() => isStats.value)
 const isGestionRoute = computed(() => route.path === '/gestion')
 const isLightAppShell = computed(() =>
-  ['/', '/gestion', '/a-propos', '/confidentialite', '/privacy', '/legal', '/legal/cgv', '/cookies'].includes(route.path),
+  ['/', '/gestion', '/a-propos', '/confidentialite', '/privacy', '/legal', '/legal/cgu', '/legal/cgv', '/cookies'].includes(route.path),
 )
 const isLightChrome = computed(() =>
   ![
@@ -514,7 +514,7 @@ const QUICK_INTRO_CONFIG = {
     description:
       'Le canvas te laisse composer des widgets ou appliquer un template complet pour analyser ventes, marges et stock.',
     detail: 'Commence par un template si tu veux une lecture propre tout de suite.',
-    points: ['Templates prets a l emploi', 'Widgets modulaires', 'Periodes et profils comparables'],
+    points: ['Modèles prêts à l’emploi', 'Widgets modulaires', 'Périodes et profils comparables'],
   },
   'gestion-inventory': {
     kicker: 'Quick intro',
@@ -534,27 +534,19 @@ const QUICK_INTRO_CONFIG = {
   },
   'gestion-admin': {
     kicker: 'Quick intro',
-    title: 'Administratif cadre le dossier legal',
+    title: 'L’administratif structure le dossier légal',
     description:
-      'Cet onglet sert a completer le profil, verifier les obligations et generer les documents utiles.',
+      'Cet onglet sert à compléter le profil, vérifier les obligations et générer les documents utiles.',
     detail: 'Le rappel profil incomplet renvoie ici tant que les informations essentielles manquent.',
-    points: ['Profil legal', 'Declarations', 'Documents et controles'],
+    points: ['Profil légal', 'Déclarations', 'Documents et contrôles'],
   },
   account: {
     kicker: 'Quick intro',
-    title: 'Compte gere securite et profil legal',
+    title: 'Compte : sécurité et profil légal',
     description:
-      'Tu retrouves ici les informations du compte, le mot de passe et l acces vers le module administratif.',
+      'Tu retrouves ici les informations du compte, le mot de passe et l’accès au module administratif.',
     detail: 'C est la page de maintenance du compte, pas la page de pilotage.',
-    points: ['Infos utilisateur', 'Mot de passe', 'Etat du profil legal'],
-  },
-  abo: {
-    kicker: 'Quick intro',
-    title: 'Abonnement debloque le produit complet',
-    description:
-      'Cette page explique ce que Premium active et te laisse lancer le checkout en un clic.',
-    detail: 'Aucun centre de notifications ne s affiche ici pour garder le parcours de paiement propre.',
-    points: ['Activation Stripe', 'Avantages Premium', 'Conditions de gestion'],
+    points: ['Informations utilisateur', 'Mot de passe', 'État du profil légal'],
   },
   'abo-view': {
     kicker: 'Quick intro',
@@ -631,8 +623,6 @@ const activeQuickIntroKey = computed(() => {
       return 'gestion-inventory'
     case 'account':
       return 'account'
-    case 'abo':
-      return 'abo'
     case 'abo-view':
       return 'abo-view'
     default:

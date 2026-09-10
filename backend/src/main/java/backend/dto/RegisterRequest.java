@@ -2,6 +2,7 @@ package backend.dto;
 
 import backend.security.PasswordPolicy;
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
@@ -20,6 +21,9 @@ public class RegisterRequest {
     @NotBlank
     @Size(min = PasswordPolicy.MIN_LENGTH, max = PasswordPolicy.MAX_LENGTH)
     private String password;
+
+    @AssertTrue(message = "Les conditions d’utilisation doivent être acceptées")
+    private Boolean acceptTerms;
 
     public RegisterRequest() {
     }
@@ -55,5 +59,13 @@ public class RegisterRequest {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public Boolean getAcceptTerms() {
+        return acceptTerms;
+    }
+
+    public void setAcceptTerms(Boolean acceptTerms) {
+        this.acceptTerms = acceptTerms;
     }
 }

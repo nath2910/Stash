@@ -228,8 +228,8 @@
               :class="{ 'is-active': groupDatePopoverOpen }"
               :disabled="groupDateCompatibleCount === 0"
               :aria-expanded="groupDatePopoverOpen"
-              title="Regler la periode des widgets selectionnes"
-              aria-label="Regler la periode des widgets selectionnes"
+              title="Régler la période des widgets sélectionnés"
+              aria-label="Régler la période des widgets sélectionnés"
               @click.stop="toggleGroupDatePopover"
             >
               <CalendarRange class="h-4 w-4" />
@@ -239,12 +239,12 @@
               v-if="groupDatePopoverOpen"
               class="group-selection-date-popover"
               role="dialog"
-              aria-label="Periode de la selection"
+              aria-label="Période de la sélection"
               @pointerdown.stop
               @click.stop
             >
               <div class="group-selection-date-popover__head">
-                <strong>Periode</strong>
+                <strong>Période</strong>
                 <span>{{ groupDateCompatibleCount }} compatible{{ groupDateCompatibleCount > 1 ? 's' : '' }}</span>
               </div>
               <div class="group-selection-date-popover__fields">
@@ -324,9 +324,9 @@
           @click.stop
         >
           <div class="canvas-empty-guide__kicker">Canvas libre</div>
-          <h2 class="canvas-empty-guide__title">Ton dashboard est pret a etre construit</h2>
+          <h2 class="canvas-empty-guide__title">Ton dashboard est prêt à être construit</h2>
           <p class="canvas-empty-guide__lead">
-            Commence par un template pour poser une base complete, puis ajuste la periode et ajoute
+            Commence par un modèle pour poser une base complète, puis ajuste la période et ajoute
             seulement les widgets utiles a ton profil.
           </p>
 
@@ -345,7 +345,7 @@
                 <CalendarRange class="h-4 w-4" />
               </span>
               <div class="canvas-empty-guide-step__content">
-                <strong>2. Regle la periode du profil</strong>
+                <strong>2. Règle la période du profil</strong>
                 <p>Affiche la bonne lecture en passant d'un suivi ponctuel a une vue plus large.</p>
               </div>
             </div>
@@ -461,9 +461,9 @@
           type="button"
           class="template-rail__meta-btn"
           :class="{ 'is-active': railDatePickerOpen }"
-          :data-tooltip="'Periode'"
-          title="Periode"
-          aria-label="Periode"
+          :data-tooltip="'Période'"
+          title="Période"
+          aria-label="Période"
           @click.stop="toggleRailDatePicker"
         >
           <CalendarRange class="h-4 w-4" />
@@ -552,7 +552,7 @@
         class="template-rail-date-popover"
         @click.stop
       >
-        <div class="template-rail-date-popover__title">Periode</div>
+        <div class="template-rail-date-popover__title">Période</div>
 
         <div class="template-rail-date-popover__inputs">
           <div class="template-rail-date-field">
@@ -1888,7 +1888,7 @@ function normalizeLayout(raw: unknown): Widget[] | null {
       avgDaysToSell: 'Délai moyen',
       goalProgress: 'Goal progress',
       grossRevenue: "Chiffre d'affaires",
-      netProfit: 'Benefice net',
+      netProfit: 'Bénéfice net',
       varianceToTarget: 'Variance to target',
       sellThrough: 'Sell-through',
       deathPile: 'Death pile',
@@ -2353,7 +2353,7 @@ const paletteGroups = computed(() => {
       type: w.type,
       title: w.title,
       icon: w.icon,
-      help: w.help ?? 'Ajoute ce widget au canvas',
+      help: w.help ?? 'Ajoute ce widget au tableau de bord',
       forms: w.forms ?? [],
       formPicker: w.formPicker !== false,
       selection: getWidgetSelectionMeta(w.type, w.forms ?? []),
@@ -2879,7 +2879,7 @@ function inferSettingsSection(key: string) {
       'secondaryLimit',
     ].includes(key)
   ) {
-    return 'Donnees'
+    return 'Données'
   }
   if (
     [
@@ -2913,8 +2913,8 @@ function buildSettingsFieldsForWidget(
   const rangeFields =
     !hideRange && dateMode === 'range'
       ? [
-          { key: 'from', label: 'Du', type: 'date', hideWhenGlobalRange: true, section: 'Donnees' },
-          { key: 'to', label: 'Au', type: 'date', hideWhenGlobalRange: true, section: 'Donnees' },
+          { key: 'from', label: 'Du', type: 'date', hideWhenGlobalRange: true, section: 'Données' },
+          { key: 'to', label: 'Au', type: 'date', hideWhenGlobalRange: true, section: 'Données' },
         ]
       : []
 
@@ -2943,7 +2943,7 @@ function buildSettingsFieldsForWidget(
           dependsOn: 'types',
           requiresAny: 'types',
           placeholder: 'Toutes sous-categories',
-          lockedHint: "Choisis d'abord une categorie majeure.",
+          lockedHint: 'Choisis d’abord une catégorie principale.',
           section: 'Filtres',
         },
       ]
@@ -2954,10 +2954,10 @@ function buildSettingsFieldsForWidget(
       ? [
           {
             key: 'useGlobalRange',
-            label: 'Utiliser periode globale',
+            label: 'Utiliser la période globale',
             type: 'toggle',
             hint: 'Active par defaut',
-            section: 'Donnees',
+            section: 'Données',
           },
         ]
       : []),

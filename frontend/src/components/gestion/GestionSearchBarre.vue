@@ -15,7 +15,7 @@
         autocomplete="off"
         autocapitalize="none"
         spellcheck="false"
-        placeholder="Rechercher nom, categorie, tag, SKU..."
+        placeholder="Rechercher un nom, une catégorie, un tag, un SKU…"
         class="gestion-search-input min-w-0 flex-1 border-0 bg-transparent text-[15px] font-semibold leading-none text-slate-950 placeholder:text-slate-400 focus:outline-none focus:ring-0 sm:text-[13px]"
       />
 

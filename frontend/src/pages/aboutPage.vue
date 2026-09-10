@@ -2,20 +2,20 @@
   <section class="about-page w-full">
     <div class="about-hero">
       <div class="about-copy">
-        <p class="about-kicker">A propos</p>
-        <h1>Stash aide les revendeurs a garder une gestion claire, rapide et exploitable.</h1>
+        <p class="about-kicker">À propos</p>
+        <h1>Stash aide les revendeurs à garder une gestion claire, rapide et exploitable.</h1>
         <p class="about-lead">
-          L'app rassemble le stock, les ventes, l'abonnement et l'administratif dans une interface
-          simple a piloter au quotidien.
+          L’application rassemble le stock, les ventes, l’abonnement et l’administratif dans une
+          interface simple à piloter au quotidien.
         </p>
       </div>
 
       <div class="about-highlight-card">
-        <span>Ce que l'app doit faire</span>
+        <span>Ce que l’application doit faire</span>
         <strong>Moins de friction, plus de suivi.</strong>
         <p>
           Des rappels utiles, un dossier propre, et assez de contexte pour agir sans transformer
-          chaque ecran en usine a gaz.
+          chaque écran en usine à gaz.
         </p>
       </div>
     </div>
@@ -25,16 +25,16 @@
         <p class="about-card-kicker">Mission</p>
         <h2>Rendre la revente plus lisible</h2>
         <p>
-          Suivre le stock, les marges, les ventes et les pieces administratives sans multiplier les
-          outils ni perdre du temps sur des details repetitifs.
+          Suivre le stock, les marges, les ventes et les pièces administratives sans multiplier les
+          outils ni perdre du temps sur des détails répétitifs.
         </p>
       </article>
 
       <article class="about-card">
         <p class="about-card-kicker">Approche</p>
-        <h2>Une app utile avant d'etre demonstrative</h2>
+        <h2>Une application utile avant d’être démonstrative</h2>
         <p>
-          Les rappels, les exports et les controles sont la pour aider a prendre une decision ou a
+          Les rappels, les exports et les contrôles sont là pour aider à prendre une décision ou à
           corriger un dossier, pas pour faire joli.
         </p>
       </article>
@@ -43,7 +43,7 @@
         <p class="about-card-kicker">Protection</p>
         <h2>Cadre et transparence</h2>
         <p>
-          Une page de confidentialite dediee explique les donnees traitees, leur usage, la
+          Une page de confidentialité dédiée explique les données traitées, leur usage, leur
           conservation et les droits utilisateur.
         </p>
       </article>
@@ -54,27 +54,27 @@
         <p class="about-card-kicker">Ce que couvre Stash</p>
         <ul>
           <li>Stock, achats, ventes et recherche rapide.</li>
-          <li>Alertes par domaine: revente, abonnement et administratif.</li>
-          <li>Preparation de dossier admin et acces aux exports utiles.</li>
+          <li>Alertes par domaine : revente, abonnement et administratif.</li>
+          <li>Préparation du dossier administratif et accès aux exports utiles.</li>
         </ul>
       </article>
 
       <article class="about-band-card">
-        <p class="about-card-kicker">A garder en tete</p>
+        <p class="about-card-kicker">À garder en tête</p>
         <ul>
-          <li>L'app aide a preparer, controler et archiver.</li>
-          <li>La validation officielle reste effectuee par l'utilisateur.</li>
-          <li>Le texte legal doit etre relu et adapte avant mise en production publique.</li>
+          <li>L’application aide à préparer, contrôler et exporter les informations utiles.</li>
+          <li>La validation officielle reste effectuée par l’utilisateur.</li>
+          <li>Les outils fournis restent indicatifs : l’utilisateur garde la responsabilité de ses démarches.</li>
         </ul>
       </article>
     </div>
 
     <div class="about-cta">
       <div>
-        <p class="about-card-kicker">Confidentialite</p>
-        <h2>Consultez la page dediee aux donnees et a la protection utilisateur.</h2>
+        <p class="about-card-kicker">Confidentialité</p>
+        <h2>Consultez la page dédiée aux données et à la protection des utilisateurs.</h2>
       </div>
-      <RouterLink to="/confidentialite" class="about-cta-link">Voir la confidentialite</RouterLink>
+      <RouterLink to="/confidentialite" class="about-cta-link">Voir la confidentialité</RouterLink>
     </div>
   </section>
 </template>

@@ -3,6 +3,9 @@ package backend.service;
 import backend.entity.DiscordAllowedGuild;
 import backend.entity.User;
 import backend.repository.DiscordAllowedGuildRepository;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -13,6 +16,7 @@ import org.springframework.web.client.RestTemplate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
@@ -24,11 +28,23 @@ public class DiscordAccessService {
   @Value("${app.discord.bot-token:}")
   private String botToken;
 
-  private final RestTemplate restTemplate = new RestTemplate();
+  private final RestTemplate restTemplate;
   private final DiscordAllowedGuildRepository guildRepo;
+  private final Cache<Long, Boolean> eligibilityCache = Caffeine.newBuilder()
+      .maximumSize(10_000)
+      .expireAfterWrite(Duration.ofMinutes(5))
+      .build();
+  private final Cache<String, List<DiscordAllowedGuild>> allowedGuildsCache = Caffeine.newBuilder()
+      .maximumSize(1)
+      .expireAfterWrite(Duration.ofMinutes(5))
+      .build();
 
-  public DiscordAccessService(DiscordAllowedGuildRepository guildRepo) {
+  public DiscordAccessService(DiscordAllowedGuildRepository guildRepo, RestTemplateBuilder restTemplateBuilder) {
     this.guildRepo = guildRepo;
+    this.restTemplate = restTemplateBuilder
+        .connectTimeout(Duration.ofSeconds(2))
+        .readTimeout(Duration.ofSeconds(3))
+        .build();
   }
 
   public boolean isConfigured() {
@@ -36,8 +52,13 @@ public class DiscordAccessService {
   }
 
   public boolean isEligible(User user) {
+    if (user == null || user.getId() == null) return false;
+    return eligibilityCache.get(user.getId(), ignored -> computeEligibility(user));
+  }
+
+  private boolean computeEligibility(User user) {
     if (!isConfigured()) {
-      log.warn("Discord eligibility: bot token not configured");
+      log.debug("Discord eligibility: bot token not configured");
       return false;
     }
     String discordId = user.getDiscordId();
@@ -46,7 +67,7 @@ public class DiscordAccessService {
       return false;
     }
 
-    List<DiscordAllowedGuild> allowed = guildRepo.findAll();
+    List<DiscordAllowedGuild> allowed = allowedGuildsCache.get("allowed", ignored -> guildRepo.findAll());
     if (allowed.isEmpty()) {
       log.warn("Discord eligibility: no allowed guild configured");
       return false;

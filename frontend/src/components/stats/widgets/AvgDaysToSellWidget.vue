@@ -26,7 +26,7 @@
         <span class="objective-note">delai cible</span>
       </div>
       <div class="period-chip">
-        <span class="period-label">Periode</span>
+        <span class="period-label">Période</span>
         <span class="period-value">{{ fromLabel }} -> {{ toLabel }}</span>
       </div>
     </div>
@@ -96,7 +96,7 @@ const deltaDays = computed(() => {
 const deltaLabel = computed(() => {
   if (deltaDays.value == null) return ''
   const sign = deltaDays.value >= 0 ? '+' : ''
-  return `${sign}${deltaDays.value.toFixed(0)} j vs periode precedente`
+  return `${sign}${deltaDays.value.toFixed(0)} j par rapport à la période précédente`
 })
 const spark = computed(() => series.value.slice(-18).map((p) => p.value))
 const fromLabel = computed(() =>

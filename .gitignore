@@ -30,4 +30,5 @@ Features a ajouter stash.txt
 
 # Local storage for attachments
 uploads/
+tmp/
 .agents/

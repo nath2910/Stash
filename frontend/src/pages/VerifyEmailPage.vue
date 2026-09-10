@@ -106,15 +106,15 @@ const title = computed(() => {
 
 const description = computed(() => {
   if (status.value === 'success') {
-    return 'Top. Ton compte est pret, tu peux te connecter tout de suite.'
+    return 'Ton compte est prêt, tu peux te connecter immédiatement.'
   }
   if (status.value === 'error') {
     return errorKind.value === 'invalid-link'
       ? "Ce lien n'est plus valide. Recommence l'inscription ou demande un nouvel email."
-      : "La verification a echoue a cause d'un probleme serveur. Reessaie plus tard ou demande un nouvel email."
+      : 'La vérification a échoué à cause d’un problème serveur. Réessaie plus tard ou demande un nouvel email.'
   }
   if (token.value) {
-    return 'On verifie ton lien de confirmation. Cela prend quelques secondes.'
+    return 'Nous vérifions ton lien de confirmation. Cela prend quelques secondes.'
   }
   return "On t'a envoye un email avec un lien de confirmation. Clique dessus pour activer ton compte."
 })

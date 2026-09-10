@@ -25,7 +25,7 @@ const payload = await scrapeTrackingPage({
     'colis',
     'courrier',
     'numero',
-    'nÂ°',
+    'n°',
     'envoi',
   ],
   submitButtonHints: [

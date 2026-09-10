@@ -1,6 +1,6 @@
 <template>
   <WidgetCard
-    title="Comparaison periode"
+    title="Comparaison de périodes"
     subtitle="Actuel vs precedent"
     :accent="accent"
     surface="trend"
@@ -21,11 +21,11 @@
       <VChart class="comparison-chart" :option="option" autoresize />
       <div class="comparison-side">
         <div class="comparison-kpi">
-          <span>Periode actuelle - {{ currentPeriodText }}</span>
+          <span>Période actuelle – {{ currentPeriodText }}</span>
           <strong>{{ currentText }}</strong>
         </div>
         <div class="comparison-kpi">
-          <span>Periode precedente - {{ previousPeriodText }}</span>
+          <span>Période précédente – {{ previousPeriodText }}</span>
           <strong>{{ previousText }}</strong>
         </div>
         <div class="comparison-kpi">
@@ -231,7 +231,7 @@ function formatComparisonTooltip(params) {
   const entry = Array.isArray(params) ? params[0] : params
   const index = Number(entry?.dataIndex ?? 0)
   const isCurrent = index === 1
-  const label = isCurrent ? 'Periode actuelle' : 'Periode precedente'
+  const label = isCurrent ? 'Période actuelle' : 'Période précédente'
   const period = isCurrent ? currentPeriodText.value : previousPeriodText.value
   const value = isCurrent ? currentText.value : previousText.value
   const delta =

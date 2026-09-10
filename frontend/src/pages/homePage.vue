@@ -47,18 +47,18 @@
     </teleport>
 
     <section class="home-action-shell" aria-label="Actions rapides">
-      <section v-if="showImportPrompt" class="import-prompt-card" aria-label="Importer des donnees">
+      <section v-if="showImportPrompt" class="import-prompt-card" aria-label="Importer des données">
         <div class="import-prompt-card__copy">
           <p class="import-prompt-card__eyebrow">Demarrage rapide</p>
-          <h2>Importe tes donnees pour remplir l'app plus vite.</h2>
+          <h2>Importe tes données pour remplir l’application plus vite.</h2>
           <p>
-            Si tu as deja un CSV ou un fichier Excel, envoie-le dans Gestion pour creer ton
+            Si tu as déjà un CSV ou un fichier Excel, envoie-le dans Gestion pour créer ton
             inventaire en une fois.
           </p>
         </div>
         <div class="import-prompt-card__actions">
           <button type="button" class="import-prompt-card__primary" @click="goToImportFlow">
-            Importer mes donnees
+            Importer mes données
           </button>
           <button type="button" class="import-prompt-card__secondary" @click="focusQuickAddForm">
             Ajouter a la main
@@ -325,13 +325,13 @@ function resolveQuickAddError(error) {
     ''
   const message = String(rawMessage || '').trim()
   if (!message || message === 'Network Error') {
-    return "Item non ajoute. Verifie la connexion et les champs."
+    return 'Item non ajouté. Vérifie la connexion et les champs.'
   }
   return message
 }
 
 function handleQuickAddValidationError(message) {
-  showQuickAddToast(message || "Item non ajoute. Verifie les champs.", 'error')
+  showQuickAddToast(message || 'Item non ajouté. Vérifie les champs.', 'error')
 }
 
 function openItemModal(item) {
@@ -377,10 +377,10 @@ async function handleQuickAdd({ payload, quantity }) {
     quickAddSuccessKey.value += 1
     showQuickAddToast(
       safeQuantity > 1 && payload?.grouped
-        ? `Groupe cree (${safeQuantity} unites)`
+        ? `Groupe créé (${safeQuantity} unités)`
         : safeQuantity > 1
           ? `${safeQuantity} items ajoutes`
-          : 'Item ajoute',
+          : 'Item ajouté',
     )
   } catch (error) {
     showQuickAddToast(resolveQuickAddError(error), 'error')

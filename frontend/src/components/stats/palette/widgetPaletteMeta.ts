@@ -118,18 +118,6 @@ const META_BY_TYPE: Record<string, WidgetPaletteMeta> = {
       legend: ['0-30', '31-60', '61-90', '91-120', '120+'],
     },
   },
-  activeListings: {
-    tags: ['inventory', 'marketplace'],
-    dataType: 'inventory',
-    preview: {
-      kind: 'kpi',
-      ratio: 0.83,
-      values: [24, 26, 28, 30, 34, 36],
-      label: 'Annonces actives',
-      valueText: '238',
-      deltaText: '+16',
-    },
-  },
   topProfitDrivers: {
     tags: ['ranking', 'drivers'],
     dataType: 'performance',
@@ -195,7 +183,7 @@ const META_BY_TYPE: Record<string, WidgetPaletteMeta> = {
       kind: 'bars',
       values: [38, 46],
       secondaryValues: [41, 43],
-      label: 'Periode',
+      label: 'Période',
       legend: ['N-1', 'N'],
     },
   },
@@ -283,13 +271,13 @@ const META_BY_TYPE: Record<string, WidgetPaletteMeta> = {
 const METRIC_VARIANTS = {
   netProfit: {
     label: 'Bénéfice net',
-    hint: 'Profit net sur la periode',
+    hint: 'Profit net sur la période',
     unit: 'EUR',
     target: 12000,
   },
   grossRevenue: {
     label: "Chiffre d'affaires",
-    hint: 'CA sur la periode',
+    hint: 'CA sur la période',
     unit: 'EUR',
     target: 42000,
   },
@@ -340,7 +328,7 @@ const SELECTION_BY_TYPE: Record<string, WidgetDisplayGroup[]> = {
         {
           key: 'total',
           label: 'Bénéfice net total',
-          hint: 'Total net sur la periode',
+          hint: 'Total net sur la période',
           view: 'number',
           props: { view: 'number', kpiVariant: 'total' },
           widgetTitle: 'Bénéfice net',
@@ -356,7 +344,7 @@ const SELECTION_BY_TYPE: Record<string, WidgetDisplayGroup[]> = {
         {
           key: 'sales',
           label: 'Ventes réalisées',
-          hint: 'Ventes dans la periode',
+          hint: 'Ventes dans la période',
           view: 'number',
           props: { view: 'number', kpiVariant: 'sales' },
           widgetTitle: 'Ventes réalisées',
@@ -388,7 +376,7 @@ const SELECTION_BY_TYPE: Record<string, WidgetDisplayGroup[]> = {
         {
           key: 'total',
           label: "Chiffre d'affaires total",
-          hint: 'Somme du CA sur la periode',
+          hint: 'Somme du CA sur la période',
           view: 'number',
           props: { view: 'number' },
           widgetTitle: "Chiffre d'affaires",
@@ -403,7 +391,7 @@ const SELECTION_BY_TYPE: Record<string, WidgetDisplayGroup[]> = {
         {
           key: 'trend',
           label: "Evolution du chiffre d'affaires",
-          hint: 'Courbe du CA selon la periode',
+          hint: 'Courbe du CA selon la période',
           view: 'line',
           props: { view: 'line' },
           widgetTitle: 'Evolution CA',
@@ -457,21 +445,13 @@ const SELECTION_BY_TYPE: Record<string, WidgetDisplayGroup[]> = {
       ],
     },
   ],
-  activeListings: [
-    {
-      key: 'number',
-      label: 'KPI',
-      hint: 'Stock publie',
-      variants: [{ key: 'count', label: 'Annonces actives', hint: 'Nombre d annonces en ligne' }],
-    },
-  ],
   asp: [
     {
       key: 'number',
       label: 'KPI',
       hint: 'Prix de vente',
       variants: [
-        { key: 'avg', label: 'Prix moyen de vente', hint: 'Prix de vente moyen sur la periode' },
+        { key: 'avg', label: 'Prix moyen de vente', hint: 'Prix de vente moyen sur la période' },
       ],
     },
   ],
@@ -724,7 +704,7 @@ const SELECTION_BY_TYPE: Record<string, WidgetDisplayGroup[]> = {
       label: 'Liste courte',
       hint: 'Classement',
       variants: [
-        { key: 'profit', label: 'Top ventes par benefice', hint: 'Produits les plus rentables' },
+        { key: 'profit', label: 'Top ventes par bénéfice', hint: 'Produits les plus rentables' },
       ],
     },
   ],

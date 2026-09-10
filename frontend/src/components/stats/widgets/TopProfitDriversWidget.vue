@@ -20,14 +20,14 @@
           <span class="tp-pill tp-pill--static">Categories</span>
         </div>
         <div class="period-chip">
-          <span class="period-label">Periode</span>
+          <span class="period-label">Période</span>
           <span class="period-value">{{ fromLabel }} -> {{ toLabel }}</span>
         </div>
       </div>
 
       <div v-if="props.view === 'pie'" class="tp-main">
         <div class="tp-legend">
-          <div v-if="!items.length" class="tp-empty">Aucune donnee sur la periode.</div>
+          <div v-if="!items.length" class="tp-empty">Aucune donnée sur la période.</div>
           <div v-else class="tp-list">
             <div
               v-for="row in rows"
@@ -51,7 +51,7 @@
       <div v-else class="tp-stack">
         <VChart class="tp-chart" :style="chartStyle" :option="option" autoresize />
         <div class="tp-legend">
-          <div v-if="!items.length" class="tp-empty">Aucune donnee sur la periode.</div>
+          <div v-if="!items.length" class="tp-empty">Aucune donnée sur la période.</div>
           <div v-else class="tp-list">
             <div
               v-for="row in rows"

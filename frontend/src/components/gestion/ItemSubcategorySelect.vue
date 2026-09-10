@@ -3,7 +3,7 @@
     <div class="subcategory-field-header">
       <div>
         <label :for="buttonId" class="subcategory-label">
-          Sous-categorie
+          Sous-catégorie
         </label>
       </div>
       <button
@@ -33,7 +33,7 @@
     <div v-if="menuOpen" class="subcategory-menu">
       <div class="max-h-56 overflow-y-auto p-1.5">
         <button type="button" class="subcategory-option is-empty" @click="selectValue('')">
-          <span>Aucune sous-categorie</span>
+          <span>Aucune sous-catégorie</span>
           <Check v-if="!modelValue" class="h-4 w-4" />
         </button>
         <button
@@ -73,7 +73,7 @@
               </p>
               <h3 class="subcategory-manager-title">Sous-categories</h3>
               <p class="subcategory-manager-subtitle">
-                Ajoute les familles de detail qui te servent vraiment pour ce type d'article.
+                Ajoute les familles de détail qui te servent vraiment pour ce type d’article.
               </p>
             </div>
             <button
@@ -92,7 +92,7 @@
                 v-model.trim="draftName"
                 type="text"
                 maxlength="60"
-                placeholder="Nouvelle sous-categorie"
+                placeholder="Nouvelle sous-catégorie"
                 class="subcategory-add-input"
               />
               <button type="submit" class="subcategory-add-button" :disabled="!draftName">
@@ -173,7 +173,7 @@
               v-else
               class="subcategory-empty-state"
             >
-              Aucune sous-categorie definie.
+              Aucune sous-catégorie définie.
             </p>
           </div>
         </section>
@@ -258,8 +258,8 @@ const subcategoryUseCounts = computed(() => {
 })
 const selectedLabel = computed(() =>
   mainCategoryAliases.value.has(normalizeSubcategoryName(props.modelValue).toLocaleLowerCase('fr'))
-    ? 'Choisir une sous-categorie'
-    : props.modelValue || 'Choisir une sous-categorie',
+    ? 'Choisir une sous-catégorie'
+    : props.modelValue || 'Choisir une sous-catégorie',
 )
 
 watch(
@@ -337,12 +337,12 @@ function subcategoryUseCount(item) {
 
 function subcategoryMeta(item) {
   const count = subcategoryUseCount(item)
-  return `Utilisee par ${count} item${count > 1 ? 's' : ''}`
+  return `Utilisée par ${count} item${count > 1 ? 's' : ''}`
 }
 
 function removeTitle(item) {
   const count = subcategoryUseCount(item)
-  if (count) return `Sous-categorie utilisee par ${count} item${count > 1 ? 's' : ''}`
+  if (count) return `Sous-catégorie utilisée par ${count} item${count > 1 ? 's' : ''}`
   return `Supprimer ${item}`
 }
 
@@ -350,7 +350,7 @@ function removeItem(item) {
   const count = subcategoryUseCount(item)
   if (count) {
     managerMessage.value =
-      `Sous-categorie utilisee par ${count} item${count > 1 ? 's' : ''}. ` +
+      `Sous-catégorie utilisée par ${count} item${count > 1 ? 's' : ''}. ` +
       'Modifie ou reassigne ces items avant de la supprimer.'
     return
   }
@@ -364,7 +364,7 @@ function removeItem(item) {
   ) {
     emit('update:modelValue', '')
   }
-  managerMessage.value = 'Sous-categorie supprimee.'
+  managerMessage.value = 'Sous-catégorie supprimée.'
 }
 
 function startRename(item) {

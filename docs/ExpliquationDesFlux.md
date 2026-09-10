@@ -107,7 +107,7 @@ Dans ce document:
 ### 7.2 Creation item
 1. `GestionAjoutPaire.vue` construit payload.
 2. `SnkVenteServices.ajouter` -> `/snkVente/add`.
-3. Backend valide proprietaire + nettoie metadata selon `ItemType`.
+3. Backend valide proprietaire + nettoie metadata selon le `type` item.
 4. Save DB.
 5. Cache stats backend invalide (`@CacheEvict`).
 

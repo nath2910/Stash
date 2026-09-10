@@ -19,7 +19,7 @@
         <span class="st-status-pill" :class="status.tone">{{ status.label }}</span>
       </div>
       <div class="st-period">
-        <span class="st-period-label">Periode</span>
+        <span class="st-period-label">Période</span>
         <span class="st-period-value">{{ fromLabel }} → {{ toLabel }}</span>
       </div>
     </div>

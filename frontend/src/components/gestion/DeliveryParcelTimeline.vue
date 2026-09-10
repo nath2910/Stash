@@ -124,7 +124,7 @@
       v-if="!parcel"
       class="mt-8 rounded-2xl border border-dashed border-slate-300 bg-white/70 p-6 text-center text-sm text-slate-500"
     >
-      Aucun colis selectionne.
+      Aucun colis sélectionné.
     </div>
 
     <div v-else-if="events.length" class="mt-5">
@@ -246,7 +246,7 @@ const progressPercent = computed(() => {
 const progressHeadline = computed(() => {
   if (!props.parcel) return ''
   if (props.parcel.status === 'EXCEPTION') {
-    return 'Incident detecte sur le parcours'
+    return 'Incident détecté sur le parcours'
   }
   return getDeliveryStatusMeta(props.parcel).label
 })

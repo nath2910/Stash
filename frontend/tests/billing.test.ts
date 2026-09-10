@@ -57,7 +57,7 @@ describe('describeBillingError', () => {
         { code: 'ECONNABORTED', message: 'timeout of 15000ms exceeded' },
         'fallback',
       ),
-    ).toBe('Le service de paiement met trop de temps a repondre. Reessaie dans quelques instants.')
+    ).toBe('Le service de paiement met trop de temps à répondre. Réessaie dans quelques instants.')
   })
 
   it('prefers backend response messages when present', () => {

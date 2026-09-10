@@ -12,7 +12,7 @@
     :widget-base-height="props.widgetBaseHeight"
   >
     <template #actions>
-      <div class="roi-header-period" :title="periodText" aria-label="Periode active">
+      <div class="roi-header-period" :title="periodText" aria-label="Période active">
         <CalendarDays class="roi-header-period__icon" aria-hidden="true" />
         <span class="roi-header-period__text">{{ periodText }}</span>
       </div>
@@ -90,7 +90,7 @@
           </li>
         </ul>
 
-        <p v-else class="roi-empty">Pas assez de data sur la periode.</p>
+        <p v-else class="roi-empty">Pas assez de données sur la période.</p>
       </section>
     </div>
   </WidgetCard>
@@ -200,7 +200,7 @@ const deltaPtsText = computed(() => {
 
 const deltaDescription = computed(() => {
   if (deltaPts.value == null) return 'Comparaison indisponible'
-  return 'vs periode precedente'
+  return 'par rapport à la période précédente'
 })
 
 const fromLabel = computed(() =>

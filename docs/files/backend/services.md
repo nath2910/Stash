@@ -43,7 +43,7 @@ Gestion metier des pieces jointes.
 1. `list(userId, venteId)`.
 2. `add(userId, venteId, file)`:
 - check ownership item,
-- validate taille/type MIME selon `ItemType`,
+- validate taille/type MIME selon le type item,
 - store fichier physique,
 - save metadata DB.
 3. `delete(userId, venteId, attachmentId)`:
@@ -53,7 +53,7 @@ Gestion metier des pieces jointes.
 
 ### Points critiques
 - limite 10MB,
-- validation renforcée pour `ItemType.TICKET`.
+- validation renforcée selon le type item.
 
 ---
 

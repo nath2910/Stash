@@ -15,10 +15,6 @@ Pedagogie JS:
 
 ## 2) Widgets KPI / sparkline
 
-### `ActiveListingsWidget.vue`
-- Metric backend: `kpi('activeListings')`, `series('activeListings')`.
-- Affiche nb annonces actives + delta + sparkline.
-
 ### `AspWidget.vue`
 - Metric backend: `asp`.
 - Affiche prix moyen de vente.

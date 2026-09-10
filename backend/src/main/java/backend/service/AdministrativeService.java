@@ -90,7 +90,6 @@ public class AdministrativeService {
       "consignment",
       "ecommerce",
       "physical_shop",
-      "marketplaces",
       "events"
   );
   private static final Set<String> VAT_REGIMES = Set.of(
@@ -306,7 +305,7 @@ public class AdministrativeService {
       docs.add(new AdministrativeDocumentDescriptorResponse(
           "second-hand-register",
           "Registre des objets d'occasion",
-          "Registre preparatoire des objets d'occasion detectes dans les donnees MyStash.",
+          "Registre préparatoire des objets d’occasion détectés dans les données Stash.",
           "/administrative/documents/second-hand-register",
           "PDF",
           company ? "SOCIETE_REEL" : "MICRO_ENTREPRISE"
@@ -854,8 +853,7 @@ public class AdministrativeService {
     boolean resaleActivity = profile.buysForResale()
         || activities.contains("goods_resale")
         || activities.contains("mixed")
-        || activities.contains("ecommerce")
-        || activities.contains("marketplaces");
+        || activities.contains("ecommerce");
 
     if ("none".equals(legalStatus) || "personal".equals(legalStatus)) {
       obligations.add(obligation(

@@ -215,13 +215,12 @@ Mapping principal:
 1. `roi` -> `profit / cost * 100`.
 2. `avgMargin` -> `profit / sold`.
 3. `asp` -> `ca / sold`.
-4. `activeListings` -> `stock count`.
-5. `sellThrough` -> `sold / (sold + stock) * 100`.
-6. `cashAvailable` -> `profit`.
-7. `avgDaysToSell` -> requete avg jours vendus.
-8. `grossRevenue` / `ca` -> `ca`.
-9. `netProfit` / `profit` -> `profit`.
-10. fallback -> `0`.
+4. `sellThrough` -> `sold / (sold + stock) * 100`.
+5. `cashAvailable` -> `profit`.
+6. `avgDaysToSell` -> requete avg jours vendus.
+7. `grossRevenue` / `ca` -> `ca`.
+8. `netProfit` / `profit` -> `profit`.
+9. fallback -> `0`.
 
 ---
 
@@ -231,10 +230,9 @@ Mapping proche du summary mais calcule point par point:
 2. `asp`.
 3. `roi`.
 4. `sellThrough`.
-5. `activeListings` (stock historique par bucket).
-6. `grossRevenue` / `ca`.
-7. `netProfit` / `profit` / `cashAvailable`.
-8. fallback `0`.
+5. `grossRevenue` / `ca`.
+6. `netProfit` / `profit` / `cashAvailable`.
+7. fallback `0`.
 
 ---
 

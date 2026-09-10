@@ -17,11 +17,13 @@ public class SubscriptionAccessService {
 
   public boolean hasActiveSubscription(User user) {
     if (user == null) return false;
-    // Bypass: Discord-eligible users get access even without Stripe subscription
-    if (isDiscordEligible(user)) return true;
-    return isActiveStatus(user.getSubscriptionStatus())
+    if (isActiveStatus(user.getSubscriptionStatus())
         && user.getSubscriptionCurrentPeriodEnd() != null
-        && user.getSubscriptionCurrentPeriodEnd().isAfter(java.time.OffsetDateTime.now());
+        && user.getSubscriptionCurrentPeriodEnd().isAfter(java.time.OffsetDateTime.now())) {
+      return true;
+    }
+    // Bypass: Discord-eligible users get access even without Stripe subscription.
+    return isDiscordEligible(user);
   }
 
   public void requireActiveSubscription(User user) {

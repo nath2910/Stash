@@ -745,17 +745,17 @@ function buildPreviewItem(row: CsvRow, headers: string[], mapping: ImportMapping
   const errors: string[] = []
   const warnings: string[] = []
   const nomItem = readCell(row, mapping.name)
-  if (looksBadName(nomItem)) errors.push('Modele / nom manquant')
-  if (nomItem.length > 200) errors.push('Modele trop long (max 200 caracteres)')
+  if (looksBadName(nomItem)) errors.push('Modèle ou nom manquant')
+  if (nomItem.length > 200) errors.push('Modèle trop long (200 caractères maximum)')
 
   const quantityRaw = readCell(row, mapping.quantity)
   const quantityParsed = quantityRaw ? toNumberSmart(quantityRaw) : 1
   const quantity = Number.isFinite(Number(quantityParsed)) ? Math.trunc(Number(quantityParsed)) : 0
   if (quantityRaw && quantityParsed !== null && !Number.isInteger(Number(quantityParsed))) {
-    errors.push('Quantite doit etre un nombre entier')
+    errors.push('La quantité doit être un nombre entier')
   }
-  if (quantity < 1) errors.push('Quantite invalide')
-  if (quantity > 50) errors.push('Quantite trop elevee par ligne (max 50)')
+  if (quantity < 1) errors.push('Quantité invalide')
+  if (quantity > 50) errors.push('Quantité trop élevée par ligne (50 maximum)')
 
   const typeValue = normalizeItemType(readCell(row, mapping.type)) ?? 'SNEAKER'
   const metadataFromJson =
@@ -774,13 +774,13 @@ function buildPreviewItem(row: CsvRow, headers: string[], mapping: ImportMapping
 
   const categoryRaw = readCell(row, mapping.brand)
   const categorie = categoryRaw ? categoryRaw.slice(0, 60) : null
-  if (categoryRaw.length > 60) warnings.push('Marque tronquee a 60 caracteres')
+  if (categoryRaw.length > 60) warnings.push('Marque tronquée à 60 caractères')
 
   const notes = readCell(row, mapping.notes)
   const supplier = readCell(row, mapping.supplier)
   const description = compactDescription([notes, supplier ? `Fournisseur: ${supplier}` : null])
   if ((notes || supplier) && description && description.endsWith('...')) {
-    warnings.push('Notes tronquees a 500 caracteres')
+    warnings.push('Notes tronquées à 500 caractères')
   }
 
   const dateAchat = parseOptionalDate(row, mapping.dateAchat, "Date d'achat", errors)
@@ -839,7 +839,7 @@ export function analyzeImportRows(
         status: 'invalid',
         name: '',
         quantity: 0,
-        errors: ['Colonne modele / nom introuvable'],
+        errors: ['Colonne « modèle / nom » introuvable'],
         warnings: [],
         item: null,
       })),
@@ -851,10 +851,10 @@ export function analyzeImportRows(
     const { item, quantity, errors, warnings } = buildPreviewItem(row, headers, mapping)
     const key = item.nomItem ? createDuplicateKey(item) : ''
     if (key && seenKeys.has(key)) {
-      warnings.push('Doublon detecte dans le fichier')
+      warnings.push('Doublon détecté dans le fichier')
       duplicateRows += 1
     }
-    if (key && existingKeys.has(key)) warnings.push('Ressemble a un item deja present')
+    if (key && existingKeys.has(key)) warnings.push('Ressemble à un item déjà présent')
 
     if (!errors.length && payload.length + quantity > 500) {
       errors.push('Import trop volumineux (max 500 items)')

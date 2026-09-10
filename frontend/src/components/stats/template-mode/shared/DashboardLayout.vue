@@ -87,7 +87,7 @@
           </div>
 
           <div v-else class="dashboard-layout__module-empty">
-            Aucun module disponible pour cette periode.
+            Aucun module disponible pour cette période.
           </div>
         </section>
       </template>

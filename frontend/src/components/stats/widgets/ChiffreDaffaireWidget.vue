@@ -1,7 +1,7 @@
 <template>
   <WidgetCard
     title="Chiffre d'affaires"
-    subtitle="Synthese et evolution sur la periode"
+    subtitle="Synthèse et évolution sur la période"
     :accent="accent"
     surface="trend"
     :loading="loading"
@@ -34,7 +34,7 @@
           <div v-if="pointsCount <= 1" class="gr-chart-empty">
             <div>
               <div class="gr-chart-empty__title">Pas assez de points</div>
-              <div class="gr-chart-empty__desc">Elargis la periode pour afficher une tendance.</div>
+              <div class="gr-chart-empty__desc">Élargis la période pour afficher une tendance.</div>
             </div>
           </div>
         </section>
@@ -218,7 +218,7 @@ const importantPointMap = computed(() => {
   if (!points.length) return map
 
   const peak = points.reduce((best, point) => (point.value > best.value ? point : best), points[0])
-  addImportantPoint(map, peak, 'Pic', 'Meilleur niveau de la periode', accent)
+  addImportantPoint(map, peak, 'Pic', 'Meilleur niveau de la période', accent)
 
   let strongestMove = null
   for (let index = 1; index < points.length; index += 1) {

@@ -21,7 +21,7 @@
     </div>
     <div v-else class="risk-empty">
       <strong>Aucun risque lisible</strong>
-      <span>Ajoute du stock ou des ventes categorisees pour alimenter la carte.</span>
+      <span>Ajoute du stock ou des ventes catégorisées pour alimenter la carte.</span>
     </div>
   </WidgetCard>
 </template>

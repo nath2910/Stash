@@ -68,7 +68,7 @@
               <div>
                 <p class="text-lg font-semibold text-slate-900">Nettoyer les colis livres</p>
                 <p class="mt-1 text-sm text-slate-500">
-                  Ce colis est livre depuis plus de deux semaines. Tu peux le retirer de la liste.
+                  Ce colis est livré depuis plus de deux semaines. Tu peux le retirer de la liste.
                 </p>
               </div>
               <button
@@ -92,7 +92,7 @@
                   </p>
                 </div>
                 <span class="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
-                  Livre depuis {{ deliveredParcelAgeDays(deliveredCleanupParcel) }} jours
+                  Livré depuis {{ deliveredParcelAgeDays(deliveredCleanupParcel) }} jours
                 </span>
               </div>
               <p class="mt-3 text-sm text-slate-600">
@@ -355,7 +355,7 @@
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p class="text-sm font-semibold text-slate-900">
-              {{ selectedParcelIds.length }} colis selectionne(s)
+              {{ selectedParcelIds.length }} colis sélectionné(s)
             </p>
             <p class="mt-1 text-xs text-slate-500">
               Raccourcis: `/` recherche, `N` ajout manuel, `M` mode multi-selection.
@@ -882,7 +882,7 @@ const refreshAllParcelStatuses = async () => {
     parcelsError.value = requestErrorMessage(
       error,
       'Mise a jour globale des suivis impossible',
-      'La mise a jour des suivis prend trop de temps. Reessaie dans quelques secondes.',
+      'La mise à jour des suivis prend trop de temps. Réessaie dans quelques secondes.',
     )
   } finally {
     refreshingAllParcels.value = false
@@ -915,7 +915,7 @@ const scanAccount = async (accountId, refresh = true, showNotice = true) => {
   try {
     const { data } = await DeliveryTrackingService.scanNow(accountId)
     if (showNotice) {
-      showFeedbackSummary(data, 'Scan Gmail termine')
+      showFeedbackSummary(data, 'Scan Gmail terminé')
     }
     if (refresh) {
       await refreshAll()
@@ -938,7 +938,7 @@ const scanAllNow = async () => {
   accountsError.value = ''
   try {
     const { data } = await DeliveryTrackingService.scanAll()
-    showFeedbackSummary(data, 'Import Gmail termine')
+    showFeedbackSummary(data, 'Import Gmail terminé')
     await refreshAll()
   } catch (error) {
     accountsError.value = error?.response?.data?.message || 'Scan Gmail impossible'
@@ -969,7 +969,7 @@ const createManualParcel = async (payload) => {
   try {
     const numbers = parseManualTrackingEntries(payload?.trackingInput)
     if (!numbers.length) {
-      manualParcelError.value = 'Ajoute au moins un numero de suivi valide.'
+      manualParcelError.value = 'Ajoute au moins un numéro de suivi valide.'
       return
     }
 
@@ -999,7 +999,7 @@ const createManualParcel = async (payload) => {
       manualParcelError.value =
         numbers.length === 1 && firstFailureMessage
           ? firstFailureMessage
-          : "Aucun suivi n'a pu etre ajoute."
+          : 'Aucun suivi n’a pu être ajouté.'
       return
     }
 
@@ -1013,16 +1013,16 @@ const createManualParcel = async (payload) => {
     manualModalOpen.value = false
     showFeedbackToast({
       kind: failedNumbers.length ? 'warning' : 'success',
-      title: failedNumbers.length ? 'Ajout partiel' : 'Suivi ajoute',
+      title: failedNumbers.length ? 'Ajout partiel' : 'Suivi ajouté',
       message: failedNumbers.length
-        ? `${createdParcels.length} suivi(s) ajoute(s), ${failedNumbers.length} refuse(s).`
-        : `${createdParcels.length} suivi(s) ajoute(s) au tableau de livraison.`,
+        ? `${createdParcels.length} suivi(s) ajouté(s), ${failedNumbers.length} refusé(s).`
+        : `${createdParcels.length} suivi(s) ajouté(s) au tableau de livraison.`,
     })
   } catch (error) {
     manualParcelError.value = requestErrorMessage(
       error,
       'Ajout du colis impossible',
-      "L'ajout du colis prend trop de temps. Reessaie dans quelques secondes.",
+      'L’ajout du colis prend trop de temps. Réessaie dans quelques secondes.',
     )
   } finally {
     creatingManualParcel.value = false
@@ -1047,7 +1047,7 @@ const refreshParcel = async (parcelId) => {
     parcelsError.value = requestErrorMessage(
       error,
       'Mise a jour du suivi impossible',
-      'La mise a jour du suivi prend trop de temps. Reessaie dans quelques secondes.',
+      'La mise à jour du suivi prend trop de temps. Réessaie dans quelques secondes.',
     )
   } finally {
     refreshingParcelId.value = null
@@ -1075,8 +1075,8 @@ const confirmCandidate = async (candidateId) => {
     }
     showFeedbackToast({
       kind: 'success',
-      title: 'Colis ajoute',
-      message: 'Candidat valide et ajoute au suivi.',
+      title: 'Colis ajouté',
+      message: 'Candidat validé et ajouté au suivi.',
     })
   } catch (error) {
     candidatesError.value = error?.response?.data?.message || 'Validation impossible'
@@ -1118,7 +1118,7 @@ const performDeleteParcel = async (
   parcelId,
   {
     confirmMessage = null,
-    successTitle = 'Suivi supprime',
+    successTitle = 'Suivi supprimé',
     successMessage = 'Le colis a ete retire de la liste.',
   } = {},
 ) => {
@@ -1157,7 +1157,7 @@ const deleteDeliveredCleanupParcel = async () => {
   deliveredCleanupSnoozed.value = false
   await performDeleteParcel(parcel.id, {
     successTitle: 'Colis retire',
-    successMessage: 'Le colis livre depuis plus de deux semaines a ete supprime.',
+    successMessage: 'Le colis livré depuis plus de deux semaines a été supprimé.',
   })
 }
 
@@ -1169,7 +1169,7 @@ const deleteAccount = async (accountId) => {
     showFeedbackToast({
       kind: 'success',
       title: 'Compte retire',
-      message: 'La source Gmail a ete supprimee.',
+      message: 'La source Gmail a été supprimée.',
     })
   } catch (error) {
     accountsError.value = error?.response?.data?.message || 'Suppression du compte impossible'
@@ -1238,19 +1238,19 @@ const deleteSelectedParcels = async () => {
   }
 
   if (failedIds.length) {
-    parcelsError.value = `${failedIds.length} suppression(s) ont echoue.`
+    parcelsError.value = `${failedIds.length} suppression(s) ont échoué.`
     showFeedbackToast({
       kind: 'warning',
       title: 'Suppression partielle',
-      message: `${ids.length - failedIds.length} suivi(s) supprime(s), ${failedIds.length} en erreur.`,
+      message: `${ids.length - failedIds.length} suivi(s) supprimé(s), ${failedIds.length} en erreur.`,
     })
     return
   }
 
   showFeedbackToast({
     kind: 'success',
-    title: 'Selection supprimee',
-    message: `${ids.length} suivi(s) supprime(s) de la liste.`,
+    title: 'Sélection supprimée',
+    message: `${ids.length} suivi(s) supprimé(s) de la liste.`,
   })
 }
 

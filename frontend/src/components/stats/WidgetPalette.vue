@@ -120,7 +120,7 @@
                 </div>
 
                 <footer class="palette-foot">
-                  <span>Entree ajoute le widget actif, Echap ferme la palette.</span>
+                  <span>Entrée ajoute le widget actif, Échap ferme la palette.</span>
                 </footer>
               </section>
             </DialogPanel>

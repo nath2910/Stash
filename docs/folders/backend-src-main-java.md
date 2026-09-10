@@ -153,7 +153,7 @@ Endpoints:
 ### `AttachmentService.java`
 - CRUD metadonnees attachments.
 - Delegue stockage physique a `FileStorageService`.
-- Validation MIME/type selon `ItemType`.
+- Validation MIME/type selon le type item.
 
 ### `FileStorageService.java`
 - Sauvegarde disque locale sous root configure.
@@ -190,7 +190,6 @@ Endpoints:
 - `EmailVerificationToken`.
 - `UserStatsLayout`.
 - `DiscordAllowedGuild`.
-- `ItemType` (enum type item).
 
 ## 8) package `dto/`
 - Contrats d'entree/sortie API.

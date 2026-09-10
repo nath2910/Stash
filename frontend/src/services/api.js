@@ -77,7 +77,7 @@ api.interceptors.response.use(
       return Promise.reject(error)
     }
 
-    // Token expirÃ© ou non autorisÃ©
+    // Jeton expiré ou non autorisé
     if (status === 401 && !url.startsWith('/auth')) {
       clearAuthState()
       redirectToLogin('unauthorized')

@@ -2,11 +2,17 @@ package backend.service;
 
 import backend.security.PasswordPolicy;
 import backend.security.SensitiveTokenHasher;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.UUID;
 
 import jakarta.mail.internet.MimeMessage;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
@@ -182,20 +188,38 @@ public class PasswordResetService {
         .toUriString();
   }
 
+  private String getLogoBase64() {
+    try {
+      Resource resource = new UrlResource(new URI("file:" + System.getenv("LOGOMYSTASH_PATH")));
+      byte[] imageBytes = resource.getInputStream().readAllBytes();
+      return "data:image/png;base64," + Base64.getEncoder().encodeToString(imageBytes);
+    } catch (Exception e) {
+      logger.warn("Impossible de charger le logo, utilisation du texte seul", e);
+      return null;
+    }
+  }
+
+  private String getLogoImgHtml() {
+    String logoBase64 = getLogoBase64();
+    if (logoBase64 == null) return null;
+    return "<img src=\"" + logoBase64 + "\" alt=\"MyStash\" style=\"max-width:200px;height:auto;\" />";
+  }
+
   private String resetPasswordHtml(String link) {
     String safeLink = escapeHtml(link);
+    String logoHtml = getLogoImgHtml();
     return baseEmailHtml(
         "Reinitialise ton mot de passe",
         "Pour choisir un nouveau mot de passe MyStash, ouvre ce lien dans ton navigateur.",
         "Choisir un nouveau mot de passe",
         safeLink,
-        "Ce lien expire dans " + expirationMinutes + " minutes. Si tu n'as pas demande cette reinitialisation, tu peux ignorer cet email."
+        "Ce lien expire dans " + expirationMinutes + " minutes. Si tu n'as pas demande cette reinitialisation, tu peux ignorer cet email.",
+        logoHtml
     );
   }
 
-  private String baseEmailHtml(String title, String intro, String buttonLabel, String link, String footnote) {
-    String frontendBaseUrl = environment.getProperty("app.frontend.base-url", "https://mystash.fr");
-    String logoUrl = escapeHtml(frontendBaseUrl.replaceAll("/+$", "") + "/logo.png");
+  private String baseEmailHtml(String title, String intro, String buttonLabel, String link, String footnote, String logoHtml) {
+    String logoSection = logoHtml != null ? "<div style=\"text-align:center;margin-bottom:30px;\">" + logoHtml + "</div>\n" : "";
     return """
         <!doctype html>
         <html>
@@ -205,13 +229,10 @@ public class PasswordResetService {
                 <td align="center">
                   <table role="presentation" width="100%%" cellspacing="0" cellpadding="0" style="max-width:720px;">
                     <tr>
-                      <td style="padding:0 0 18px 0;">
-                        <img src="%s" width="44" height="44" alt="MyStash" style="display:block;border:0;border-radius:12px;">
-                      </td>
-                    </tr>
-                    <tr>
                       <td style="background:#ffffff;border-radius:14px;padding:58px 64px 46px;box-shadow:0 1px 2px rgba(60,66,87,0.08);">
-                        <div style="font-size:22px;font-weight:800;letter-spacing:-0.02em;color:#0f172a;">MyStash</div>
+                        <div style="text-align:center;margin-bottom:30px;">
+                          <img src="%s" alt="MyStash" style="max-width:200px;height:auto;" />
+                        </div>
                         <h1 style="margin:42px 0 0;font-size:24px;line-height:1.35;font-weight:700;color:#30313d;">%s</h1>
                         <p style="margin:24px 0 0;font-size:17px;line-height:1.65;color:#4f566b;">%s</p>
                         <p style="margin:22px 0 0;font-size:16px;line-height:1.65;color:#4f566b;">Ne partage jamais ce lien. L'equipe MyStash ne te demandera jamais de le copier sur un autre site.</p>
@@ -236,7 +257,7 @@ public class PasswordResetService {
           </body>
         </html>
         """.formatted(
-        logoUrl,
+        escapeHtml(logoHtml != null ? logoHtml : ""),
         escapeHtml(title),
         escapeHtml(intro),
         link,

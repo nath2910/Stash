@@ -64,7 +64,7 @@ export const TEMPLATE_DEFINITIONS = [
     badge: 'Inventory',
     title: 'Analyse par univers',
     headline: 'Univers puis sous-categories',
-    description: 'Vue simple par grande categorie avec filtre de sous-categories, stock visible et top ventes.',
+    description: 'Vue simple par grande catégorie avec filtre de sous-catégories, stock visible et meilleures ventes.',
     highlights: ['Univers', 'Sous-categories', 'Top ventes'],
     accent: 'amber',
     component: defineAsyncComponent(

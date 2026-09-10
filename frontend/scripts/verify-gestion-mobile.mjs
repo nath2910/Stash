@@ -66,6 +66,7 @@ const fakeUser = {
   lastName: 'Test',
   email: 'test@example.com',
   subscriptionStatus: 'active',
+  createdAt: '2026-01-01T00:00:00Z',
 }
 
 const browser = await puppeteer.launch({
@@ -88,12 +89,21 @@ try {
   page.on('request', async (request) => {
     const url = request.url()
     const method = request.method()
-    if (url.startsWith('http://localhost:8080') || url.startsWith('http://127.0.0.1:8080')) {
+    if (
+      url.startsWith('http://localhost:8080') ||
+      url.startsWith('http://127.0.0.1:8080') ||
+      url.startsWith('https://api.mystash.fr')
+    ) {
       const respond = (body, status = 200) => request.respond({
         status,
         contentType: 'application/json',
         body: JSON.stringify(body),
-        headers: { 'Access-Control-Allow-Origin': '*' },
+        headers: {
+          'Access-Control-Allow-Origin': 'http://127.0.0.1:4173',
+          'Access-Control-Allow-Credentials': 'true',
+          'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
+        },
       })
 
       if (method === 'OPTIONS') return respond({})
@@ -114,8 +124,8 @@ try {
     )
   }, fakeToken, fakeUser)
 
-  await page.goto(targetUrl, { waitUntil: 'networkidle0', timeout: 60000 })
-  await page.waitForSelector('.gestion-page-stack', { timeout: 30000 })
+  await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 30000 })
+  await page.waitForSelector('.gestion-page-stack', { timeout: 5000 })
   fs.mkdirSync(path.dirname(screenshotPath), { recursive: true })
   await page.screenshot({ path: screenshotPath, fullPage: true })
 

@@ -23,7 +23,7 @@
         v-model="query"
         type="search"
         autocomplete="off"
-        placeholder="Rechercher un item, une categorie, une marque..."
+        placeholder="Rechercher un item, une catégorie, une marque…"
         :aria-expanded="dropdownOpen"
         :aria-activedescendant="activeDescendant"
         aria-label="Rechercher un item"

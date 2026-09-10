@@ -18,7 +18,7 @@
             <header class="modal-card-header flex items-start justify-between border-b p-4 sm:p-5">
               <div>
                 <h3 id="add-item-title">Ajouter un item</h3>
-                <p>Categorie, nom, prix et dates suivent la meme logique que la modification.</p>
+                <p>Catégorie, nom, prix et dates suivent la même logique que la modification.</p>
               </div>
 
               <button
@@ -36,7 +36,7 @@
             </div>
 
             <div v-if="success" class="modal-alert modal-alert--success">
-              Item ajoute.
+              Item ajouté.
             </div>
 
             <div class="modal-form">

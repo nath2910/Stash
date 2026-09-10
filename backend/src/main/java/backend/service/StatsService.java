@@ -174,10 +174,7 @@ public class StatsService {
     String[] typeArray = toArray(itemTypes);
     LocalDateRange range = normalizeRange(from, to);
     int safe = Math.min(Math.max(limit, 1), 20);
-    return repo.topVentesBetween(userId, range.from(), range.to(), catArray, categoriesAll, typeArray, typesAll)
-        .stream()
-        .limit(safe)
-        .toList();
+    return repo.topVentesBetweenLimited(userId, range.from(), range.to(), catArray, categoriesAll, typeArray, typesAll, safe);
   }
 
   public StatsKpiResponse kpi(Long userId, LocalDate from, LocalDate to, String metric) {
@@ -224,6 +221,10 @@ public class StatsService {
     return series(userId, from, to, metric, granularity, null, null);
   }
 
+  @Cacheable(
+      cacheNames = "statsQueries",
+      key = "T(backend.service.StatsCacheKeys).series(#userId,#from,#to,#metric,#granularity,#categories,#types)"
+  )
   public List<StatsSeriesPointResponse> series(
       Long userId,
       LocalDate from,
@@ -249,18 +250,43 @@ public class StatsService {
     }
 
     var rows = timeseriesFull(userId, range.from(), range.to(), granularity, catArray, categoriesAll, typeArray, typesAll);
+    Map<LocalDate, Long> stockByBucket = historicalStockMetric(metric)
+        ? stockCountsByBucket(userId, rows, catArray, categoriesAll, typeArray, typesAll)
+        : Map.of();
 
     return rows.stream()
         .map(r -> {
           long stockAtBucket = historicalStockMetric(metric)
-              ? repo.countInStockAt(userId, r.getBucket(), catArray, categoriesAll, typeArray, typesAll)
+              ? stockByBucket.getOrDefault(r.getBucket(), 0L)
               : 0;
           return new StatsSeriesPointResponse(
               r.getBucket(),
               metricFromTimeseries(r.getCa(), r.getProfit(), r.getCost(), r.getNb(), stockAtBucket, metric)
           );
         })
-        .toList();
+      .toList();
+  }
+
+  private Map<LocalDate, Long> stockCountsByBucket(
+      Long userId,
+      List<SnkVenteRepository.TimePointFullRow> rows,
+      String[] categories,
+      boolean categoriesAll,
+      String[] types,
+      boolean typesAll
+  ) {
+    LocalDate[] buckets = rows.stream()
+        .map(SnkVenteRepository.TimePointFullRow::getBucket)
+        .filter(Objects::nonNull)
+        .distinct()
+        .toArray(LocalDate[]::new);
+    if (buckets.length == 0) return Map.of();
+    return repo.countInStockAtBuckets(userId, buckets, categories, categoriesAll, types, typesAll).stream()
+        .collect(java.util.stream.Collectors.toMap(
+            SnkVenteRepository.BucketLongRow::getBucket,
+            SnkVenteRepository.BucketLongRow::getValue,
+            (left, right) -> right
+        ));
   }
 
   @Cacheable(
@@ -276,6 +302,10 @@ public class StatsService {
     return breakdown(userId, metric, from, to, null, null);
   }
 
+  @Cacheable(
+      cacheNames = "statsQueries",
+      key = "T(backend.service.StatsCacheKeys).breakdown(#userId,#metric,#from,#to,#categories,#types)"
+  )
   public List<StatsLabelValueResponse> breakdown(
       Long userId,
       String metric,
@@ -339,6 +369,10 @@ public class StatsService {
     return rank(userId, from, to, metric, limit, null, null);
   }
 
+  @Cacheable(
+      cacheNames = "statsQueries",
+      key = "T(backend.service.StatsCacheKeys).rank(#userId,#from,#to,#metric,#limit,#categories,#types)"
+  )
   public List<StatsLabelValueResponse> rank(
       Long userId,
       LocalDate from,
@@ -448,9 +482,6 @@ public class StatsService {
     if ("asp".equalsIgnoreCase(metric)) {
       return sold > 0 ? ca.divide(BigDecimal.valueOf(sold), 4, RoundingMode.HALF_UP) : BigDecimal.ZERO;
     }
-    if ("activeListings".equalsIgnoreCase(metric)) {
-      return BigDecimal.valueOf(stock);
-    }
     if ("sellThrough".equalsIgnoreCase(metric)) {
       long total = sold + stock;
       if (total == 0) return BigDecimal.ZERO;
@@ -510,9 +541,6 @@ public class StatsService {
       return BigDecimal.valueOf(sold).multiply(BigDecimal.valueOf(100))
           .divide(BigDecimal.valueOf(total), 4, RoundingMode.HALF_UP);
     }
-    if ("activeListings".equalsIgnoreCase(metric)) {
-      return BigDecimal.valueOf(stockAtBucket);
-    }
     if ("grossRevenue".equalsIgnoreCase(metric) || "ca".equalsIgnoreCase(metric)) {
       return safeCa;
     }
@@ -523,7 +551,7 @@ public class StatsService {
   }
 
   private boolean historicalStockMetric(String metric) {
-    return "sellThrough".equalsIgnoreCase(metric) || "activeListings".equalsIgnoreCase(metric);
+    return "sellThrough".equalsIgnoreCase(metric);
   }
 
   private List<SnkVenteRepository.AvgDaysRow> avgDaysRows(
