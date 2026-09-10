@@ -6,11 +6,12 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
 
+import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -129,23 +130,22 @@ public class EmailVerificationService {
   }
 
   private void sendVerificationEmail(String to, String link) {
-    SimpleMailMessage message = new SimpleMailMessage();
-    message.setTo(to);
-
     String from = resolveFromAddress();
-    if (from != null && !from.isBlank()) {
-      message.setFrom(from);
-    }
-
-    message.setSubject("Verification de votre adresse email");
-    message.setText(
-        "Bonjour bienvenu sur Stash,\n\n" +
-        "Merci de confirmer votre adresse email en cliquant sur le lien ci-dessous :\n" +
-        link + "\n\n" +
-        "Si vous n'etes pas a l'origine de cette creation de compte, ignorez cet email.\n"
-    );
 
     try {
+      MimeMessage message = mailSender.createMimeMessage();
+      MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+      helper.setTo(to);
+      helper.setFrom(from, "MyStash");
+      helper.setSubject("Confirme ton adresse email MyStash");
+      helper.setText(
+          "Bienvenue sur MyStash.\n\n"
+              + "Confirme ton adresse email pour activer ton compte :\n"
+              + link + "\n\n"
+              + "Ce lien expire dans " + expirationMinutes + " minutes.\n"
+              + "Si tu n'es pas a l'origine de cette creation de compte, ignore cet email.\n",
+          verificationHtml(link)
+      );
       mailSender.send(message);
     } catch (Exception ex) {
       logger.warn("Verification email send failed for {}", to, ex);
@@ -158,23 +158,18 @@ public class EmailVerificationService {
       return;
     }
 
-    SimpleMailMessage message = new SimpleMailMessage();
-    message.setTo(to);
-
     String from = resolveFromAddress();
-    if (from != null && !from.isBlank()) {
-      message.setFrom(from);
-    }
-
-    message.setSubject("Votre email a ete verifie");
-    message.setText(
-        "Enfin !\n\n" +
-        "Votre adresse email a bien ete confirmee. Vous pouvez maintenant vous connecter.\n\n" +
-        "Merci,\n" +
-        "L'equipe Stash\n"
-    );
 
     try {
+      MimeMessage message = mailSender.createMimeMessage();
+      MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+      helper.setTo(to);
+      helper.setFrom(from, "MyStash");
+      helper.setSubject("Ton compte MyStash est active");
+      helper.setText(
+          "Ton adresse email a bien ete confirmee. Tu peux maintenant te connecter a MyStash.\n",
+          confirmationHtml()
+      );
       mailSender.send(message);
     } catch (Exception ex) {
       // Ne bloque pas la validation si l'email de confirmation echoue.
@@ -234,5 +229,91 @@ public class EmailVerificationService {
     byte[] bytes = new byte[16];
     secureRandom.nextBytes(bytes);
     return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+  }
+
+  private String verificationHtml(String link) {
+    String safeLink = escapeHtml(link);
+    return baseEmailHtml(
+        "Confirme ton adresse email",
+        "Pour activer ton compte MyStash, ouvre ce lien dans ton navigateur.",
+        "Confirmer mon email",
+        safeLink,
+        "Ce lien expire dans " + expirationMinutes + " minutes. Si tu n'as pas cree de compte MyStash, tu peux ignorer cet email."
+    );
+  }
+
+  private String confirmationHtml() {
+    return baseEmailHtml(
+        "Ton compte est active",
+        "Ton adresse email est confirmee. Tu peux maintenant te connecter a MyStash.",
+        "Ouvrir MyStash",
+        escapeHtml(environment.getProperty("app.frontend.base-url", "https://mystash.fr")),
+        "Merci d'utiliser MyStash."
+    );
+  }
+
+  private String baseEmailHtml(String title, String intro, String buttonLabel, String link, String footnote) {
+    String frontendBaseUrl = environment.getProperty("app.frontend.base-url", "https://mystash.fr");
+    String logoUrl = escapeHtml(frontendBaseUrl.replaceAll("/+$", "") + "/logo.png");
+    return """
+        <!doctype html>
+        <html>
+          <body style="margin:0;background:#f6f9fc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#3c4257;">
+            <table role="presentation" width="100%%" cellspacing="0" cellpadding="0" style="background:#f6f9fc;padding:54px 16px;">
+              <tr>
+                <td align="center">
+                  <table role="presentation" width="100%%" cellspacing="0" cellpadding="0" style="max-width:720px;">
+                    <tr>
+                      <td style="padding:0 0 18px 0;">
+                        <img src="%s" width="44" height="44" alt="MyStash" style="display:block;border:0;border-radius:12px;">
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="background:#ffffff;border-radius:14px;padding:58px 64px 46px;box-shadow:0 1px 2px rgba(60,66,87,0.08);">
+                        <div style="font-size:22px;font-weight:800;letter-spacing:-0.02em;color:#0f172a;">MyStash</div>
+                        <h1 style="margin:42px 0 0;font-size:24px;line-height:1.35;font-weight:700;color:#30313d;">%s</h1>
+                        <p style="margin:24px 0 0;font-size:17px;line-height:1.65;color:#4f566b;">%s</p>
+                        <p style="margin:22px 0 0;font-size:16px;line-height:1.65;color:#4f566b;">Ne partage jamais ce lien. L'equipe MyStash ne te demandera jamais de le copier sur un autre site.</p>
+                        <p style="margin:30px 0 0;">
+                          <a href="%s" style="display:inline-block;background:#635bff;color:#ffffff;text-decoration:none;font-weight:700;font-size:16px;border-radius:7px;padding:12px 20px;">%s</a>
+                        </p>
+                        <p style="margin:34px 0 0;font-size:14px;line-height:1.7;color:#697386;">Si le bouton ne fonctionne pas, copie ce lien dans ton navigateur :</p>
+                        <p style="margin:8px 0 0;font-size:13px;line-height:1.55;word-break:break-all;color:#635bff;">%s</p>
+                        <div style="height:1px;background:#e6ebf1;margin:34px 0 0;"></div>
+                        <p style="margin:28px 0 0;font-size:15px;line-height:1.7;color:#4f566b;">%s</p>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding:24px 0 0;">
+                        <p style="margin:0;font-size:13px;line-height:1.7;color:#697386;">MyStash - mystash.fr</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </body>
+        </html>
+        """.formatted(
+        logoUrl,
+        escapeHtml(title),
+        escapeHtml(intro),
+        link,
+        escapeHtml(buttonLabel),
+        link,
+        escapeHtml(footnote)
+    );
+  }
+
+  private String escapeHtml(String value) {
+    if (value == null) {
+      return "";
+    }
+    return value
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace("\"", "&quot;")
+        .replace("'", "&#39;");
   }
 }

@@ -5,6 +5,8 @@ import backend.entity.User;
 import backend.security.SensitiveTokenHasher;
 import backend.repository.EmailVerificationTokenRepository;
 import backend.repository.UserRepository;
+import jakarta.mail.Session;
+import jakarta.mail.internet.MimeMessage;
 import java.time.Instant;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -40,7 +42,8 @@ class EmailVerificationServiceTest {
     Mockito.when(user.getEmail()).thenReturn("test@example.com");
     Mockito.when(user.getProvider()).thenReturn("LOCAL");
     Mockito.when(user.isEmailVerified()).thenReturn(false);
-    Mockito.doThrow(new MailSendException("smtp failed")).when(mailSender).send(Mockito.any(org.springframework.mail.SimpleMailMessage.class));
+    Mockito.when(mailSender.createMimeMessage()).thenReturn(new MimeMessage((Session) null));
+    Mockito.doThrow(new MailSendException("smtp failed")).when(mailSender).send(Mockito.any(MimeMessage.class));
 
     ResponseStatusException exception = Assertions.assertThrows(
         ResponseStatusException.class,
@@ -118,6 +121,7 @@ class EmailVerificationServiceTest {
 
     Mockito.when(tokenRepository.findByToken(SensitiveTokenHasher.hash("valid-token")))
         .thenReturn(java.util.Optional.of(token));
+    Mockito.when(mailSender.createMimeMessage()).thenReturn(new MimeMessage((Session) null));
 
     User verifiedUser = service.verifyToken("valid-token");
 
@@ -126,7 +130,7 @@ class EmailVerificationServiceTest {
     Assertions.assertNotNull(token.getUsedAt());
     Mockito.verify(userRepository).save(user);
     Mockito.verify(tokenRepository, Mockito.atLeastOnce()).save(token);
-    Mockito.verify(mailSender).send(Mockito.any(org.springframework.mail.SimpleMailMessage.class));
+    Mockito.verify(mailSender).send(Mockito.any(MimeMessage.class));
   }
 
   @Test
@@ -191,10 +195,11 @@ class EmailVerificationServiceTest {
     Mockito.when(user.getEmail()).thenReturn("test@example.com");
     Mockito.when(user.getProvider()).thenReturn("LOCAL");
     Mockito.when(user.isEmailVerified()).thenReturn(false);
+    Mockito.when(mailSender.createMimeMessage()).thenReturn(new MimeMessage((Session) null));
 
     Assertions.assertDoesNotThrow(() -> service.sendVerification(user));
     Mockito.verify(tokenRepository).deleteByUserIdAndUsedAtIsNull(42L);
     Mockito.verify(tokenRepository).save(Mockito.any());
-    Mockito.verify(mailSender).send(Mockito.any(org.springframework.mail.SimpleMailMessage.class));
+    Mockito.verify(mailSender).send(Mockito.any(MimeMessage.class));
   }
 }

@@ -6,11 +6,12 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
+import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -105,7 +106,7 @@ public class PasswordResetService {
     if (PasswordPolicy.isTooShort(request.getNewPassword())) {
       throw new ResponseStatusException(
           HttpStatus.BAD_REQUEST,
-          "Mot de passe trop court (minimum " + PasswordPolicy.MIN_LENGTH + " caracteres)"
+          "Mot de passe trop court (minimum " + PasswordPolicy.MIN_LENGTH + " caractères)"
       );
     }
 
@@ -130,23 +131,22 @@ public class PasswordResetService {
   }
 
   private void sendResetEmail(String to, String link) {
-    SimpleMailMessage message = new SimpleMailMessage();
-    message.setTo(to);
-
     String from = resolveFromAddress();
-    if (from != null && !from.isBlank()) {
-      message.setFrom(from);
-    }
-
-    message.setSubject("Reinitialisation du mot de passe");
-    message.setText(
-        "Bonjour,\n\n" +
-        "Pour reinitialiser votre mot de passe, cliquez sur le lien ci-dessous :\n" +
-        link + "\n\n" +
-        "Si vous n'etes pas a l'origine de cette demande, ignorez cet email.\n"
-    );
 
     try {
+      MimeMessage message = mailSender.createMimeMessage();
+      MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+      helper.setTo(to);
+      helper.setFrom(from, "MyStash");
+      helper.setSubject("Reinitialise ton mot de passe MyStash");
+      helper.setText(
+          "Tu as demande a reinitialiser ton mot de passe MyStash.\n\n"
+              + "Clique sur ce lien pour choisir un nouveau mot de passe :\n"
+              + link + "\n\n"
+              + "Ce lien expire dans " + expirationMinutes + " minutes.\n"
+              + "Si tu n'es pas a l'origine de cette demande, ignore cet email.\n",
+          resetPasswordHtml(link)
+      );
       mailSender.send(message);
     } catch (Exception ex) {
       logger.warn("Password reset email send failed for {}", to, ex);
@@ -180,5 +180,81 @@ public class PasswordResetService {
         .fromUriString(resetPasswordUrl)
         .queryParam("token", token)
         .toUriString();
+  }
+
+  private String resetPasswordHtml(String link) {
+    String safeLink = escapeHtml(link);
+    return baseEmailHtml(
+        "Reinitialise ton mot de passe",
+        "Pour choisir un nouveau mot de passe MyStash, ouvre ce lien dans ton navigateur.",
+        "Choisir un nouveau mot de passe",
+        safeLink,
+        "Ce lien expire dans " + expirationMinutes + " minutes. Si tu n'as pas demande cette reinitialisation, tu peux ignorer cet email."
+    );
+  }
+
+  private String baseEmailHtml(String title, String intro, String buttonLabel, String link, String footnote) {
+    String frontendBaseUrl = environment.getProperty("app.frontend.base-url", "https://mystash.fr");
+    String logoUrl = escapeHtml(frontendBaseUrl.replaceAll("/+$", "") + "/logo.png");
+    return """
+        <!doctype html>
+        <html>
+          <body style="margin:0;background:#f6f9fc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#3c4257;">
+            <table role="presentation" width="100%%" cellspacing="0" cellpadding="0" style="background:#f6f9fc;padding:54px 16px;">
+              <tr>
+                <td align="center">
+                  <table role="presentation" width="100%%" cellspacing="0" cellpadding="0" style="max-width:720px;">
+                    <tr>
+                      <td style="padding:0 0 18px 0;">
+                        <img src="%s" width="44" height="44" alt="MyStash" style="display:block;border:0;border-radius:12px;">
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="background:#ffffff;border-radius:14px;padding:58px 64px 46px;box-shadow:0 1px 2px rgba(60,66,87,0.08);">
+                        <div style="font-size:22px;font-weight:800;letter-spacing:-0.02em;color:#0f172a;">MyStash</div>
+                        <h1 style="margin:42px 0 0;font-size:24px;line-height:1.35;font-weight:700;color:#30313d;">%s</h1>
+                        <p style="margin:24px 0 0;font-size:17px;line-height:1.65;color:#4f566b;">%s</p>
+                        <p style="margin:22px 0 0;font-size:16px;line-height:1.65;color:#4f566b;">Ne partage jamais ce lien. L'equipe MyStash ne te demandera jamais de le copier sur un autre site.</p>
+                        <p style="margin:30px 0 0;">
+                          <a href="%s" style="display:inline-block;background:#635bff;color:#ffffff;text-decoration:none;font-weight:700;font-size:16px;border-radius:7px;padding:12px 20px;">%s</a>
+                        </p>
+                        <p style="margin:34px 0 0;font-size:14px;line-height:1.7;color:#697386;">Si le bouton ne fonctionne pas, copie ce lien dans ton navigateur :</p>
+                        <p style="margin:8px 0 0;font-size:13px;line-height:1.55;word-break:break-all;color:#635bff;">%s</p>
+                        <div style="height:1px;background:#e6ebf1;margin:34px 0 0;"></div>
+                        <p style="margin:28px 0 0;font-size:15px;line-height:1.7;color:#4f566b;">%s</p>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding:24px 0 0;">
+                        <p style="margin:0;font-size:13px;line-height:1.7;color:#697386;">MyStash - mystash.fr</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </body>
+        </html>
+        """.formatted(
+        logoUrl,
+        escapeHtml(title),
+        escapeHtml(intro),
+        link,
+        escapeHtml(buttonLabel),
+        link,
+        escapeHtml(footnote)
+    );
+  }
+
+  private String escapeHtml(String value) {
+    if (value == null) {
+      return "";
+    }
+    return value
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace("\"", "&quot;")
+        .replace("'", "&#39;");
   }
 }

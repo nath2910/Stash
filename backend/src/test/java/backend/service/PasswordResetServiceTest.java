@@ -6,6 +6,8 @@ import backend.entity.User;
 import backend.security.SensitiveTokenHasher;
 import backend.repository.PasswordResetTokenRepository;
 import backend.repository.UserRepository;
+import jakarta.mail.Session;
+import jakarta.mail.internet.MimeMessage;
 import java.time.Instant;
 import java.util.Optional;
 import org.junit.jupiter.api.Assertions;
@@ -122,10 +124,11 @@ class PasswordResetServiceTest {
     user.setPassword("old-password");
 
     Mockito.when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(user));
+    Mockito.when(mailSender.createMimeMessage()).thenReturn(new MimeMessage((Session) null));
 
     Assertions.assertDoesNotThrow(() -> service.requestReset("test@example.com"));
     Mockito.verify(tokenRepository).save(Mockito.any());
-    Mockito.verify(mailSender).send(Mockito.any(org.springframework.mail.SimpleMailMessage.class));
+    Mockito.verify(mailSender).send(Mockito.any(MimeMessage.class));
   }
 
   @Test
@@ -151,7 +154,7 @@ class PasswordResetServiceTest {
     Assertions.assertDoesNotThrow(() -> service.requestReset("unknown@example.com"));
     Mockito.verify(tokenRepository, Mockito.never()).save(Mockito.any());
     Mockito.verify(mailSender, Mockito.never())
-        .send(Mockito.any(org.springframework.mail.SimpleMailMessage.class));
+        .send(Mockito.any(MimeMessage.class));
   }
 
   @Test
@@ -188,6 +191,6 @@ class PasswordResetServiceTest {
     Assertions.assertEquals("Service email non configure", exception.getReason());
     Mockito.verify(tokenRepository, Mockito.never()).save(Mockito.any());
     Mockito.verify(mailSender, Mockito.never())
-        .send(Mockito.any(org.springframework.mail.SimpleMailMessage.class));
+        .send(Mockito.any(MimeMessage.class));
   }
 }

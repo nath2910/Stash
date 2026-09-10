@@ -39,6 +39,9 @@ spring:
     properties:
       mail.smtp.auth: ${SPRING_MAIL_SMTP_AUTH:true}
       mail.smtp.starttls.enable: ${SPRING_MAIL_SMTP_STARTTLS:true}
+      mail.smtp.connectiontimeout: ${SPRING_MAIL_CONNECTION_TIMEOUT_MS:5000}
+      mail.smtp.timeout: ${SPRING_MAIL_TIMEOUT_MS:5000}
+      mail.smtp.writetimeout: ${SPRING_MAIL_WRITE_TIMEOUT_MS:5000}
 
   security:
     oauth2:
@@ -120,6 +123,8 @@ app:
 
 stripe:
   sales-enabled: ${STRIPE_SALES_ENABLED:false}
+  # Test keys are always allowed. Live checkout requires both flags to be true.
+  commercial-registration-complete: ${STRIPE_COMMERCIAL_REGISTRATION_COMPLETE:false}
   annual-price-id: ${STRIPE_ANNUAL_PRICE_ID:}
   secret-key: ${STRIPE_SECRET_KEY:}
   price-id: ${STRIPE_PRICE_ID:}

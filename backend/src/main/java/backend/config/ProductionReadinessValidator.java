@@ -51,6 +51,7 @@ public class ProductionReadinessValidator {
     validatePublicHttpsUrl(frontendBaseUrl, "APP_FRONTEND_BASE_URL");
     validatePublicHttpsUrl(backendPublicBaseUrl, "APP_BACKEND_PUBLIC_BASE_URL");
     validateCorsOrigins(allowedOrigins);
+    validateMailConfiguration(environment);
   }
 
   static boolean usesInsecureJwtSecret(String secret) {
@@ -110,6 +111,37 @@ public class ProductionReadinessValidator {
     if (isLocalHost(normalizedHost)) {
       throw new IllegalStateException(propertyName + " cannot point to localhost in prod");
     }
+  }
+
+  static void validateMailConfiguration(Environment environment) {
+    String host = trim(environment.getProperty("spring.mail.host"));
+    if (host == null) {
+      throw new IllegalStateException("SPRING_MAIL_HOST must be set in prod so account verification emails can be sent");
+    }
+
+    String from = trim(environment.getProperty("app.email-verification.mail-from"));
+    String username = trim(environment.getProperty("spring.mail.username"));
+    if (from == null && username == null) {
+      throw new IllegalStateException("APP_MAIL_FROM or SPRING_MAIL_USERNAME must be set in prod for verification emails");
+    }
+
+    boolean smtpAuth = Boolean.parseBoolean(environment.getProperty("spring.mail.properties.mail.smtp.auth", "true"));
+    if (smtpAuth) {
+      String password = trim(environment.getProperty("spring.mail.password"));
+      if (username == null) {
+        throw new IllegalStateException("SPRING_MAIL_USERNAME must be set in prod when SMTP auth is enabled");
+      }
+      if (password == null) {
+        throw new IllegalStateException("SPRING_MAIL_PASSWORD must be set in prod when SMTP auth is enabled");
+      }
+    }
+  }
+
+  private static String trim(String value) {
+    if (value == null || value.isBlank()) {
+      return null;
+    }
+    return value.trim();
   }
 
   private static URI parseAbsoluteUri(String rawValue, String propertyName) {
