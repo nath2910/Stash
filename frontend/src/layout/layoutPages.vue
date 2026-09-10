@@ -1401,16 +1401,22 @@ body.layout-light-document-scroll::-webkit-scrollbar {
 
   .layout-footer-pill {
     width: 100%;
-    gap: 0.75rem;
-    overflow-x: auto;
-    padding: 0.65rem 0.9rem;
-    border-radius: 20px;
-    scrollbar-width: none;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.35rem 0.75rem;
+    overflow: visible;
+    padding: 0.65rem 0.8rem;
+    border-radius: 16px;
+    scrollbar-width: auto;
     font-size: 0.75rem;
   }
 
-  .layout-footer-pill::-webkit-scrollbar {
-    display: none;
+  .layout-footer-pill > * {
+    white-space: normal;
+  }
+
+  .layout-footer-pill a {
+    line-height: 1.35;
   }
 }
 

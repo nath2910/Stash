@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full overflow-hidden bg-slate-950 text-slate-100">
+  <div class="app-page-stack--abo h-full overflow-hidden bg-slate-950 text-slate-100">
     <div class="mx-auto flex h-full w-full max-w-6xl flex-col px-4 py-4 sm:px-6 sm:py-5 lg:px-8">
       <div class="flex items-center justify-between gap-3">
         <button

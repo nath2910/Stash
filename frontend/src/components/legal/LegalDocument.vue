@@ -49,7 +49,43 @@ nav { display: flex; gap: 1rem; flex-wrap: wrap; }
 :deep(.legal-summary strong) { color: #1e3a8a; }
 :deep(.legal-summary p) { margin: .35rem 0 0; color: #334155; }
 @media (max-width: 680px) {
-  .legal-document { padding-top: 1.25rem; }
-  :deep(table) { display: block; overflow-x: auto; white-space: normal; }
+  .legal-document { padding: 1rem 0.85rem 3rem; }
+  header, nav, .legal-content { padding: 1rem; border-radius: .8rem; }
+  nav { display: grid; gap: .45rem; }
+  :deep(nav a) { width: 100%; padding: .55rem .65rem; }
+  :deep(table),
+  :deep(thead),
+  :deep(tbody),
+  :deep(tr),
+  :deep(th),
+  :deep(td) {
+    display: block;
+    width: 100%;
+  }
+  :deep(table) {
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: .86rem;
+  }
+  :deep(thead) {
+    display: none;
+  }
+  :deep(tr) {
+    margin: .75rem 0;
+    border: 1px solid #dbe4ef;
+    border-radius: .85rem;
+    background: #f8fafc;
+    overflow: hidden;
+  }
+  :deep(td),
+  :deep(th) {
+    border-bottom: 1px solid #e2e8f0;
+    padding: .7rem .75rem;
+    overflow-wrap: anywhere;
+  }
+  :deep(td:last-child),
+  :deep(th:last-child) {
+    border-bottom: 0;
+  }
 }
 </style>

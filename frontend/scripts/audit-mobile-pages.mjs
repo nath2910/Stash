@@ -23,6 +23,7 @@ function sleep(ms) {
 }
 
 const baseUrl = process.argv[2] || 'http://127.0.0.1:4173'
+const mockCorsOrigin = new URL(baseUrl).origin
 const outputDir = path.resolve(process.cwd(), '..', 'tmp', 'mobile-audit')
 
 const fixtureItems = Array.from({ length: 12 }, (_, index) => ({
@@ -401,7 +402,7 @@ async function auditRoute(browser, routeConfig) {
         contentType: 'application/json',
         body: JSON.stringify(body),
         headers: {
-          'Access-Control-Allow-Origin': 'http://127.0.0.1:4173',
+          'Access-Control-Allow-Origin': mockCorsOrigin,
           'Access-Control-Allow-Credentials': 'true',
           'Access-Control-Allow-Headers': 'Authorization, Content-Type',
           'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',

@@ -217,13 +217,69 @@ defineEmits(['close'])
 }
 
 @media (max-width: 640px) {
+  .quick-intro-shell {
+    align-items: flex-end;
+    padding:
+      max(0.75rem, env(safe-area-inset-top))
+      0.75rem
+      max(0.75rem, env(safe-area-inset-bottom))
+      0.75rem;
+  }
+
   .quick-intro-card {
-    padding: 1.2rem;
-    border-radius: 1.4rem;
+    max-height: calc(100dvh - 1.5rem);
+    overflow-y: auto;
+    padding: 1rem;
+    border-radius: 1.15rem;
+  }
+
+  .quick-intro-close {
+    top: 0.75rem;
+    right: 0.75rem;
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .quick-intro-kicker {
+    font-size: 0.66rem;
   }
 
   .quick-intro-title {
     padding-right: 2.25rem;
+    font-size: 1.35rem;
+    line-height: 1.08;
+  }
+
+  .quick-intro-description {
+    margin-top: 0.7rem;
+    font-size: 0.9rem;
+    line-height: 1.45;
+  }
+
+  .quick-intro-detail {
+    margin-top: 0.7rem;
+    padding: 0.75rem;
+    border-radius: 0.8rem;
+    font-size: 0.84rem;
+  }
+
+  .quick-intro-points {
+    gap: 0.45rem;
+  }
+
+  .quick-intro-points li {
+    padding: 0.7rem 0.75rem;
+    border-radius: 0.85rem;
+    font-size: 0.84rem;
+  }
+
+  .quick-intro-actions,
+  .quick-intro-primary {
+    width: 100%;
+  }
+
+  .quick-intro-primary {
+    min-height: 2.75rem;
   }
 }
 </style>
