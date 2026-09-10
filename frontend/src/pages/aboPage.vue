@@ -26,10 +26,10 @@
             {{ stripeTestMode ? 'Checkout test' : 'Abonnement mensuel' }}
           </p>
           <h1 class="mt-4 max-w-3xl text-3xl font-bold leading-tight text-white sm:text-5xl">
-            L'outil du reseller
+            MyStash
           </h1>
           <p class="mt-4 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">
-            Pilote ton stock, tes ventes et ta compta depuis un seul outil pense pour la revente.
+            Pilote ton stock, tes ventes et ta comptabilite depuis un seul outil pense pour la revente.
           </p>
 
           <div class="mt-6 grid gap-3 sm:grid-cols-2">
@@ -167,6 +167,8 @@ const stripeReady = ref(true)
 type Plan = { id: string; amount: number; available: boolean; testMode: boolean }
 const plans = ref<Plan[]>([])
 const termsAccepted = ref(false)
+const PLANS_CACHE_KEY = 'snk_billing_plans_v1'
+const PLANS_CACHE_TTL_MS = 24 * 60 * 60 * 1000
 
 const monthlyOffer = computed(() => plans.value.find((plan) => plan.id === 'monthly'))
 const monthlyOfferAvailable = computed(() => Boolean(monthlyOffer.value?.available))
@@ -210,16 +212,65 @@ const features = [
   },
   {
     icon: Calculator,
-    title: 'Compta reseller',
+    title: 'Comptabilite',
     desc: 'Recettes, charges et elements utiles pour suivre ton activite.',
   },
 ]
+
+const validPlans = (value: unknown): value is Plan[] =>
+  Array.isArray(value) &&
+  value.every(
+    (plan) =>
+      plan &&
+      typeof plan === 'object' &&
+      typeof (plan as Plan).id === 'string' &&
+      typeof (plan as Plan).amount === 'number' &&
+      Number.isFinite((plan as Plan).amount) &&
+      typeof (plan as Plan).available === 'boolean' &&
+      typeof (plan as Plan).testMode === 'boolean',
+  )
+
+const loadCachedPlans = () => {
+  try {
+    const raw = localStorage.getItem(PLANS_CACHE_KEY)
+    if (!raw) return
+    const payload = JSON.parse(raw) as { savedAt?: number; plans?: unknown }
+    if (!payload.savedAt || Date.now() - payload.savedAt > PLANS_CACHE_TTL_MS) return
+    if (validPlans(payload.plans)) plans.value = payload.plans
+  } catch {
+    // Ignore stale or malformed cache.
+  }
+}
+
+const saveCachedPlans = (nextPlans: Plan[]) => {
+  try {
+    localStorage.setItem(PLANS_CACHE_KEY, JSON.stringify({ savedAt: Date.now(), plans: nextPlans }))
+  } catch {
+    // Ignore storage quota/private mode failures.
+  }
+}
+
+const fetchPlans = async () => {
+  try {
+    const nextPlans = (await BillingService.plans()).data
+    if (validPlans(nextPlans)) {
+      plans.value = nextPlans
+      saveCachedPlans(nextPlans)
+    }
+    error.value = ''
+  } catch {
+    if (!monthlyOffer.value) {
+      error.value =
+        'Tarif Stripe indisponible : verifie que le prix mensuel Stripe est actif, en EUR et mensuel.'
+    }
+  }
+}
 
 const checkoutDetails = computed(() =>
   stripeTestMode.value
     ? ['Mode test Stripe : aucun debit reel.', 'Activation simulee apres le checkout.', 'Webhook et portail testes de bout en bout.']
     : [
-        `${priceLabel.value} TTC si ton tarif Stripe est actif.`,
+        `${priceLabel.value} si ton tarif Stripe est actif.`,
         'Carte bancaire, Apple Pay ou Google Pay selon Stripe.',
         'Aucune donnee de carte stockee par MyStash.',
       ],
@@ -345,12 +396,8 @@ const redirectIfActive = () => {
 }
 
 onMounted(async () => {
-  try {
-    plans.value = (await BillingService.plans()).data
-  } catch {
-    error.value = 'Tarif Stripe indisponible : verifie que le prix mensuel Stripe est actif et configure en EUR.'
-  }
-  await fetchStatus(false, shouldPollAfterCheckout.value)
+  loadCachedPlans()
+  await Promise.all([fetchPlans(), fetchStatus(false, shouldPollAfterCheckout.value)])
   redirectIfActive()
 
   if (shouldPollAfterCheckout.value) {

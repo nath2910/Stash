@@ -251,7 +251,8 @@ public class BillingService {
   private String priceId(String plan) { return "monthly".equals(plan) ? props.getPriceId() : "annual".equals(plan) ? props.getAnnualPriceId() : null; }
   private boolean acceptableTaxBehavior(String taxBehavior) {
     return taxBehavior == null || taxBehavior.isBlank()
-        || "inclusive".equals(taxBehavior) || "unspecified".equals(taxBehavior);
+        || "inclusive".equals(taxBehavior) || "exclusive".equals(taxBehavior)
+        || "unspecified".equals(taxBehavior);
   }
   private boolean terminal(String status) { return "canceled".equals(status) || "incomplete_expired".equals(status); }
   private boolean accessStatus(String status) { return "active".equals(status) || "trialing".equals(status); }
