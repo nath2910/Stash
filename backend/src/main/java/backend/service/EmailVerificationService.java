@@ -320,9 +320,9 @@ public class EmailVerificationService {
   private String emailBrandHtml() {
     String logoUrl = environment.getProperty("app.email-brand.logo-url", "");
     if (logoUrl == null || logoUrl.isBlank() || !logoUrl.startsWith("https://")) {
-      return "<div style=\"font-size:22px;font-weight:800;letter-spacing:-0.02em;color:#0f172a;\">MyStash</div>";
+      return "<div style=\"text-align:center;font-size:22px;font-weight:800;letter-spacing:-0.02em;color:#0f172a;\">MyStash</div>";
     }
-    return "<div style=\"line-height:0;\"><img src=\"%s\" width=\"160\" alt=\"MyStash\" style=\"display:block;width:160px;max-width:100%%;height:auto;border:0;outline:none;text-decoration:none;\"></div>"
+    return "<div style=\"text-align:center;line-height:0;\"><img src=\"%s\" width=\"128\" alt=\"MyStash\" style=\"display:inline-block;width:128px;max-width:100%%;height:auto;border:0;outline:none;text-decoration:none;\"></div>"
         .formatted(escapeHtml(logoUrl.trim()));
   }
 
