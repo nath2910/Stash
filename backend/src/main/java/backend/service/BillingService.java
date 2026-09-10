@@ -79,7 +79,7 @@ public class BillingService {
     }
     String interval = "annual".equals(plan) ? "year" : "month";
     if (!Boolean.TRUE.equals(price.getActive()) || price.getUnitAmount() == null || price.getUnitAmount() <= 0
-        || !"eur".equals(price.getCurrency()) || !"inclusive".equals(price.getTaxBehavior())
+        || !"eur".equals(price.getCurrency()) || !acceptableTaxBehavior(price.getTaxBehavior())
         || price.getRecurring() == null || !interval.equals(price.getRecurring().getInterval())
         || !Long.valueOf(1).equals(price.getRecurring().getIntervalCount())) {
       throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Tarif TTC non configuré");
@@ -249,6 +249,10 @@ public class BillingService {
     return users.lockById(principal.getId()).orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
   }
   private String priceId(String plan) { return "monthly".equals(plan) ? props.getPriceId() : "annual".equals(plan) ? props.getAnnualPriceId() : null; }
+  private boolean acceptableTaxBehavior(String taxBehavior) {
+    return taxBehavior == null || taxBehavior.isBlank()
+        || "inclusive".equals(taxBehavior) || "unspecified".equals(taxBehavior);
+  }
   private boolean terminal(String status) { return "canceled".equals(status) || "incomplete_expired".equals(status); }
   private boolean accessStatus(String status) { return "active".equals(status) || "trialing".equals(status); }
   private boolean present(String value) { return value != null && !value.isBlank(); }

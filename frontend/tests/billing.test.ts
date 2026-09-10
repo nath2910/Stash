@@ -24,11 +24,11 @@ describe('BillingService', () => {
   it('uses a longer timeout for checkout', async () => {
     apiPost.mockResolvedValue({ data: { url: 'https://stripe.test/checkout' } })
 
-    await BillingService.checkout(undefined, undefined)
+    await BillingService.checkout('monthly', true)
 
     expect(apiPost).toHaveBeenCalledWith(
       '/billing/checkout',
-      { promoCode: undefined, discord: undefined },
+      { plan: 'monthly', termsAccepted: true },
       { timeout: 45000 },
     )
   })

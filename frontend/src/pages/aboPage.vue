@@ -1,6 +1,6 @@
 <template>
-  <div class="min-h-full overflow-x-hidden bg-slate-950 text-slate-100">
-    <div class="mx-auto flex min-h-dvh w-full max-w-6xl flex-col px-4 py-5 sm:px-6 lg:px-8">
+  <div class="h-full overflow-hidden bg-slate-950 text-slate-100">
+    <div class="mx-auto flex h-full w-full max-w-6xl flex-col px-4 py-4 sm:px-6 sm:py-5 lg:px-8">
       <div class="flex items-center justify-between gap-3">
         <button
           type="button"
@@ -20,19 +20,19 @@
         </span>
       </div>
 
-      <main class="grid flex-1 items-center gap-6 py-8 lg:grid-cols-[1fr_420px] lg:py-10">
+      <main class="grid min-h-0 flex-1 items-center gap-5 py-4 lg:grid-cols-[1fr_420px] lg:py-6">
         <section class="min-w-0">
           <p class="text-xs font-bold uppercase tracking-[0.24em] text-emerald-300">
             {{ stripeTestMode ? 'Checkout test' : 'Abonnement mensuel' }}
           </p>
           <h1 class="mt-4 max-w-3xl text-3xl font-bold leading-tight text-white sm:text-5xl">
-            MyStash Premium
+            L'outil du reseller
           </h1>
           <p class="mt-4 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">
-            Debloque les fonctions avancees pour suivre ton stock, tes ventes et tes performances sans gestion manuelle.
+            Pilote ton stock, tes ventes et ta compta depuis un seul outil pense pour la revente.
           </p>
 
-          <div class="mt-7 grid gap-3 sm:grid-cols-2">
+          <div class="mt-6 grid gap-3 sm:grid-cols-2">
             <div
               v-for="feature in features"
               :key="feature.title"
@@ -140,6 +140,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import {
   ArrowLeft,
   BarChart3,
+  Calculator,
   CheckCircle2,
   CreditCard,
   DatabaseBackup,
@@ -208,9 +209,9 @@ const features = [
     desc: 'Aide plus rapide si tu bloques sur un point important.',
   },
   {
-    icon: ShieldCheck,
-    title: 'Gestion Stripe',
-    desc: 'Factures, carte et annulation dans un portail securise.',
+    icon: Calculator,
+    title: 'Compta reseller',
+    desc: 'Recettes, charges et elements utiles pour suivre ton activite.',
   },
 ]
 
@@ -347,7 +348,7 @@ onMounted(async () => {
   try {
     plans.value = (await BillingService.plans()).data
   } catch {
-    error.value = 'Les tarifs sont temporairement indisponibles.'
+    error.value = 'Tarif Stripe indisponible : verifie que le prix mensuel Stripe est actif et configure en EUR.'
   }
   await fetchStatus(false, shouldPollAfterCheckout.value)
   redirectIfActive()
