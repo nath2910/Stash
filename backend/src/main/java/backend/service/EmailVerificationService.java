@@ -1,15 +1,10 @@
 package backend.service;
 
 import backend.security.SensitiveTokenHasher;
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
 
 import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.factory.annotation.Value;
@@ -236,50 +231,47 @@ public class EmailVerificationService {
     return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
   }
 
-  private String getLogoBase64() {
-    try {
-      Resource resource = new UrlResource(new URI("file:" + System.getenv("LOGOMYSTASH_PATH")));
-      byte[] imageBytes = resource.getInputStream().readAllBytes();
-      return "data:image/png;base64," + Base64.getEncoder().encodeToString(imageBytes);
-    } catch (Exception e) {
-      logger.warn("Impossible de charger le logo, utilisation du texte seul", e);
-      return null;
-    }
-  }
-
-  private String getLogoImgHtml() {
-    String logoBase64 = getLogoBase64();
-    if (logoBase64 == null) return null;
-    return "<img src=\"" + logoBase64 + "\" alt=\"MyStash\" style=\"max-width:200px;height:auto;\" />";
-  }
-
   private String verificationHtml(String link) {
     String safeLink = escapeHtml(link);
-    String logoHtml = getLogoImgHtml();
     return baseEmailHtml(
         "Confirme ton adresse email",
         "Pour activer ton compte MyStash, ouvre ce lien dans ton navigateur.",
         "Confirmer mon email",
         safeLink,
         "Ce lien expire dans " + expirationMinutes + " minutes. Si tu n'as pas cree de compte MyStash, tu peux ignorer cet email.",
-        logoHtml
+        true,
+        true
     );
   }
 
   private String confirmationHtml() {
-    String logoHtml = getLogoImgHtml();
     return baseEmailHtml(
         "Ton compte est active",
-        "Ton adresse email est confirmee. Tu peux maintenant te connecter a MyStash.",
+        "Ton adresse email est confirmee. Ton espace MyStash est pret.",
         "Ouvrir MyStash",
         escapeHtml(environment.getProperty("app.frontend.base-url", "https://mystash.fr")),
-        "Merci d'utiliser MyStash.",
-        logoHtml
+        "Tu peux maintenant te connecter et commencer a utiliser ton compte.",
+        false,
+        false
     );
   }
 
-  private String baseEmailHtml(String title, String intro, String buttonLabel, String link, String footnote, String logoHtml) {
-    String logoSection = logoHtml != null ? "<div style=\"text-align:center;margin-bottom:30px;\">" + logoHtml + "</div>\n" : "";
+  private String baseEmailHtml(
+      String title,
+      String intro,
+      String buttonLabel,
+      String link,
+      String footnote,
+      boolean sensitiveAction,
+      boolean showFallbackLink
+  ) {
+    String securityBlock = sensitiveAction
+        ? "<p style=\"margin:22px 0 0;font-size:16px;line-height:1.65;color:#4f566b;\">Ne partage jamais ce lien. L'equipe MyStash ne te demandera jamais de le copier sur un autre site.</p>"
+        : "";
+    String fallbackBlock = showFallbackLink
+        ? "<p style=\"margin:34px 0 0;font-size:14px;line-height:1.7;color:#697386;\">Si le bouton ne fonctionne pas, copie ce lien dans ton navigateur :</p><p style=\"margin:8px 0 0;font-size:13px;line-height:1.55;word-break:break-all;color:#635bff;\">%s</p>".formatted(link)
+        : "";
+    String brandBlock = emailBrandHtml();
     return """
         <!doctype html>
         <html>
@@ -290,17 +282,14 @@ public class EmailVerificationService {
                   <table role="presentation" width="100%%" cellspacing="0" cellpadding="0" style="max-width:720px;">
                     <tr>
                       <td style="background:#ffffff;border-radius:14px;padding:58px 64px 46px;box-shadow:0 1px 2px rgba(60,66,87,0.08);">
-                        <div style="text-align:center;margin-bottom:30px;">
-                          <img src="%s" alt="MyStash" style="max-width:200px;height:auto;" />
-                        </div>
+                        %s
                         <h1 style="margin:42px 0 0;font-size:24px;line-height:1.35;font-weight:700;color:#30313d;">%s</h1>
                         <p style="margin:24px 0 0;font-size:17px;line-height:1.65;color:#4f566b;">%s</p>
-                        <p style="margin:22px 0 0;font-size:16px;line-height:1.65;color:#4f566b;">Ne partage jamais ce lien. L'equipe MyStash ne te demandera jamais de le copier sur un autre site.</p>
+                        %s
                         <p style="margin:30px 0 0;">
                           <a href="%s" style="display:inline-block;background:#635bff;color:#ffffff;text-decoration:none;font-weight:700;font-size:16px;border-radius:7px;padding:12px 20px;">%s</a>
                         </p>
-                        <p style="margin:34px 0 0;font-size:14px;line-height:1.7;color:#697386;">Si le bouton ne fonctionne pas, copie ce lien dans ton navigateur :</p>
-                        <p style="margin:8px 0 0;font-size:13px;line-height:1.55;word-break:break-all;color:#635bff;">%s</p>
+                        %s
                         <div style="height:1px;background:#e6ebf1;margin:34px 0 0;"></div>
                         <p style="margin:28px 0 0;font-size:15px;line-height:1.7;color:#4f566b;">%s</p>
                       </td>
@@ -317,14 +306,24 @@ public class EmailVerificationService {
           </body>
         </html>
         """.formatted(
-        escapeHtml(logoHtml != null ? logoHtml : ""),
+        brandBlock,
         escapeHtml(title),
         escapeHtml(intro),
+        securityBlock,
         link,
         escapeHtml(buttonLabel),
-        link,
+        fallbackBlock,
         escapeHtml(footnote)
     );
+  }
+
+  private String emailBrandHtml() {
+    String logoUrl = environment.getProperty("app.email-brand.logo-url", "");
+    if (logoUrl == null || logoUrl.isBlank() || !logoUrl.startsWith("https://")) {
+      return "<div style=\"font-size:22px;font-weight:800;letter-spacing:-0.02em;color:#0f172a;\">MyStash</div>";
+    }
+    return "<div style=\"line-height:0;\"><img src=\"%s\" width=\"160\" alt=\"MyStash\" style=\"display:block;width:160px;max-width:100%%;height:auto;border:0;outline:none;text-decoration:none;\"></div>"
+        .formatted(escapeHtml(logoUrl.trim()));
   }
 
   private String escapeHtml(String value) {

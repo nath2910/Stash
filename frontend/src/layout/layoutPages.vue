@@ -282,7 +282,7 @@
 
     <!-- Footer -->
     <footer
-      v-if="!route.meta.fullBleed && !isAuthRoute"
+      v-if="!route.meta.fullBleed && !isAuthRoute && !isPublicDocumentRoute"
       class="layout-footer fixed left-0 right-0 bottom-4 flex justify-center transition-opacity duration-500 ease-out pointer-events-none"
       :class="footerVisible ? 'opacity-100' : 'opacity-0'"
     >
@@ -294,7 +294,7 @@
             : 'bg-slate-900/92 border-white/10 shadow-[0_10px_24px_rgba(0,0,0,0.3)]'
         "
       >
-        <span class="font-jetbrains-mono">&copy; {{ new Date().getFullYear() }} - Stash</span>
+        <span class="font-jetbrains-mono">&copy; {{ new Date().getFullYear() }} - MyStash</span>
         <RouterLink to="/a-propos" class="hover:underline">À propos</RouterLink>
         <RouterLink to="/confidentialite" class="hover:underline">Confidentialité</RouterLink>
         <RouterLink to="/legal" class="hover:underline">Mentions légales</RouterLink>
@@ -400,8 +400,10 @@ const router = useRouter()
 const isStats = computed(() => route.path === '/stats')
 const isStatsLight = computed(() => isStats.value)
 const isGestionRoute = computed(() => route.path === '/gestion')
+const isPublicDocumentRoute = computed(() => route.meta.publicDocument === true)
 const isLightAppShell = computed(() =>
-  ['/', '/gestion', '/a-propos', '/confidentialite', '/privacy', '/legal', '/legal/cgu', '/legal/cgv', '/cookies'].includes(route.path),
+  isPublicDocumentRoute.value ||
+  ['/', '/gestion', '/a-propos', '/confidentialite', '/privacy'].includes(route.path),
 )
 const isLightChrome = computed(() =>
   ![
@@ -435,7 +437,9 @@ const isAuthRoute = computed(() =>
     'verify-email-short',
   ].includes(route.name),
 )
-const showPrimaryNav = computed(() => !isAuthRoute.value && route.meta.hidePrimaryNav !== true)
+const showPrimaryNav = computed(
+  () => !isAuthRoute.value && !isPublicDocumentRoute.value && route.meta.hidePrimaryNav !== true,
+)
 const statsTemplateModeActive = ref(false)
 const isAccountRoute = computed(() => route.name === 'account')
 const showHeaderNav = computed(() => showPrimaryNav.value && !isStats.value)
@@ -565,6 +569,7 @@ const showNotificationSystem = computed(
     !!auth.user?.value?.id &&
     billing.status.value === 'active' &&
     !isAuthRoute.value &&
+    !isPublicDocumentRoute.value &&
     !notificationHiddenRoutes.has(String(route.name || '')),
 )
 const unreadBadge = computed(() =>

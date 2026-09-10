@@ -154,11 +154,11 @@ const router = createRouter({
       alias: '/privacy',
       name: 'privacy',
       component: PrivacyPage,
-      meta: { allowScroll: true, wideContent: true },
+      meta: { allowScroll: true, wideContent: true, publicDocument: true },
     },
-    { path: '/legal', name: 'legal', component: () => import('@/pages/LegalPage.vue'), meta: { allowScroll: true, wideContent: true } },
-    { path: '/legal/cgv', name: 'cgv', component: () => import('@/pages/TermsPage.vue'), meta: { allowScroll: true, wideContent: true } },
-    { path: '/cookies', name: 'cookies', component: () => import('@/pages/CookiesPage.vue'), meta: { allowScroll: true, wideContent: true } },
+    { path: '/legal', name: 'legal', component: () => import('@/pages/LegalPage.vue'), meta: { allowScroll: true, wideContent: true, publicDocument: true } },
+    { path: '/legal/cgu', alias: '/legal/cgv', name: 'cgu', component: () => import('@/pages/TermsPage.vue'), meta: { allowScroll: true, wideContent: true, publicDocument: true } },
+    { path: '/cookies', name: 'cookies', component: () => import('@/pages/CookiesPage.vue'), meta: { allowScroll: true, wideContent: true, publicDocument: true } },
     {
       path: '/admin',
       name: 'admin',
@@ -264,7 +264,7 @@ const router = createRouter({
 })
 
 const publicRoutes = new Set([
-  'legal', 'cgv', 'cookies',
+  'legal', 'cgu', 'cookies',
   'auth',
   'discover',
   'about',
