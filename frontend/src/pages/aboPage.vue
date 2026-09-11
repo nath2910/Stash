@@ -116,7 +116,7 @@
               <button
                 type="button"
                 class="rounded-lg border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-emerald-400/50 disabled:opacity-50"
-                :disabled="promoValidating || !promoCode?.strip() || promoCode.strip().length < 3"
+                :disabled="promoValidating || !promoCode?.trim() || promoCode.trim().length < 3"
                 @click="validatePromoCode"
               >
                 {{ promoValidating ? '...' : 'Valider' }}
@@ -429,7 +429,7 @@ const startCheckout = async () => {
 }
 
 const validatePromoCode = async () => {
-  const code = promoCode.value?.strip()
+  const code = promoCode.value?.trim()
   if (!code || code.length < 3) {
     promoValid.value = false
     promoError.value = 'Code trop court'
