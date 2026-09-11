@@ -1,6 +1,6 @@
 <template>
   <div class="app-page-stack--abo h-full overflow-hidden bg-slate-950 text-slate-100">
-    <div class="mx-auto flex h-full w-full max-w-6xl flex-col px-4 py-4 sm:px-6 sm:py-5 lg:px-8">
+    <div class="mx-auto flex h-full w-full max-w-6xl flex-col px-4 py-3 sm:px-6 sm:py-3 lg:px-8">
       <div class="flex items-center justify-between gap-3">
         <button
           type="button"
@@ -20,7 +20,7 @@
         </span>
       </div>
 
-      <main class="grid min-h-0 flex-1 items-center gap-5 py-4 lg:grid-cols-[1fr_420px] lg:py-6">
+      <main class="grid min-h-0 flex-1 items-center gap-4 py-2 lg:grid-cols-[1fr_420px] lg:py-3">
         <section class="min-w-0">
           <p class="text-xs font-bold uppercase tracking-[0.24em] text-emerald-300">
             {{ stripeTestMode ? 'Checkout test' : 'Abonnement mensuel' }}
@@ -32,11 +32,11 @@
             Pilote ton stock, tes ventes et ta comptabilite depuis un seul outil pense pour la revente.
           </p>
 
-          <div class="mt-6 grid gap-3 sm:grid-cols-2">
+          <div class="mt-5 grid gap-3 sm:grid-cols-2">
             <div
               v-for="feature in features"
               :key="feature.title"
-              class="flex gap-3 rounded-xl border border-slate-800 bg-slate-900/65 p-4"
+              class="flex gap-3 rounded-xl border border-slate-800 bg-slate-900/65 p-3"
             >
               <span class="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-400/10 text-emerald-300">
                 <component :is="feature.icon" class="h-4 w-4" />
@@ -48,7 +48,7 @@
             </div>
           </div>
 
-          <div class="mt-6 flex flex-wrap items-center gap-3 text-sm text-slate-400">
+          <div class="mt-5 flex flex-wrap items-center gap-3 text-sm text-slate-400">
             <span class="inline-flex items-center gap-2">
               <ShieldCheck class="h-4 w-4 text-emerald-300" />
               Paiement securise par Stripe
@@ -60,7 +60,7 @@
           </div>
         </section>
 
-        <aside class="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-2xl shadow-black/30 sm:p-6">
+        <aside class="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 shadow-2xl shadow-black/30 sm:p-5">
           <div class="flex items-start justify-between gap-4">
             <div>
               <p class="text-sm font-semibold text-slate-400">Offre mensuelle</p>
@@ -74,11 +74,11 @@
             </span>
           </div>
 
-          <p class="mt-4 text-sm leading-6 text-slate-300">
+          <p class="mt-3 text-sm leading-6 text-slate-300">
             Acces immediat apres paiement. Renouvellement automatique chaque mois, annulable depuis le portail Stripe.
           </p>
 
-          <div class="mt-5 space-y-3 border-y border-slate-800 py-4">
+          <div class="mt-4 space-y-3 border-y border-slate-800 py-3">
             <div
               v-for="item in checkoutDetails"
               :key="item"
@@ -89,7 +89,7 @@
             </div>
           </div>
 
-          <label class="mt-5 flex items-start gap-3 text-sm leading-6 text-slate-300">
+          <label class="mt-4 flex items-start gap-3 text-sm leading-6 text-slate-300">
             <input
               v-model="termsAccepted"
               type="checkbox"
@@ -103,7 +103,7 @@
             </span>
           </label>
 
-          <div class="mt-5 space-y-2">
+          <div class="mt-4 space-y-2">
             <div class="flex gap-2">
               <input
                 v-model="promoCode"
@@ -129,7 +129,7 @@
 
           <button
             type="button"
-            class="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-emerald-400 px-4 text-sm font-bold text-slate-950 shadow-lg shadow-emerald-500/20 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-55"
+            class="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-emerald-400 px-4 text-sm font-bold text-slate-950 shadow-lg shadow-emerald-500/20 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-55"
             :disabled="ctaDisabled"
             @click="startCheckout"
           >
@@ -146,10 +146,10 @@
             Gerer mon abonnement
           </button>
 
-          <p v-if="error" class="mt-4 rounded-lg border border-red-400/25 bg-red-400/10 px-3 py-2 text-sm text-red-200">
+          <p v-if="error" class="mt-3 rounded-lg border border-red-400/25 bg-red-400/10 px-3 py-2 text-sm text-red-200">
             {{ error }}
           </p>
-          <p v-else class="mt-4 text-xs leading-5 text-slate-500">
+          <p v-else class="mt-3 text-xs leading-5 text-slate-500">
             {{ stripeStatusCopy }}
           </p>
         </aside>

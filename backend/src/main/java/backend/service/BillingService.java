@@ -11,12 +11,14 @@ import com.stripe.Stripe;
 import com.stripe.model.Coupon;
 import com.stripe.model.Customer;
 import com.stripe.model.Price;
+import com.stripe.model.PromotionCode;
 import com.stripe.model.Subscription;
 import com.stripe.model.checkout.Session;
 import com.stripe.net.RequestOptions;
 import com.stripe.net.Webhook;
 import com.stripe.param.CouponCreateParams;
 import com.stripe.param.CouponListParams;
+import com.stripe.param.PromotionCodeListParams;
 import com.stripe.param.CustomerCreateParams;
 import com.stripe.param.SubscriptionListParams;
 import com.stripe.param.SubscriptionUpdateParams;
@@ -66,11 +68,20 @@ public class BillingService {
     String normalized = code.strip().toUpperCase();
     if (normalized.isBlank()) return null;
     try {
+      PromotionCode promotionCode = findPromotionCode(normalized);
+      if (promotionCode != null && promotionCode.getCoupon() != null) {
+        Coupon coupon = promotionCode.getCoupon();
+        long amountOff = coupon.getAmountOff() != null ? coupon.getAmountOff() : 0L;
+        String currency = coupon.getCurrency() != null ? coupon.getCurrency().toUpperCase() : "EUR";
+        return new ValidatedPromo(promotionCode.getCode(), coupon.getId(), amountOff, currency);
+      }
+
+      // Also accept a coupon ID or coupon name for compatibility with older configurations.
       var params = CouponListParams.builder().setLimit(100L).build();
-      // Stripe coupons are identified by their ID or name; search by ID prefix match
       var collection = Coupon.list(params);
       for (Coupon c : collection.getData()) {
-        if (normalized.equals(c.getId().toUpperCase()) || normalized.equals(c.getName().toUpperCase())) {
+        if (normalized.equals(c.getId().toUpperCase())
+            || (c.getName() != null && normalized.equals(c.getName().toUpperCase()))) {
           long amountOff = c.getAmountOff() != null ? c.getAmountOff() : 0L;
           String currency = c.getCurrency() != null ? c.getCurrency().toUpperCase() : "EUR";
           return new ValidatedPromo(c.getId(), c.getId(), amountOff, currency);
@@ -122,11 +133,19 @@ public class BillingService {
 
   private Coupon validateAndGetCoupon(String code) throws Exception {
     requireConfigured();
+    String normalized = code == null ? "" : code.strip().toUpperCase();
     try {
+      PromotionCode promotionCode = findPromotionCode(normalized);
+      if (promotionCode != null && promotionCode.getCoupon() != null) {
+        return promotionCode.getCoupon();
+      }
+
+      // Also accept a coupon ID or coupon name for compatibility with older configurations.
       var params = CouponListParams.builder().setLimit(100L).build();
       var collection = Coupon.list(params);
       for (Coupon c : collection.getData()) {
-        if (code.toUpperCase().equals(c.getId().toUpperCase()) || code.toUpperCase().equals(c.getName().toUpperCase())) {
+        if (normalized.equals(c.getId().toUpperCase())
+            || (c.getName() != null && normalized.equals(c.getName().toUpperCase()))) {
           return c;
         }
       }
@@ -136,6 +155,24 @@ public class BillingService {
     } catch (Exception ex) {
       throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Validation du code promo impossible");
     }
+  }
+
+  private PromotionCode findPromotionCode(String normalizedCode) throws Exception {
+    if (normalizedCode == null || normalizedCode.isBlank()) return null;
+    var params = PromotionCodeListParams.builder().setLimit(100L).build();
+    var collection = PromotionCode.list(params);
+    long now = Instant.now().getEpochSecond();
+    for (PromotionCode promotionCode : collection.getData()) {
+      if (!Boolean.TRUE.equals(promotionCode.getActive())
+          || promotionCode.getCode() == null
+          || !normalizedCode.equals(promotionCode.getCode().toUpperCase())) continue;
+      if (promotionCode.getExpiresAt() != null && promotionCode.getExpiresAt() <= now) continue;
+      if (promotionCode.getMaxRedemptions() != null
+          && promotionCode.getTimesRedeemed() != null
+          && promotionCode.getTimesRedeemed() >= promotionCode.getMaxRedemptions()) continue;
+      return promotionCode;
+    }
+    return null;
   }
 
   @Transactional(rollbackFor = Exception.class)
