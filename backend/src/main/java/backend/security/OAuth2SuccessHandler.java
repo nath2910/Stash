@@ -137,8 +137,10 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
     String emailNorm = !isBlank(email) ? email.trim().toLowerCase() : null;
 
     // Vérifie l'éligibilité AVANT toute persistance (discordId suffit, ID utilisateur pas nécessaire)
+    // Invalide d'abord le cache pour garantir un rendu à jour de l'éligibilité Discord.
     User probe = new User();
     probe.setDiscordId(discordId);
+    discordAccessService.invalidateForUser(probe);
     boolean eligible = discordAccessService.isEligible(probe);
     if (!eligible) {
       response.sendRedirect(successRedirect + "#error=discord_not_allowed");
