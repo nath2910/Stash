@@ -8,12 +8,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.stripe.Stripe;
+import com.stripe.model.Coupon;
 import com.stripe.model.Customer;
 import com.stripe.model.Price;
 import com.stripe.model.Subscription;
 import com.stripe.model.checkout.Session;
 import com.stripe.net.RequestOptions;
 import com.stripe.net.Webhook;
+import com.stripe.param.CouponListParams;
 import com.stripe.param.CustomerCreateParams;
 import com.stripe.param.SubscriptionListParams;
 import com.stripe.param.SubscriptionUpdateParams;
@@ -55,6 +57,30 @@ public class BillingService {
         && present(props.getSuccessUrl()) && present(props.getWebhookSecret());
   }
 
+  public record ValidatedPromo(String code, String couponId, long amountOffCents, String currency) {}
+
+  public ValidatedPromo validatePromo(String code) throws Exception {
+    requireConfigured();
+    if (code == null || code.isBlank()) return null;
+    String normalized = code.strip().toUpperCase();
+    if (normalized.isBlank()) return null;
+    try {
+      var params = CouponListParams.builder().setActive(true).setLimit(100L).build();
+      // Stripe coupons are identified by their ID or name; search by ID prefix match
+      var collection = Coupon.list(params);
+      for (Coupon c : collection.getData()) {
+        if (normalized.equals(c.getId().toUpperCase()) || normalized.equals(c.getName().toUpperCase())) {
+          long amountOff = c.getAmountOff() != null ? c.getAmountOff() : 0L;
+          String currency = c.getCurrency() != null ? c.getCurrency().toUpperCase() : "EUR";
+          return new ValidatedPromo(c.getId(), c.getId(), amountOff, currency);
+        }
+      }
+      return null;
+    } catch (Exception ex) {
+      throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Validation du code promo impossible");
+    }
+  }
+
   public record Plan(String id, long amount, String currency, String interval, boolean available, boolean testMode) {}
 
   public List<Plan> plans() throws Exception {
@@ -93,6 +119,24 @@ public class BillingService {
     return price;
   }
 
+  private Coupon validateAndGetCoupon(String code) throws Exception {
+    requireConfigured();
+    try {
+      var params = CouponListParams.builder().setActive(true).setLimit(100L).build();
+      var collection = Coupon.list(params);
+      for (Coupon c : collection.getData()) {
+        if (code.toUpperCase().equals(c.getId().toUpperCase()) || code.toUpperCase().equals(c.getName().toUpperCase())) {
+          return c;
+        }
+      }
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Code promo invalide");
+    } catch (ResponseStatusException ex) {
+      throw ex;
+    } catch (Exception ex) {
+      throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Validation du code promo impossible");
+    }
+  }
+
   @Transactional(rollbackFor = Exception.class)
   public Session createCheckout(User principal, CheckoutRequest request) throws Exception {
     requireConfigured();
@@ -107,8 +151,15 @@ public class BillingService {
     if (!user.isEmailVerified()) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Vérifiez votre email");
     Price price = priceFor(request.plan());
     String customerId = ensureCustomer(user);
-    if (subscriptions(customerId).stream().anyMatch(s -> !terminal(s.getStatus()))) {
+    List<Subscription> currentSubscriptions = subscriptions(customerId);
+    syncCurrent(user, currentSubscriptions);
+    if (currentSubscriptions.stream().anyMatch(this::blocksNewCheckout)) {
       throw new ResponseStatusException(HttpStatus.CONFLICT, "Un abonnement existe déjà. Gérez-le depuis votre compte.");
+    }
+    // Validate promo code if provided
+    Coupon appliedCoupon = null;
+    if (request.promoCode() != null && !request.promoCode().isBlank()) {
+      appliedCoupon = validateAndGetCoupon(request.promoCode().strip());
     }
     // A user lock serializes checkout, cancellation, deletion and webhook processing across replicas.
     for (Session open : openSessions(customerId)) {
@@ -126,6 +177,11 @@ public class BillingService {
         .setSubscriptionData(SessionCreateParams.SubscriptionData.builder()
             .putMetadata("terms_version", TERMS_VERSION).putMetadata("terms_accepted_at", String.valueOf(acceptedAt)).build())
         .addLineItem(SessionCreateParams.LineItem.builder().setPrice(price.getId()).setQuantity(1L).build()).build();
+    if (appliedCoupon != null) {
+      params = params.toBuilder()
+          .setCoupon(appliedCoupon.getId())
+          .build();
+    }
     return Session.create(params, RequestOptions.builder().setIdempotencyKey(
         "checkout:" + user.getId() + ":" + price.getId() + ":" + acceptedAt / 1800).build());
   }
@@ -262,6 +318,11 @@ public class BillingService {
   }
   private boolean terminal(String status) { return "canceled".equals(status) || "incomplete_expired".equals(status); }
   private boolean accessStatus(String status) { return "active".equals(status) || "trialing".equals(status); }
+  private boolean blocksNewCheckout(Subscription subscription) {
+    if (subscription == null || !knownPrice(subscription)) return false;
+    String status = subscription.getStatus();
+    return accessStatus(status) || "past_due".equals(status) || "unpaid".equals(status) || "paused".equals(status);
+  }
   private boolean present(String value) { return value != null && !value.isBlank(); }
   private boolean checkoutEnabled() {
     return isTestMode() || (props.isSalesEnabled() && props.isCommercialRegistrationComplete());

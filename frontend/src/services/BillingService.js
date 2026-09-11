@@ -14,8 +14,14 @@ const BillingService = {
   plans() { return api.get('/billing/plans') },
   cancel() { return api.post('/billing/cancel') },
   portal() { return api.post('/billing/portal') },
-  checkout(plan, termsAccepted) {
-    return api.post('/billing/checkout', { plan, termsAccepted }, { timeout: BILLING_CHECKOUT_TIMEOUT_MS })
+  validatePromo(code) {
+    return api.post('/billing/validate-promo', null, {
+      params: { code },
+      timeout: 10000,
+    })
+  },
+  checkout(plan, termsAccepted, promoCode) {
+    return api.post('/billing/checkout', { plan, termsAccepted, promoCode }, { timeout: BILLING_CHECKOUT_TIMEOUT_MS })
   },
 }
 

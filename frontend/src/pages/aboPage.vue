@@ -103,6 +103,30 @@
             </span>
           </label>
 
+          <div class="mt-5 space-y-2">
+            <div class="flex gap-2">
+              <input
+                v-model="promoCode"
+                type="text"
+                placeholder="Code promo..."
+                class="flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:border-emerald-400/50 focus:outline-none"
+                :disabled="promoValidating || status === 'active'"
+                @keyup.enter="validatePromoCode"
+              />
+              <button
+                type="button"
+                class="rounded-lg border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-emerald-400/50 disabled:opacity-50"
+                :disabled="promoValidating || !promoCode?.strip() || promoCode.strip().length < 3"
+                @click="validatePromoCode"
+              >
+                {{ promoValidating ? '...' : 'Valider' }}
+              </button>
+            </div>
+            <p v-if="promoError" class="text-xs" :class="promoValid ? 'text-emerald-400' : 'text-red-400'">
+              {{ promoError }}
+            </p>
+          </div>
+
           <button
             type="button"
             class="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-emerald-400 px-4 text-sm font-bold text-slate-950 shadow-lg shadow-emerald-500/20 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-55"
@@ -164,6 +188,10 @@ const portalUrl = ref('')
 const loading = ref(false)
 const error = ref('')
 const stripeReady = ref(true)
+const promoCode = ref('')
+const promoValidating = ref(false)
+const promoValid = ref(false)
+const promoError = ref('')
 type Plan = { id: string; amount: number; available: boolean; testMode: boolean }
 const plans = ref<Plan[]>([])
 const plansVerified = ref(false)
@@ -297,7 +325,8 @@ const ctaDisabled = computed(
     !stripeReady.value ||
     !plansVerified.value ||
     !termsAccepted.value ||
-    !monthlyOffer.value?.available,
+    !monthlyOffer.value?.available ||
+    promoValidating.value,
 )
 
 const ctaLabel = computed(() => {
@@ -307,6 +336,7 @@ const ctaLabel = computed(() => {
   if (!plansVerified.value) return monthlyOffer.value ? 'Verification du tarif...' : 'Tarif indisponible'
   if (!monthlyOffer.value?.available) return 'Tarif indisponible'
   if (!termsAccepted.value) return 'Accepte les conditions'
+  if (promoValidating.value) return 'Validation du code...'
   return stripeTestMode.value ? 'Tester le checkout' : `S'abonner - ${formatPrice(monthlyOffer.value.amount)}`
 })
 
@@ -382,7 +412,7 @@ const startCheckout = async () => {
   error.value = ''
 
   try {
-    const res = await BillingService.checkout('monthly', termsAccepted.value)
+    const res = await BillingService.checkout('monthly', termsAccepted.value, promoCode.value || undefined)
     const url = res?.data?.url
 
     if (url) {
@@ -395,6 +425,32 @@ const startCheckout = async () => {
     error.value = describeBillingError(e, 'Impossible de lancer le paiement pour le moment.')
   } finally {
     loading.value = false
+  }
+}
+
+const validatePromoCode = async () => {
+  const code = promoCode.value?.strip()
+  if (!code || code.length < 3) {
+    promoValid.value = false
+    promoError.value = 'Code trop court'
+    return
+  }
+  promoValidating.value = true
+  promoError.value = ''
+  try {
+    const res = await BillingService.validatePromo(code)
+    if (res?.data) {
+      promoValid.value = true
+      promoError.value = 'Code promo valide ✓'
+    } else {
+      promoValid.value = false
+      promoError.value = 'Code promo invalide'
+    }
+  } catch (e: unknown) {
+    promoValid.value = false
+    promoError.value = describeBillingError(e, 'Impossible de valider le code promo')
+  } finally {
+    promoValidating.value = false
   }
 }
 

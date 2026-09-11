@@ -5,6 +5,7 @@ import backend.dto.CheckoutRequest;
 import backend.dto.CheckoutResponse;
 import backend.entity.User;
 import backend.service.BillingService;
+import backend.service.BillingService.ValidatedPromo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -35,7 +36,7 @@ public class BillingController {
       throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Stripe non configuré");
     }
     try {
-      if (forceRefresh) {
+      if (forceRefresh || user.getStripeCustomerId() != null) {
         billingService.refreshStatus(user);
       }
       String portalUrl = "";
@@ -87,6 +88,18 @@ public class BillingController {
   @PostMapping("/portal")
   public CheckoutResponse portal(@AuthenticationPrincipal User user) throws Exception {
     return new CheckoutResponse(billingService.createPortal(user).getUrl());
+  }
+
+  @PostMapping("/validate-promo")
+  public ValidatedPromo validatePromo(@RequestParam String code) {
+    if (code == null || code.isBlank()) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Code requis");
+    }
+    try {
+      return billingService.validatePromo(code.strip());
+    } catch (Exception e) {
+      throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Validation du code promo impossible");
+    }
   }
 
   private BillingStatusResponse snapshot(User user, String portalUrl) {
