@@ -110,9 +110,14 @@ public class DiscordAccessService {
       headers.set("User-Agent", "sneakers-app/1.0");
       ResponseEntity<Map> resp = restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(headers), Map.class);
       if (resp.getStatusCode().is2xxSuccessful()) {
+        log.info("Discord eligibility: member fetch OK guild={} user={} roles={}",
+            guildId, discordId,
+            resp.getBody().get("roles") != null ? resp.getBody().get("roles") : "[]");
         return resp.getBody();
       }
-      log.warn("Discord eligibility: member fetch non-2xx guild={} user={} status={}", guildId, discordId, resp.getStatusCode());
+      log.warn("Discord eligibility: member fetch non-2xx guild={} user={} status={} body={}",
+          guildId, discordId, resp.getStatusCode(),
+          resp.getBody() != null ? resp.getBody().toString() : "null");
     } catch (Exception e) {
       log.warn("Discord eligibility: error fetching member guild={} user={}: {}", guildId, discordId, e.getMessage());
     }
