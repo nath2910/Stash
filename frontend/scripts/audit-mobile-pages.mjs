@@ -164,6 +164,15 @@ const routeConfigs = [
     selector: '.home-page-light',
   },
   {
+    name: 'home-menu',
+    path: '/',
+    auth: true,
+    subscriptionStatus: 'active',
+    selector: '.layout-mobile-menu-panel',
+    openMobileMenu: true,
+    maxViewportWidth: 767,
+  },
+  {
     name: 'gestion-inventory',
     path: '/gestion',
     auth: true,
@@ -460,6 +469,13 @@ async function auditRoute(browser, routeConfig, viewportConfig) {
   await setSessionState(page, routeConfig)
   const targetUrl = new URL(routeConfig.path, `${baseUrl}/`).toString()
   await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 30000 })
+  if (routeConfig.openMobileMenu) {
+    const menuButton = await page.waitForSelector('button[aria-label="Ouvrir le menu"]', { timeout: 5000 }).catch(() => null)
+    if (menuButton) {
+      await page.evaluate((button) => button.click(), menuButton)
+      await sleep(220)
+    }
+  }
   let selectorFound = true
   if (routeConfig.selector) {
     selectorFound = Boolean(
@@ -524,6 +540,7 @@ try {
   const results = []
   for (const routeConfig of routeConfigs) {
     for (const viewportConfig of viewportConfigs) {
+      if (routeConfig.maxViewportWidth && viewportConfig.width > routeConfig.maxViewportWidth) continue
       // sequential on purpose to keep screenshots and request mocks deterministic
       process.stderr.write(`Auditing ${routeConfig.name} ${viewportConfig.name}\n`)
       results.push(await auditRoute(browser, routeConfig, viewportConfig))

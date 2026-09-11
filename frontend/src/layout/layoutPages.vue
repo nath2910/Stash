@@ -20,7 +20,7 @@
           (route.path === '/' || route.path === '/gestion') && homeHeaderHidden && !mobileMenuOpen && !menuOpen
             ? 'layout-app-header--hidden'
             : '',
-          isStats ? 'top-2' : navBubble || mobileMenuOpen ? 'top-0 is-stuck' : 'top-4',
+          isStats ? 'top-2' : navBubble || (mobileMenuOpen && isCompactNavViewport) ? 'top-0 is-stuck' : 'top-4',
           isLightChrome || isStatsLight ? 'is-light' : 'is-dark',
         ]"
       >
@@ -33,32 +33,24 @@
             <button
               v-if="showHeaderNav"
               type="button"
-              class="md:hidden p-2 rounded-xl transition"
+              class="layout-mobile-menu-button sm:hidden"
               :class="
                 isLightChrome
                   ? 'text-gray-600 hover:text-black hover:bg-black/5'
                   : 'text-gray-300 hover:text-white hover:bg-white/5'
               "
               @click.stop="toggleMobileMenu"
-              aria-label="Ouvrir le menu"
-              :aria-expanded="mobileMenuOpen"
+              :aria-label="mobileMenuOpen && isCompactNavViewport ? 'Fermer le menu' : 'Ouvrir le menu'"
+              :aria-expanded="mobileMenuOpen && isCompactNavViewport"
             >
-              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  v-if="!mobileMenuOpen"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M4 6h16M4 12h16M4 18h16"
-                />
-                <path
-                  v-else
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
+              <span
+                class="layout-mobile-menu-button__lines"
+                :class="{ 'is-open': mobileMenuOpen && isCompactNavViewport }"
+              >
+                <span></span>
+                <span></span>
+                <span></span>
+              </span>
             </button>
             <span v-else class="h-9 w-9" aria-hidden="true"></span>
           </div>
@@ -66,7 +58,7 @@
           <!-- Center nav -->
           <nav
             v-if="showHeaderNav"
-            class="hidden md:flex items-center justify-center pointer-events-auto mx-auto"
+            class="hidden sm:flex items-center justify-center pointer-events-auto mx-auto"
             :class="
               navBubble || isStatsLight || isLightChrome
                 ? isStatsLight || isLightChrome
@@ -175,18 +167,12 @@
         </div>
 
         <!-- Mobile menu -->
-        <div
-          v-if="showHeaderNav && mobileMenuOpen"
-          class="md:hidden layout-shell-row layout-shell-row--header pb-3 pointer-events-auto"
-          @click.stop
-        >
+        <Transition name="layout-mobile-menu">
           <div
-            class="layout-mobile-menu-panel mt-2 rounded-2xl border p-2 shadow-lg"
-            :class="
-              isLightChrome || isStatsLight
-                ? 'bg-white/92 border-slate-200/90 shadow-slate-950/10'
-                : 'bg-gray-900/70 border-white/10 shadow-slate-950/30'
-            "
+            v-if="showHeaderNav && mobileMenuOpen && isCompactNavViewport"
+            class="layout-mobile-menu-panel sm:hidden pointer-events-auto"
+            :class="isLightChrome || isStatsLight ? 'is-light' : 'is-dark'"
+            @click.stop
           >
             <RouterLink
               to="/"
@@ -215,7 +201,7 @@
               Gestion
             </RouterLink>
           </div>
-        </div>
+        </Transition>
       </header>
     </template>
 
@@ -362,16 +348,6 @@
       </button>
     </div>
 
-    <AsyncQuickIntroOverlay
-      v-if="activeQuickIntro"
-      :open="quickIntroOpen"
-      :kicker="activeQuickIntro.kicker"
-      :title="activeQuickIntro.title"
-      :description="activeQuickIntro.description"
-      :detail="activeQuickIntro.detail"
-      :points="activeQuickIntro.points"
-      @close="closeQuickIntro"
-    />
   </div>
 </template>
 
@@ -381,7 +357,6 @@ import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/store/authStore'
 import { useBillingStore } from '@/store/billingStore'
 import { useNotificationStore } from '@/store/notificationStore'
-import { scopedStorageKey } from '@/RegleItem/storageScope'
 import { Home, BarChart3, Boxes, Bell } from 'lucide-vue-next'
 
 const AsyncNotificationCenter = defineAsyncComponent(
@@ -389,9 +364,6 @@ const AsyncNotificationCenter = defineAsyncComponent(
 )
 const AsyncNotificationToastStack = defineAsyncComponent(
   () => import('@/components/NotificationToastStack.vue'),
-)
-const AsyncQuickIntroOverlay = defineAsyncComponent(
-  () => import('@/components/QuickIntroOverlay.vue'),
 )
 
 const route = useRoute()
@@ -493,81 +465,20 @@ const billing = useBillingStore()
 const notification = useNotificationStore()
 let notificationInitTimer = null
 let notificationInitIdleHandle = null
-let quickIntroTimer = null
 const idleTimeoutMs = 10 * 60 * 1000
 const lastActivity = ref(Date.now())
 let idleTimer = null
-const quickIntroOpen = ref(false)
 const IDLE_ACTIVITY_EVENTS = ['pointerdown', 'keydown', 'visibilitychange']
 
-const QUICK_INTRO_STORAGE_PREFIX = 'snk_quick_intro_seen'
-const HOME_ONBOARD_PENDING_PREFIX = 'snk_onboarding_pending'
-const HOME_ONBOARD_SEEN_PREFIX = 'snk_onboarding_seen'
-const QUICK_INTRO_CONFIG = {
-  home: {
-    kicker: 'Quick intro',
-    title: 'L accueil centralise les actions rapides',
-    description:
-      'Tu peux ajouter une paire, retrouver un item et lire les KPI du moment sans changer de page.',
-    detail: "C est la page la plus directe pour alimenter ton stock et garder un oeil sur l activite.",
-    points: ['Recherche instantanee', 'Ajout rapide', 'KPI annuels et stock'],
-  },
-  stats: {
-    kicker: 'Quick intro',
-    title: 'Stats sert a piloter visuellement ton activite',
-    description:
-      'Le canvas te laisse composer des widgets ou appliquer un template complet pour analyser ventes, marges et stock.',
-    detail: 'Commence par un template si tu veux une lecture propre tout de suite.',
-    points: ['Modèles prêts à l’emploi', 'Widgets modulaires', 'Périodes et profils comparables'],
-  },
-  'gestion-inventory': {
-    kicker: 'Quick intro',
-    title: 'Inventaire regroupe tes items et tes filtres',
-    description:
-      'Cette vue sert a nettoyer le stock, ouvrir une fiche, corriger des infos et lancer des actions de masse.',
-    detail: 'Les filtres et la recherche sont le point d entree principal pour naviguer vite.',
-    points: ['Liste complete du stock', 'Filtres et tris', 'Edition et suppression'],
-  },
-  'gestion-delivery': {
-    kicker: 'Quick intro',
-    title: 'Suivi livraison centralise colis et mails',
-    description:
-      'Tu suis ici les livraisons detectees, les evenements colis et les connexions de boites mail.',
-    detail: 'Pratique pour relier rapidement un suivi a un item et voir les statuts sans sortir du produit.',
-    points: ['Colis detectes', 'Statuts de transport', 'Comptes mail et candidates'],
-  },
-  'gestion-admin': {
-    kicker: 'Quick intro',
-    title: 'L’administratif structure le dossier légal',
-    description:
-      'Cet onglet sert à compléter le profil, vérifier les obligations et générer les documents utiles.',
-    detail: 'Le rappel profil incomplet renvoie ici tant que les informations essentielles manquent.',
-    points: ['Profil légal', 'Déclarations', 'Documents et contrôles'],
-  },
-  account: {
-    kicker: 'Quick intro',
-    title: 'Compte : sécurité et profil légal',
-    description:
-      'Tu retrouves ici les informations du compte, le mot de passe et l’accès au module administratif.',
-    detail: 'C est la page de maintenance du compte, pas la page de pilotage.',
-    points: ['Informations utilisateur', 'Mot de passe', 'État du profil légal'],
-  },
-  'abo-view': {
-    kicker: 'Quick intro',
-    title: 'Mon abonnement sert a gerer la partie Stripe',
-    description:
-      'Tu peux verifier le statut, ouvrir le portail et garder un oeil sur la facturation sans repasser par le checkout.',
-    detail: 'La gestion de carte et des factures reste centralisee cote Stripe.',
-    points: ['Statut courant', 'Portail client', 'Facturation et annulation'],
-  },
-}
-
 const notificationHiddenRoutes = new Set(['stats', 'gestion'])
+const isResponsiveViewport = ref(false)
+const isCompactNavViewport = ref(false)
 const showNotificationSystem = computed(
   () =>
     !!auth.token?.value &&
     !!auth.user?.value?.id &&
     billing.status.value === 'active' &&
+    !isResponsiveViewport.value &&
     !isAuthRoute.value &&
     !isPublicDocumentRoute.value &&
     !notificationHiddenRoutes.has(String(route.name || '')),
@@ -608,33 +519,6 @@ const currentUser = computed(() => {
   return u && typeof u === 'object' && 'value' in u ? u.value : u
 })
 const currentUserId = computed(() => currentUser.value?.id ?? 'guest')
-const homeOnboardPendingStorageKey = computed(() =>
-  scopedStorageKey(HOME_ONBOARD_PENDING_PREFIX, currentUserId.value),
-)
-const homeOnboardSeenStorageKey = computed(() =>
-  scopedStorageKey(HOME_ONBOARD_SEEN_PREFIX, currentUserId.value),
-)
-const activeQuickIntroKey = computed(() => {
-  if (!auth.token?.value || !currentUser.value?.id) return ''
-
-  switch (route.name) {
-    case 'home':
-      return shouldSuppressHomeQuickIntro() ? '' : 'home'
-    case 'stats':
-      return 'stats'
-    case 'gestion':
-      if (route.query?.tab === 'delivery') return 'gestion-delivery'
-      if (route.query?.tab === 'admin') return 'gestion-admin'
-      return 'gestion-inventory'
-    case 'account':
-      return 'account'
-    case 'abo-view':
-      return 'abo-view'
-    default:
-      return ''
-  }
-})
-const activeQuickIntro = computed(() => QUICK_INTRO_CONFIG[activeQuickIntroKey.value] || null)
 
 const initials = computed(() => {
   const u = currentUser.value
@@ -696,6 +580,7 @@ const toggleUserMenu = () => {
 }
 
 const toggleMobileMenu = () => {
+  if (!isCompactNavViewport.value) return
   mobileMenuOpen.value = !mobileMenuOpen.value
   if (mobileMenuOpen.value) menuOpen.value = false
 }
@@ -803,6 +688,15 @@ const onWindowClick = (e) => {
   closeMenus()
 }
 
+const updateResponsiveViewport = () => {
+  if (typeof window === 'undefined') return
+  isResponsiveViewport.value = window.matchMedia('(max-width: 767px)').matches
+  isCompactNavViewport.value = window.matchMedia('(max-width: 639px)').matches
+  if (!isCompactNavViewport.value) {
+    mobileMenuOpen.value = false
+  }
+}
+
 const onKeyDown = (e) => {
   const target = e.target
   const isTypingTarget =
@@ -868,74 +762,12 @@ const scheduleNotificationInit = () => {
   })
 }
 
-const clearQuickIntroTimer = () => {
-  if (quickIntroTimer) {
-    window.clearTimeout(quickIntroTimer)
-    quickIntroTimer = null
-  }
-}
-
-const quickIntroSeenStorageKey = (introKey) =>
-  `${QUICK_INTRO_STORAGE_PREFIX}_${currentUserId.value}_${introKey}`
-
-const hasSeenQuickIntro = (introKey) => {
-  if (!introKey || typeof window === 'undefined') return true
-  try {
-    return localStorage.getItem(quickIntroSeenStorageKey(introKey)) === '1'
-  } catch {
-    return false
-  }
-}
-
-const markQuickIntroSeen = (introKey) => {
-  if (!introKey || typeof window === 'undefined') return
-  try {
-    localStorage.setItem(quickIntroSeenStorageKey(introKey), '1')
-  } catch {
-    // ignore storage failures
-  }
-}
-
-function shouldSuppressHomeQuickIntro() {
-  if (typeof window === 'undefined') return false
-  try {
-    return (
-      localStorage.getItem(homeOnboardPendingStorageKey.value) === '1' ||
-      localStorage.getItem(homeOnboardSeenStorageKey.value) === '1'
-    )
-  } catch {
-    return false
-  }
-}
-
-const scheduleQuickIntro = () => {
-  clearQuickIntroTimer()
-  quickIntroOpen.value = false
-
-  const introKey = activeQuickIntroKey.value
-  if (!introKey || !activeQuickIntro.value || hasSeenQuickIntro(introKey)) {
-    return
-  }
-
-  quickIntroTimer = window.setTimeout(() => {
-    if (!activeQuickIntro.value || activeQuickIntroKey.value !== introKey) return
-    quickIntroOpen.value = true
-    quickIntroTimer = null
-  }, 260)
-}
-
-const closeQuickIntro = () => {
-  clearQuickIntroTimer()
-  if (activeQuickIntroKey.value) {
-    markQuickIntroSeen(activeQuickIntroKey.value)
-  }
-  quickIntroOpen.value = false
-}
-
 onMounted(() => {
+  updateResponsiveViewport()
   window.addEventListener('snk:stats-template-mode', onStatsTemplateModeChange)
   window.addEventListener('click', onWindowClick)
   window.addEventListener('keydown', onKeyDown)
+  window.addEventListener('resize', updateResponsiveViewport, { passive: true })
   attachScroll()
   startIdleWatch()
 })
@@ -943,13 +775,13 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener('click', onWindowClick)
   window.removeEventListener('keydown', onKeyDown)
+  window.removeEventListener('resize', updateResponsiveViewport)
   window.removeEventListener('snk:stats-template-mode', onStatsTemplateModeChange)
   document.documentElement.classList.remove('layout-light-document-scroll')
   document.body.classList.remove('layout-light-document-scroll')
   detachScroll()
   stopIdleWatch()
   clearNotificationInitTimer()
-  clearQuickIntroTimer()
   notification.teardown({ clearState: true })
 })
 
@@ -1002,14 +834,6 @@ watch(
     notification.closeCenter()
     notificationButtonExpanded.value = false
   },
-)
-
-watch(
-  () => [route.fullPath, currentUserId.value, billing.status.value],
-  () => {
-    scheduleQuickIntro()
-  },
-  { immediate: true },
 )
 
 watch(
@@ -1357,9 +1181,106 @@ body.layout-light-document-scroll::-webkit-scrollbar {
   background: color-mix(in srgb, var(--theme-ink-border) 100%, transparent);
 }
 
+.layout-mobile-menu-button {
+  display: inline-grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease,
+    transform 180ms ease;
+}
+
+.layout-mobile-menu-button:active {
+  transform: scale(0.94);
+}
+
+@media (min-width: 640px) {
+  .layout-mobile-menu-button {
+    display: none;
+  }
+}
+
+.layout-mobile-menu-button__lines {
+  position: relative;
+  display: block;
+  width: 1.45rem;
+  height: 1.1rem;
+}
+
+.layout-mobile-menu-button__lines span {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+  transform-origin: center;
+  transition:
+    top 220ms cubic-bezier(0.2, 0.9, 0.2, 1),
+    transform 220ms cubic-bezier(0.2, 0.9, 0.2, 1),
+    opacity 140ms ease;
+}
+
+.layout-mobile-menu-button__lines span:nth-child(1) {
+  top: 0;
+}
+
+.layout-mobile-menu-button__lines span:nth-child(2) {
+  top: calc(50% - 1px);
+}
+
+.layout-mobile-menu-button__lines span:nth-child(3) {
+  top: calc(100% - 2px);
+}
+
+.layout-mobile-menu-button__lines.is-open span:nth-child(1) {
+  top: calc(50% - 1px);
+  transform: rotate(45deg);
+}
+
+.layout-mobile-menu-button__lines.is-open span:nth-child(2) {
+  opacity: 0;
+  transform: scaleX(0.35);
+}
+
+.layout-mobile-menu-button__lines.is-open span:nth-child(3) {
+  top: calc(50% - 1px);
+  transform: rotate(-45deg);
+}
+
 .layout-mobile-menu-panel {
   max-height: calc(100dvh - 5.5rem);
   overflow-y: auto;
+}
+
+.layout-mobile-menu-enter-active,
+.layout-mobile-menu-leave-active {
+  transform-origin: top center;
+  transition:
+    opacity 180ms ease,
+    transform 230ms cubic-bezier(0.2, 0.9, 0.2, 1),
+    filter 180ms ease;
+  will-change: opacity, transform, filter;
+}
+
+.layout-mobile-menu-enter-from,
+.layout-mobile-menu-leave-to {
+  opacity: 0;
+  filter: blur(5px);
+  transform: translate3d(0, -0.65rem, 0) scale(0.96);
+}
+
+.layout-mobile-menu-enter-to,
+.layout-mobile-menu-leave-from {
+  opacity: 1;
+  filter: blur(0);
+  transform: translate3d(0, 0, 0) scale(1);
 }
 
 .layout-footer-pill {
@@ -1377,15 +1298,67 @@ body.layout-light-document-scroll::-webkit-scrollbar {
     padding-inline-end: max(12px, env(safe-area-inset-right));
   }
 
-  .layout-notification-fab {
-    top: calc(4.25rem + env(safe-area-inset-top, 0px));
-    right: max(12px, env(safe-area-inset-right));
-    bottom: auto !important;
+  .layout-app-header {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 0.35rem);
   }
 
-  .layout-notification-fab :deep(.notification-trigger) {
-    min-width: 2.75rem;
-    min-height: 2.75rem;
+  .layout-app-header.is-stuck {
+    border-bottom: 0;
+  }
+
+  .layout-app-header.is-stuck.is-light {
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+
+  .layout-app-header.is-stuck.is-dark {
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+
+  .layout-mobile-menu-panel {
+    display: grid;
+    position: fixed;
+    top: calc(env(safe-area-inset-top, 0px) + 0.62rem);
+    left: max(4rem, env(safe-area-inset-left));
+    right: max(4rem, env(safe-area-inset-right));
+    width: auto;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.38rem;
+    overflow: visible;
+    border: 0 !important;
+    border-radius: 0;
+    margin: 0;
+    background: transparent !important;
+    padding: 0;
+    box-shadow: none !important;
+    backdrop-filter: none;
+    will-change: opacity, transform, filter;
+  }
+
+  .layout-mobile-menu-panel a {
+    display: inline-flex;
+    min-width: 0;
+    min-height: 38px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(203, 213, 225, 0.76);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.94);
+    padding: 0 0.55rem;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.1);
+    font-size: 0.82rem;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .layout-mobile-menu-panel a.bg-emerald-500\/14 {
+    border-color: rgba(45, 212, 191, 0.34);
+    background: linear-gradient(135deg, rgba(209, 250, 229, 0.96), rgba(236, 253, 245, 0.92));
+    color: #0f172a;
+    box-shadow: 0 14px 32px rgba(20, 184, 166, 0.12);
   }
 
   .layout-page-content {
@@ -1446,9 +1419,37 @@ body.layout-light-document-scroll::-webkit-scrollbar {
     padding-inline-end: max(10px, env(safe-area-inset-right));
   }
 
+  .layout-mobile-menu-panel {
+    left: max(3.65rem, env(safe-area-inset-left));
+    right: max(3.65rem, env(safe-area-inset-right));
+    gap: 0.28rem;
+  }
+
+  .layout-mobile-menu-panel a {
+    min-height: 36px;
+    padding-inline: 0.35rem;
+    font-size: 0.76rem;
+  }
+
   .layout-page-content {
     padding-top: calc(4rem + env(safe-area-inset-top, 0px));
     padding-bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (min-width: 640px) and (max-width: 767px) {
+  .layout-app-header.is-stuck.is-light {
+    border-bottom: 1px solid color-mix(in srgb, var(--theme-page-border-strong) 82%, transparent);
+    background: color-mix(in srgb, var(--theme-page-bg) 92%, transparent);
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+    backdrop-filter: blur(16px) saturate(130%);
+  }
+
+  .layout-app-header.is-stuck.is-dark {
+    border-bottom: 1px solid var(--theme-ink-border);
+    background: var(--theme-ink-overlay);
+    box-shadow: var(--theme-ink-shadow);
+    backdrop-filter: blur(16px) saturate(130%);
   }
 }
 

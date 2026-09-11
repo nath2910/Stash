@@ -15,6 +15,7 @@ import com.stripe.model.Subscription;
 import com.stripe.model.checkout.Session;
 import com.stripe.net.RequestOptions;
 import com.stripe.net.Webhook;
+import com.stripe.param.CouponCreateParams;
 import com.stripe.param.CouponListParams;
 import com.stripe.param.CustomerCreateParams;
 import com.stripe.param.SubscriptionListParams;
@@ -65,7 +66,7 @@ public class BillingService {
     String normalized = code.strip().toUpperCase();
     if (normalized.isBlank()) return null;
     try {
-      var params = CouponListParams.builder().setActive(true).setLimit(100L).build();
+      var params = CouponListParams.builder().setLimit(100L).build();
       // Stripe coupons are identified by their ID or name; search by ID prefix match
       var collection = Coupon.list(params);
       for (Coupon c : collection.getData()) {
@@ -122,7 +123,7 @@ public class BillingService {
   private Coupon validateAndGetCoupon(String code) throws Exception {
     requireConfigured();
     try {
-      var params = CouponListParams.builder().setActive(true).setLimit(100L).build();
+      var params = CouponListParams.builder().setLimit(100L).build();
       var collection = Coupon.list(params);
       for (Coupon c : collection.getData()) {
         if (code.toUpperCase().equals(c.getId().toUpperCase()) || code.toUpperCase().equals(c.getName().toUpperCase())) {
@@ -168,7 +169,7 @@ public class BillingService {
       open.expire();
     }
     long acceptedAt = Instant.now().getEpochSecond();
-    var params = SessionCreateParams.builder()
+    SessionCreateParams.Builder sessionBuilder = SessionCreateParams.builder()
         .setMode(SessionCreateParams.Mode.SUBSCRIPTION).setCustomer(customerId)
         .setClientReferenceId(String.valueOf(user.getId()))
         .setSuccessUrl(successUrl()).setCancelUrl(present(props.getCancelUrl()) ? props.getCancelUrl() : props.getSuccessUrl())
@@ -176,12 +177,11 @@ public class BillingService {
         .putMetadata("price_id", price.getId())
         .setSubscriptionData(SessionCreateParams.SubscriptionData.builder()
             .putMetadata("terms_version", TERMS_VERSION).putMetadata("terms_accepted_at", String.valueOf(acceptedAt)).build())
-        .addLineItem(SessionCreateParams.LineItem.builder().setPrice(price.getId()).setQuantity(1L).build()).build();
+        .addLineItem(SessionCreateParams.LineItem.builder().setPrice(price.getId()).setQuantity(1L).build());
     if (appliedCoupon != null) {
-      params = params.toBuilder()
-          .setCoupon(appliedCoupon.getId())
-          .build();
+      sessionBuilder.addDiscount(SessionCreateParams.Discount.builder().setCoupon(appliedCoupon.getId()).build());
     }
+    var params = sessionBuilder.build();
     return Session.create(params, RequestOptions.builder().setIdempotencyKey(
         "checkout:" + user.getId() + ":" + price.getId() + ":" + acceptedAt / 1800).build());
   }
