@@ -56,7 +56,7 @@ class OAuth2SuccessHandlerTest {
         "verified", Boolean.TRUE,
         "username", "Discord User"
     ));
-    Mockito.when(discordAccessService.isEligible(Mockito.any(User.class))).thenReturn(true);
+    Mockito.when(discordAccessService.isEligible(Mockito.any(User.class))).thenReturn(false);
     Mockito.when(userRepository.findByProviderAndProviderId("DISCORD", "discord-123"))
         .thenReturn(Optional.empty());
     Mockito.when(userRepository.findByEmail("user@example.com"))
@@ -68,6 +68,6 @@ class OAuth2SuccessHandlerTest {
     Mockito.verify(userRepository, Mockito.never()).save(Mockito.argThat(user ->
         "active".equals(((User) user).getSubscriptionStatus())
     ));
-    Mockito.verify(response).sendRedirect(Mockito.contains("#token="));
+    Mockito.verify(response).sendRedirect(Mockito.contains("#error=discord_not_allowed"));
   }
 }

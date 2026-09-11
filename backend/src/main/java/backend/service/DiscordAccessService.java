@@ -55,7 +55,7 @@ public class DiscordAccessService {
     if (user == null) return false;
     String discordId = user.getDiscordId();
     if (discordId == null || discordId.isBlank()) return false;
-    long cacheKey = user.getId() != null ? user.getId() : (long) discordId.hashCode();
+    long cacheKey = ((long) discordId.hashCode()) & 0x7FFFFFFFFFFFFFFFL;
     return eligibilityCache.get(cacheKey, ignored -> computeEligibility(user));
   }
 
