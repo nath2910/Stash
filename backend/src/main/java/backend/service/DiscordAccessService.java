@@ -52,8 +52,16 @@ public class DiscordAccessService {
   }
 
   public boolean isEligible(User user) {
-    if (user == null || user.getId() == null) return false;
-    return eligibilityCache.get(user.getId(), ignored -> computeEligibility(user));
+    if (user == null) return false;
+    long cacheKey;
+    if (user.getId() != null) {
+      cacheKey = user.getId();
+    } else if (user.getDiscordId() != null) {
+      cacheKey = user.getDiscordId().hashCode();
+    } else {
+      cacheKey = 0L;
+    }
+    return eligibilityCache.get(cacheKey, ignored -> computeEligibility(user));
   }
 
   private boolean computeEligibility(User user) {

@@ -136,7 +136,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
     String emailNorm = !isBlank(email) ? email.trim().toLowerCase() : null;
 
-    // Vérifie l'éligibilité AVANT toute persistance
+    // Vérifie l'éligibilité AVANT toute persistance (discordId suffit, ID utilisateur pas nécessaire)
     User probe = new User();
     probe.setDiscordId(discordId);
     boolean eligible = discordAccessService.isEligible(probe);
