@@ -13,10 +13,10 @@
             >
               <X class="h-4 w-4" aria-hidden="true" />
             </button>
-            <p class="mb-2 text-xs font-extrabold uppercase text-teal-700">Bienvenue</p>
-            <h2 class="mb-2 text-2xl font-extrabold text-slate-950">Abonnement actif</h2>
+            <p class="mb-2 text-xs font-extrabold uppercase tracking-[0.18em] text-teal-700">Accès Premium activé</p>
+            <h2 class="mb-2 text-2xl font-extrabold text-slate-950">Bienvenue dans ton espace</h2>
             <p class="mb-4 text-sm text-slate-600">
-              Retrouve tes actions rapides, tes stats et ton inventaire depuis l'accueil.
+              Ton abonnement est confirmé. Ton inventaire et tes outils sont prêts à être utilisés.
             </p>
             <div class="flex flex-col gap-3 min-[420px]:flex-row min-[420px]:flex-wrap">
               <button
@@ -24,14 +24,14 @@
                 class="rounded-xl bg-teal-700 px-4 py-2 text-sm font-bold text-white shadow-md hover:bg-teal-600"
                 @click="goToStatsFromModal"
               >
-                Ouvrir les stats
+                Explorer les statistiques
               </button>
               <button
                 type="button"
                 class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-bold text-slate-800 hover:border-teal-500"
                 @click="goToGestionFromModal"
               >
-                Voir Gestion
+                Gérer mon inventaire
               </button>
               <button
                 type="button"
