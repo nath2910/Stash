@@ -194,14 +194,19 @@ public class BillingService {
     if (currentSubscriptions.stream().anyMatch(this::blocksNewCheckout)) {
       throw new ResponseStatusException(HttpStatus.CONFLICT, "Un abonnement existe déjà. Gérez-le depuis votre compte.");
     }
-    // Validate promo code if provided
+    // Validate promo code if provided. Stripe applies the linked coupon to the
+    // Checkout subscription; a promotion code is only the customer-facing key.
     Coupon appliedCoupon = null;
     if (request.promoCode() != null && !request.promoCode().isBlank()) {
       appliedCoupon = validateAndGetCoupon(request.promoCode().strip());
     }
     // A user lock serializes checkout, cancellation, deletion and webhook processing across replicas.
     for (Session open : openSessions(customerId)) {
-      if (TERMS_VERSION.equals(open.getMetadata().get("terms_version"))
+      // Never reuse a session created without the currently requested discount.
+      // Otherwise the code is validated successfully but the customer is sent
+      // to an old Stripe session where no discount was configured.
+      if (appliedCoupon == null
+          && TERMS_VERSION.equals(open.getMetadata().get("terms_version"))
           && price.getId().equals(open.getMetadata().get("price_id"))) return open;
       open.expire();
     }
@@ -219,8 +224,9 @@ public class BillingService {
       sessionBuilder.addDiscount(SessionCreateParams.Discount.builder().setCoupon(appliedCoupon.getId()).build());
     }
     var params = sessionBuilder.build();
+    String discountKey = appliedCoupon == null ? "none" : appliedCoupon.getId();
     return Session.create(params, RequestOptions.builder().setIdempotencyKey(
-        "checkout:" + user.getId() + ":" + price.getId() + ":" + acceptedAt / 1800).build());
+        "checkout:" + user.getId() + ":" + price.getId() + ":" + discountKey + ":" + acceptedAt / 1800).build());
   }
 
   private String ensureCustomer(User user) throws Exception {
