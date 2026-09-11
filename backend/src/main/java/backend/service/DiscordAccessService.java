@@ -53,14 +53,9 @@ public class DiscordAccessService {
 
   public boolean isEligible(User user) {
     if (user == null) return false;
-    long cacheKey;
-    if (user.getId() != null) {
-      cacheKey = user.getId();
-    } else if (user.getDiscordId() != null) {
-      cacheKey = user.getDiscordId().hashCode();
-    } else {
-      cacheKey = 0L;
-    }
+    String discordId = user.getDiscordId();
+    if (discordId == null || discordId.isBlank()) return false;
+    long cacheKey = user.getId() != null ? user.getId() : (long) discordId.hashCode();
     return eligibilityCache.get(cacheKey, ignored -> computeEligibility(user));
   }
 
@@ -85,7 +80,7 @@ public class DiscordAccessService {
       Map<String, Object> member = fetchMember(g.getGuildId(), discordId.trim());
       if (member == null) {
         log.debug("Discord eligibility: user {} not member of guild {}", discordId, g.getGuildId());
-        continue; // not in this guild
+        continue;
       }
       if (g.getPremiumRoleId() == null || g.getPremiumRoleId().isBlank()) {
         log.debug("Discord eligibility: user {} accepted (guild {})", discordId, g.getGuildId());
