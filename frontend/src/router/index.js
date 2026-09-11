@@ -262,6 +262,33 @@ const router = createRouter({
   },
 })
 
+// A deploy can briefly leave an old index.html in a browser/CDN cache while
+// the hashed assets already belong to a newer build. Retry once with a fresh
+// document so the router does not remain mounted with only the app shell.
+const CHUNK_RELOAD_KEY = 'snk_chunk_reload_attempted'
+router.onError((error, to) => {
+  const message = String(error?.message || error || '')
+  const isChunkLoadError =
+    message.includes('Failed to fetch dynamically imported module') ||
+    message.includes('Importing a module script failed') ||
+    message.includes('Expected a JavaScript-or-Wasm module script')
+  if (!isChunkLoadError || typeof window === 'undefined') return
+
+  try {
+    if (window.sessionStorage.getItem(CHUNK_RELOAD_KEY) === '1') {
+      window.sessionStorage.removeItem(CHUNK_RELOAD_KEY)
+      return
+    }
+    window.sessionStorage.setItem(CHUNK_RELOAD_KEY, '1')
+  } catch {
+    // Continue with the regular router error if storage is unavailable.
+  }
+
+  const target = to?.fullPath || window.location.pathname + window.location.search
+  const separator = target.includes('?') ? '&' : '?'
+  window.location.replace(`${target}${separator}_v=${Date.now()}`)
+})
+
 const publicRoutes = new Set([
   'legal', 'cgu', 'cookies',
   'auth',

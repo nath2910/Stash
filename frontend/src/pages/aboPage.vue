@@ -20,7 +20,7 @@
         </span>
       </div>
 
-      <main class="grid min-h-0 flex-1 items-center gap-4 py-2 lg:grid-cols-[1fr_420px] lg:py-3">
+      <main class="grid min-h-0 flex-1 items-center gap-4 py-2 lg:grid-cols-[1fr_420px] lg:translate-y-3 lg:py-3">
         <section class="min-w-0">
           <p class="text-xs font-bold uppercase tracking-[0.24em] text-emerald-300">
             {{ stripeTestMode ? 'Checkout test' : 'Abonnement mensuel' }}
@@ -29,7 +29,7 @@
             MyStash
           </h1>
           <p class="mt-4 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">
-            Pilote ton stock, tes ventes et ta comptabilite depuis un seul outil pense pour la revente.
+            Gère ton stock et tes ventes depuis un seul espace.
           </p>
 
           <div class="mt-5 grid gap-3 sm:grid-cols-2">
@@ -51,11 +51,11 @@
           <div class="mt-5 flex flex-wrap items-center gap-3 text-sm text-slate-400">
             <span class="inline-flex items-center gap-2">
               <ShieldCheck class="h-4 w-4 text-emerald-300" />
-              Paiement securise par Stripe
+               Paiement sécurisé par Stripe
             </span>
             <span class="inline-flex items-center gap-2">
               <RefreshCcw class="h-4 w-4 text-emerald-300" />
-              Resiliable en ligne
+               Résiliable en ligne
             </span>
           </div>
         </section>
@@ -75,7 +75,7 @@
           </div>
 
           <p class="mt-3 text-sm leading-6 text-slate-300">
-            Acces immediat apres paiement. Renouvellement automatique chaque mois, annulable depuis le portail Stripe.
+            Accès immédiat. Paiement mensuel résiliable à tout moment.
           </p>
 
           <div class="mt-4 space-y-3 border-y border-slate-800 py-3">
@@ -226,23 +226,23 @@ const priceLabel = computed(() => {
 const features = [
   {
     icon: BarChart3,
-    title: 'Stats avancees',
-    desc: 'Ventes, marges, stock et performances au meme endroit.',
+    title: 'Stats avancées',
+    desc: 'Analyse tes ventes et tes marges.',
   },
   {
     icon: DatabaseBackup,
     title: 'Sauvegarde cloud',
-    desc: 'Tes donnees restent accessibles et synchronisees.',
+    desc: 'Tes données sont synchronisées automatiquement.',
   },
   {
     icon: Headphones,
     title: 'Support prioritaire',
-    desc: 'Aide plus rapide si tu bloques sur un point important.',
+    desc: 'Une réponse rapide quand tu en as besoin.',
   },
   {
     icon: Calculator,
-    title: 'Comptabilite',
-    desc: 'Recettes, charges et elements utiles pour suivre ton activite.',
+    title: 'Comptabilité',
+    desc: 'Suis simplement tes recettes et tes charges.',
   },
 ]
 
@@ -303,18 +303,17 @@ const fetchPlans = async () => {
     clearCachedPlans()
     if (!monthlyOffer.value) {
       error.value =
-        'Tarif Stripe indisponible : verifie que le prix mensuel Stripe est actif, en EUR et mensuel.'
+        'Tarif Stripe indisponible : vérifie que le prix mensuel est actif en EUR.'
     }
   }
 }
 
 const checkoutDetails = computed(() =>
   stripeTestMode.value
-    ? ['Mode test Stripe : aucun debit reel.', 'Activation simulee apres le checkout.', 'Webhook et portail testes de bout en bout.']
+    ? ['Mode test Stripe : aucun débit réel.', 'Activation immédiate après le paiement.']
     : [
-        `${priceLabel.value} si ton tarif Stripe est actif.`,
-        'Carte bancaire, Apple Pay ou Google Pay selon Stripe.',
-        'Aucune donnee de carte stockee par MyStash.',
+        `${priceLabel.value}. Renouvellement mensuel.`,
+        'Paiement sécurisé par Stripe.',
       ],
 )
 

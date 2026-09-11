@@ -31,6 +31,7 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -44,14 +45,22 @@ public class BillingService {
   private final UserRepository users;
   private final JdbcTemplate jdbc;
   private final ObjectMapper mapper;
+  private final BillingReceiptEmailService receiptEmailService;
   private final Cache<String, Price> prices = Caffeine.newBuilder().maximumSize(2)
       .expireAfterWrite(Duration.ofMinutes(5)).build();
 
   public BillingService(StripeProperties props, UserRepository users, JdbcTemplate jdbc, ObjectMapper mapper) {
+    this(props, users, jdbc, mapper, null);
+  }
+
+  @Autowired
+  public BillingService(StripeProperties props, UserRepository users, JdbcTemplate jdbc, ObjectMapper mapper,
+                        BillingReceiptEmailService receiptEmailService) {
     this.props = props;
     this.users = users;
     this.jdbc = jdbc;
     this.mapper = mapper;
+    this.receiptEmailService = receiptEmailService;
     if (present(props.getSecretKey())) Stripe.apiKey = props.getSecretKey();
   }
 
@@ -269,6 +278,9 @@ public class BillingService {
       if (inserted == 0) return;
       // Stripe does not guarantee delivery order: read current provider state while holding the lock.
       syncCurrent(user, subscriptions(customerId));
+      if ("invoice.paid".equals(type) && receiptEmailService != null) {
+        receiptEmailService.send(user, mapper.readTree(payload).path("data").path("object"));
+      }
     } catch (Exception ex) {
       // Roll back the receipt and return a retryable error.
       throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Synchronisation paiement temporairement indisponible");
