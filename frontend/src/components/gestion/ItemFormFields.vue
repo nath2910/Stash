@@ -152,7 +152,7 @@
           ></textarea>
         </label>
 
-        <div v-if="coreMetadataFields.length" class="item-field item-field--section">
+        <div v-if="metadataFields.length" class="item-field item-field--section">
           <p>Champs specifiques</p>
           <span>Adaptes au type {{ currentTypeLabel.toLowerCase() }}</span>
         </div>
