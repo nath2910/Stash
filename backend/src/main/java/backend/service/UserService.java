@@ -117,7 +117,7 @@ public class UserService {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Email ou mot de passe invalide");
         }
 
-        if ("LOCAL".equalsIgnoreCase(user.getProvider()) && !user.isEmailVerified()) {
+        if (user.getPassword() != null && !user.getPassword().isBlank() && !user.isEmailVerified()) {
             throw new ResponseStatusException(
                 HttpStatus.FORBIDDEN,
                 "Email non vérifié. Vérifie ton adresse email avant de te connecter"

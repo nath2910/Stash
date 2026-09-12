@@ -73,12 +73,12 @@ public class PasswordResetService {
     }
 
     User user = userOpt.get();
-    if (user.getPassword() == null || !"LOCAL".equalsIgnoreCase(user.getProvider())) {
+    if (user.getPassword() == null || user.getPassword().isBlank()) {
       logger.info(
           "Password reset skipped: user {} is not eligible (provider={}, hasPassword={})",
           user.getEmail(),
           user.getProvider(),
-          user.getPassword() != null
+          user.getPassword() != null && !user.getPassword().isBlank()
       );
       return;
     }

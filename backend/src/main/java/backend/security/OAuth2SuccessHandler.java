@@ -46,6 +46,9 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
   private static String norm(String s) { return s == null ? "" : s.trim(); }
   private static boolean isBlank(String s) { return s == null || s.trim().isEmpty(); }
+  private static boolean hasLocalPassword(User user) {
+    return user != null && !isBlank(user.getPassword());
+  }
 
   @Override
   public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
@@ -89,9 +92,10 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
       Optional<User> byEmail = userRepository.findByEmail(emailNorm);
       if (byEmail.isPresent()) {
         User u = byEmail.get();
-        if (!u.isEmailVerified()) { u.setPassword(""); u.setSessionVersion(u.getSessionVersion() + 1); }
-        u.setProvider("GOOGLE");
-        u.setProviderId(sub);
+        if (!hasLocalPassword(u)) {
+          u.setProvider("GOOGLE");
+          u.setProviderId(sub);
+        }
         u.setEmailVerified(Boolean.TRUE.equals(emailVerified));
         if (!isBlank(givenName)) u.setFirstName(norm(givenName));
         if (!isBlank(familyName)) u.setLastName(norm(familyName));
@@ -147,16 +151,20 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
       return;
     }
 
-    Optional<User> byDiscord = userRepository.findByProviderAndProviderId("DISCORD", discordId);
+    Optional<User> byDiscord = userRepository.findByDiscordId(discordId);
+    if (byDiscord.isEmpty()) {
+      byDiscord = userRepository.findByProviderAndProviderId("DISCORD", discordId);
+    }
 
     User user = byDiscord.orElseGet(() -> {
       if (!isBlank(emailNorm)) {
         Optional<User> byEmail = userRepository.findByEmail(emailNorm);
         if (byEmail.isPresent()) {
           User u = byEmail.get();
-          if (!u.isEmailVerified()) { u.setPassword(""); u.setSessionVersion(u.getSessionVersion() + 1); }
-          u.setProvider("DISCORD");
-          u.setProviderId(discordId);
+          if (!hasLocalPassword(u)) {
+            u.setProvider("DISCORD");
+            u.setProviderId(discordId);
+          }
           u.setDiscordId(discordId);
           if (!isBlank(username)) u.setFirstName(norm(username));
           if (emailVerified != null) u.setEmailVerified(emailVerified);

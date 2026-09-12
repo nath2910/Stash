@@ -4,6 +4,7 @@ import backend.dto.BillingStatusResponse;
 import backend.dto.CheckoutRequest;
 import backend.dto.CheckoutResponse;
 import backend.entity.User;
+import backend.security.SubscriptionAccessService;
 import backend.service.BillingService;
 import com.stripe.model.billingportal.Session;
 import org.junit.jupiter.api.Assertions;
@@ -19,6 +20,8 @@ class BillingControllerTest {
 
   @Mock
   private BillingService billingService;
+  @Mock
+  private SubscriptionAccessService subscriptionAccessService;
 
   private BillingController controller;
   private User user;
@@ -26,10 +29,11 @@ class BillingControllerTest {
   @BeforeEach
   void setup() {
     MockitoAnnotations.openMocks(this);
-    controller = new BillingController(billingService);
+    controller = new BillingController(billingService, subscriptionAccessService);
     user = Mockito.mock(User.class);
     Mockito.when(user.getId()).thenReturn(42L);
     Mockito.when(user.getSubscriptionStatus()).thenReturn("inactive");
+    Mockito.when(subscriptionAccessService.hasActiveSubscription(user)).thenReturn(false);
   }
 
   @Test
@@ -48,6 +52,7 @@ class BillingControllerTest {
   void statusReturnsBillingSnapshotWhenConfigured() throws Exception {
     Mockito.when(billingService.isConfigured()).thenReturn(true);
     Mockito.when(user.getSubscriptionStatus()).thenReturn("active");
+    Mockito.when(subscriptionAccessService.hasActiveSubscription(user)).thenReturn(true);
     Session portal = Mockito.mock(Session.class);
     Mockito.when(portal.getUrl()).thenReturn("https://stripe.test/portal");
     Mockito.when(billingService.createPortal(user)).thenReturn(portal);
@@ -57,6 +62,7 @@ class BillingControllerTest {
     Mockito.verify(billingService).refreshStatus(user);
     Assertions.assertEquals("active", response.status());
     Assertions.assertEquals("https://stripe.test/portal", response.portalUrl());
+    Assertions.assertTrue(response.hasAccess());
   }
 
   @Test

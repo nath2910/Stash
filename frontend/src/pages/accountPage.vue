@@ -259,7 +259,7 @@ const canDelete = computed(
   () => deleteConfirmChecked.value && deleteConfirmText.value.trim() === 'SUPPRIMER',
 )
 const showSubscriptionButton = computed(() =>
-  ['active', 'past_due', 'canceled'].includes(billing.status.value),
+  billing.hasAccess.value || ['active', 'trialing', 'past_due', 'canceled'].includes(billing.status.value),
 )
 const legalProfileCompleted = computed(() => Boolean(legalProfile.value.completed))
 const legalProfileOption = computed(() => getLegalProfileOption(legalProfile.value.legalProfileType))

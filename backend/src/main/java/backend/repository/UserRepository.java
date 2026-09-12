@@ -31,6 +31,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByStripeCustomerId(String stripeCustomerId);
 
+    Optional<User> findByDiscordId(String discordId);
+
     @Query("select u.id from User u")
     List<Long> findAllUserIds();
     

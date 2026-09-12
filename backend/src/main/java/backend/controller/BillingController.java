@@ -4,6 +4,7 @@ import backend.dto.BillingStatusResponse;
 import backend.dto.CheckoutRequest;
 import backend.dto.CheckoutResponse;
 import backend.entity.User;
+import backend.security.SubscriptionAccessService;
 import backend.service.BillingService;
 import backend.service.BillingService.ValidatedPromo;
 import org.slf4j.Logger;
@@ -21,9 +22,11 @@ public class BillingController {
   private static final Logger log = LoggerFactory.getLogger(BillingController.class);
 
   private final BillingService billingService;
+  private final SubscriptionAccessService subscriptionAccessService;
 
-  public BillingController(BillingService billingService) {
+  public BillingController(BillingService billingService, SubscriptionAccessService subscriptionAccessService) {
     this.billingService = billingService;
+    this.subscriptionAccessService = subscriptionAccessService;
   }
 
   @GetMapping("/status")
@@ -104,7 +107,8 @@ public class BillingController {
 
   private BillingStatusResponse snapshot(User user, String portalUrl) {
     return new BillingStatusResponse(user.getSubscriptionStatus(), portalUrl,
-        user.getSubscriptionCurrentPeriodEnd(), user.isSubscriptionCancelAtPeriodEnd());
+        user.getSubscriptionCurrentPeriodEnd(), user.isSubscriptionCancelAtPeriodEnd(),
+        subscriptionAccessService.hasActiveSubscription(user));
   }
 
   private boolean isPortalEligibleStatus(String status) {

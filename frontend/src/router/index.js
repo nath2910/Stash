@@ -38,6 +38,10 @@ function isTokenExpired(token) {
   return now >= exp * 1000 - 30_000
 }
 
+function hasAppAccess(billing) {
+  return Boolean(billing.hasAccess?.value) || ['active', 'trialing'].includes(billing.status.value)
+}
+
 const POST_AUTH_REDIRECT_KEY = 'snk_post_auth_redirect'
 const POST_AUTH_REDIRECT_TTL_MS = 60_000
 
@@ -337,7 +341,7 @@ router.beforeEach(async (to) => {
 
   if (to.name === 'auth' && auth.token.value) {
     await billing.fetchStatus()
-    return billing.status.value === 'active' ? { name: 'home' } : { name: 'abo' }
+    return hasAppAccess(billing) ? { name: 'home' } : { name: 'abo' }
   }
 
   // Si page protégée, vérifier l'abo (sauf si allowInactive)
@@ -346,11 +350,11 @@ router.beforeEach(async (to) => {
       return true
     }
     await billing.fetchStatus()
-    if (!allowInactive && billing.status.value !== 'active') {
+    if (!allowInactive && !hasAppAccess(billing)) {
       return { name: 'abo', query: { returnTo: to.fullPath } }
     }
     // Si abo actif et il vient sur /abo, on redirige vers la vue abonnement
-    if (to.name === 'abo' && billing.status.value === 'active') {
+    if (to.name === 'abo' && hasAppAccess(billing)) {
       const target = to.query?.returnTo || '/'
       if (target && typeof target === 'string') {
         return target.startsWith('/') ? target : { path: target }

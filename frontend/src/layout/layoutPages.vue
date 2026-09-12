@@ -477,7 +477,7 @@ const showNotificationSystem = computed(
   () =>
     !!auth.token?.value &&
     !!auth.user?.value?.id &&
-    billing.status.value === 'active' &&
+    (billing.hasAccess.value || ['active', 'trialing'].includes(billing.status.value)) &&
     !isResponsiveViewport.value &&
     !isAuthRoute.value &&
     !isPublicDocumentRoute.value &&

@@ -2,6 +2,7 @@ import { ref } from 'vue'
 import BillingService from '@/services/BillingService'
 
 const status = ref('unknown') // unknown | active | past_due | canceled | inactive
+const hasAccess = ref(false)
 const portalUrl = ref('')
 const lastFetchedAt = ref(0)
 let inflightBasic = null
@@ -53,6 +54,10 @@ function normalizeStatus(value) {
   return next || 'inactive'
 }
 
+function accessFromStatus(value) {
+  return ['active', 'trialing'].includes(normalizeStatus(value))
+}
+
 function persistStatus() {
   if (status.value === 'unknown') {
     safeRemove(CACHE_KEY)
@@ -62,6 +67,7 @@ function persistStatus() {
     CACHE_KEY,
     JSON.stringify({
       status: status.value,
+      hasAccess: hasAccess.value,
       fetchedAt: lastFetchedAt.value || Date.now(),
     }),
   )
@@ -72,6 +78,7 @@ function loadFromStorage() {
     const cached = JSON.parse(safeGet(CACHE_KEY) || 'null')
     if (!cached?.status || !cached?.fetchedAt) return
     status.value = normalizeStatus(cached.status)
+    hasAccess.value = Boolean(cached.hasAccess) || accessFromStatus(cached.status)
     lastFetchedAt.value = Number(cached.fetchedAt) || 0
   } catch {
     safeRemove(CACHE_KEY)
@@ -82,8 +89,9 @@ function isFresh(ttlMs = STATUS_CACHE_TTL_MS) {
   return status.value !== 'unknown' && Date.now() - lastFetchedAt.value < ttlMs
 }
 
-function applyStatus(nextStatus, nextPortalUrl = '') {
+function applyStatus(nextStatus, nextPortalUrl = '', nextHasAccess = undefined) {
   status.value = normalizeStatus(nextStatus)
+  hasAccess.value = typeof nextHasAccess === 'boolean' ? nextHasAccess : accessFromStatus(status.value)
   lastFetchedAt.value = Date.now()
   if (nextPortalUrl) portalUrl.value = nextPortalUrl
   persistStatus()
@@ -95,7 +103,7 @@ function refreshInBackground(includePortal = false) {
 }
 
 async function fetchStatus(force = false, includePortal = false) {
-  if (!force && !includePortal && status.value === 'active') {
+  if (!force && !includePortal && hasAccess.value) {
     if (!isFresh(ACTIVE_STALE_REFRESH_MS)) refreshInBackground(false)
     return status.value
   }
@@ -110,7 +118,7 @@ async function fetchStatus(force = false, includePortal = false) {
   const previousStatus = status.value
   const request = BillingService.status(includePortal, force)
     .then((res) => {
-      applyStatus(res?.data?.status || 'inactive', res?.data?.portalUrl || '')
+      applyStatus(res?.data?.status || 'inactive', res?.data?.portalUrl || '', res?.data?.hasAccess)
       if (includePortal) {
         portalUrl.value = res?.data?.portalUrl || ''
       }
@@ -141,11 +149,12 @@ function seedStatus(nextStatus) {
 }
 
 function seedFromUser(user) {
-  return seedStatus(user?.subscriptionStatus)
+  return applyStatus(user?.subscriptionStatus, '', user?.hasAccess)
 }
 
 function reset() {
   status.value = 'unknown'
+  hasAccess.value = false
   portalUrl.value = ''
   lastFetchedAt.value = 0
   safeRemove(CACHE_KEY)
@@ -154,5 +163,5 @@ function reset() {
 loadFromStorage()
 
 export function useBillingStore() {
-  return { status, portalUrl, lastFetchedAt, fetchStatus, seedStatus, seedFromUser, reset }
+  return { status, hasAccess, portalUrl, lastFetchedAt, fetchStatus, seedStatus, seedFromUser, reset }
 }

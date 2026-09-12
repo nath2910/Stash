@@ -110,7 +110,7 @@
                 type="text"
                 placeholder="Code promo..."
                 class="flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:border-emerald-400/50 focus:outline-none"
-                :disabled="promoValidating || status === 'active'"
+                :disabled="promoValidating || hasAccess"
                 @keyup.enter="validatePromoCode"
               />
               <button
@@ -138,7 +138,7 @@
           </button>
 
           <button
-            v-if="status === 'active'"
+            v-if="hasAccess && status !== 'inactive'"
             type="button"
             class="mt-3 inline-flex h-11 w-full items-center justify-center rounded-xl border border-slate-700 bg-slate-950/50 px-4 text-sm font-semibold text-slate-100 transition hover:border-emerald-300/40"
             @click="openPortal"
@@ -183,7 +183,8 @@ const router = useRouter()
 const auth = useAuthStore()
 const billing = useBillingStore()
 
-const status = ref<'unknown' | 'inactive' | 'active' | 'past_due' | 'canceled'>('unknown')
+const status = ref<'unknown' | 'inactive' | 'active' | 'trialing' | 'past_due' | 'canceled'>('unknown')
+const hasAccess = ref(false)
 const portalUrl = ref('')
 const loading = ref(false)
 const error = ref('')
@@ -320,7 +321,7 @@ const checkoutDetails = computed(() =>
 const ctaDisabled = computed(
   () =>
     loading.value ||
-    status.value === 'active' ||
+    hasAccess.value ||
     !stripeReady.value ||
     !plansVerified.value ||
     !termsAccepted.value ||
@@ -329,7 +330,7 @@ const ctaDisabled = computed(
 )
 
 const ctaLabel = computed(() => {
-  if (status.value === 'active') return 'Abonnement actif'
+  if (hasAccess.value) return status.value === 'trialing' ? 'Essai actif' : 'Abonnement actif'
   if (loading.value) return 'Redirection...'
   if (!stripeReady.value) return 'Paiement indisponible'
   if (!plansVerified.value) return monthlyOffer.value ? 'Verification du tarif...' : 'Tarif indisponible'
@@ -350,8 +351,9 @@ const stripeStatusCopy = computed(() => {
 const statusMeta = computed(() => {
   switch (status.value) {
     case 'active':
+    case 'trialing':
       return {
-        label: 'Actif',
+        label: status.value === 'trialing' ? 'Essai actif' : 'Actif',
         badge: 'border-emerald-300/30 bg-emerald-300/10 text-emerald-100',
         dot: 'bg-emerald-300',
       }
@@ -381,10 +383,11 @@ const fetchStatus = async (includePortal = false, forceRefresh = false) => {
   try {
     const res = await BillingService.status(includePortal, forceRefresh)
     status.value = (res?.data?.status as typeof status.value) || 'inactive'
+    hasAccess.value = Boolean(res?.data?.hasAccess) || ['active', 'trialing'].includes(status.value)
     portalUrl.value = res?.data?.portalUrl || ''
-    billing.seedStatus(status.value)
+    billing.seedFromUser({ subscriptionStatus: status.value, hasAccess: hasAccess.value })
 
-    if (previousStatus !== 'active' && status.value === 'active') {
+    if (!['active', 'trialing'].includes(String(previousStatus || '')) && hasAccess.value) {
       try {
         localStorage.setItem(onboardingPendingStorageKey.value, '1')
       } catch (e) {
@@ -461,7 +464,7 @@ const openPortal = async () => {
 }
 
 const redirectIfActive = () => {
-  if (status.value === 'active') {
+  if (hasAccess.value) {
     router.replace(successRedirect.value || '/')
   }
 }
@@ -474,7 +477,7 @@ onMounted(async () => {
   if (shouldPollAfterCheckout.value) {
     let attempts = 0
     poll = window.setInterval(async () => {
-      if (++attempts > 12 || status.value === 'active') {
+      if (++attempts > 12 || hasAccess.value) {
         if (poll) window.clearInterval(poll)
         return
       }
