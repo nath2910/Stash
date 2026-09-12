@@ -133,11 +133,9 @@ function submit(event) {
 }
 
 .modal-card {
-  display: flex;
-  flex-direction: column;
   width: min(100%, 940px);
   max-height: calc(100dvh - 2rem);
-  overflow: hidden;
+  overflow: auto;
   border: 1px solid rgba(148, 163, 184, 0.28);
   border-radius: 20px;
   background: #ffffff;
@@ -145,7 +143,6 @@ function submit(event) {
 }
 
 .modal-header {
-  flex: 0 0 auto;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -187,16 +184,10 @@ h2 {
 }
 
 .modal-body {
-  flex: 1 1 auto;
-  min-height: min(520px, calc(100dvh - 9rem));
-  overflow-y: auto;
-  overscroll-behavior: contain;
   padding: 1rem;
-  scrollbar-width: thin;
 }
 
 .modal-alert {
-  flex: 0 0 auto;
   margin: 0.85rem 1rem 0;
   border-radius: 12px;
   padding: 0.7rem 0.85rem;
@@ -228,7 +219,6 @@ h2 {
   }
 
   .modal-body {
-    min-height: calc(100dvh - 7rem);
     padding: 0.85rem;
   }
 }
