@@ -49,6 +49,11 @@ function redirectToLogin(reason = 'auth') {
   window.location.assign(`/auth?${params.toString()}`)
 }
 
+function notifyBillingAccessRequired() {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new CustomEvent('snk:billing-access-required'))
+}
+
 api.interceptors.request.use((config) => {
   const token = readAuthToken()
   if (token) {
@@ -97,6 +102,10 @@ api.interceptors.response.use(
     if (status === 401 && !url.startsWith('/auth')) {
       clearAuthState()
       redirectToLogin('unauthorized')
+    }
+
+    if (status === 402 && !url.startsWith('/billing')) {
+      notifyBillingAccessRequired()
     }
 
     return Promise.reject(error)

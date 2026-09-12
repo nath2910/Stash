@@ -2,6 +2,7 @@ package backend.security;
 
 import backend.entity.User;
 import backend.service.DiscordAccessService;
+import java.time.OffsetDateTime;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -17,9 +18,7 @@ public class SubscriptionAccessService {
 
   public boolean hasActiveSubscription(User user) {
     if (user == null) return false;
-    if (isActiveStatus(user.getSubscriptionStatus())
-        && user.getSubscriptionCurrentPeriodEnd() != null
-        && user.getSubscriptionCurrentPeriodEnd().isAfter(java.time.OffsetDateTime.now())) {
+    if (hasUsableStripeAccess(user)) {
       return true;
     }
     // Bypass: Discord-eligible users get access even without Stripe subscription.
@@ -46,5 +45,13 @@ public class SubscriptionAccessService {
   static boolean isActiveStatus(String status) {
     return "active".equalsIgnoreCase(String.valueOf(status).trim())
         || "trialing".equalsIgnoreCase(String.valueOf(status).trim());
+  }
+
+  private boolean hasUsableStripeAccess(User user) {
+    if (!isActiveStatus(user.getSubscriptionStatus())) {
+      return false;
+    }
+    OffsetDateTime periodEnd = user.getSubscriptionCurrentPeriodEnd();
+    return periodEnd == null || periodEnd.isAfter(OffsetDateTime.now());
   }
 }

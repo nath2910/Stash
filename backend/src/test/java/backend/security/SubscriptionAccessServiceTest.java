@@ -23,6 +23,15 @@ class SubscriptionAccessServiceTest {
   }
 
   @Test
+  void acceptsActiveSubscriptionWhenStripePeriodEndIsMissing() {
+    User user = userWithStatus("active");
+    user.setSubscriptionCurrentPeriodEnd(null);
+    Mockito.when(discordAccessService.isEligible(Mockito.any())).thenReturn(false);
+
+    Assertions.assertDoesNotThrow(() -> service.requireActiveSubscription(user));
+  }
+
+  @Test
   void rejectsInactiveSubscription() {
     User user = userWithStatus("inactive");
     Mockito.when(discordAccessService.isEligible(Mockito.any())).thenReturn(false);

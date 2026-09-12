@@ -465,6 +465,7 @@ const billing = useBillingStore()
 const notification = useNotificationStore()
 let notificationInitTimer = null
 let notificationInitIdleHandle = null
+let billingAccessRefreshInFlight = null
 const idleTimeoutMs = 10 * 60 * 1000
 const lastActivity = ref(Date.now())
 let idleTimer = null
@@ -483,6 +484,8 @@ const showNotificationSystem = computed(
     !isPublicDocumentRoute.value &&
     !notificationHiddenRoutes.has(String(route.name || '')),
 )
+const hasBillingAccess = () =>
+  Boolean(billing.hasAccess.value) || ['active', 'trialing'].includes(billing.status.value)
 const unreadBadge = computed(() =>
   notification.unreadCount.value > 99 ? '99+' : String(notification.unreadCount.value),
 )
@@ -762,9 +765,30 @@ const scheduleNotificationInit = () => {
   })
 }
 
+const onBillingAccessRequired = () => {
+  if (billingAccessRefreshInFlight || !auth.token?.value) return
+  if (route.meta.allowInactive === true || isAuthRoute.value || isPublicDocumentRoute.value) return
+
+  billing.reset()
+  billingAccessRefreshInFlight = billing
+    .fetchStatus(true)
+    .then(() => {
+      if (!hasBillingAccess() && route.meta.allowInactive !== true) {
+        router.replace({ name: 'abo', query: { returnTo: route.fullPath } }).catch(() => {})
+      }
+    })
+    .catch(() => {
+      router.replace({ name: 'abo', query: { returnTo: route.fullPath } }).catch(() => {})
+    })
+    .finally(() => {
+      billingAccessRefreshInFlight = null
+    })
+}
+
 onMounted(() => {
   updateResponsiveViewport()
   window.addEventListener('snk:stats-template-mode', onStatsTemplateModeChange)
+  window.addEventListener('snk:billing-access-required', onBillingAccessRequired)
   window.addEventListener('click', onWindowClick)
   window.addEventListener('keydown', onKeyDown)
   window.addEventListener('resize', updateResponsiveViewport, { passive: true })
@@ -777,6 +801,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeyDown)
   window.removeEventListener('resize', updateResponsiveViewport)
   window.removeEventListener('snk:stats-template-mode', onStatsTemplateModeChange)
+  window.removeEventListener('snk:billing-access-required', onBillingAccessRequired)
   document.documentElement.classList.remove('layout-light-document-scroll')
   document.body.classList.remove('layout-light-document-scroll')
   detachScroll()
