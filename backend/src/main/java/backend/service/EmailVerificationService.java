@@ -95,6 +95,16 @@ public class EmailVerificationService {
     sendVerification(userOpt.get());
   }
 
+  public boolean isEmailVerified(String email) {
+    if (email == null || email.isBlank()) {
+      return false;
+    }
+    var normalizedEmail = email.trim().toLowerCase();
+    return userRepository.findByEmail(normalizedEmail)
+        .map(User::isEmailVerified)
+        .orElse(false);
+  }
+
   @Transactional
   public User verifyToken(String token) {
     if (token == null || token.isBlank()) {

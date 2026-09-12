@@ -41,17 +41,6 @@
             </button>
           </div>
 
-          <div class="mt-5 grid gap-3 text-sm text-slate-200 sm:mt-6 sm:grid-cols-2">
-            <div class="rounded-xl border border-slate-800/80 bg-slate-900/55 px-4 py-3">
-              <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Prénom</p>
-              <p class="mt-1 break-words font-medium">{{ currentUser.firstName || '-' }}</p>
-            </div>
-            <div class="rounded-xl border border-slate-800/80 bg-slate-900/55 px-4 py-3">
-              <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Nom</p>
-              <p class="mt-1 break-words font-medium">{{ currentUser.lastName || '-' }}</p>
-            </div>
-          </div>
-
           <AccountDataActions />
           <div class="account-profile-panel account-profile-panel--legal mt-6">
             <div class="account-profile-head">

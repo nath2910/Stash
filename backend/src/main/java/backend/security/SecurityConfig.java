@@ -90,6 +90,7 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
               "/auth/forgot-password",
               "/auth/reset-password",
               "/auth/verify-email",
+              "/auth/email-verification-status",
               "/auth/resend-verification",
               "/oauth2/**",
               "/login/**",

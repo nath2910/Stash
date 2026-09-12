@@ -202,4 +202,35 @@ class EmailVerificationServiceTest {
     Mockito.verify(tokenRepository).save(Mockito.any());
     Mockito.verify(mailSender).send(Mockito.any(MimeMessage.class));
   }
+
+  @Test
+  void isEmailVerifiedReturnsCurrentVerificationState() {
+    EmailVerificationTokenRepository tokenRepository = Mockito.mock(EmailVerificationTokenRepository.class);
+    UserRepository userRepository = Mockito.mock(UserRepository.class);
+    JavaMailSender mailSender = Mockito.mock(JavaMailSender.class);
+    MockEnvironment environment = new MockEnvironment();
+
+    EmailVerificationService service = new EmailVerificationService(
+        tokenRepository,
+        userRepository,
+        mailSender,
+        environment,
+        60,
+        "https://mystash.fr/verify-email",
+        ""
+    );
+
+    User verifiedUser = new User();
+    verifiedUser.setEmail("test@example.com");
+    verifiedUser.setEmailVerified(true);
+
+    Mockito.when(userRepository.findByEmail("test@example.com"))
+        .thenReturn(java.util.Optional.of(verifiedUser));
+    Mockito.when(userRepository.findByEmail("missing@example.com"))
+        .thenReturn(java.util.Optional.empty());
+
+    Assertions.assertTrue(service.isEmailVerified(" TEST@example.com "));
+    Assertions.assertFalse(service.isEmailVerified("missing@example.com"));
+    Assertions.assertFalse(service.isEmailVerified(""));
+  }
 }

@@ -70,6 +70,13 @@ class AuthService {
     return res.data
   }
 
+  async emailVerificationStatus(payload) {
+    const res = await api.post('/auth/email-verification-status', payload, {
+      timeout: 10000,
+    })
+    return res.data
+  }
+
   async me() {
     const res = await api.get('/auth/me')
     return res.data

@@ -10,6 +10,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import backend.dto.LoginRequest;
 import backend.dto.ChangePasswordRequest;
 import backend.dto.EmailVerificationRequest;
+import backend.dto.EmailVerificationStatusResponse;
 import backend.dto.ForgotPasswordRequest;
 import backend.dto.RegisterRequest;
 import backend.dto.ResetPasswordRequest;
@@ -102,6 +103,14 @@ public class AuthController {
     public String resendVerification(@RequestBody @jakarta.validation.Valid EmailVerificationRequest request) {
         emailVerificationService.requestVerification(request != null ? request.getEmail() : null);
         return "Si un compte existe, un email a ete envoye";
+    }
+
+    @PostMapping("/email-verification-status")
+    public EmailVerificationStatusResponse emailVerificationStatus(
+            @RequestBody @jakarta.validation.Valid EmailVerificationRequest request
+    ) {
+        boolean verified = emailVerificationService.isEmailVerified(request != null ? request.getEmail() : null);
+        return new EmailVerificationStatusResponse(verified);
     }
 
     @GetMapping("/me")

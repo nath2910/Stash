@@ -23,6 +23,9 @@
         <p class="mt-6 text-sm leading-relaxed text-slate-300 sm:text-[0.95rem]">
           {{ description }}
         </p>
+        <p v-if="status === 'pending' && pollingVerification" class="mt-3 text-xs font-medium text-emerald-200">
+          Verification automatique en cours...
+        </p>
 
         <div v-if="status === 'pending'" class="mt-6 grid gap-3 text-sm text-slate-300 sm:grid-cols-2">
           <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
@@ -90,6 +93,11 @@ const errorMessage = ref('')
 const errorKind = ref('')
 const resendLoading = ref(false)
 const resendMessage = ref('')
+const pollingVerification = ref(false)
+let verificationPollTimer = null
+let verificationPollStartedAt = 0
+const VERIFICATION_POLL_INTERVAL_MS = 5000
+const VERIFICATION_POLL_MAX_MS = 5 * 60 * 1000
 
 const token = computed(() => (route.query.token || route.params.token || '').toString())
 const email = computed(() => (route.query.email || '').toString())
@@ -122,9 +130,11 @@ const description = computed(() => {
 const verify = async () => {
   if (!token.value) {
     status.value = 'pending'
+    startEmailVerificationPolling()
     return
   }
 
+  stopEmailVerificationPolling()
   status.value = 'loading'
   errorMessage.value = ''
   errorKind.value = ''
@@ -143,6 +153,65 @@ const verify = async () => {
     errorMessage.value =
       err.response?.data?.message || err.message || "Impossible de verifier l'email."
   }
+}
+
+const canPollEmailVerification = () =>
+  Boolean(email.value) && !token.value && status.value === 'pending'
+
+const stopEmailVerificationPolling = () => {
+  if (verificationPollTimer) {
+    window.clearTimeout(verificationPollTimer)
+    verificationPollTimer = null
+  }
+  pollingVerification.value = false
+}
+
+const scheduleEmailVerificationPoll = (delay = VERIFICATION_POLL_INTERVAL_MS) => {
+  if (!canPollEmailVerification()) return
+  if (
+    verificationPollStartedAt &&
+    Date.now() - verificationPollStartedAt > VERIFICATION_POLL_MAX_MS
+  ) {
+    stopEmailVerificationPolling()
+    return
+  }
+
+  if (verificationPollTimer) window.clearTimeout(verificationPollTimer)
+  verificationPollTimer = window.setTimeout(checkEmailVerificationStatus, delay)
+}
+
+const startEmailVerificationPolling = () => {
+  if (!canPollEmailVerification()) return
+  if (!verificationPollStartedAt) verificationPollStartedAt = Date.now()
+  scheduleEmailVerificationPoll(1500)
+}
+
+const checkEmailVerificationStatus = async () => {
+  if (!canPollEmailVerification()) {
+    stopEmailVerificationPolling()
+    return
+  }
+  if (document.visibilityState === 'hidden') {
+    scheduleEmailVerificationPoll()
+    return
+  }
+
+  pollingVerification.value = true
+  try {
+    const payload = await AuthService.emailVerificationStatus({ email: email.value })
+    if (payload?.verified) {
+      stopEmailVerificationPolling()
+      status.value = 'success'
+      resendMessage.value = 'Email confirme. Tu peux maintenant te connecter.'
+      return
+    }
+  } catch (err) {
+    console.warn('Unable to refresh email verification status', err)
+  } finally {
+    pollingVerification.value = false
+  }
+
+  scheduleEmailVerificationPoll()
 }
 
 const resendEmail = async () => {
@@ -192,17 +261,29 @@ const onStorage = (event) => {
   }
 }
 
+const onVisibilityChange = () => {
+  if (document.visibilityState === 'visible' && canPollEmailVerification()) {
+    scheduleEmailVerificationPoll(0)
+  }
+}
+
 onMounted(() => {
   window.addEventListener('storage', onStorage)
+  document.addEventListener('visibilitychange', onVisibilityChange)
   verify()
   handleLoginFromStorage()
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('storage', onStorage)
+  document.removeEventListener('visibilitychange', onVisibilityChange)
+  stopEmailVerificationPolling()
 })
 
-watch(token, verify)
+watch([token, email], () => {
+  verificationPollStartedAt = 0
+  verify()
+})
 </script>
 
 <style scoped>
