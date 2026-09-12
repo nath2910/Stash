@@ -26,8 +26,12 @@ function normalizeSubscriptionStatus(value) {
   return String(value || '').trim().toLowerCase()
 }
 
+function userHasAppAccess(user) {
+  return Boolean(user?.hasAccess) || ['active', 'trialing'].includes(normalizeSubscriptionStatus(user?.subscriptionStatus))
+}
+
 function resolvePostAuthTarget(user) {
-  return normalizeSubscriptionStatus(user?.subscriptionStatus) === 'active'
+  return userHasAppAccess(user)
     ? { name: 'home' }
     : { name: 'abo' }
 }

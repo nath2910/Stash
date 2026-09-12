@@ -17,14 +17,18 @@ import {
 const user = ref(null)
 const token = ref('')
 
-function syncBillingFromAuth(nextUser, nextToken, previousToken = token.value) {
+function userIdOf(value) {
+  return value?.id == null ? '' : String(value.id)
+}
+
+function syncBillingFromAuth(nextUser, nextToken, previousToken = token.value, previousUser = user.value) {
   try {
     const billing = useBillingStore()
     if (!nextToken) {
       billing.reset()
       return
     }
-    if (nextToken !== previousToken) {
+    if (nextToken !== previousToken || userIdOf(nextUser) !== userIdOf(previousUser)) {
       billing.reset()
     }
     if (nextUser?.subscriptionStatus) {
@@ -43,6 +47,7 @@ function resetUserScopedRuntimeState() {
 
 function loadFromStorage() {
   const previousToken = token.value
+  const previousUser = user.value
   const parsedUser = readStoredUser()
   token.value = readAuthToken()
   user.value = token.value ? parsedUser : null
@@ -52,7 +57,7 @@ function loadFromStorage() {
   if (previousToken !== token.value) {
     resetUserScopedRuntimeState()
   }
-  syncBillingFromAuth(user.value, token.value, previousToken)
+  syncBillingFromAuth(user.value, token.value, previousToken, previousUser)
 }
 loadFromStorage()
 
@@ -62,6 +67,7 @@ loadFromStorage()
  */
 function setAuth(payload) {
   const previousToken = token.value
+  const previousUser = user.value
   token.value = payload?.token ? String(payload.token) : ''
   user.value = token.value ? (payload?.user ?? null) : null
 
@@ -69,7 +75,7 @@ function setAuth(payload) {
     resetUserScopedRuntimeState()
   }
   writeAuthState({ token: token.value, user: user.value })
-  syncBillingFromAuth(user.value, token.value, previousToken)
+  syncBillingFromAuth(user.value, token.value, previousToken, previousUser)
 }
 
 function setToken(newToken) {

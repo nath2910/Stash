@@ -350,6 +350,12 @@ const stripeStatusCopy = computed(() => {
 
 const statusMeta = computed(() => {
   switch (status.value) {
+    case 'unknown':
+      return {
+        label: 'Verification',
+        badge: 'border-slate-700 bg-slate-900/70 text-slate-200',
+        dot: 'bg-slate-400',
+      }
     case 'active':
     case 'trialing':
       return {
@@ -385,7 +391,7 @@ const fetchStatus = async (includePortal = false, forceRefresh = false) => {
     status.value = (res?.data?.status as typeof status.value) || 'inactive'
     hasAccess.value = Boolean(res?.data?.hasAccess) || ['active', 'trialing'].includes(status.value)
     portalUrl.value = res?.data?.portalUrl || ''
-    billing.seedFromUser({ subscriptionStatus: status.value, hasAccess: hasAccess.value })
+    billing.seedFromUser({ id: currentUserId.value, subscriptionStatus: status.value, hasAccess: hasAccess.value })
 
     if (!['active', 'trialing'].includes(String(previousStatus || '')) && hasAccess.value) {
       try {

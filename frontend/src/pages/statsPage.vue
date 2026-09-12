@@ -13,20 +13,27 @@
       </div>
     </Transition>
 
-    <StatsCanvas :key="statsCanvasKey" v-model:from="from" v-model:to="to" />
+    <div v-if="canvasError" class="stats-canvas-error" role="alert">
+      <strong>Stats indisponibles</strong>
+      <span>Recharge la page ou reviens dans un instant.</span>
+      <button type="button" @click="retryCanvas">Recharger</button>
+    </div>
+
+    <StatsCanvas v-else :key="statsCanvasKey" v-model:from="from" v-model:to="to" />
   </div>
 </template>
 
 <script setup lang="ts">
+import StatsCanvas from '@/components/stats/StatsCanvas.vue'
 import { INVENTORY_CHANGED_EVENT } from '@/utils/inventoryEvents'
 import { useStatsRange } from '@/composables/useStatsRange'
-import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onErrorCaptured, onMounted, ref, watch } from 'vue'
 
-const StatsCanvas = defineAsyncComponent(() => import('@/components/stats/StatsCanvas.vue'))
 const { from, to } = useStatsRange()
 const rangeRefreshing = ref(false)
 const statsCanvasKey = ref(0)
 const templateModeActive = ref(false)
+const canvasError = ref('')
 let rangeRefreshTimer: number | null = null
 let inventoryRefreshTimer: number | null = null
 
@@ -47,6 +54,12 @@ watch(
     }, 700)
   },
 )
+
+onErrorCaptured((error) => {
+  canvasError.value = String((error as Error)?.message || error || 'Erreur inconnue')
+  console.error('[stats] Canvas render failed', error)
+  return false
+})
 
 onBeforeUnmount(() => {
   if (rangeRefreshTimer) window.clearTimeout(rangeRefreshTimer)
@@ -72,6 +85,11 @@ function onInventoryChanged() {
 
 function onTemplateModeChange(event: Event) {
   templateModeActive.value = Boolean((event as CustomEvent)?.detail?.active)
+}
+
+function retryCanvas() {
+  canvasError.value = ''
+  statsCanvasKey.value += 1
 }
 
 function formatDateLabel(value: string) {
@@ -145,6 +163,43 @@ function formatDateLabel(value: string) {
 .stats-range-loader__content span {
   font-size: 0.7rem;
   opacity: 0.8;
+}
+
+.stats-canvas-error {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-content: center;
+  gap: 0.85rem;
+  padding: 1.5rem;
+  text-align: center;
+  color: #111827;
+}
+
+.stats-canvas-error strong {
+  font-size: 1.05rem;
+  font-weight: 900;
+}
+
+.stats-canvas-error span {
+  color: #4b5563;
+  font-size: 0.92rem;
+}
+
+.stats-canvas-error button {
+  justify-self: center;
+  border: 1px solid rgba(17, 24, 39, 0.16);
+  border-radius: 8px;
+  background: #111827;
+  padding: 0.65rem 1rem;
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.stats-canvas-error button:hover {
+  background: #1f2937;
 }
 
 .stats-range-loader-enter-active,

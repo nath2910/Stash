@@ -1,16 +1,19 @@
 import { ref } from 'vue'
 import BillingService from '@/services/BillingService'
+import { readStoredUser } from '@/utils/authStorage'
 
 const status = ref('unknown') // unknown | active | past_due | canceled | inactive
 const hasAccess = ref(false)
 const portalUrl = ref('')
 const lastFetchedAt = ref(0)
+const loading = ref(false)
 let inflightBasic = null
 let inflightWithPortal = null
 
-const CACHE_KEY = 'snk_billing_status_cache'
+const BASE_CACHE_KEY = 'snk_billing_status_cache'
 const STATUS_CACHE_TTL_MS = 2 * 60 * 1000
 const ACTIVE_STALE_REFRESH_MS = 5 * 60 * 1000
+let scopedUserId = null
 
 function safeGet(key) {
   try {
@@ -54,17 +57,35 @@ function normalizeStatus(value) {
   return next || 'inactive'
 }
 
+function normalizeUserId(value) {
+  const next = String(value || '').trim()
+  return next || 'guest'
+}
+
+function currentUserId() {
+  if (scopedUserId) return scopedUserId
+  return normalizeUserId(readStoredUser()?.id)
+}
+
+function cacheKey() {
+  return `${BASE_CACHE_KEY}:${currentUserId()}`
+}
+
+function forgetLegacyCache() {
+  safeRemove(BASE_CACHE_KEY)
+}
+
 function accessFromStatus(value) {
   return ['active', 'trialing'].includes(normalizeStatus(value))
 }
 
 function persistStatus() {
   if (status.value === 'unknown') {
-    safeRemove(CACHE_KEY)
+    safeRemove(cacheKey())
     return
   }
   safeSet(
-    CACHE_KEY,
+    cacheKey(),
     JSON.stringify({
       status: status.value,
       hasAccess: hasAccess.value,
@@ -75,13 +96,14 @@ function persistStatus() {
 
 function loadFromStorage() {
   try {
-    const cached = JSON.parse(safeGet(CACHE_KEY) || 'null')
+    forgetLegacyCache()
+    const cached = JSON.parse(safeGet(cacheKey()) || 'null')
     if (!cached?.status || !cached?.fetchedAt) return
     status.value = normalizeStatus(cached.status)
     hasAccess.value = Boolean(cached.hasAccess) || accessFromStatus(cached.status)
     lastFetchedAt.value = Number(cached.fetchedAt) || 0
   } catch {
-    safeRemove(CACHE_KEY)
+    safeRemove(cacheKey())
   }
 }
 
@@ -116,6 +138,7 @@ async function fetchStatus(force = false, includePortal = false) {
   if (!force && currentInflight) return currentInflight
 
   const previousStatus = status.value
+  loading.value = true
   const request = BillingService.status(includePortal, force)
     .then((res) => {
       applyStatus(res?.data?.status || 'inactive', res?.data?.portalUrl || '', res?.data?.hasAccess)
@@ -135,6 +158,7 @@ async function fetchStatus(force = false, includePortal = false) {
     .finally(() => {
       if (includePortal) inflightWithPortal = null
       else inflightBasic = null
+      if (!inflightBasic && !inflightWithPortal) loading.value = false
     })
 
   if (includePortal) inflightWithPortal = request
@@ -149,19 +173,25 @@ function seedStatus(nextStatus) {
 }
 
 function seedFromUser(user) {
+  scopedUserId = normalizeUserId(user?.id)
   return applyStatus(user?.subscriptionStatus, '', user?.hasAccess)
 }
 
 function reset() {
+  safeRemove(cacheKey())
+  forgetLegacyCache()
+  scopedUserId = null
   status.value = 'unknown'
   hasAccess.value = false
   portalUrl.value = ''
   lastFetchedAt.value = 0
-  safeRemove(CACHE_KEY)
+  loading.value = false
+  inflightBasic = null
+  inflightWithPortal = null
 }
 
 loadFromStorage()
 
 export function useBillingStore() {
-  return { status, hasAccess, portalUrl, lastFetchedAt, fetchStatus, seedStatus, seedFromUser, reset }
+  return { status, hasAccess, portalUrl, lastFetchedAt, loading, fetchStatus, seedStatus, seedFromUser, reset }
 }

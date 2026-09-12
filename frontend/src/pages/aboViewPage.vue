@@ -159,9 +159,17 @@ const cancelSubscription = async () => {
 
 const statusMeta = computed(() => {
   switch (status.value) {
-    case 'active':
+    case 'unknown':
       return {
-        label: 'Actif',
+        label: 'Verification',
+        note: 'Synchronisation de ton abonnement.',
+        badge: 'border-slate-700 bg-slate-900/70 text-slate-200',
+        dot: 'bg-slate-400',
+      }
+    case 'active':
+    case 'trialing':
+      return {
+        label: status.value === 'trialing' ? 'Essai actif' : 'Actif',
         note: 'Accès total débloqué.',
         badge: 'border-emerald-300/30 bg-emerald-300/10 text-emerald-100',
         dot: 'bg-emerald-300',

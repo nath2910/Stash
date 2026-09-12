@@ -314,7 +314,6 @@ router.beforeEach(async (to) => {
   const isPublic = publicRoutes.has(to.name)
   const requiresAuth = to.meta.requiresAuth === true
   const allowInactive = to.meta.allowInactive === true
-  const bypassPostAuthGate = requiresAuth && hasRecentPostAuthRedirect(to.name)
 
   if (hasToken && isTokenExpired(token)) {
     auth.logout()
@@ -346,9 +345,6 @@ router.beforeEach(async (to) => {
 
   // Si page protégée, vérifier l'abo (sauf si allowInactive)
   if (requiresAuth) {
-    if (bypassPostAuthGate) {
-      return true
-    }
     await billing.fetchStatus()
     if (!allowInactive && !hasAppAccess(billing)) {
       return { name: 'abo', query: { returnTo: to.fullPath } }
