@@ -6,10 +6,10 @@
         class="item-details-toggle"
         :class="{ 'is-active': showDetails }"
         :aria-expanded="showDetails"
-        @click="showDetails = !showDetails"
+        @click="toggleDetails"
       >
         <SlidersHorizontal class="h-4 w-4" aria-hidden="true" />
-        <span>Details</span>
+        <span>{{ showDetails ? 'Details ouverts' : 'Details' }}</span>
       </button>
     </div>
 
@@ -71,7 +71,7 @@
         <CompactDateInput v-model="form.dateAchat" light size="md" />
       </div>
 
-      <div v-if="quantityEnabled && (!showDetails || isQuickSurface)" class="item-field item-field--quantity">
+      <div v-if="quantityEnabled && (!showInlineDetails || isQuickSurface)" class="item-field item-field--quantity">
         <span>Quantité</span>
         <div class="quantity-stepper">
           <button
@@ -107,7 +107,7 @@
       </div>
 
       <div
-        v-if="quantityEnabled && (!showDetails || isQuickSurface)"
+        v-if="quantityEnabled && (!showInlineDetails || isQuickSurface)"
         class="item-field item-field--grouping"
         :class="{ 'is-inactive': Number(form.quantity) <= 1 }"
         :aria-hidden="Number(form.quantity) <= 1"
@@ -167,7 +167,7 @@
         </label>
       </template>
 
-      <div v-if="quantityEnabled && showInlineDetails" class="item-field item-field--quantity">
+      <div v-if="quantityEnabled && showInlineDetails && !isQuickSurface" class="item-field item-field--quantity">
         <span>Quantité</span>
         <div class="quantity-stepper">
           <button
@@ -203,7 +203,7 @@
       </div>
 
       <div
-        v-if="quantityEnabled && showInlineDetails"
+        v-if="quantityEnabled && showInlineDetails && !isQuickSurface"
         class="item-field item-field--grouping"
         :class="{ 'is-inactive': Number(form.quantity) <= 1 }"
         :aria-hidden="Number(form.quantity) <= 1"
@@ -221,7 +221,7 @@
         </label>
       </div>
 
-      <slot name="after-fields" :form="form" :show-details="showDetails"></slot>
+      <slot name="after-fields" :form="form" :show-details="showInlineDetails"></slot>
 
       <footer class="item-form-actions">
         <button v-if="showCancel" type="button" class="item-secondary-button" :disabled="saving" @click="$emit('cancel')">
@@ -485,6 +485,14 @@ function focusFirstField() {
     nameInputRef.value?.focus?.()
     nameInputRef.value?.select?.()
   })
+}
+
+function toggleDetails() {
+  if (isQuickSurface.value) {
+    showDetails.value = true
+    return
+  }
+  showDetails.value = !showDetails.value
 }
 
 function applySuggestedPrice(key, value) {

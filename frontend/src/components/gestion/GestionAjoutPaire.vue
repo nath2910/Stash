@@ -9,7 +9,7 @@
           @click.self="handleClose"
         >
           <section
-            class="modal-card w-full max-w-4xl max-h-[92vh] rounded-2xl border bg-white shadow-2xl"
+            class="modal-card w-full max-w-4xl rounded-2xl border bg-white shadow-2xl"
             role="dialog"
             aria-modal="true"
             aria-labelledby="add-item-title"
@@ -41,13 +41,14 @@
 
             <div class="modal-form">
               <ItemFormFields
+                :key="formRenderKey"
                 mode="create"
                 surface="modal"
                 :items="items"
                 :saving="loading"
                 details-default-open
                 quantity-enabled
-                :show-details-toggle="false"
+                :show-details-toggle="true"
                 auto-infer-from-name
                 submit-label="Ajouter"
                 @cancel="handleClose"
@@ -79,6 +80,7 @@ const success = ref(false)
 const error = ref(null)
 const visible = ref(true)
 const closeTimer = ref(null)
+const formRenderKey = ref(0)
 
 function resetState() {
   success.value = false
@@ -109,6 +111,7 @@ async function createSales({ payload, quantity }) {
     const n = Math.min(50, Math.max(1, Math.trunc(Number(quantity || 1))))
     await SnkVenteServices.createMany(payload, n)
     success.value = true
+    formRenderKey.value += 1
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('snk:stock-items-change', { detail: { source: 'gestion' } }))
     }
@@ -133,14 +136,17 @@ onBeforeUnmount(() => {
 .modal-card {
   position: relative;
   isolation: isolate;
-  max-height: calc(100dvh - 2rem);
+  display: flex;
+  flex-direction: column;
+  max-height: min(760px, calc(100dvh - 2rem));
+  min-height: min(620px, calc(100dvh - 2rem));
   border-color: rgba(125, 211, 252, 0.38);
   background:
     linear-gradient(135deg, rgba(14, 165, 233, 0.08), transparent 42%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96)),
     #ffffff;
   color: #0f172a;
-  overflow-y: auto;
+  overflow: hidden;
   overscroll-behavior: contain;
   scrollbar-width: thin;
   box-shadow: 0 28px 80px rgba(15, 23, 42, 0.22);
@@ -148,8 +154,7 @@ onBeforeUnmount(() => {
 
 .modal-card::before {
   content: '';
-  position: sticky;
-  top: 0;
+  flex: 0 0 auto;
   z-index: 90;
   display: block;
   height: 4px;
@@ -157,8 +162,7 @@ onBeforeUnmount(() => {
 }
 
 .modal-card-header {
-  position: sticky;
-  top: 4px;
+  flex: 0 0 auto;
   z-index: 80;
   border-color: rgba(125, 211, 252, 0.26);
   background:
@@ -215,6 +219,10 @@ onBeforeUnmount(() => {
 .modal-form {
   position: relative;
   z-index: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 1rem;
 }
 
@@ -278,6 +286,7 @@ onBeforeUnmount(() => {
   .modal-card {
     width: 100%;
     max-height: 100dvh;
+    min-height: min(680px, 100dvh);
     border-radius: 18px 18px 0 0;
     padding-bottom: max(env(safe-area-inset-bottom), 0.75rem);
   }
