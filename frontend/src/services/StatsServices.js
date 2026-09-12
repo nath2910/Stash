@@ -1,5 +1,6 @@
 // src/services/StatsServices.js
 import api from './api.js'
+import { readStoredUser } from '../utils/authStorage.js'
 
 const DEFAULT_CACHE_TTL_MS = 20_000
 const inFlightRequests = new Map()
@@ -19,8 +20,9 @@ function asStableString(value) {
 }
 
 function buildCacheKey(path, params = {}) {
+  const userId = readStoredUser()?.id ?? 'guest'
   const keys = Object.keys(params).sort((a, b) => a.localeCompare(b))
-  const pairs = []
+  const pairs = [`userId=${encodeURIComponent(userId)}`]
   for (const key of keys) {
     const raw = params[key]
     if (raw === undefined || raw === null || raw === '') continue

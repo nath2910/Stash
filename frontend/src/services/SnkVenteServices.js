@@ -2,6 +2,7 @@
 import api from './api'
 import { invalidateStatsCache } from './StatsServices.js'
 import { notifyInventoryChanged } from '@/utils/inventoryEvents.js'
+import { readStoredUser } from '../utils/authStorage.js'
 
 const LIST_CACHE_TTL_MS = 60_000
 const listCache = new Map()
@@ -14,25 +15,26 @@ function normalizeOptions(options = {}) {
 }
 
 function cacheKeyFor(options = {}) {
+  const userId = readStoredUser()?.id ?? 'guest'
   return JSON.stringify(
-    Object.keys(options)
+    Object.keys({ ...options, userId })
       .sort((a, b) => a.localeCompare(b))
       .reduce((acc, key) => {
-        const value = options[key]
+        const value = key === 'userId' ? userId : options[key]
         if (value !== undefined && value !== null && value !== '') acc[key] = value
         return acc
       }, {}),
   )
 }
 
-function invalidateListCache() {
+export function invalidateSnkVenteListCache() {
   listCacheGeneration += 1
   listCache.clear()
   listInflight.clear()
 }
 
 function syncAfterInventoryMutation(detail = {}) {
-  invalidateListCache()
+  invalidateSnkVenteListCache()
   invalidateStatsCache()
   notifyInventoryChanged(detail)
 }

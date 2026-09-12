@@ -56,6 +56,7 @@ api.interceptors.request.use((config) => {
     config.headers = config.headers || {}
     config.headers.Authorization = `Bearer ${token}`
   }
+  config.__authToken = token
 
   return config
 })
@@ -63,8 +64,23 @@ api.interceptors.request.use((config) => {
 let redirectingOnAuth = false
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const requestToken = response?.config?.__authToken || ''
+    if (requestToken && requestToken !== readAuthToken()) {
+      const error = new Error('Stale authenticated response ignored')
+      error.code = 'ERR_STALE_AUTH_RESPONSE'
+      return Promise.reject(error)
+    }
+    return response
+  },
   (error) => {
+    const requestToken = error?.config?.__authToken || ''
+    if (requestToken && requestToken !== readAuthToken()) {
+      const staleError = new Error('Stale authenticated response ignored')
+      staleError.code = 'ERR_STALE_AUTH_RESPONSE'
+      return Promise.reject(staleError)
+    }
+
     const status = error?.response?.status
     const url = error?.config?.url || ''
     const isNetworkError =

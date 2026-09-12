@@ -2,6 +2,9 @@
 import { ref } from 'vue'
 import { useBillingStore } from './billingStore'
 import api from '@/services/api'
+import { invalidateStatsCache } from '@/services/StatsServices.js'
+import { invalidateSnkVenteListCache } from '@/services/SnkVenteServices.js'
+import { resetInventoryPreferencesServiceCache } from '@/services/inventoryPreferencesService.js'
 import {
   AUTH_STORAGE_KEYS,
   AUTH_SYNC_EVENT,
@@ -32,6 +35,12 @@ function syncBillingFromAuth(nextUser, nextToken, previousToken = token.value) {
   }
 }
 
+function resetUserScopedRuntimeState() {
+  invalidateStatsCache()
+  invalidateSnkVenteListCache()
+  resetInventoryPreferencesServiceCache()
+}
+
 function loadFromStorage() {
   const previousToken = token.value
   const parsedUser = readStoredUser()
@@ -39,6 +48,9 @@ function loadFromStorage() {
   user.value = token.value ? parsedUser : null
   if (!token.value && parsedUser) {
     safeStorageRemove('snk_user')
+  }
+  if (previousToken !== token.value) {
+    resetUserScopedRuntimeState()
   }
   syncBillingFromAuth(user.value, token.value, previousToken)
 }
@@ -53,6 +65,9 @@ function setAuth(payload) {
   token.value = payload?.token ? String(payload.token) : ''
   user.value = token.value ? (payload?.user ?? null) : null
 
+  if (previousToken !== token.value) {
+    resetUserScopedRuntimeState()
+  }
   writeAuthState({ token: token.value, user: user.value })
   syncBillingFromAuth(user.value, token.value, previousToken)
 }

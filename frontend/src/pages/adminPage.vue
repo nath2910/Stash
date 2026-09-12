@@ -540,7 +540,7 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   AlertTriangle,
@@ -577,6 +577,8 @@ import {
   getDocumentRows,
   shouldUseQuarterPeriod,
 } from '@/rules/administrativeRules'
+import { useAuthStore } from '@/store/authStore'
+import { scopedStorageKey } from '@/RegleItem/storageScope'
 
 const props = defineProps({
   embedded: {
@@ -586,7 +588,8 @@ const props = defineProps({
 })
 
 const router = useRouter()
-const GENERATED_DOCUMENTS_STORAGE_KEY = 'stash_admin_generated_documents_v1'
+const auth = useAuthStore()
+const GENERATED_DOCUMENTS_STORAGE_PREFIX = 'stash_admin_generated_documents_v1'
 const STATUS_LABELS = Object.freeze({
   complete: 'Prêt',
   checked: 'Prêt',
@@ -620,7 +623,17 @@ const summary = ref(null)
 const documents = ref([])
 const invoices = ref([])
 const documentRecords = ref([])
+const generatedDocumentsStorageKey = computed(() =>
+  scopedStorageKey(GENERATED_DOCUMENTS_STORAGE_PREFIX, auth.user.value?.id ?? 'guest'),
+)
 const generatedDocuments = ref(readGeneratedDocuments())
+
+watch(
+  generatedDocumentsStorageKey,
+  () => {
+    generatedDocuments.value = readGeneratedDocuments()
+  },
+)
 const periodTouched = ref(false)
 const periodYear = ref(initialYear)
 const selectedMonth = ref(today.getMonth() + 1)
@@ -1983,7 +1996,7 @@ function mergeRecords(records = []) {
 function readGeneratedDocuments() {
   if (typeof localStorage === 'undefined') return []
   try {
-    const value = JSON.parse(localStorage.getItem(GENERATED_DOCUMENTS_STORAGE_KEY) || '[]')
+    const value = JSON.parse(localStorage.getItem(generatedDocumentsStorageKey.value) || '[]')
     return Array.isArray(value) ? value : []
   } catch {
     return []
@@ -1992,7 +2005,7 @@ function readGeneratedDocuments() {
 
 function writeGeneratedDocuments(value) {
   if (typeof localStorage === 'undefined') return
-  localStorage.setItem(GENERATED_DOCUMENTS_STORAGE_KEY, JSON.stringify(value))
+  localStorage.setItem(generatedDocumentsStorageKey.value, JSON.stringify(value))
 }
 
 function errorMessage(errorObject, fallback) {
