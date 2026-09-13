@@ -96,6 +96,7 @@ public class MailAccountController {
   }
 
   @DeleteMapping("/{id}")
+  @RequiresActiveSubscription
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void delete(@AuthenticationPrincipal User currentUser, @PathVariable Long id) {
     mailAccountService.deleteForUser(currentUser.getId(), id);

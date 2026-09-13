@@ -1,6 +1,7 @@
 package backend.security;
 
 import backend.entity.User;
+import backend.controller.MailAccountController;
 import backend.service.BillingService;
 import backend.service.DiscordAccessService;
 import org.junit.jupiter.api.AfterEach;
@@ -106,6 +107,33 @@ class ActiveSubscriptionInterceptorTest {
     );
 
     Assertions.assertTrue(allowed);
+  }
+
+  @Test
+  void mailAccountDeletionRequiresActiveSubscription() throws Exception {
+    setAuthenticatedUser("inactive");
+    Mockito.when(discordAccessService.isEligible(Mockito.any())).thenReturn(false);
+
+    ResponseStatusException ex = Assertions.assertThrows(
+        ResponseStatusException.class,
+        () -> interceptor.preHandle(
+            new MockHttpServletRequest(),
+            new MockHttpServletResponse(),
+            new HandlerMethod(
+                new MailAccountController(
+                    Mockito.mock(backend.service.MailAccountService.class),
+                    Mockito.mock(org.springframework.jdbc.core.JdbcTemplate.class)
+                ),
+                MailAccountController.class.getMethod(
+                    "delete",
+                    User.class,
+                    Long.class
+                )
+            )
+        )
+    );
+
+    Assertions.assertEquals(402, ex.getStatusCode().value());
   }
 
   private User setAuthenticatedUser(String subscriptionStatus) {

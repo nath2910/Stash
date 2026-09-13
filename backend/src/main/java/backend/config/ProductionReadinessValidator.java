@@ -22,19 +22,22 @@ public class ProductionReadinessValidator {
   private final String frontendBaseUrl;
   private final String backendPublicBaseUrl;
   private final String allowedOrigins;
+  private final StripeProperties stripeProperties;
 
   public ProductionReadinessValidator(
       Environment environment,
       @Value("${app.jwt.secret}") String jwtSecret,
       @Value("${app.frontend.base-url}") String frontendBaseUrl,
       @Value("${app.backend.public-base-url}") String backendPublicBaseUrl,
-      @Value("${app.cors.allowed-origins:}") String allowedOrigins
+      @Value("${app.cors.allowed-origins:}") String allowedOrigins,
+      StripeProperties stripeProperties
   ) {
     this.environment = environment;
     this.jwtSecret = jwtSecret;
     this.frontendBaseUrl = frontendBaseUrl;
     this.backendPublicBaseUrl = backendPublicBaseUrl;
     this.allowedOrigins = allowedOrigins;
+    this.stripeProperties = stripeProperties;
   }
 
   @PostConstruct
@@ -52,6 +55,7 @@ public class ProductionReadinessValidator {
     validatePublicHttpsUrl(backendPublicBaseUrl, "APP_BACKEND_PUBLIC_BASE_URL");
     validateCorsOrigins(allowedOrigins);
     validateMailConfiguration(environment);
+    validateStripeProductionConfiguration(stripeProperties);
   }
 
   static boolean usesInsecureJwtSecret(String secret) {
@@ -110,6 +114,39 @@ public class ProductionReadinessValidator {
     String normalizedHost = host.toLowerCase(Locale.ROOT);
     if (isLocalHost(normalizedHost)) {
       throw new IllegalStateException(propertyName + " cannot point to localhost in prod");
+    }
+  }
+
+  static void validateStripeProductionConfiguration(StripeProperties stripe) {
+    if (stripe == null) {
+      throw new IllegalStateException("Stripe configuration must be available in prod");
+    }
+
+    String secretKey = trim(stripe.getSecretKey());
+    if (secretKey == null) {
+      throw new IllegalStateException("STRIPE_SECRET_KEY must be set in prod");
+    }
+    if (!secretKey.startsWith("sk_live_")) {
+      throw new IllegalStateException("STRIPE_SECRET_KEY must be a live Stripe secret key in prod");
+    }
+
+    if (trim(stripe.getPriceId()) == null) {
+      throw new IllegalStateException("STRIPE_PRICE_ID must be set in prod");
+    }
+    if (trim(stripe.getWebhookSecret()) == null) {
+      throw new IllegalStateException("STRIPE_WEBHOOK_SECRET must be set in prod");
+    }
+
+    validatePublicHttpsUrl(stripe.getSuccessUrl(), "STRIPE_SUCCESS_URL");
+    if (trim(stripe.getCancelUrl()) != null) {
+      validatePublicHttpsUrl(stripe.getCancelUrl(), "STRIPE_CANCEL_URL");
+    }
+
+    if (!stripe.isSalesEnabled()) {
+      throw new IllegalStateException("STRIPE_SALES_ENABLED must be true in prod before accepting paid customers");
+    }
+    if (!stripe.isCommercialRegistrationComplete()) {
+      throw new IllegalStateException("STRIPE_COMMERCIAL_REGISTRATION_COMPLETE must be true in prod before accepting paid customers");
     }
   }
 

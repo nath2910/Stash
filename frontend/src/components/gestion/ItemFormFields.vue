@@ -488,10 +488,6 @@ function focusFirstField() {
 }
 
 function toggleDetails() {
-  if (isQuickSurface.value) {
-    showDetails.value = true
-    return
-  }
   showDetails.value = !showDetails.value
 }
 
