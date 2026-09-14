@@ -1,88 +1,95 @@
 <template>
-  <LegalDocument title="Conditions générales d’utilisation" description="Règles d’accès et d’utilisation de la version bêta de Stash.">
+  <LegalDocument title="Conditions generales d'utilisation" description="Regles d'acces et d'utilisation de MyStash.">
     <div class="legal-summary">
-      <strong>À retenir</strong>
-      <p>Stash est une bêta gratuite, sans abonnement payant ni engagement de disponibilité. Vous gardez la maîtrise de vos données et pouvez supprimer votre compte.</p>
+      <strong>A retenir</strong>
+      <p>MyStash est un outil de gestion. L'acces aux fonctions payantes depend d'un abonnement valide ou d'un acces special explicitement accorde.</p>
     </div>
 
     <h2>1. Objet et acceptation</h2>
     <p>
-      Les présentes conditions encadrent l’utilisation de Stash. La création d’un compte vaut acceptation
-      de ces conditions et de la <RouterLink to="/privacy">politique de confidentialité</RouterLink>.
-      Si vous n’acceptez pas ces documents, n’utilisez pas le service.
+      Les presentes conditions encadrent l'utilisation de MyStash. La creation d'un compte vaut
+      acceptation de ces conditions et de la <RouterLink to="/privacy">politique de confidentialite</RouterLink>.
+      Si vous n'acceptez pas ces documents, n'utilisez pas le service.
     </p>
 
-    <h2>2. Version bêta et absence d’offre commerciale</h2>
+    <h2>2. Acces au service et abonnement</h2>
     <p>
-      Stash est mis à disposition gratuitement à des fins de test et d’amélioration. Aucun prix n’est dû,
-      aucun abonnement payant n’est proposé et aucune relation vendeur-consommateur n’est créée à ce stade.
-      Les fonctions, limites et modalités d’accès peuvent évoluer pendant la bêta.
+      Certaines fonctions necessitent un abonnement actif, gere par Stripe, ou un acces special accorde
+      par MyStash. Les prix, periodes et conditions applicables sont ceux affiches dans l'application ou
+      dans le parcours de paiement au moment de la souscription.
     </p>
     <p>
-      Une éventuelle offre payante fera l’objet, avant son ouverture, de conditions générales de vente
-      distinctes, de tarifs complets et de l’identification légale du professionnel.
+      L'acces peut etre interrompu en cas de paiement refuse, d'abonnement annule, d'expiration d'un acces
+      special ou de violation des presentes conditions.
     </p>
 
     <h2>3. Compte utilisateur</h2>
     <p>
-      Vous devez fournir des informations exactes, protéger vos identifiants et nous prévenir rapidement
-      en cas d’accès non autorisé. Un compte est personnel. Vous êtes responsable des opérations réalisées
-      depuis votre compte, sauf utilisation frauduleuse indépendante de votre volonté.
+      Un compte est personnel. Vous devez fournir des informations exactes, proteger vos identifiants et
+      nous prevenir rapidement en cas d'acces non autorise. Vous etes responsable des operations realisees
+      depuis votre compte, sauf utilisation frauduleuse independante de votre volonte.
     </p>
 
-    <h2>4. Utilisation autorisée</h2>
-    <p>Vous vous engagez à ne pas :</p>
+    <h2>4. Utilisation autorisee</h2>
+    <p>Vous vous engagez a ne pas :</p>
     <ul>
-      <li>utiliser Stash à des fins illicites, frauduleuses ou portant atteinte aux droits d’un tiers ;</li>
-      <li>tenter de contourner la sécurité, les contrôles d’accès ou les limites techniques ;</li>
-      <li>importer des données, fichiers ou contenus que vous n’êtes pas autorisé à traiter ;</li>
-      <li>perturber le service, automatiser des requêtes abusives ou introduire un contenu malveillant.</li>
+      <li>utiliser MyStash a des fins illicites, frauduleuses ou portant atteinte aux droits d'un tiers ;</li>
+      <li>tenter de contourner la securite, les controles d'acces, l'abonnement ou les limites techniques ;</li>
+      <li>importer des donnees, fichiers ou contenus que vous n'etes pas autorise a traiter ;</li>
+      <li>perturber le service, automatiser des requetes abusives ou introduire un contenu malveillant.</li>
     </ul>
 
-    <h2>5. Données et contenus importés</h2>
+    <h2>5. Donnees et contenus importes</h2>
     <p>
       Vous conservez vos droits sur vos contenus. Vous accordez uniquement les autorisations techniques
-      nécessaires pour les héberger, les traiter et vous fournir les fonctions demandées. Si vous saisissez
-      des données relatives à des clients ou à d’autres tiers, vous devez disposer d’une base légale et ne
-      collecter que les informations nécessaires.
+      necessaires pour les heberger, les traiter et fournir les fonctions demandees. Si vous saisissez des
+      donnees relatives a des clients ou a d'autres tiers, vous devez disposer d'une base legale et ne
+      collecter que les informations necessaires.
     </p>
 
-    <h2>6. Services externes</h2>
+    <h2>6. Paiement et resiliation</h2>
     <p>
-      Les connexions à Google, Discord ou Gmail sont facultatives. Leur utilisation est également soumise
-      aux règles de ces fournisseurs. Le suivi des colis dépend des informations communiquées par les
-      transporteurs, qui peuvent être retardées, incomplètes ou indisponibles.
+      Les paiements, factures, moyens de paiement et resilations sont traites via Stripe lorsque
+      l'abonnement est souscrit par ce biais. Sauf indication contraire affichee lors du paiement,
+      l'abonnement se renouvelle automatiquement jusqu'a sa resiliation.
     </p>
 
-    <h2>7. Disponibilité et limites</h2>
+    <h2>7. Services externes</h2>
     <p>
-      La bêta est fournie avec un objectif raisonnable de sécurité et de continuité, sans garantie de
-      disponibilité permanente. Des interruptions peuvent intervenir pour maintenance, correction ou en
-      raison d’un prestataire. Pensez à exporter régulièrement les données importantes.
-    </p>
-    <p>
-      Stash ne garantit pas l’exactitude juridique, fiscale ou comptable des calculs et documents générés.
-      Vous devez les vérifier avant toute utilisation officielle. Rien dans ces conditions n’exclut une
-      responsabilité qui ne pourrait pas légalement être limitée.
+      Les connexions a Google, Discord ou Gmail sont facultatives. Leur utilisation est egalement soumise
+      aux regles de ces fournisseurs. Le suivi des colis depend des informations communiquees par les
+      transporteurs, qui peuvent etre retardees, incompletes ou indisponibles.
     </p>
 
-    <h2>8. Suspension et suppression</h2>
+    <h2>8. Disponibilite et limites</h2>
     <p>
-      Un accès peut être suspendu en cas de risque de sécurité, d’abus ou de violation de ces conditions.
-      Vous pouvez exporter vos données puis supprimer votre compte depuis votre espace personnel. La
-      suppression entraîne la fermeture de l’accès et l’effacement des données associées, sous réserve des
-      délais techniques strictement nécessaires.
+      MyStash met en oeuvre des moyens raisonnables de securite et de continuite, sans garantie de
+      disponibilite permanente. Des interruptions peuvent intervenir pour maintenance, correction ou en
+      raison d'un prestataire. Pensez a exporter regulierement les donnees importantes.
+    </p>
+    <p>
+      MyStash ne garantit pas l'exactitude juridique, fiscale ou comptable des calculs et documents
+      generes. Vous devez les verifier avant toute utilisation officielle. Rien dans ces conditions
+      n'exclut une responsabilite qui ne pourrait pas legalement etre limitee.
     </p>
 
-    <h2>9. Évolution des conditions</h2>
+    <h2>9. Suspension et suppression</h2>
     <p>
-      La version applicable est celle publiée sur cette page. Toute modification importante sera signalée
-      de manière visible. Si une modification nécessite votre accord, il sera demandé avant sa prise d’effet.
+      Un acces peut etre suspendu en cas de risque de securite, d'abus, de paiement non valide ou de
+      violation de ces conditions. Vous pouvez exporter vos donnees puis supprimer votre compte depuis
+      votre espace personnel. La suppression entraine la fermeture de l'acces et l'effacement des donnees
+      associees, sous reserve des delais techniques strictement necessaires.
     </p>
 
-    <h2>10. Droit applicable et contact</h2>
+    <h2>10. Evolution des conditions</h2>
     <p>
-      Ces conditions sont soumises au droit français. En cas de difficulté, contactez d’abord
+      La version applicable est celle publiee sur cette page. Toute modification importante sera signalee
+      de maniere visible. Si une modification necessite votre accord, il sera demande avant sa prise d'effet.
+    </p>
+
+    <h2>11. Droit applicable et contact</h2>
+    <p>
+      Ces conditions sont soumises au droit francais. En cas de difficulte, contactez d'abord
       <a href="mailto:nathantalvasson@gmail.com">nathantalvasson@gmail.com</a> afin de rechercher une solution amiable.
     </p>
   </LegalDocument>
