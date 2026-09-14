@@ -6,10 +6,12 @@
         <span>{{ error }}</span>
       </div>
 
-      <div v-if="feedback" class="notice ok" role="status">
-        <CheckCircle2 class="notice-icon" aria-hidden="true" />
-        <span>{{ feedback }}</span>
-      </div>
+      <Transition name="admin-toast">
+        <div v-if="feedback" class="admin-toast" role="status" aria-live="polite">
+          <CheckCircle2 class="notice-icon" aria-hidden="true" />
+          <span>{{ feedback }}</span>
+        </div>
+      </Transition>
 
       <div v-if="loading" class="loading-box" aria-live="polite">
         <RefreshCw class="button-icon spinning" aria-hidden="true" />
@@ -669,6 +671,7 @@ const profileForm = reactive({
   buysForResale: false,
 })
 let copiedResetTimer = 0
+let feedbackResetTimer = 0
 
 const legalStatusOptions = ADMIN_LEGAL_STATUS_OPTIONS
 const vatOptions = ADMIN_VAT_OPTIONS
@@ -1260,7 +1263,10 @@ const quarterOptions = computed(() => [
 ])
 
 onMounted(loadAll)
-onBeforeUnmount(clearCopiedTimer)
+onBeforeUnmount(() => {
+  clearCopiedTimer()
+  clearFeedbackTimer()
+})
 
 async function loadAll() {
   loading.value = true
@@ -1428,7 +1434,7 @@ async function saveProfile() {
     profile.value = await AdminService.saveAdministrativeProfile(profilePayload())
     await Promise.all([loadSummary(), loadDocuments(), loadDocumentRecords()])
     resetProfileForm()
-    feedback.value = 'Parametres administratifs enregistres.'
+    showFeedback('Parametres administratifs enregistres.')
   } catch (err) {
     profileEditError.value = errorMessage(err, "Impossible d'enregistrer le profil administratif.")
   } finally {
@@ -1455,12 +1461,21 @@ async function copyText(value, successMessage, fallbackMessage, key) {
   try {
     if (!navigator?.clipboard) throw new Error('Clipboard unavailable')
     await navigator.clipboard.writeText(value)
-    feedback.value = successMessage
+    showFeedback(successMessage)
   } catch {
-    feedback.value = fallbackMessage
+    showFeedback(fallbackMessage)
   } finally {
     markCopied(key)
   }
+}
+
+function showFeedback(message, duration = 2200) {
+  feedback.value = message
+  clearFeedbackTimer()
+  feedbackResetTimer = window.setTimeout(() => {
+    feedback.value = ''
+    feedbackResetTimer = 0
+  }, duration)
 }
 
 function markCopied(key) {
@@ -1477,6 +1492,12 @@ function clearCopiedTimer() {
   if (!copiedResetTimer) return
   window.clearTimeout(copiedResetTimer)
   copiedResetTimer = 0
+}
+
+function clearFeedbackTimer() {
+  if (!feedbackResetTimer) return
+  window.clearTimeout(feedbackResetTimer)
+  feedbackResetTimer = 0
 }
 
 async function generateUrssafSheet() {
@@ -1503,7 +1524,7 @@ async function generateAdministrativeExport(documentId) {
     const filename = await AdminService.generateAdministrativeExport(documentId, payload)
     rememberGeneratedDocument(documentId, filename)
     await loadDocumentRecords()
-    feedback.value = `Document généré : ${filename}.`
+    showFeedback(`Document généré : ${filename}.`)
   } catch (err) {
     error.value = errorMessage(err, 'Impossible de générer le document.')
   } finally {
@@ -1523,7 +1544,7 @@ async function generateMissingInvoices() {
     })
     await Promise.all([loadInvoices(), loadDocumentRecords()])
     const count = result?.generatedCount ?? result?.count ?? missingInvoices.value.length
-    feedback.value = `${number(count)} facture(s) generee(s).`
+    showFeedback(`${number(count)} facture(s) generee(s).`)
   } catch (err) {
     error.value = errorMessage(err, 'Impossible de générer les factures manquantes.')
   } finally {
@@ -1545,7 +1566,7 @@ async function markDeclarationDone() {
       profileId: administrativeProfile.value.id,
     })
     documentRecords.value = mergeRecords([record, ...documentRecords.value])
-    feedback.value = 'Déclaration archivée pour cette période.'
+    showFeedback('Déclaration archivée pour cette période.')
   } catch (err) {
     error.value = errorMessage(err, "Impossible d'archiver la declaration.")
   } finally {
@@ -1595,7 +1616,7 @@ async function handleAdministrativeService(service) {
     generatingService.value = service.id
     try {
       await Promise.all([loadSummary(), loadInvoices(), loadDocumentRecords()])
-      feedback.value = 'Dossier recalcule.'
+      showFeedback('Dossier recalcule.')
     } finally {
       generatingService.value = ''
     }
@@ -1610,7 +1631,7 @@ async function handleAdministrativeService(service) {
     try {
       await copyDeclarationAmount()
       await generateUrssafSheet()
-      feedback.value = 'Déclaration URSSAF préparée : montant copié et fiche générée.'
+      showFeedback('Déclaration URSSAF préparée : montant copié et fiche générée.', 3000)
     } finally {
       generatingService.value = ''
     }
@@ -1639,9 +1660,12 @@ async function generateDocumentBundle(service) {
       generatedCount += 1
     }
     if (!error.value) {
-      feedback.value = generatedCount
-        ? `${number(generatedCount)} document(s) généré(s) pour le dossier.`
-        : 'Aucun document disponible à générer pour cette période.'
+      showFeedback(
+        generatedCount
+          ? `${number(generatedCount)} document(s) généré(s) pour le dossier.`
+          : 'Aucun document disponible à générer pour cette période.',
+        3000,
+      )
     }
   } finally {
     generatingService.value = ''
@@ -2149,6 +2173,49 @@ function errorMessage(errorObject, fallback) {
   color: #065f46;
   background: #ecfdf5;
   border: 1px solid #a7f3d0;
+}
+
+.admin-toast {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 5rem);
+  right: max(1rem, env(safe-area-inset-right));
+  z-index: 90;
+  display: inline-flex;
+  max-width: min(24rem, calc(100vw - 2rem));
+  align-items: center;
+  gap: 0.65rem;
+  border: 1px solid rgba(20, 184, 166, 0.22);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.96);
+  padding: 0.7rem 0.95rem;
+  color: #065f46;
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.14);
+  font-size: 0.88rem;
+  font-weight: 850;
+  backdrop-filter: blur(14px) saturate(140%);
+}
+
+.admin-toast-enter-active,
+.admin-toast-leave-active {
+  transition:
+    opacity 150ms ease,
+    transform 170ms ease;
+}
+
+.admin-toast-enter-from,
+.admin-toast-leave-to {
+  opacity: 0;
+  transform: translateY(-0.4rem) scale(0.98);
+}
+
+@media (max-width: 640px) {
+  .admin-toast {
+    top: calc(env(safe-area-inset-top, 0px) + 4.35rem);
+    right: 0.75rem;
+    left: 0.75rem;
+    justify-content: center;
+    border-radius: 14px;
+  }
 }
 
 .notice-icon,
@@ -3173,6 +3240,573 @@ function errorMessage(errorObject, fallback) {
 
   .span-2 {
     grid-column: span 1;
+  }
+}
+
+/* Polished administrative surface */
+.admin-page {
+  --admin-bg: #f7f9f8;
+  --admin-surface: rgba(255, 255, 255, 0.94);
+  --admin-surface-soft: #f8fbfb;
+  --admin-border: #dde7e6;
+  --admin-border-strong: #c8d7d6;
+  --admin-text: #111827;
+  --admin-muted: #64748b;
+  --admin-soft-text: #475569;
+  --admin-accent: #0f8b86;
+  --admin-accent-strong: #0b7471;
+  --admin-blue: #1598d3;
+  --admin-success: #047857;
+  --admin-danger: #b42318;
+  --admin-warning: #b45309;
+  --admin-shadow: 0 16px 38px rgba(15, 23, 42, 0.07);
+  --admin-shadow-soft: 0 8px 20px rgba(15, 23, 42, 0.045);
+  background:
+    linear-gradient(180deg, #fbfaf7 0%, var(--admin-bg) 34%, #f8fafc 100%);
+  color: var(--admin-text);
+}
+
+.admin-shell {
+  width: min(1360px, 100%);
+  padding: clamp(16px, 2vw, 28px) clamp(12px, 2vw, 24px) 42px;
+}
+
+.admin-header,
+.next-action-card,
+.profile-summary-card,
+.checklist-card,
+.copy-workbench,
+.simple-panel,
+.blockers-panel,
+.settings-panel {
+  border-color: var(--admin-border);
+  border-radius: 8px;
+  background: var(--admin-surface);
+  box-shadow: var(--admin-shadow-soft);
+}
+
+.admin-header {
+  align-items: center;
+  border-color: rgba(15, 139, 134, 0.18);
+  background: rgba(255, 255, 255, 0.8);
+  padding: 16px 18px;
+  backdrop-filter: blur(14px);
+}
+
+.admin-header h1 {
+  font-size: clamp(1.35rem, 2vw, 1.85rem);
+  font-weight: 900;
+}
+
+.admin-header p {
+  color: var(--admin-muted);
+  font-weight: 720;
+}
+
+.period-controls {
+  min-width: min(100%, 30rem);
+}
+
+.period-controls label,
+.profile-form label {
+  color: #334155;
+  font-size: 0.76rem;
+  letter-spacing: 0.01em;
+}
+
+.period-controls select,
+.profile-form select,
+.profile-form input,
+.profile-form textarea {
+  min-height: 44px;
+  border-color: #d8e2e1;
+  border-radius: 8px;
+  background: #fbfdff;
+  color: var(--admin-text);
+  font-weight: 760;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.period-controls select:hover,
+.profile-form select:hover,
+.profile-form input:hover,
+.profile-form textarea:hover {
+  border-color: #b8cbca;
+}
+
+.period-controls select:focus,
+.profile-form select:focus,
+.profile-form input:focus,
+.profile-form textarea:focus {
+  border-color: var(--admin-accent);
+  box-shadow: 0 0 0 4px rgba(15, 139, 134, 0.12);
+}
+
+.notice {
+  width: fit-content;
+  max-width: 100%;
+  border-radius: 8px;
+  padding: 10px 12px;
+  box-shadow: var(--admin-shadow-soft);
+}
+
+.notice.danger {
+  color: var(--admin-danger);
+  background: #fff7f6;
+  border-color: #ffd1cb;
+}
+
+.notice.ok {
+  color: var(--admin-success);
+  background: #f0fdfa;
+  border-color: #b8f3df;
+}
+
+.admin-toast {
+  border-radius: 8px;
+  border-color: rgba(15, 139, 134, 0.2);
+  background: rgba(255, 255, 255, 0.97);
+  color: #075e59;
+}
+
+.loading-box {
+  min-height: 320px;
+  border: 1px solid var(--admin-border);
+  border-radius: 8px;
+  background: var(--admin-surface);
+  color: var(--admin-soft-text);
+  box-shadow: var(--admin-shadow-soft);
+}
+
+.icon-button,
+.text-button,
+.mini-copy-button {
+  border-radius: 8px;
+  font-weight: 850;
+}
+
+.icon-button {
+  min-height: 44px;
+  padding: 10px 14px;
+}
+
+.icon-button.primary {
+  background: linear-gradient(90deg, var(--admin-accent), var(--admin-blue));
+  border-color: transparent;
+  color: #ffffff;
+  box-shadow: 0 14px 26px rgba(15, 139, 134, 0.18);
+}
+
+.icon-button.primary:not(:disabled):hover {
+  background: linear-gradient(90deg, var(--admin-accent-strong), #0d86bd);
+  transform: translateY(-1px);
+}
+
+.icon-button.secondary,
+.icon-button.ghost {
+  background: #ffffff;
+  border-color: #d7e1e0;
+  color: #172033;
+}
+
+.icon-button.secondary:not(:disabled):hover,
+.icon-button.ghost:not(:disabled):hover {
+  background: #f4fbfa;
+  border-color: #b9d1cf;
+  color: #0f6460;
+}
+
+.text-button {
+  color: var(--admin-accent);
+}
+
+.text-button:not(:disabled):hover {
+  color: var(--admin-accent-strong);
+}
+
+.section-kicker,
+.document-type {
+  color: #08766f;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+}
+
+.command-center {
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.next-action-card {
+  position: relative;
+  overflow: hidden;
+  border-left: 0;
+  padding: clamp(20px, 2.4vw, 30px);
+  box-shadow: var(--admin-shadow);
+}
+
+.next-action-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: linear-gradient(90deg, var(--admin-accent), var(--admin-blue), #f5b21a);
+}
+
+.profile-summary-card,
+.checklist-card,
+.copy-workbench,
+.blockers-panel,
+.simple-panel {
+  padding: 18px;
+}
+
+.profile-summary-card h2,
+.checklist-card h2,
+.action-head h2,
+.section-heading h2,
+.disclosure-panel summary h2,
+.optional-panel summary h2 {
+  color: #101827;
+  font-weight: 900;
+}
+
+.action-head p:not(.section-kicker),
+.profile-mode-line,
+.service-card > p,
+.copy-field p,
+.profile-plan-copy p,
+.quality-row p,
+.data-summary-item p,
+.document-card p,
+.calculation-note {
+  color: var(--admin-soft-text);
+}
+
+.amount-block {
+  display: inline-grid;
+  min-width: min(100%, 26rem);
+  margin: 26px 0 18px;
+  padding: 18px;
+  border: 1px solid #dce8e7;
+  border-radius: 8px;
+  background: #f8fcfc;
+}
+
+.amount-block strong {
+  color: #0d4747;
+  font-size: clamp(2.45rem, 6vw, 4.9rem);
+}
+
+.amount-block p {
+  color: #315a5b;
+}
+
+.profile-summary-list div {
+  border-color: #e7eeee;
+}
+
+.declaration-step,
+.copy-field,
+.data-summary-item,
+.profile-plan-row,
+.quality-row,
+.document-card,
+.service-card,
+.issue-card {
+  border-radius: 8px;
+}
+
+.declaration-step {
+  background: #fbfdfd;
+  border-color: #dfe9e8;
+  transition:
+    border-color 0.16s ease,
+    background 0.16s ease,
+    transform 0.16s ease;
+}
+
+.declaration-step:not(:disabled):hover {
+  border-color: #b9d1cf;
+  background: #f5fbfa;
+  transform: translateY(-1px);
+}
+
+.step-index {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.declaration-step.is-success .step-index {
+  background: #047857;
+  color: #ffffff;
+}
+
+.declaration-step.is-warning .step-index {
+  background: #fef3c7;
+  color: var(--admin-warning);
+}
+
+.declaration-step.is-danger .step-index {
+  background: #fee4e2;
+  color: var(--admin-danger);
+}
+
+.services-panel {
+  margin-bottom: 18px;
+}
+
+.service-grid {
+  gap: 14px;
+}
+
+.service-card {
+  min-height: 238px;
+  border-color: #dfe9e8;
+  background: #ffffff;
+  box-shadow: none;
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease,
+    border-color 0.16s ease;
+}
+
+.service-card:hover {
+  border-color: #c4d7d5;
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.06);
+  transform: translateY(-1px);
+}
+
+.service-card.is-primary-service {
+  border-color: rgba(15, 139, 134, 0.32);
+  box-shadow: 0 14px 28px rgba(15, 139, 134, 0.08);
+}
+
+.service-card.is-success,
+.profile-plan-row.is-success,
+.quality-row.is-success,
+.declaration-step.is-success {
+  border-color: #b8e7d5;
+  background: #f7fdfa;
+}
+
+.service-card.is-warning,
+.profile-plan-row.is-warning,
+.quality-row.is-warning,
+.declaration-step.is-warning {
+  border-color: #f3d68c;
+  background: #fffaf0;
+}
+
+.service-card.is-danger,
+.profile-plan-row.is-danger,
+.quality-row.is-danger,
+.declaration-step.is-danger,
+.copy-field.is-missing,
+.issue-card {
+  border-color: #fac5bc;
+  background: #fff8f7;
+}
+
+.service-icon {
+  width: 42px;
+  height: 42px;
+  border-color: #dce8e7;
+  background: #f7fbfb;
+}
+
+.service-icon.is-success {
+  color: var(--admin-success);
+  background: #ecfdf5;
+}
+
+.service-icon.is-warning {
+  color: var(--admin-warning);
+  background: #fffbeb;
+}
+
+.service-icon.is-danger {
+  color: var(--admin-danger);
+  background: #fff1f0;
+}
+
+.service-metrics span {
+  border-color: #dce8e7;
+  background: #f9fcfc;
+  color: #31535a;
+}
+
+.copy-workbench,
+.blockers-panel,
+.settings-panel,
+.simple-panel {
+  box-shadow: var(--admin-shadow-soft);
+}
+
+.copy-field,
+.data-summary-item {
+  background: #fbfdfd;
+  border-color: #dfe9e8;
+}
+
+.mini-copy-button {
+  border-color: #d7e1e0;
+  color: var(--admin-accent);
+}
+
+.mini-copy-button:hover {
+  background: #f4fbfa;
+}
+
+.mini-copy-button.is-copied {
+  color: var(--admin-success);
+  border-color: #b8e7d5;
+  background: #ecfdf5;
+}
+
+.status-pill {
+  min-height: 26px;
+  border-color: #dbe7e6;
+  background: #f8fbfb;
+  color: #526171;
+  font-size: 0.75rem;
+}
+
+.status-pill.is-success {
+  color: #046c4e;
+  background: #ecfdf5;
+  border-color: #b8e7d5;
+}
+
+.status-pill.is-danger {
+  color: var(--admin-danger);
+  background: #fff1f0;
+  border-color: #fac5bc;
+}
+
+.status-pill.is-warning {
+  color: var(--admin-warning);
+  background: #fffbeb;
+  border-color: #f3d68c;
+}
+
+.status-pill.is-info,
+.status-pill.is-neutral {
+  color: #365162;
+  background: #f3f7f8;
+  border-color: #dce8e7;
+}
+
+.ready-line {
+  width: fit-content;
+  margin: 14px 0 0;
+  padding: 8px 11px;
+  border: 1px solid #b8e7d5;
+  border-radius: 8px;
+  background: #f7fdfa;
+  color: var(--admin-success);
+}
+
+.progressive-panels {
+  gap: 12px;
+}
+
+.disclosure-panel summary,
+.optional-panel summary,
+.settings-panel summary {
+  padding: 16px 18px;
+}
+
+.disclosure-body,
+.optional-panel-body {
+  border-color: #e7eeee;
+  padding: 18px;
+}
+
+.profile-plan-row,
+.quality-row {
+  background: #fbfdfd;
+}
+
+.document-card {
+  border-color: #dfe9e8;
+  background: #fbfdfd;
+}
+
+.settings-panel {
+  overflow: hidden;
+}
+
+.profile-form {
+  border-color: #e7eeee;
+}
+
+.profile-form small {
+  width: fit-content;
+  border-radius: 999px;
+  background: #fff1f0;
+  padding: 4px 8px;
+  color: var(--admin-danger);
+  font-weight: 800;
+}
+
+.form-actions .icon-button {
+  min-width: 160px;
+}
+
+@media (max-width: 640px) {
+  .admin-page {
+    background: #f7f9f8;
+  }
+
+  .admin-shell {
+    padding: 12px 10px 28px;
+  }
+
+  .admin-header,
+  .next-action-card,
+  .profile-summary-card,
+  .checklist-card,
+  .copy-workbench,
+  .simple-panel,
+  .blockers-panel {
+    padding: 14px;
+  }
+
+  .admin-header {
+    gap: 14px;
+  }
+
+  .period-controls select,
+  .profile-form select,
+  .profile-form input,
+  .profile-form textarea,
+  .icon-button {
+    min-height: 46px;
+  }
+
+  .amount-block {
+    width: 100%;
+    padding: 15px;
+  }
+
+  .service-grid,
+  .copy-grid,
+  .document-grid,
+  .data-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .disclosure-panel summary,
+  .optional-panel summary,
+  .settings-panel summary,
+  .disclosure-body,
+  .optional-panel-body,
+  .profile-form {
+    padding: 14px;
+  }
+
+  .form-actions .icon-button {
+    min-width: 0;
   }
 }
 
