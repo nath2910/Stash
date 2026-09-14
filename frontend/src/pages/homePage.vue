@@ -226,6 +226,12 @@ async function chargerVentes() {
     apiSummary.value = null
     notifyStockChanged()
   } catch (error) {
+    if (error?.response?.status === 402) {
+      stockItems.value = []
+      stockLoaded.value = true
+      apiSummary.value = null
+      return
+    }
     console.error('Erreur chargement stock accueil', error)
     stockError.value = "Impossible de charger l'inventaire."
     stockItems.value = []
@@ -244,6 +250,10 @@ async function chargerStatsAnnuelles() {
     const { data } = await StatsServices.summary(annualRange.value.from, annualRange.value.to)
     apiSummary.value = data || null
   } catch (error) {
+    if (error?.response?.status === 402) {
+      apiSummary.value = null
+      return
+    }
     console.error('Erreur chargement KPI accueil', error)
     statsError.value = "KPI calcules localement si l'inventaire est disponible."
   } finally {

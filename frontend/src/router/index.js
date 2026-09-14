@@ -242,6 +242,7 @@ const router = createRouter({
         requiresAuth: true,
         allowInactive: true,
         fullBleed: true,
+        allowScroll: true,
         hidePrimaryNav: true,
       },
     },

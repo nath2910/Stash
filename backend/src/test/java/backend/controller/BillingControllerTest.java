@@ -68,6 +68,32 @@ class BillingControllerTest {
   }
 
   @Test
+  void statusDoesNotRefreshStripeWhenUserHasNoStripeCustomer() {
+    Mockito.when(billingService.isConfigured()).thenReturn(true);
+
+    BillingStatusResponse response = controller.status(user, false, true);
+
+    Mockito.verify(billingService, Mockito.never()).refreshStatus(user);
+    Assertions.assertEquals("inactive", response.status());
+    Assertions.assertFalse(response.hasAccess());
+    Assertions.assertFalse(response.portalAvailable());
+  }
+
+  @Test
+  void statusFallsBackToStoredSnapshotWhenStripeRefreshFails() {
+    Mockito.when(billingService.isConfigured()).thenReturn(true);
+    Mockito.when(user.getStripeCustomerId()).thenReturn("cus_test");
+    Mockito.when(billingService.refreshStatus(user))
+        .thenThrow(new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Stripe down"));
+
+    BillingStatusResponse response = controller.status(user, false, true);
+
+    Assertions.assertEquals("inactive", response.status());
+    Assertions.assertFalse(response.hasAccess());
+    Assertions.assertFalse(response.portalAvailable());
+  }
+
+  @Test
   void checkoutReturns503WhenStripeIsNotConfigured() {
     Mockito.when(billingService.isConfigured()).thenReturn(false);
 

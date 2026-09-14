@@ -38,19 +38,24 @@ public class BillingController {
     if (!billingService.isConfigured()) {
       throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Stripe non configuré");
     }
-    try {
-      if (forceRefresh || user.getStripeCustomerId() != null) {
+    if (hasStripeCustomer(user)) {
+      try {
         billingService.refreshStatus(user);
+      } catch (Exception e) {
+        log.warn("Billing status refresh failed for user {}", user.getId());
       }
-      String portalUrl = "";
-      if (includePortal && canOpenPortal(user)) {
+    }
+    String portalUrl = "";
+    if (includePortal && canOpenPortal(user)) {
+      try {
         var portal = billingService.createPortal(user);
         portalUrl = portal.getUrl();
+      } catch (Exception e) {
+        log.warn("Billing status portal creation failed for user {}", user.getId());
+        throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Portail Stripe temporairement indisponible");
       }
-      return snapshot(user, portalUrl);
-    } catch (Exception e) {
-      throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Facturation temporairement indisponible");
     }
+    return snapshot(user, portalUrl);
   }
 
   public BillingStatusResponse status(User user, boolean includePortal) {
@@ -125,10 +130,14 @@ public class BillingController {
   }
 
   private boolean canOpenPortal(User user) {
+    return hasStripeCustomer(user)
+        && isPortalEligibleStatus(user.getSubscriptionStatus());
+  }
+
+  private boolean hasStripeCustomer(User user) {
     return user != null
         && user.getStripeCustomerId() != null
-        && !user.getStripeCustomerId().isBlank()
-        && isPortalEligibleStatus(user.getSubscriptionStatus());
+        && !user.getStripeCustomerId().isBlank();
   }
 
   private boolean isPortalEligibleStatus(String status) {

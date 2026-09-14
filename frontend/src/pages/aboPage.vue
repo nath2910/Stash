@@ -1,6 +1,6 @@
 <template>
-  <div class="app-page-stack--abo h-full overflow-hidden bg-slate-950 text-slate-100">
-    <div class="mx-auto flex h-full w-full max-w-6xl flex-col px-4 py-3 sm:px-6 sm:py-3 lg:px-8">
+  <div class="app-page-stack--abo min-h-full bg-slate-950 text-slate-100">
+    <div class="mx-auto flex min-h-full w-full max-w-6xl flex-col px-4 py-3 sm:px-6 sm:py-3 lg:px-8">
       <div class="flex items-center justify-between gap-3">
         <button
           type="button"
@@ -500,12 +500,26 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+.app-page-stack--abo {
+  min-height: 100%;
+  overflow-x: hidden;
+  overflow-y: visible;
+}
+
+.app-page-stack--abo :deep(*) {
+  scrollbar-width: none;
+}
+
+.app-page-stack--abo :deep(*)::-webkit-scrollbar {
+  display: none;
+}
+
 @media (max-width: 767px) {
   .app-page-stack--abo {
     height: auto !important;
     min-height: 100dvh;
     overflow-x: hidden !important;
-    overflow-y: auto !important;
+    overflow-y: visible !important;
   }
 
   .app-page-stack--abo > div {
