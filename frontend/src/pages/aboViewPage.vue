@@ -36,7 +36,7 @@
               <span
                 class="inline-flex items-center rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1 text-slate-200"
               >
-                9,90 EUR / mois
+                {{ subscriptionPriceLabel }}
               </span>
             </div>
           </div>
@@ -75,8 +75,8 @@
         </div>
         <div class="rounded-2xl border border-slate-800/80 bg-slate-900/70 p-4 space-y-1">
           <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Plan</p>
-          <p class="text-lg font-semibold text-white">Premium mensuel</p>
-          <p class="text-sm text-slate-400">9,90 EUR, annulation a tout moment.</p>
+          <p class="text-lg font-semibold text-white">{{ planTitle }}</p>
+          <p class="text-sm text-slate-400">{{ planDescription }}</p>
         </div>
         <div class="rounded-2xl border border-slate-800/80 bg-slate-900/70 p-4 space-y-1">
           <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Support</p>
@@ -135,12 +135,20 @@ const router = useRouter()
 const billing = useBillingStore()
 
 const status = computed(() => billing.status.value)
-const portalUrl = computed(() => billing.portalUrl.value)
 const portalBusy = ref(false)
 const portalError = ref('')
 const cancelConfirm = ref(false)
 const cancelAtPeriodEnd = ref(false)
 const periodEnd = ref('')
+type Plan = {
+  id: string
+  amount: number
+  currency?: string
+  interval?: string
+  available?: boolean
+  testMode?: boolean
+}
+const plans = ref<Plan[]>([])
 const canCancel = computed(() => ['active', 'trialing', 'past_due', 'unpaid', 'paused'].includes(status.value) && !cancelAtPeriodEnd.value)
 const applySnapshot = (data: { status: string; currentPeriodEnd?: string; cancelAtPeriodEnd?: boolean }) => {
   billing.seedStatus(data.status)
@@ -155,6 +163,47 @@ const cancelSubscription = async () => {
   } catch (error) {
     portalError.value = describeBillingError(error, 'Résiliation temporairement indisponible. Réessayez.')
   } finally { portalBusy.value = false }
+}
+
+const monthlyOffer = computed(() => plans.value.find((plan) => plan.id === 'monthly'))
+
+const formatPlanPrice = (plan?: Plan) => {
+  if (!plan || !Number.isFinite(plan.amount)) return 'Tarif Stripe indisponible'
+  const currency = String(plan.currency || 'EUR').toUpperCase()
+  const amount = new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency,
+  }).format(plan.amount / 100)
+  const interval = plan.interval === 'year' ? 'an' : 'mois'
+  return `${amount} / ${interval}`
+}
+
+const subscriptionPriceLabel = computed(() => formatPlanPrice(monthlyOffer.value))
+const planTitle = computed(() => (monthlyOffer.value ? 'Premium mensuel' : 'Premium'))
+const planDescription = computed(() =>
+  monthlyOffer.value
+    ? `${formatPlanPrice(monthlyOffer.value)}, annulation a tout moment.`
+    : 'Tarif Stripe temporairement indisponible.',
+)
+
+const validPlans = (value: unknown): value is Plan[] =>
+  Array.isArray(value) &&
+  value.every(
+    (plan) =>
+      plan &&
+      typeof plan === 'object' &&
+      typeof (plan as Plan).id === 'string' &&
+      typeof (plan as Plan).amount === 'number' &&
+      Number.isFinite((plan as Plan).amount),
+  )
+
+const fetchPlans = async () => {
+  try {
+    const nextPlans = (await BillingService.plans()).data
+    if (validPlans(nextPlans)) plans.value = nextPlans
+  } catch {
+    plans.value = []
+  }
 }
 
 const statusMeta = computed(() => {
@@ -210,11 +259,12 @@ const openPortal = async () => {
 
   portalBusy.value = true
   try {
-    await billing.fetchStatus(true, true)
-    if (!portalUrl.value) {
+    const response = await BillingService.portal()
+    const nextPortalUrl = response?.data?.url || ''
+    if (!nextPortalUrl) {
       throw new Error('Impossible de recuperer le portail Stripe pour le moment.')
     }
-    window.location.assign(portalUrl.value)
+    window.location.assign(nextPortalUrl)
   } catch (e: unknown) {
     portalError.value = describeBillingError(
       e,
@@ -235,7 +285,8 @@ const goToUpgrade = () => {
 }
 
 onMounted(async () => {
-  try { applySnapshot((await BillingService.status(false, true)).data) }
+  fetchPlans()
+  try { applySnapshot((await BillingService.status(false, false)).data) }
   catch (error) { portalError.value = describeBillingError(error, 'État temporairement indisponible.') }
 })
 </script>

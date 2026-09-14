@@ -90,7 +90,17 @@ public class BillingController {
 
   @PostMapping("/portal")
   public CheckoutResponse portal(@AuthenticationPrincipal User user) throws Exception {
-    return new CheckoutResponse(billingService.createPortal(user).getUrl());
+    if (!billingService.isConfigured()) {
+      throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Stripe non configuré");
+    }
+    try {
+      return new CheckoutResponse(billingService.createPortal(user).getUrl());
+    } catch (ResponseStatusException ex) {
+      throw ex;
+    } catch (Exception e) {
+      log.warn("Billing portal failed");
+      throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Portail Stripe temporairement indisponible");
+    }
   }
 
   @PostMapping("/validate-promo")

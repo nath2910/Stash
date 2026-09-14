@@ -92,10 +92,7 @@ public class ProductionReadinessValidator {
     String normalizedHost = host.toLowerCase(Locale.ROOT);
 
     if (isLocalHost(normalizedHost)) {
-      if (!"http".equalsIgnoreCase(scheme) && !"https".equalsIgnoreCase(scheme)) {
-        throw new IllegalStateException("APP_CORS_ALLOWED_ORIGINS localhost entries must use http or https");
-      }
-      return;
+      throw new IllegalStateException("APP_CORS_ALLOWED_ORIGINS cannot include localhost entries in prod");
     }
 
     if (!"https".equalsIgnoreCase(scheme)) {

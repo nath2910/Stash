@@ -90,6 +90,30 @@ class BillingControllerTest {
   }
 
   @Test
+  void portalReturnsSessionUrlWhenConfigured() throws Exception {
+    Mockito.when(billingService.isConfigured()).thenReturn(true);
+    Session portal = Mockito.mock(Session.class);
+    Mockito.when(portal.getUrl()).thenReturn("https://stripe.test/portal");
+    Mockito.when(billingService.createPortal(user)).thenReturn(portal);
+
+    CheckoutResponse response = controller.portal(user);
+
+    Assertions.assertEquals("https://stripe.test/portal", response.url());
+  }
+
+  @Test
+  void portalReturns503WhenStripeIsNotConfigured() {
+    Mockito.when(billingService.isConfigured()).thenReturn(false);
+
+    ResponseStatusException ex = Assertions.assertThrows(
+        ResponseStatusException.class,
+        () -> controller.portal(user)
+    );
+
+    Assertions.assertEquals(HttpStatus.SERVICE_UNAVAILABLE, ex.getStatusCode());
+  }
+
+  @Test
   void checkoutSanitizesUnexpectedProviderFailures() throws Exception {
     Mockito.when(billingService.isConfigured()).thenReturn(true);
     Mockito.when(billingService.createCheckout(user, new CheckoutRequest(null, null)))

@@ -559,6 +559,29 @@ onBeforeUnmount(() => {
   box-shadow: 0 18px 55px rgba(15, 23, 42, 0.14);
 }
 
+@media (max-width: 640px) {
+  .subcategory-field.is-open {
+    z-index: 10030;
+  }
+
+  .subcategory-menu {
+    position: fixed;
+    left: max(0.75rem, env(safe-area-inset-left));
+    right: max(0.75rem, env(safe-area-inset-right));
+    top: auto;
+    bottom: max(0.75rem, env(safe-area-inset-bottom));
+    z-index: 10030;
+    width: calc(100vw - 1.5rem);
+    max-width: calc(100vw - 1.5rem);
+    max-height: min(72dvh, 30rem);
+    overflow: hidden;
+    border-radius: 1.1rem;
+    box-shadow:
+      0 30px 80px rgba(15, 23, 42, 0.34),
+      0 0 0 9999px rgba(15, 23, 42, 0.18);
+  }
+}
+
 .subcategory-option {
   display: flex;
   width: 100%;

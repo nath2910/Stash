@@ -35,9 +35,11 @@ describe('BillingService', () => {
 
   it('uses a longer timeout for portal or forced status refreshes', async () => {
     apiGet.mockResolvedValue({ data: { status: 'active', portalUrl: '' } })
+    apiPost.mockResolvedValue({ data: { url: 'https://stripe.test/portal' } })
 
     await BillingService.status(true, false)
     await BillingService.status(false, true)
+    await BillingService.portal()
 
     expect(apiGet).toHaveBeenNthCalledWith(1, '/billing/status', {
       params: { includePortal: true, forceRefresh: false },
@@ -47,6 +49,7 @@ describe('BillingService', () => {
       params: { includePortal: false, forceRefresh: true },
       timeout: 30000,
     })
+    expect(apiPost).toHaveBeenCalledWith('/billing/portal', null, { timeout: 30000 })
   })
 })
 

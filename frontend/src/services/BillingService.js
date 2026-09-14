@@ -13,7 +13,7 @@ const BillingService = {
   },
   plans() { return api.get('/billing/plans') },
   cancel() { return api.post('/billing/cancel') },
-  portal() { return api.post('/billing/portal') },
+  portal() { return api.post('/billing/portal', null, { timeout: BILLING_REFRESH_TIMEOUT_MS }) },
   validatePromo(code) {
     return api.post('/billing/validate-promo', null, {
       params: { code },
