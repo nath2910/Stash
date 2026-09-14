@@ -124,14 +124,15 @@ public class BillingController {
   }
 
   private BillingStatusResponse snapshot(User user, String portalUrl) {
+    boolean portalAvailable = canOpenPortal(user);
+    boolean hasAccess = subscriptionAccessService.hasActiveSubscription(user);
     return new BillingStatusResponse(user.getSubscriptionStatus(), portalUrl,
         user.getSubscriptionCurrentPeriodEnd(), user.isSubscriptionCancelAtPeriodEnd(),
-        subscriptionAccessService.hasActiveSubscription(user), canOpenPortal(user));
+        hasAccess, portalAvailable, portalAvailable ? "stripe" : hasAccess ? "discord" : "none");
   }
 
   private boolean canOpenPortal(User user) {
-    return hasStripeCustomer(user)
-        && isPortalEligibleStatus(user.getSubscriptionStatus());
+    return hasStripeCustomer(user) && isPortalEligibleStatus(user.getSubscriptionStatus());
   }
 
   private boolean hasStripeCustomer(User user) {
@@ -144,4 +145,5 @@ public class BillingController {
     if (status == null) return false;
     return !"inactive".equalsIgnoreCase(status);
   }
+
 }

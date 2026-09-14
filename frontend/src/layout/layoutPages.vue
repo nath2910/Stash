@@ -20,7 +20,7 @@
           (route.path === '/' || route.path === '/gestion') && homeHeaderHidden && !mobileMenuOpen && !menuOpen
             ? 'layout-app-header--hidden'
             : '',
-          isStats ? 'top-2' : navBubble || (mobileMenuOpen && isCompactNavViewport) ? 'top-0 is-stuck' : 'top-4',
+          isStats ? 'top-2' : navBubble ? 'top-0 is-stuck' : 'top-4',
           isLightChrome || isStatsLight ? 'is-light' : 'is-dark',
         ]"
       >

@@ -65,6 +65,7 @@ class BillingControllerTest {
     Assertions.assertEquals("https://stripe.test/portal", response.portalUrl());
     Assertions.assertTrue(response.hasAccess());
     Assertions.assertTrue(response.portalAvailable());
+    Assertions.assertEquals("stripe", response.accessSource());
   }
 
   @Test
@@ -77,6 +78,7 @@ class BillingControllerTest {
     Assertions.assertEquals("inactive", response.status());
     Assertions.assertFalse(response.hasAccess());
     Assertions.assertFalse(response.portalAvailable());
+    Assertions.assertEquals("none", response.accessSource());
   }
 
   @Test
@@ -91,6 +93,19 @@ class BillingControllerTest {
     Assertions.assertEquals("inactive", response.status());
     Assertions.assertFalse(response.hasAccess());
     Assertions.assertFalse(response.portalAvailable());
+    Assertions.assertEquals("none", response.accessSource());
+  }
+
+  @Test
+  void statusMarksDiscordAccessWithoutPortal() {
+    Mockito.when(billingService.isConfigured()).thenReturn(true);
+    Mockito.when(subscriptionAccessService.hasActiveSubscription(user)).thenReturn(true);
+
+    BillingStatusResponse response = controller.status(user, false, true);
+
+    Assertions.assertTrue(response.hasAccess());
+    Assertions.assertFalse(response.portalAvailable());
+    Assertions.assertEquals("discord", response.accessSource());
   }
 
   @Test

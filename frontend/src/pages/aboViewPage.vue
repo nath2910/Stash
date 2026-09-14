@@ -42,9 +42,9 @@
           </div>
 
           <div class="w-full max-w-sm rounded-2xl border border-slate-800/80 bg-slate-900/70 p-5 space-y-2">
-            <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Portail Stripe</p>
-            <p class="text-lg font-semibold text-white">Gerer le paiement</p>
-            <p class="text-sm text-slate-400">Moyen de paiement, factures, annulation.</p>
+            <p class="text-xs uppercase tracking-[0.2em] text-slate-500">{{ portalCardEyebrow }}</p>
+            <p class="text-lg font-semibold text-white">{{ portalCardTitle }}</p>
+            <p class="text-sm text-slate-400">{{ portalCardDescription }}</p>
             <button
               type="button"
               class="mt-3 w-full inline-flex items-center justify-center rounded-xl border border-slate-700 bg-slate-900/70 px-3 py-2 text-sm font-semibold text-slate-100 hover:border-emerald-300/40 transition disabled:opacity-60"
@@ -52,6 +52,14 @@
               @click="openPortal"
             >
               {{ portalBusy ? 'Ouverture...' : 'Ouvrir le portail Stripe' }}
+            </button>
+            <button
+              v-if="showUpgradeAction"
+              type="button"
+              class="mt-2 w-full inline-flex items-center justify-center rounded-xl border border-emerald-300/40 bg-emerald-300/10 px-3 py-2 text-sm font-semibold text-emerald-100 hover:bg-emerald-300/15 transition"
+              @click="goToUpgrade"
+            >
+              Voir les offres Stripe
             </button>
             <p v-if="portalError" class="text-xs text-red-300">{{ portalError }}</p>
           </div>
@@ -109,7 +117,7 @@
           </button>
         </div>
         <button
-          v-if="status === 'inactive'"
+          v-if="showUpgradeAction"
           type="button"
           class="w-full sm:w-auto rounded-xl border border-emerald-300/40 bg-emerald-300/10 px-4 py-2 text-sm font-semibold text-emerald-100 hover:bg-emerald-300/15 transition"
           @click="goToUpgrade"
@@ -141,6 +149,8 @@ const cancelConfirm = ref(false)
 const cancelAtPeriodEnd = ref(false)
 const periodEnd = ref('')
 const portalAvailable = ref(false)
+const hasAccess = ref(false)
+const accessSource = ref<'stripe' | 'discord' | 'none'>('none')
 type Plan = {
   id: string
   amount: number
@@ -150,12 +160,14 @@ type Plan = {
   testMode?: boolean
 }
 const plans = ref<Plan[]>([])
-const canCancel = computed(() => ['active', 'trialing', 'past_due', 'unpaid', 'paused'].includes(status.value) && !cancelAtPeriodEnd.value)
-const applySnapshot = (data: { status: string; currentPeriodEnd?: string; cancelAtPeriodEnd?: boolean; portalAvailable?: boolean }) => {
+const canCancel = computed(() => isStripeManaged.value && ['active', 'trialing', 'past_due', 'unpaid', 'paused'].includes(status.value) && !cancelAtPeriodEnd.value)
+const applySnapshot = (data: { status: string; currentPeriodEnd?: string; cancelAtPeriodEnd?: boolean; portalAvailable?: boolean; hasAccess?: boolean; accessSource?: string }) => {
   billing.seedStatus(data.status)
   cancelAtPeriodEnd.value = Boolean(data.cancelAtPeriodEnd)
   periodEnd.value = data.currentPeriodEnd ? new Date(data.currentPeriodEnd).toLocaleDateString('fr-FR') : ''
   portalAvailable.value = Boolean(data.portalAvailable)
+  hasAccess.value = Boolean(data.hasAccess)
+  accessSource.value = data.accessSource === 'stripe' || data.accessSource === 'discord' ? data.accessSource : 'none'
 }
 const cancelSubscription = async () => {
   portalBusy.value = true
@@ -187,6 +199,16 @@ const planDescription = computed(() =>
     ? `${formatPlanPrice(monthlyOffer.value)}, annulation a tout moment.`
     : 'Tarif Stripe temporairement indisponible.',
 )
+const isStripeManaged = computed(() => accessSource.value === 'stripe' && portalAvailable.value)
+const isDiscordManaged = computed(() => accessSource.value === 'discord' && hasAccess.value && !portalAvailable.value)
+const showUpgradeAction = computed(() => !hasAccess.value || isDiscordManaged.value)
+const portalCardEyebrow = computed(() => (isDiscordManaged.value ? 'Acces Discord' : 'Portail Stripe'))
+const portalCardTitle = computed(() => (isDiscordManaged.value ? 'Acces gratuit actif' : 'Gerer le paiement'))
+const portalCardDescription = computed(() =>
+  isDiscordManaged.value
+    ? 'Ton acces vient de ton role Discord. Aucun abonnement Stripe n est lie a ce compte.'
+    : 'Moyen de paiement, factures, annulation.',
+)
 
 const validPlans = (value: unknown): value is Plan[] =>
   Array.isArray(value) &&
@@ -209,6 +231,15 @@ const fetchPlans = async () => {
 }
 
 const statusMeta = computed(() => {
+  if (isDiscordManaged.value) {
+    return {
+      label: 'Discord actif',
+      note: 'Acces gratuit via role Discord.',
+      badge: 'border-emerald-300/30 bg-emerald-300/10 text-emerald-100',
+      dot: 'bg-emerald-300',
+    }
+  }
+
   switch (status.value) {
     case 'unknown':
       return {
@@ -220,8 +251,8 @@ const statusMeta = computed(() => {
     case 'active':
     case 'trialing':
       return {
-        label: status.value === 'trialing' ? 'Essai actif' : 'Actif',
-        note: 'Accès total débloqué.',
+        label: isDiscordManaged.value ? 'Discord actif' : status.value === 'trialing' ? 'Essai actif' : 'Actif',
+        note: isDiscordManaged.value ? 'Acces gratuit via role Discord.' : 'Accès total débloqué.',
         badge: 'border-emerald-300/30 bg-emerald-300/10 text-emerald-100',
         dot: 'bg-emerald-300',
       }
@@ -250,12 +281,14 @@ const statusMeta = computed(() => {
   }
 })
 
-const canOpenPortal = computed(() => portalAvailable.value && status.value !== 'inactive' && status.value !== 'unknown')
+const canOpenPortal = computed(() => isStripeManaged.value && status.value !== 'inactive' && status.value !== 'unknown')
 
 const openPortal = async () => {
   portalError.value = ''
   if (!canOpenPortal.value) {
-    portalError.value = 'Portail Stripe disponible uniquement pour un abonnement paye via Stripe.'
+    portalError.value = isDiscordManaged.value
+      ? 'Ton acces est gere par Discord, pas par Stripe.'
+      : 'Portail Stripe disponible uniquement pour un abonnement paye via Stripe.'
     return
   }
 

@@ -273,10 +273,14 @@ const router = createRouter({
 const CHUNK_RELOAD_KEY = 'snk_chunk_reload_attempted'
 router.onError((error, to) => {
   const message = String(error?.message || error || '')
+  const lowerMessage = message.toLowerCase()
   const isChunkLoadError =
-    message.includes('Failed to fetch dynamically imported module') ||
-    message.includes('Importing a module script failed') ||
-    message.includes('Expected a JavaScript-or-Wasm module script')
+    lowerMessage.includes('dynamically imported module') ||
+    lowerMessage.includes('failed to fetch') ||
+    lowerMessage.includes('importing a module script failed') ||
+    lowerMessage.includes('expected a javascript-or-wasm module script') ||
+    lowerMessage.includes('preload') ||
+    lowerMessage.includes('chunk')
   if (!isChunkLoadError || typeof window === 'undefined') return
 
   try {
