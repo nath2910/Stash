@@ -5,21 +5,24 @@
         <i aria-hidden="true"></i>
         Total achete
       </span>
-      <strong>{{ totalPaires }}</strong>
+      <span v-if="loading" class="stock-summary-skeleton" aria-hidden="true"></span>
+      <strong v-else>{{ totalPaires }}</strong>
     </article>
     <article class="stock-summary-item is-success">
       <span class="stock-summary-label">
         <i aria-hidden="true"></i>
         En stock
       </span>
-      <strong>{{ nbEnStock }}</strong>
+      <span v-if="loading" class="stock-summary-skeleton" aria-hidden="true"></span>
+      <strong v-else>{{ nbEnStock }}</strong>
     </article>
     <article class="stock-summary-item is-accent">
       <span class="stock-summary-label">
         <i aria-hidden="true"></i>
         Valeur stock
       </span>
-      <strong>{{ formattedStockValue }} <small>EUR</small></strong>
+      <span v-if="loading" class="stock-summary-skeleton stock-summary-skeleton--wide" aria-hidden="true"></span>
+      <strong v-else>{{ formattedStockValue }} <small>EUR</small></strong>
     </article>
   </div>
 </template>
@@ -31,6 +34,7 @@ interface Props {
   totalPaires: number
   nbEnStock: number
   valeurStock: number
+  loading?: boolean
 }
 
 const props = defineProps<Props>()
@@ -126,6 +130,28 @@ const formattedStockValue = computed(() => {
   font-size: 0.68rem;
   font-weight: 850;
   letter-spacing: 0.03em;
+}
+
+.stock-summary-skeleton {
+  width: 3rem;
+  height: 1.45rem;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(226, 232, 240, 0.72), rgba(248, 250, 252, 0.96), rgba(226, 232, 240, 0.72));
+  background-size: 220% 100%;
+  animation: stock-summary-skeleton 1.05s ease-in-out infinite;
+}
+
+.stock-summary-skeleton--wide {
+  width: 5.1rem;
+}
+
+@keyframes stock-summary-skeleton {
+  0% {
+    background-position: 120% 0;
+  }
+  100% {
+    background-position: -120% 0;
+  }
 }
 
 .stock-summary-item.is-success strong {

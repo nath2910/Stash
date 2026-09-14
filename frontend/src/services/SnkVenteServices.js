@@ -78,7 +78,37 @@ class SnkVenteServices {
 
   getGroupedSnkVente(options = {}) {
     const params = normalizeOptions(options)
-    return api.get('/snkVente/grouped', { params })
+    const bypassCache = params.forceRefresh || params.noCache
+    delete params.forceRefresh
+    delete params.noCache
+
+    const key = cacheKeyFor({ ...params, view: 'grouped' })
+    const requestGeneration = listCacheGeneration
+    const now = Date.now()
+    const cached = listCache.get(key)
+    if (!bypassCache && cached && cached.expiresAt > now) {
+      return Promise.resolve(cached.response)
+    }
+
+    const pending = listInflight.get(key)
+    if (!bypassCache && pending) return pending
+
+    const request = api
+      .get('/snkVente/grouped', { params })
+      .then((response) => {
+        if (requestGeneration !== listCacheGeneration) return response
+        listCache.set(key, {
+          response,
+          expiresAt: Date.now() + LIST_CACHE_TTL_MS,
+        })
+        return response
+      })
+      .finally(() => {
+        listInflight.delete(key)
+      })
+
+    if (!bypassCache) listInflight.set(key, request)
+    return request
   }
 
   regrouperSelection(ids = []) {

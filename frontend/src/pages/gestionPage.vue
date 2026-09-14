@@ -69,6 +69,7 @@
                   :total-paires="totalPaires"
                   :nb-en-stock="nbEnStock"
                   :valeur-stock="valeurStock"
+                  :loading="inventoryLoading"
                 />
               </div>
             </section>
@@ -86,8 +87,8 @@
                   <div class="inventory-toolbar-copy">
                     <h2>Liste des items</h2>
                     <p>
-                      {{ filteredVentes.length }} résultat(s)
-                      <span v-if="hasMoreFilteredVentes">
+                      {{ inventoryLoading ? 'Chargement...' : `${filteredVentes.length} résultat(s)` }}
+                      <span v-if="!inventoryLoading && hasMoreFilteredVentes">
                         - {{ visibleFilteredVentes.length }} affiche(s)
                       </span>
                       <span v-if="selectedIds.length">
@@ -282,6 +283,7 @@
                 >
                   <afficherTout
                     :snkVentes="visibleFilteredVentes"
+                    :loading="inventoryLoading"
                     selectable
                     v-model="selectedIds"
                     @edit="openEditModal"
@@ -419,6 +421,7 @@ const DeliveryTrackingPanel = defineAsyncComponent(() => import('@/components/ge
 const AdminPage = defineAsyncComponent(() => import('@/pages/adminPage.vue'))
 
 const snkVentes = ref([])
+const inventoryLoading = ref(true)
 const searchTerm = ref('')
 const selectedIds = ref([])
 const groupingSelection = ref(false)
@@ -1106,9 +1109,11 @@ const chargerVentes = async () => {
   if (!currentUser.value) {
     snkVentes.value = []
     selectedIds.value = []
+    inventoryLoading.value = false
     return
   }
 
+  inventoryLoading.value = true
   try {
     const { data } = await SnkVenteServices.getGroupedSnkVente()
     snkVentes.value = Array.isArray(data) ? data : []
@@ -1116,6 +1121,8 @@ const chargerVentes = async () => {
   } catch (e) {
     console.error('Erreur chargement ventes', e)
     snkVentes.value = []
+  } finally {
+    inventoryLoading.value = false
   }
 }
 
@@ -1252,7 +1259,7 @@ const gestionHero = computed(() => {
 // Recherche + filtres
 const filteredVentes = computed(() => buildFilteredVentes())
 const visibleFilteredVentes = computed(() => filteredVentes.value.slice(0, renderLimit.value))
-const hasMoreFilteredVentes = computed(() => visibleFilteredVentes.value.length < filteredVentes.value.length)
+const hasMoreFilteredVentes = computed(() => !inventoryLoading.value && visibleFilteredVentes.value.length < filteredVentes.value.length)
 
 const loadMoreFilteredVentes = () => {
   renderLimit.value = Math.min(renderLimit.value + RENDER_BATCH_SIZE, filteredVentes.value.length)

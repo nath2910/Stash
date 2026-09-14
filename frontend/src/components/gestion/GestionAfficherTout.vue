@@ -19,7 +19,17 @@
       </button>
     </div>
 
-    <div v-if="!isDesktop && snkVentes.length" class="gestion-mobile-list space-y-3 md:hidden">
+    <div
+      v-if="loading && !snkVentes.length && !isDesktop"
+      class="gestion-loading-state md:hidden"
+      role="status"
+      aria-live="polite"
+    >
+      <span class="gestion-loading-spinner" aria-hidden="true"></span>
+      <span>Chargement des items...</span>
+    </div>
+
+    <div v-else-if="!isDesktop && snkVentes.length" class="gestion-mobile-list space-y-3 md:hidden">
       <article
         v-for="vente in snkVentes"
         :key="vente.id"
@@ -479,7 +489,16 @@
             </tr>
           </template>
 
-          <tr v-if="!snkVentes.length">
+          <tr v-if="loading && !snkVentes.length">
+            <td :colspan="selectable ? 11 : 10" class="px-4 py-10">
+              <div class="gestion-loading-state" role="status" aria-live="polite">
+                <span class="gestion-loading-spinner" aria-hidden="true"></span>
+                <span>Chargement des items...</span>
+              </div>
+            </td>
+          </tr>
+
+          <tr v-else-if="!snkVentes.length">
             <td :colspan="selectable ? 11 : 10" class="px-4 py-8 text-center text-sm text-gray-400">
               Aucun item a afficher pour le moment.
             </td>
@@ -513,6 +532,7 @@ import { useAuthStore } from '@/store/authStore'
 
 const props = defineProps({
   snkVentes: { type: Array, required: true },
+  loading: { type: Boolean, default: false },
   selectable: { type: Boolean, default: false },
   modelValue: { type: Array, default: () => [] },
 })
@@ -741,6 +761,34 @@ onBeforeUnmount(() => {
 .gestion-list
   :is(.border-gray-700, .border-gray-700\/70, .border-gray-700\/80, .border-gray-800) {
   border-color: rgba(148, 163, 184, 0.24);
+}
+
+.gestion-loading-state {
+  display: inline-flex;
+  width: 100%;
+  min-height: 5.5rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  border-radius: 16px;
+  color: #64748b;
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+.gestion-loading-spinner {
+  width: 1.35rem;
+  height: 1.35rem;
+  border: 2px solid rgba(14, 165, 233, 0.2);
+  border-top-color: #0ea5e9;
+  border-radius: 999px;
+  animation: gestion-loading-spin 760ms linear infinite;
+}
+
+@keyframes gestion-loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .gestion-list > div:first-child {
