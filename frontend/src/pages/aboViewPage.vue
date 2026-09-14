@@ -140,6 +140,7 @@ const portalError = ref('')
 const cancelConfirm = ref(false)
 const cancelAtPeriodEnd = ref(false)
 const periodEnd = ref('')
+const portalAvailable = ref(false)
 type Plan = {
   id: string
   amount: number
@@ -150,10 +151,11 @@ type Plan = {
 }
 const plans = ref<Plan[]>([])
 const canCancel = computed(() => ['active', 'trialing', 'past_due', 'unpaid', 'paused'].includes(status.value) && !cancelAtPeriodEnd.value)
-const applySnapshot = (data: { status: string; currentPeriodEnd?: string; cancelAtPeriodEnd?: boolean }) => {
+const applySnapshot = (data: { status: string; currentPeriodEnd?: string; cancelAtPeriodEnd?: boolean; portalAvailable?: boolean }) => {
   billing.seedStatus(data.status)
   cancelAtPeriodEnd.value = Boolean(data.cancelAtPeriodEnd)
   periodEnd.value = data.currentPeriodEnd ? new Date(data.currentPeriodEnd).toLocaleDateString('fr-FR') : ''
+  portalAvailable.value = Boolean(data.portalAvailable)
 }
 const cancelSubscription = async () => {
   portalBusy.value = true
@@ -248,12 +250,12 @@ const statusMeta = computed(() => {
   }
 })
 
-const canOpenPortal = computed(() => status.value !== 'inactive' && status.value !== 'unknown')
+const canOpenPortal = computed(() => portalAvailable.value && status.value !== 'inactive' && status.value !== 'unknown')
 
 const openPortal = async () => {
   portalError.value = ''
   if (!canOpenPortal.value) {
-    portalError.value = 'Portail Stripe indisponible pour cet etat d abonnement.'
+    portalError.value = 'Portail Stripe disponible uniquement pour un abonnement paye via Stripe.'
     return
   }
 

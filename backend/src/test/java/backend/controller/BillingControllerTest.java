@@ -52,6 +52,7 @@ class BillingControllerTest {
   void statusReturnsBillingSnapshotWhenConfigured() throws Exception {
     Mockito.when(billingService.isConfigured()).thenReturn(true);
     Mockito.when(user.getSubscriptionStatus()).thenReturn("active");
+    Mockito.when(user.getStripeCustomerId()).thenReturn("cus_test");
     Mockito.when(subscriptionAccessService.hasActiveSubscription(user)).thenReturn(true);
     Session portal = Mockito.mock(Session.class);
     Mockito.when(portal.getUrl()).thenReturn("https://stripe.test/portal");
@@ -63,6 +64,7 @@ class BillingControllerTest {
     Assertions.assertEquals("active", response.status());
     Assertions.assertEquals("https://stripe.test/portal", response.portalUrl());
     Assertions.assertTrue(response.hasAccess());
+    Assertions.assertTrue(response.portalAvailable());
   }
 
   @Test
@@ -92,6 +94,8 @@ class BillingControllerTest {
   @Test
   void portalReturnsSessionUrlWhenConfigured() throws Exception {
     Mockito.when(billingService.isConfigured()).thenReturn(true);
+    Mockito.when(user.getSubscriptionStatus()).thenReturn("active");
+    Mockito.when(user.getStripeCustomerId()).thenReturn("cus_test");
     Session portal = Mockito.mock(Session.class);
     Mockito.when(portal.getUrl()).thenReturn("https://stripe.test/portal");
     Mockito.when(billingService.createPortal(user)).thenReturn(portal);
@@ -99,6 +103,20 @@ class BillingControllerTest {
     CheckoutResponse response = controller.portal(user);
 
     Assertions.assertEquals("https://stripe.test/portal", response.url());
+  }
+
+  @Test
+  void portalReturns409WhenUserHasNoStripeCustomer() {
+    Mockito.when(billingService.isConfigured()).thenReturn(true);
+    Mockito.when(user.getSubscriptionStatus()).thenReturn("active");
+
+    ResponseStatusException ex = Assertions.assertThrows(
+        ResponseStatusException.class,
+        () -> controller.portal(user)
+    );
+
+    Assertions.assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+    Assertions.assertEquals("Aucun abonnement Stripe à gérer pour ce compte", ex.getReason());
   }
 
   @Test

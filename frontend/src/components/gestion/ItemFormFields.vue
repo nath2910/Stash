@@ -860,11 +860,17 @@ defineExpose({
 }
 
 .item-field {
+  position: relative;
   display: grid;
   grid-column: span 3;
   min-width: 0;
   max-width: 100%;
   gap: 0.3rem;
+}
+
+.item-field--category.category-field.is-open,
+.item-field--subcategory.subcategory-field.is-open {
+  z-index: 10040;
 }
 
 .item-field--category {

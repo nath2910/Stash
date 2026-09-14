@@ -92,6 +92,11 @@ defineExpose({
   z-index: 3;
 }
 
+.quick-add-panel :deep(.item-field--category.category-field.is-open),
+.quick-add-panel :deep(.item-field--subcategory.subcategory-field.is-open) {
+  z-index: 10040;
+}
+
 .panel-eyebrow {
   color: #0f766e;
   font-size: 0.7rem;

@@ -43,7 +43,7 @@ public class BillingController {
         billingService.refreshStatus(user);
       }
       String portalUrl = "";
-      if (includePortal && isPortalEligibleStatus(user.getSubscriptionStatus())) {
+      if (includePortal && canOpenPortal(user)) {
         var portal = billingService.createPortal(user);
         portalUrl = portal.getUrl();
       }
@@ -93,6 +93,9 @@ public class BillingController {
     if (!billingService.isConfigured()) {
       throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Stripe non configuré");
     }
+    if (!canOpenPortal(user)) {
+      throw new ResponseStatusException(HttpStatus.CONFLICT, "Aucun abonnement Stripe à gérer pour ce compte");
+    }
     try {
       return new CheckoutResponse(billingService.createPortal(user).getUrl());
     } catch (ResponseStatusException ex) {
@@ -118,7 +121,14 @@ public class BillingController {
   private BillingStatusResponse snapshot(User user, String portalUrl) {
     return new BillingStatusResponse(user.getSubscriptionStatus(), portalUrl,
         user.getSubscriptionCurrentPeriodEnd(), user.isSubscriptionCancelAtPeriodEnd(),
-        subscriptionAccessService.hasActiveSubscription(user));
+        subscriptionAccessService.hasActiveSubscription(user), canOpenPortal(user));
+  }
+
+  private boolean canOpenPortal(User user) {
+    return user != null
+        && user.getStripeCustomerId() != null
+        && !user.getStripeCustomerId().isBlank()
+        && isPortalEligibleStatus(user.getSubscriptionStatus());
   }
 
   private boolean isPortalEligibleStatus(String status) {
