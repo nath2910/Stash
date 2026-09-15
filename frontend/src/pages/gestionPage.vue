@@ -4047,15 +4047,31 @@ onBeforeUnmount(() => {
     top: auto;
   }
 
+}
+
+@media (max-width: 760px) {
+  .inventory-list-panel {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    max-height: calc(100dvh - 1.5rem);
+    overflow: hidden;
+  }
+
+  .inventory-list-body {
+    min-height: 0;
+    padding-top: 0.7rem;
+  }
+
   .inventory-list-scroll {
-    max-height: none !important;
-    overflow-x: auto !important;
-    overflow-y: visible !important;
-    overscroll-behavior: auto;
+    max-height: clamp(320px, 52dvh, 560px) !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
     padding-right: 0;
     scrollbar-gutter: auto;
     scrollbar-width: none !important;
     -ms-overflow-style: none !important;
+    -webkit-overflow-scrolling: touch;
   }
 
   .inventory-list-scroll::-webkit-scrollbar {

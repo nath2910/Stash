@@ -1096,13 +1096,22 @@ function removeActiveTemplate() {
   profileEditorOpen.value = false
   shortcutHelpOpen.value = false
   fullscreenActive.value = false
+  detachAllInteract()
+  clearSelection()
+  setSnapGuides(null, null)
+  clearDragAssist()
   setSpacePanState(false)
   syncPanzoomExclude(false)
+  widgets.value = []
+  widgetStyleCache.clear()
   templateActive.value = false
   activeTemplateId.value = ''
   activeTemplateStates.value = {}
   dispatchTemplateMode(false)
   saveBundleNow(false)
+  nextTick(() => {
+    scheduleVisibleRectUpdate()
+  })
 }
 
 /* ===== Dates (local + safe sync) ===== */

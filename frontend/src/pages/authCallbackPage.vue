@@ -110,9 +110,9 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="auth-callback-screen flex min-h-dvh w-full items-center justify-center overflow-hidden bg-slate-950 px-4 text-slate-50">
+  <div class="auth-callback-screen">
     <div
-      class="w-full max-w-md space-y-4 rounded-3xl border border-slate-700/50 bg-slate-900/78 p-6 text-center shadow-[0_16px_44px_rgba(2,6,23,0.42)] backdrop-blur sm:p-8"
+      class="auth-callback-card w-full max-w-md space-y-4 rounded-3xl border border-slate-700/50 bg-slate-900/78 p-6 text-center shadow-[0_16px_44px_rgba(2,6,23,0.42)] backdrop-blur sm:p-8"
     >
       <div class="mx-auto h-12 w-12 rounded-full border-[3px] border-slate-700/90 border-t-emerald-300 animate-spin" />
       <div class="space-y-2">
@@ -128,6 +128,22 @@ onMounted(async () => {
 
 <style scoped>
 .auth-callback-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  min-height: 100dvh;
+  width: 100%;
+  place-items: center;
+  overflow: hidden;
+  background: #020617;
+  color: #f8fafc;
   overscroll-behavior: none;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+    max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+}
+
+.auth-callback-card {
+  margin: auto;
 }
 </style>

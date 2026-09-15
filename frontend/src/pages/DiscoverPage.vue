@@ -18,11 +18,11 @@
           <div class="max-w-2xl">
             <p class="text-xs font-black uppercase tracking-[0.28em] text-emerald-300">MyStash</p>
             <h1 class="mt-4 text-4xl font-black leading-[0.98] tracking-tight sm:text-5xl lg:text-6xl">
-              Pilote ton stock, tes ventes et tes marges sans bricolage.
+              Ton stock, tes ventes et tes marges au même endroit.
             </h1>
             <p class="mt-5 text-base leading-8 text-slate-300 sm:text-lg">
-              MyStash centralise ton inventaire, tes sorties, tes indicateurs et ton administratif
-              dans un espace clair, rapide et pense pour une activite reelle.
+              MyStash t'aide à garder une vision claire de ton activité : ce que tu as en stock,
+              ce que tu as vendu, ce que tu gagnes vraiment, et ce qui mérite ton attention.
             </p>
             <div class="mt-6 flex flex-col gap-3 min-[460px]:flex-row">
               <router-link
@@ -35,7 +35,7 @@
                 :to="{ name: 'auth', query: { mode: 'login' } }"
                 class="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/12 px-5 text-sm font-black text-white transition hover:border-white/28 hover:bg-white/[0.05]"
               >
-                J'ai deja un compte
+                J'ai déjà un compte
               </router-link>
             </div>
           </div>
@@ -44,7 +44,7 @@
             <div class="flex items-center justify-between gap-3 border-b border-white/10 pb-3">
               <div>
                 <p class="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Vue d'ensemble</p>
-                <h2 class="mt-1 text-lg font-black">Activite mensuelle</h2>
+                <h2 class="mt-1 text-lg font-black">Activité mensuelle</h2>
               </div>
               <span class="rounded-full bg-emerald-400/15 px-3 py-1 text-xs font-bold text-emerald-200">Actif</span>
             </div>
@@ -59,8 +59,8 @@
 
             <div class="mt-3 rounded-xl border border-white/10 bg-white/[0.035] p-3">
               <div class="mb-3 flex items-center justify-between text-xs text-slate-400">
-                <span>Stock a suivre</span>
-                <span>Priorites</span>
+                <span>Stock à suivre</span>
+                <span>Priorités</span>
               </div>
               <div class="grid gap-2">
                 <div v-for="row in previewRows" :key="row.name" class="grid grid-cols-[1fr_auto] items-center gap-3 rounded-lg bg-white/[0.04] px-3 py-2">
@@ -83,8 +83,8 @@
 
       <section class="rounded-2xl border border-white/10 bg-white/[0.04] p-5 sm:p-7">
         <div class="max-w-3xl">
-          <p class="text-xs font-black uppercase tracking-[0.24em] text-slate-500">Ce que tu debloques</p>
-          <h2 class="mt-3 text-2xl font-black sm:text-3xl">Un vrai espace de pilotage, pas juste une liste d'items.</h2>
+          <p class="text-xs font-black uppercase tracking-[0.24em] text-slate-500">Ce que tu débloques</p>
+          <h2 class="mt-3 text-2xl font-black sm:text-3xl">Un espace propre pour suivre ton activité sans te disperser.</h2>
         </div>
 
         <div class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -98,10 +98,10 @@
       <section class="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
         <div class="rounded-2xl border border-white/10 bg-white/[0.04] p-5 sm:p-7">
           <p class="text-xs font-black uppercase tracking-[0.24em] text-slate-500">Pour qui</p>
-          <h2 class="mt-3 text-2xl font-black">Fait pour les vendeurs qui veulent suivre proprement.</h2>
+          <h2 class="mt-3 text-2xl font-black">Pensé pour les vendeurs qui veulent savoir où ils en sont.</h2>
           <p class="mt-4 text-sm leading-7 text-slate-300">
-            Sneakers, collectibles, pieces, accessoires ou stock multi-categories : l'objectif est
-            d'avoir une base fiable, lisible et actionnable.
+            Sneakers, collectibles, pièces, accessoires ou stock multi-catégories : l'idée est
+            simple, garder une base fiable et lisible avant que tout devienne compliqué.
           </p>
         </div>
 
@@ -115,14 +115,14 @@
       <section class="rounded-2xl border border-emerald-300/20 bg-emerald-300/[0.07] p-5 sm:p-7">
         <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p class="text-xs font-black uppercase tracking-[0.24em] text-emerald-200">Pret a essayer</p>
-            <h2 class="mt-3 text-2xl font-black">Commence avec une base claire, puis fais grandir ton suivi.</h2>
+            <p class="text-xs font-black uppercase tracking-[0.24em] text-emerald-200">Prêt à essayer</p>
+            <h2 class="mt-3 text-2xl font-black">Crée ton compte, ajoute tes premiers items et garde le contrôle.</h2>
           </div>
           <router-link
             :to="{ name: 'auth', query: { mode: 'signup' } }"
             class="inline-flex min-h-12 shrink-0 items-center justify-center rounded-xl bg-white px-5 text-sm font-black text-slate-950 transition hover:bg-emerald-50"
           >
-            Creer mon compte
+            Créer mon compte
           </router-link>
         </div>
       </section>
@@ -138,52 +138,52 @@ const previewMetrics = [
 ]
 
 const previewRows = [
-  { name: 'Paires a relancer', status: 'A suivre', class: 'bg-sky-400/12 text-sky-200' },
-  { name: 'Articles anciens', status: 'Priorite', class: 'bg-amber-300/12 text-amber-200' },
-  { name: 'Ventes recentes', status: 'OK', class: 'bg-emerald-300/12 text-emerald-200' },
+  { name: 'Paires à relancer', status: 'À suivre', class: 'bg-sky-400/12 text-sky-200' },
+  { name: 'Articles anciens', status: 'Priorité', class: 'bg-amber-300/12 text-amber-200' },
+  { name: 'Ventes récentes', status: 'OK', class: 'bg-emerald-300/12 text-emerald-200' },
 ]
 
 const pillars = [
   {
     kicker: 'Inventaire',
-    title: 'Stock centralise',
-    text: 'Ajoute, retrouve et organise tes articles avec les infos importantes au meme endroit.',
+    title: 'Stock centralisé',
+    text: 'Ajoute tes articles, retrouve-les vite et garde les infos utiles au même endroit.',
   },
   {
     kicker: 'Pilotage',
     title: 'Stats exploitables',
-    text: 'Suis ton chiffre, ton profit, tes marges et les signaux qui aident a prendre de meilleures decisions.',
+    text: 'Suis ton chiffre, ton profit et tes marges avec des indicateurs faciles à lire.',
   },
   {
     kicker: 'Suivi',
-    title: 'Moins d oublis',
-    text: 'Garde un oeil sur les articles qui dorment, les actions a faire et les donnees a garder propres.',
+    title: "Moins d'oublis",
+    text: "Repère les articles qui dorment, les actions à faire et les données à garder propres.",
   },
 ]
 
 const features = [
   {
     title: 'Gestion rapide',
-    text: 'Creation, recherche, filtres, categories et edition des items pour gagner du temps au quotidien.',
+    text: "Création, recherche, filtres, catégories et édition des items pour aller plus vite au quotidien.",
   },
   {
     title: 'Tableaux de bord',
-    text: 'Templates stats et widgets pour lire ton activite sans repartir de zero.',
+    text: "Des vues prêtes à l'emploi pour comprendre ton activité sans repartir de zéro.",
   },
   {
-    title: 'Import export',
-    text: 'Ajoute un fichier ou recupere tes donnees pour garder la main sur ton inventaire.',
+    title: 'Import / export',
+    text: "Importe un fichier ou récupère tes données quand tu veux garder la main sur ton inventaire.",
   },
   {
     title: 'Abonnement souple',
-    text: 'Acces payant gere en ligne, avec portail client pour suivre le paiement et la resiliation.',
+    text: "Ton accès se gère en ligne, avec un portail Stripe pour le paiement et la résiliation.",
   },
 ]
 
 const trustPoints = [
-  'Acces reserve aux comptes autorises.',
-  'Donnees separees par utilisateur.',
-  'Paiement et abonnement geres via Stripe.',
-  'Interface pensee pour mobile et ordinateur.',
+  'Accès réservé aux comptes autorisés.',
+  'Données séparées par utilisateur.',
+  'Paiement et abonnement gérés via Stripe.',
+  'Interface pensée pour mobile et ordinateur.',
 ]
 </script>
