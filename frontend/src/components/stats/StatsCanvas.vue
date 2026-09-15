@@ -864,6 +864,7 @@ type ProfileRange = { from: string; to: string }
 
 type LayoutBundle = {
   version: number
+  updatedAt?: number
   activeProfile?: string
   profiles: Record<string, Array<Record<string, unknown>>>
   profileNames?: Record<string, string>
@@ -877,7 +878,7 @@ const props = defineProps({
   from: { type: String, required: true },
   to: { type: String, required: true },
 })
-const emit = defineEmits(['update:from', 'update:to'])
+const emit = defineEmits(['update:from', 'update:to', 'ready'])
 const { from, to } = toRefs(props)
 
 const { user } = useAuthStore()
@@ -904,6 +905,7 @@ const COMPACT_BREAKPOINT = 1100
 const activeProfile = ref('p1')
 const layoutBundle = ref<LayoutBundle>({
   version: 2,
+  updatedAt: 0,
   activeProfile: 'p1',
   profiles: {},
   ranges: {},
@@ -1089,6 +1091,8 @@ function applyTemplate(item?: TemplateDefinition) {
 
 function removeActiveTemplate() {
   if (!templateActive.value) return
+  ++layoutLoadSeq
+  clearPendingSaves()
   closeRailDatePicker()
   templatePickerOpen.value = false
   paletteOpen.value = false
@@ -1108,7 +1112,8 @@ function removeActiveTemplate() {
   activeTemplateId.value = ''
   activeTemplateStates.value = {}
   dispatchTemplateMode(false)
-  saveBundleNow(false)
+  const snapshot = saveBundleNow(false, { remote: 'none' })
+  void saveRemoteLayoutNow(snapshot)
   nextTick(() => {
     scheduleVisibleRectUpdate()
   })
@@ -2049,6 +2054,7 @@ function normalizeBundle(raw: unknown): LayoutBundle {
     const obj = raw as LayoutBundle
     return {
       version: Math.max(2, Number(obj.version || 1)),
+      updatedAt: Number.isFinite(Number(obj.updatedAt)) ? Number(obj.updatedAt) : 0,
       activeProfile: typeof obj.activeProfile === 'string' ? obj.activeProfile : 'p1',
       profiles: obj.profiles ?? {},
       profileNames: obj.profileNames ?? {},
@@ -2061,6 +2067,7 @@ function normalizeBundle(raw: unknown): LayoutBundle {
   if (Array.isArray(raw)) {
     return {
       version: 2,
+      updatedAt: 0,
       activeProfile: 'p1',
       profiles: { p1: raw },
       profileNames: {},
@@ -2072,6 +2079,7 @@ function normalizeBundle(raw: unknown): LayoutBundle {
 
   return {
     version: 2,
+    updatedAt: 0,
     activeProfile: 'p1',
     profiles: {},
     profileNames: {},
@@ -2183,6 +2191,12 @@ async function loadLayoutFromServer(expectedUserId = String(userId.value)) {
       return
     }
     const bundle = normalizeBundle(payload)
+    const localUpdatedAt = Number(layoutBundle.value?.updatedAt || 0)
+    const remoteUpdatedAt = Number(bundle.updatedAt || 0)
+    if (localUpdatedAt > remoteUpdatedAt) {
+      void saveRemoteLayoutNow(JSON.parse(JSON.stringify(layoutBundle.value)))
+      return
+    }
     layoutBundle.value = bundle
     applyProfileLayout(bundle, bundle.activeProfile)
     applyStoredRangeForActiveProfile()
@@ -2210,9 +2224,13 @@ function serializeWidgets() {
   })
 }
 
-function saveBundleNow(showToast = false) {
+function saveBundleNow(
+  showToast = false,
+  options: { remote?: 'debounced' | 'immediate' | 'none' } = {},
+) {
   const bundle = layoutBundle.value
   bundle.activeProfile = activeProfile.value
+  bundle.updatedAt = Date.now()
   bundle.profiles = bundle.profiles ?? {}
   saveRangeForProfile(activeProfile.value, from.value, to.value, { persistLocal: false })
   bundle.profiles[activeProfile.value] = serializeWidgets()
@@ -2225,7 +2243,10 @@ function saveBundleNow(showToast = false) {
   const snapshot = JSON.parse(JSON.stringify(bundle))
   localStorage.setItem(storageKey, JSON.stringify(snapshot))
   if (showToast) showSavedToast()
-  scheduleRemoteSave(snapshot)
+  const remoteMode = options.remote ?? 'debounced'
+  if (remoteMode === 'immediate') void saveRemoteLayoutNow(snapshot)
+  else if (remoteMode !== 'none') scheduleRemoteSave(snapshot)
+  return snapshot
 }
 
 function saveLayoutNow(showToast = false) {
@@ -2257,6 +2278,21 @@ function scheduleRemoteSave(payload: unknown = layoutBundle.value) {
       remoteSaveTimer = null
     }
   }, REMOTE_SAVE_DEBOUNCE_MS)
+}
+
+async function saveRemoteLayoutNow(payload: unknown = layoutBundle.value) {
+  const expectedUserId = String(userId.value)
+  if (expectedUserId === 'guest') return
+  if (remoteSaveTimer) {
+    window.clearTimeout(remoteSaveTimer)
+    remoteSaveTimer = null
+  }
+  if (String(userId.value) !== expectedUserId) return
+  try {
+    await StatsServices.saveLayout(payload)
+  } catch (err) {
+    console.warn('[stats] remote save failed', err)
+  }
 }
 
 function widgetStyle(w: Widget) {
@@ -6474,6 +6510,7 @@ watch(
       dispatchTemplateMode(false)
     } finally {
       canvasInitializing.value = false
+      emit('ready')
     }
   },
   { immediate: false },
@@ -6947,6 +6984,7 @@ onMounted(async () => {
     dispatchTemplateMode(false)
   } finally {
     canvasInitializing.value = false
+    emit('ready')
   }
 })
 

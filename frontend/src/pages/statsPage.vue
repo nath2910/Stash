@@ -19,7 +19,26 @@
       <button type="button" @click="retryCanvas">Recharger</button>
     </div>
 
-    <StatsCanvas v-else :key="statsCanvasKey" v-model:from="from" v-model:to="to" />
+    <StatsCanvas
+      v-else
+      :key="statsCanvasKey"
+      v-model:from="from"
+      v-model:to="to"
+      @ready="onCanvasReady"
+    />
+
+    <div v-if="showCanvasWatchdog" class="stats-canvas-watchdog" role="status" aria-live="polite">
+      <span class="stats-canvas-watchdog__ring" aria-hidden="true"></span>
+      <strong>{{ canvasStalled ? 'Chargement interrompu' : 'Chargement des stats' }}</strong>
+      <span>
+        {{
+          canvasStalled
+            ? "On relance l'affichage sans toucher a tes donnees."
+            : 'Preparation de ton espace statistiques...'
+        }}
+      </span>
+      <button v-if="canvasStalled" type="button" @click="retryCanvas">Relancer</button>
+    </div>
   </div>
 </template>
 
