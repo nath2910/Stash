@@ -11,6 +11,7 @@ import backend.repository.NotificationRepository;
 import backend.repository.SnkVenteRepository;
 import backend.repository.UserRepository;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
@@ -61,18 +62,81 @@ class NotificationServiceTest {
 
     int created = service.generateTimedNotificationsForUser(1L);
 
-    Assertions.assertEquals(4, created);
+    Assertions.assertEquals(2, created);
     ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
-    Mockito.verify(notificationRepository, Mockito.times(4)).saveAndFlush(captor.capture());
+    Mockito.verify(notificationRepository, Mockito.times(2)).saveAndFlush(captor.capture());
 
     List<Notification> saved = captor.getAllValues();
     Assertions.assertTrue(saved.stream().allMatch(n -> n.getType() == NotificationType.STOCK_AGING));
     Assertions.assertTrue(saved.stream().allMatch(n -> n.getEntityType() == NotificationEntityType.STOCK_ITEM));
     Assertions.assertTrue(saved.stream().allMatch(n -> "/gestion".equals(n.getCtaRoute())));
     Assertions.assertTrue(saved.stream().allMatch(n -> "Voir le stock".equals(n.getCtaLabel())));
+    Assertions.assertTrue(saved.stream().allMatch(n -> n.getMilestoneKey().startsWith("STOCK_12M_ITEM_")));
+    Assertions.assertTrue(saved.stream().allMatch(n -> n.getTitle().contains("1 an")));
     Assertions.assertTrue(saved.stream().anyMatch(n -> n.getMessage().contains("Montre vintage")));
     Assertions.assertTrue(saved.stream().anyMatch(n -> n.getMessage().contains("Console retro")));
     Assertions.assertTrue(saved.stream().noneMatch(n -> n.getMessage().toLowerCase().contains("sneaker")));
+  }
+
+  @Test
+  void stockAgingNotificationsUseCurrentYearlyMilestoneOnly() {
+    LocalDate purchaseDate = LocalDate.now(ZoneOffset.UTC).minusMonths(26);
+    SnkVente item = item(12, "Sac collector", "ACCESSOIRES", purchaseDate);
+
+    Mockito.when(snkVenteRepository.findInStockCandidatesByUserId(1L)).thenReturn(List.of(item));
+    Mockito.when(notificationRepository.existsByUser_IdAndTypeAndEntityTypeAndEntityIdAndMilestoneKey(
+        Mockito.anyLong(),
+        Mockito.any(NotificationType.class),
+        Mockito.any(NotificationEntityType.class),
+        Mockito.anyLong(),
+        Mockito.anyString()
+    )).thenReturn(false);
+    Mockito.when(notificationRepository.saveAndFlush(Mockito.any(Notification.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    int created = service.generateTimedNotificationsForUser(1L);
+
+    Assertions.assertEquals(1, created);
+    ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
+    Mockito.verify(notificationRepository).saveAndFlush(captor.capture());
+
+    Notification saved = captor.getValue();
+    Assertions.assertEquals(NotificationType.STOCK_AGING, saved.getType());
+    Assertions.assertTrue(saved.getMilestoneKey().startsWith("STOCK_24M_ITEM_12"));
+    Assertions.assertTrue(saved.getTitle().contains("2 ans"));
+    Assertions.assertTrue(saved.getMessage().contains("Sac collector"));
+  }
+
+  @Test
+  void subscriptionReminderCreatesOnlyClosestMilestone() {
+    Mockito.when(user.getSubscriptionStatus()).thenReturn("active");
+    Mockito.when(user.getSubscriptionCurrentPeriodEnd())
+        .thenReturn(OffsetDateTime.now(ZoneOffset.UTC).plusDays(2));
+    Mockito.when(user.isSubscriptionCancelAtPeriodEnd()).thenReturn(false);
+    Mockito.when(snkVenteRepository.findInStockCandidatesByUserId(1L)).thenReturn(List.of());
+    Mockito.when(notificationRepository.existsByUser_IdAndTypeAndEntityTypeAndEntityIdAndMilestoneKey(
+        Mockito.anyLong(),
+        Mockito.any(NotificationType.class),
+        Mockito.any(NotificationEntityType.class),
+        Mockito.isNull(),
+        Mockito.anyString()
+    )).thenReturn(false);
+    Mockito.when(notificationRepository.saveAndFlush(Mockito.any(Notification.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    int created = service.generateTimedNotificationsForUser(1L);
+
+    Assertions.assertEquals(1, created);
+    ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
+    Mockito.verify(notificationRepository).saveAndFlush(captor.capture());
+
+    Notification saved = captor.getValue();
+    Assertions.assertEquals(NotificationType.SUBSCRIPTION_EXPIRING, saved.getType());
+    Assertions.assertEquals(NotificationEntityType.SUBSCRIPTION, saved.getEntityType());
+    Assertions.assertTrue(saved.getMilestoneKey().contains("_J3_"));
+    Assertions.assertEquals("/mon-abonnement", saved.getCtaRoute());
+    Assertions.assertEquals("Voir l'abonnement", saved.getCtaLabel());
+    Assertions.assertTrue(saved.getMessage().contains("renouvellement"));
   }
 
   @Test

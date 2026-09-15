@@ -4,6 +4,7 @@
     :class="{
       'is-space-pan': spacePanActive,
       'is-route-leaving': isRouteLeaving,
+      'is-initializing': canvasInitializing,
       'is-template-active': templateActive,
       'theme-light': true,
     }"
@@ -307,6 +308,20 @@
           </div>
         </div>
       </div>
+
+      <Transition name="canvas-loading-fade">
+        <div
+          v-if="canvasInitializing"
+          class="stats-canvas-loading panzoom-exclude"
+          role="status"
+          aria-live="polite"
+          @pointerdown.stop
+          @pointerup.stop
+        >
+          <span class="stats-canvas-loading__ring" aria-hidden="true"></span>
+          <span>Chargement des stats...</span>
+        </div>
+      </Transition>
 
       <div
         v-if="showCanvasEmptyGuide"
@@ -872,6 +887,7 @@ const isStatsDashboardRoute = computed(
   () => route.name === 'stats' || route.path.startsWith('/stats'),
 )
 const isRouteLeaving = ref(false)
+const canvasInitializing = ref(true)
 // Chaque utilisateur a une cle de layout isolee; guest reste en stockage local.
 const userId = computed(() => user.value?.id ?? 'guest')
 const categoryLabels = ref(readStoredItemCategories(userId.value))
@@ -2151,6 +2167,10 @@ async function loadLayoutFromServer(expectedUserId = String(userId.value)) {
     if (seq !== layoutLoadSeq || String(userId.value) !== expectedUserId) return
     const payload = res?.data?.layout
     if (payload === null || typeof payload === 'undefined') {
+      const bundle = normalizeBundle(null)
+      layoutBundle.value = bundle
+      applyProfileLayout(bundle, bundle.activeProfile)
+      applyStoredRangeForActiveProfile()
       return
     }
     const bundle = normalizeBundle(payload)
@@ -6405,36 +6425,47 @@ watch(
 watch(
   userId,
   async () => {
-    const expectedUserId = String(userId.value)
-    categoryLabels.value = readStoredItemCategories(expectedUserId)
-    storedSubcategories.value = readStoredSubcategories(
-      expectedUserId,
-      undefined,
-      categoryLabels.value,
-    )
-    clearPendingSaves()
-    loadEditMode()
-    detachAllInteract()
-    loadLayoutForUser()
-    applyStoredRangeForActiveProfile()
-    await nextTick()
-    if (String(userId.value) !== expectedUserId) return
-    if (!templateActive.value) {
-      widgets.value.forEach((w) => clampWidget(w))
-      centerView()
+    canvasInitializing.value = true
+    try {
+      const expectedUserId = String(userId.value)
+      categoryLabels.value = readStoredItemCategories(expectedUserId)
+      storedSubcategories.value = readStoredSubcategories(
+        expectedUserId,
+        undefined,
+        categoryLabels.value,
+      )
+      clearPendingSaves()
+      loadEditMode()
+      detachAllInteract()
+      loadLayoutForUser()
+      applyStoredRangeForActiveProfile()
+      await nextTick()
+      if (String(userId.value) !== expectedUserId) return
+      if (!templateActive.value) {
+        widgets.value.forEach((w) => clampWidget(w))
+        centerView()
+      }
+      if (expectedUserId !== 'guest') {
+        await loadLayoutFromServer(expectedUserId)
+      }
+      if (String(userId.value) !== expectedUserId) return
+      await loadDateBounds()
+      if (String(userId.value) !== expectedUserId) return
+      if (widgets.value.some((w) => widgetNeedsCategoryFilter(w))) {
+        void loadCategories(from.value, to.value)
+      }
+      if (String(userId.value) !== expectedUserId) return
+      applyStoredRangeForActiveProfile()
+      normalizeVisibleTextWidgets(true)
+    } catch (err) {
+      console.error('[stats] user layout reload failed', err)
+      widgets.value = []
+      templateActive.value = false
+      activeTemplateId.value = ''
+      dispatchTemplateMode(false)
+    } finally {
+      canvasInitializing.value = false
     }
-    if (expectedUserId !== 'guest') {
-      await loadLayoutFromServer(expectedUserId)
-    }
-    if (String(userId.value) !== expectedUserId) return
-    await loadDateBounds()
-    if (String(userId.value) !== expectedUserId) return
-    if (widgets.value.some((w) => widgetNeedsCategoryFilter(w))) {
-      void loadCategories(from.value, to.value)
-    }
-    if (String(userId.value) !== expectedUserId) return
-    applyStoredRangeForActiveProfile()
-    normalizeVisibleTextWidgets(true)
   },
   { immediate: false },
 )
@@ -6805,98 +6836,109 @@ onBeforeRouteLeave(() => {
 
 /* ===== Lifecycle ===== */
 onMounted(async () => {
-  const initCanvasCamera = () => {
-    camera.init(() => {
-      centerView()
-      setCanvasPanEnabled(true)
-      syncPanzoomExclude(shouldUsePanzoomExclude())
-      if (window.innerWidth < COMPACT_BREAKPOINT) zoomToFitContent()
-      scheduleVisibleRectUpdate()
-    })
-  }
-
-  // init camera + centre quand la vue est prete (seulement en mode canvas)
-  if (!templateActive.value) {
-    initCanvasCamera()
-  }
-
-  watch(templateActive, async (active, previous) => {
-    if (active === previous) return
-    closeRailDatePicker()
-    if (active) {
-      setSpacePanState(false)
-      camera.destroy()
-      return
+  canvasInitializing.value = true
+  try {
+    const initCanvasCamera = () => {
+      camera.init(() => {
+        centerView()
+        setCanvasPanEnabled(true)
+        syncPanzoomExclude(shouldUsePanzoomExclude())
+        if (window.innerWidth < COMPACT_BREAKPOINT) zoomToFitContent()
+        scheduleVisibleRectUpdate()
+      })
     }
+
+    // init camera + centre quand la vue est prete (seulement en mode canvas)
+    if (!templateActive.value) {
+      initCanvasCamera()
+    }
+
+    watch(templateActive, async (active, previous) => {
+      if (active === previous) return
+      closeRailDatePicker()
+      if (active) {
+        setSpacePanState(false)
+        camera.destroy()
+        return
+      }
+      await nextTick()
+      initCanvasCamera()
+    })
+
+    window.addEventListener('keydown', onCanvasKeyDown, { capture: true })
+    window.addEventListener('keydown', onSelectionKeyDown, { capture: true })
+    window.addEventListener('keyup', onCanvasKeyUp, { capture: true })
+    window.addEventListener('blur', onWindowBlur)
+    window.addEventListener('snk:item-categories-change', onItemCategoriesChange)
+    window.addEventListener('pointerdown', onRailDateGlobalPointerDown)
+    window.addEventListener('keydown', onRailDateGlobalKeyDown)
+    document.addEventListener('visibilitychange', onVisibilityChange)
+
     await nextTick()
-    initCanvasCamera()
-  })
+    const board = boardEl.value
+    if (board) {
+      const onPanzoomChange = () => {
+        scheduleVisibleRectUpdate()
+      }
+      board.addEventListener('panzoomchange', onPanzoomChange as EventListener)
+      onBeforeUnmount(() =>
+        board.removeEventListener('panzoomchange', onPanzoomChange as EventListener),
+      )
+    }
+    scheduleVisibleRectUpdate()
 
-  window.addEventListener('keydown', onCanvasKeyDown, { capture: true })
-  window.addEventListener('keydown', onSelectionKeyDown, { capture: true })
-  window.addEventListener('keyup', onCanvasKeyUp, { capture: true })
-  window.addEventListener('blur', onWindowBlur)
-  window.addEventListener('snk:item-categories-change', onItemCategoriesChange)
-  window.addEventListener('pointerdown', onRailDateGlobalPointerDown)
-  window.addEventListener('keydown', onRailDateGlobalKeyDown)
-  document.addEventListener('visibilitychange', onVisibilityChange)
+    widgets.value.forEach((w) => clampWidget(w))
+    if (editMode.value) disarmWidget()
 
-  await nextTick()
-  const board = boardEl.value
-  if (board) {
-    const onPanzoomChange = () => {
+    const expectedUserId = String(userId.value)
+    if (expectedUserId !== 'guest') {
+      await loadLayoutFromServer(expectedUserId)
+    }
+    if (String(userId.value) !== expectedUserId) return
+    await loadDateBounds()
+    if (String(userId.value) !== expectedUserId) return
+    if (widgets.value.some((w) => widgetNeedsCategoryFilter(w))) {
+      void loadCategories(from.value, to.value)
+    }
+    if (String(userId.value) !== expectedUserId) return
+    applyStoredRangeForActiveProfile()
+    normalizeVisibleTextWidgets(true)
+
+    let resizeRaf: number | null = null
+    const applyResize = () => {
+      const compact = window.innerWidth < COMPACT_BREAKPOINT
+      const wasCompact = isCompact.value
+      if (compact !== isCompact.value) {
+        isCompact.value = compact
+      }
+      if (!wasCompact && compact) zoomToFitContent()
       scheduleVisibleRectUpdate()
     }
-    board.addEventListener('panzoomchange', onPanzoomChange as EventListener)
-    onBeforeUnmount(() =>
-      board.removeEventListener('panzoomchange', onPanzoomChange as EventListener),
-    )
-  }
-  scheduleVisibleRectUpdate()
-
-  widgets.value.forEach((w) => clampWidget(w))
-  if (editMode.value) disarmWidget()
-
-  const expectedUserId = String(userId.value)
-  if (expectedUserId !== 'guest') {
-    await loadLayoutFromServer(expectedUserId)
-  }
-  if (String(userId.value) !== expectedUserId) return
-  await loadDateBounds()
-  if (String(userId.value) !== expectedUserId) return
-  if (widgets.value.some((w) => widgetNeedsCategoryFilter(w))) {
-    void loadCategories(from.value, to.value)
-  }
-  if (String(userId.value) !== expectedUserId) return
-  applyStoredRangeForActiveProfile()
-  normalizeVisibleTextWidgets(true)
-
-  let resizeRaf: number | null = null
-  const applyResize = () => {
-    const compact = window.innerWidth < COMPACT_BREAKPOINT
-    const wasCompact = isCompact.value
-    if (compact !== isCompact.value) {
-      isCompact.value = compact
+    const resizeHandler = () => {
+      if (resizeRaf != null) return
+      resizeRaf = requestAnimationFrame(() => {
+        resizeRaf = null
+        applyResize()
+      })
     }
-    if (!wasCompact && compact) zoomToFitContent()
-    scheduleVisibleRectUpdate()
-  }
-  const resizeHandler = () => {
-    if (resizeRaf != null) return
-    resizeRaf = requestAnimationFrame(() => {
-      resizeRaf = null
-      applyResize()
+    resizeHandler()
+    window.addEventListener('resize', resizeHandler, { passive: true })
+    onBeforeUnmount(() => {
+      window.removeEventListener('resize', resizeHandler)
+      if (resizeRaf != null) {
+        cancelAnimationFrame(resizeRaf)
+        resizeRaf = null
+      }
     })
+  } catch (err) {
+    console.error('[stats] canvas init failed', err)
+    widgets.value = []
+    templateActive.value = false
+    activeTemplateId.value = ''
+    dispatchTemplateMode(false)
+  } finally {
+    canvasInitializing.value = false
   }
-  resizeHandler()
-  window.addEventListener('resize', resizeHandler, { passive: true })
-  onBeforeUnmount(() => {
-    window.removeEventListener('resize', resizeHandler)
-    if (resizeRaf != null) {
-      cancelAnimationFrame(resizeRaf)
-      resizeRaf = null
-    }
-  })
 })
 
 onBeforeUnmount(() => {

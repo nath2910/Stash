@@ -651,6 +651,15 @@ const submitSignup = async () => {
     const apiMessage = String(response?.message || '').trim()
     const reusedExistingAccount = apiMessage.toLowerCase().includes('compte deja')
 
+    if (reusedExistingAccount) {
+      setNotice(
+        'error',
+        'Compte deja existant',
+        apiMessage || 'Un compte existe deja avec cet email. Connecte-toi avec ce compte.',
+      )
+      return
+    }
+
     setNotice(
       'success',
       reusedExistingAccount ? 'Compte déjà existant' : 'Compte créé',

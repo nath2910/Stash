@@ -52,12 +52,12 @@ class AuthService {
     return res.data
   }
 
-  async verifyEmail(payload) {
+  async verifyEmail(payload, { persist = true } = {}) {
     const res = await api.get('/auth/verify-email', { params: { token: payload.token } })
     const token = res.data?.token || res.data?.accessToken || null
     const user = res.data?.user ?? res.data?.utilisateur ?? null
 
-    if (token || user) writeAuthState({ token, user })
+    if (persist && (token || user)) writeAuthState({ token, user })
 
     return { user, token, raw: res.data }
   }

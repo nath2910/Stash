@@ -49,6 +49,42 @@ class UserServiceTest {
   }
 
   @Test
+  void registerRejectsExistingEmailBeforeSendingVerification() {
+    UserRepository userRepository = Mockito.mock(UserRepository.class);
+    EmailVerificationService emailVerificationService = Mockito.mock(EmailVerificationService.class);
+    UserService service = new UserService(
+        userRepository,
+        Mockito.mock(PasswordEncoder.class),
+        emailVerificationService,
+        Mockito.mock(EmailVerificationTokenRepository.class),
+        Mockito.mock(PasswordResetTokenRepository.class),
+        Mockito.mock(UserStatsLayoutRepository.class),
+        Mockito.mock(SnkVenteRepository.class)
+    );
+
+    RegisterRequest request = new RegisterRequest();
+    request.setEmail("Test@Example.com");
+    request.setPassword("secret1234");
+    request.setFirstName("Ada");
+    request.setLastName("Lovelace");
+    request.setAcceptTerms(true);
+
+    User existing = new User();
+    existing.setEmail("test@example.com");
+    Mockito.when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(existing));
+
+    ResponseStatusException exception = Assertions.assertThrows(
+        ResponseStatusException.class,
+        () -> service.register(request)
+    );
+
+    Assertions.assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
+    Assertions.assertTrue(exception.getReason().contains("Email"));
+    Mockito.verify(userRepository, Mockito.never()).save(Mockito.any(User.class));
+    Mockito.verify(emailVerificationService, Mockito.never()).sendVerification(Mockito.any(User.class));
+  }
+
+  @Test
   void registerRollsBackUserWhenVerificationEmailFails() {
     UserRepository userRepository = Mockito.mock(UserRepository.class);
     PasswordEncoder passwordEncoder = Mockito.mock(PasswordEncoder.class);

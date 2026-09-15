@@ -38,7 +38,8 @@ public class NotificationService {
 
   private static final int MAX_PAGE_SIZE = 50;
   private static final List<Integer> SUBSCRIPTION_MILESTONES_DAYS = List.of(7, 3, 1);
-  private static final List<Integer> STOCK_MILESTONES_MONTHS = List.of(6, 12);
+  private static final int STOCK_FIRST_MILESTONE_MONTHS = 6;
+  private static final int STOCK_YEAR_MONTHS = 12;
   private static final Set<String> SUBSCRIPTION_ELIGIBLE_STATUSES =
       Set.of("active", "past_due", "canceled", "trialing");
   private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy", Locale.FRANCE);
@@ -155,7 +156,8 @@ public class NotificationService {
 
   private int generateSubscriptionExpiringNotifications(User user, LocalDate today) {
     String status = user.getSubscriptionStatus();
-    if (status == null || !SUBSCRIPTION_ELIGIBLE_STATUSES.contains(status.toLowerCase(Locale.ROOT))) {
+    String normalizedStatus = status == null ? "" : status.toLowerCase(Locale.ROOT);
+    if (!SUBSCRIPTION_ELIGIBLE_STATUSES.contains(normalizedStatus)) {
       return 0;
     }
 
@@ -172,33 +174,48 @@ public class NotificationService {
       return 0;
     }
 
-    int created = 0;
-    for (int milestone : SUBSCRIPTION_MILESTONES_DAYS) {
-      if (daysUntilEnd > milestone) {
-        continue;
-      }
-
-      String milestoneKey = "SUB_EXP_J" + milestone + "_" + endDate;
-      String title = "Abonnement: rappel J-" + milestone;
-      String message = "Votre abonnement expire le " + endDate.format(DATE_FORMAT)
-          + " (" + remainingLabel(daysUntilEnd) + ")."
-          + " Renouvelez pour conserver l'acces premium.";
-
-      created += createNotificationIfAbsent(
-          user,
-          NotificationType.SUBSCRIPTION_EXPIRING,
-          NotificationSeverity.WARNING,
-          NotificationEntityType.SUBSCRIPTION,
-          null,
-          milestoneKey,
-          title,
-          message,
-          "/abo",
-          "Renouveler"
-      );
+    int milestone = resolveSubscriptionMilestone(daysUntilEnd);
+    if (milestone == 0) {
+      return 0;
     }
 
-    return created;
+    boolean paymentNeedsAttention = "past_due".equals(normalizedStatus);
+    boolean endsAtPeriodEnd = user.isSubscriptionCancelAtPeriodEnd() || "canceled".equals(normalizedStatus);
+
+    String milestoneKey = "SUB_" + normalizedStatus.toUpperCase(Locale.ROOT) + "_J" + milestone + "_" + endDate;
+    String title;
+    String message;
+    String ctaLabel;
+
+    if (paymentNeedsAttention) {
+      title = "Paiement a verifier";
+      message = "Votre paiement d'abonnement demande une action avant le " + endDate.format(DATE_FORMAT)
+          + " (" + remainingLabel(daysUntilEnd) + "). Regularisez pour conserver l'acces premium.";
+      ctaLabel = "Regulariser";
+    } else if (endsAtPeriodEnd) {
+      title = "Abonnement: fin dans " + remainingLabel(daysUntilEnd);
+      message = "Votre acces premium reste actif jusqu'au " + endDate.format(DATE_FORMAT)
+          + ". Vous pouvez le reactiver avant cette date si besoin.";
+      ctaLabel = "Gerer";
+    } else {
+      title = "Abonnement: rappel " + remainingLabel(daysUntilEnd);
+      message = "Votre prochain renouvellement est prevu le " + endDate.format(DATE_FORMAT)
+          + ". Verifiez votre moyen de paiement si besoin.";
+      ctaLabel = "Voir l'abonnement";
+    }
+
+    return createNotificationIfAbsent(
+        user,
+        NotificationType.SUBSCRIPTION_EXPIRING,
+        NotificationSeverity.WARNING,
+        NotificationEntityType.SUBSCRIPTION,
+        null,
+        milestoneKey,
+        title,
+        message,
+        "/mon-abonnement",
+        ctaLabel
+    );
   }
 
   private int generateStockAgingNotifications(User user, LocalDate today) {
@@ -225,45 +242,72 @@ public class NotificationService {
 
       long monthsInStock = ChronoUnit.MONTHS.between(referenceDate, today);
       Long itemEntityId = item.getId().longValue();
-      for (int milestone : STOCK_MILESTONES_MONTHS) {
-        String milestonePrefix = "STOCK_" + milestone + "M_ITEM_" + item.getId();
-        String milestoneKey = milestonePrefix + "_ACHAT_" + referenceDate;
-
-        notificationRepository.deleteStockAgingMilestoneVariants(
-            user.getId(),
-            itemEntityId,
-            milestonePrefix,
-            milestoneKey
-        );
-
-        if (monthsInStock < milestone) {
-          continue;
-        }
-
-        String itemName = (item.getNomItem() == null || item.getNomItem().isBlank())
-            ? "Un item de votre stock"
-            : item.getNomItem();
-
-        String title = "Item en stock depuis " + milestone + " mois";
-        String message = itemName + " est en stock depuis le " + referenceDate.format(DATE_FORMAT)
-            + ". Pensez a ajuster votre strategie de vente.";
-
-        created += createNotificationIfAbsent(
-            user,
-            NotificationType.STOCK_AGING,
-            NotificationSeverity.INFO,
-            NotificationEntityType.STOCK_ITEM,
-            itemEntityId,
-            milestoneKey,
-            title,
-            message,
-            "/gestion",
-            "Voir le stock"
-        );
+      StockAgingMilestone milestone = resolveStockAgingMilestone(monthsInStock);
+      if (milestone == null) {
+        continue;
       }
+
+      String milestonePrefix = "STOCK_" + milestone.months() + "M_ITEM_" + item.getId();
+      String milestoneKey = milestonePrefix + "_ACHAT_" + referenceDate;
+
+      notificationRepository.deleteStockAgingMilestoneVariants(
+          user.getId(),
+          itemEntityId,
+          milestonePrefix,
+          milestoneKey
+      );
+
+      String itemName = (item.getNomItem() == null || item.getNomItem().isBlank())
+          ? "Un item de votre stock"
+          : item.getNomItem();
+
+      String title = "Item en stock depuis " + milestone.label();
+      String message = itemName + " est en stock depuis " + milestone.label()
+          + " (" + referenceDate.format(DATE_FORMAT) + ")."
+          + " Pensez a ajuster votre strategie de vente.";
+
+      created += createNotificationIfAbsent(
+          user,
+          NotificationType.STOCK_AGING,
+          NotificationSeverity.INFO,
+          NotificationEntityType.STOCK_ITEM,
+          itemEntityId,
+          milestoneKey,
+          title,
+          message,
+          "/gestion",
+          "Voir le stock"
+      );
     }
 
     return created;
+  }
+
+  private int resolveSubscriptionMilestone(long daysUntilEnd) {
+    if (daysUntilEnd < 0 || daysUntilEnd > SUBSCRIPTION_MILESTONES_DAYS.get(0)) {
+      return 0;
+    }
+    if (daysUntilEnd <= 1) {
+      return 1;
+    }
+    if (daysUntilEnd <= 3) {
+      return 3;
+    }
+    return 7;
+  }
+
+  private StockAgingMilestone resolveStockAgingMilestone(long monthsInStock) {
+    if (monthsInStock < STOCK_FIRST_MILESTONE_MONTHS) {
+      return null;
+    }
+    if (monthsInStock < STOCK_YEAR_MONTHS) {
+      return new StockAgingMilestone(STOCK_FIRST_MILESTONE_MONTHS, "6 mois");
+    }
+
+    long years = monthsInStock / STOCK_YEAR_MONTHS;
+    int months = Math.toIntExact(years * STOCK_YEAR_MONTHS);
+    String label = years == 1 ? "1 an" : years + " ans";
+    return new StockAgingMilestone(months, label);
   }
 
   private LocalDate resolveStockReferenceDate(SnkVente item) {
@@ -330,4 +374,6 @@ public class NotificationService {
     }
     return daysUntilEnd + " jours restants";
   }
+
+  private record StockAgingMilestone(int months, String label) {}
 }

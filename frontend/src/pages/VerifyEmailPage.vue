@@ -26,6 +26,9 @@
         <p v-if="status === 'pending' && pollingVerification" class="mt-3 text-xs font-medium text-emerald-200">
           Verification automatique en cours...
         </p>
+        <p v-if="status === 'success'" class="mt-3 text-xs font-medium text-emerald-200">
+          Redirection vers la connexion dans quelques secondes...
+        </p>
 
         <div v-if="status === 'pending'" class="mt-6 grid gap-3 text-sm text-slate-300 sm:grid-cols-2">
           <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
@@ -95,9 +98,11 @@ const resendLoading = ref(false)
 const resendMessage = ref('')
 const pollingVerification = ref(false)
 let verificationPollTimer = null
+let loginRedirectTimer = null
 let verificationPollStartedAt = 0
 const VERIFICATION_POLL_INTERVAL_MS = 5000
 const VERIFICATION_POLL_MAX_MS = 5 * 60 * 1000
+const LOGIN_REDIRECT_DELAY_MS = 3200
 
 const token = computed(() => (route.query.token || route.params.token || '').toString())
 const email = computed(() => (route.query.email || '').toString())
@@ -127,6 +132,20 @@ const description = computed(() => {
   return "On t'a envoye un email avec un lien de confirmation. Clique dessus pour activer ton compte."
 })
 
+const stopLoginRedirect = () => {
+  if (loginRedirectTimer) {
+    window.clearTimeout(loginRedirectTimer)
+    loginRedirectTimer = null
+  }
+}
+
+const scheduleLoginRedirect = () => {
+  stopLoginRedirect()
+  loginRedirectTimer = window.setTimeout(() => {
+    router.replace({ name: 'auth', query: { mode: 'login' } })
+  }, LOGIN_REDIRECT_DELAY_MS)
+}
+
 const verify = async () => {
   if (!token.value) {
     status.value = 'pending'
@@ -140,12 +159,9 @@ const verify = async () => {
   errorKind.value = ''
 
   try {
-    const payload = await AuthService.verifyEmail({ token: token.value })
+    await AuthService.verifyEmail({ token: token.value }, { persist: false })
     status.value = 'success'
-    if (payload?.token) {
-      auth.setAuth({ user: payload.user ?? null, token: payload.token })
-      await router.replace({ name: 'home' })
-    }
+    scheduleLoginRedirect()
   } catch (err) {
     console.error(err)
     status.value = 'error'
@@ -203,6 +219,7 @@ const checkEmailVerificationStatus = async () => {
       stopEmailVerificationPolling()
       status.value = 'success'
       resendMessage.value = 'Email confirme. Tu peux maintenant te connecter.'
+      scheduleLoginRedirect()
       return
     }
   } catch (err) {
@@ -278,10 +295,12 @@ onBeforeUnmount(() => {
   window.removeEventListener('storage', onStorage)
   document.removeEventListener('visibilitychange', onVisibilityChange)
   stopEmailVerificationPolling()
+  stopLoginRedirect()
 })
 
 watch([token, email], () => {
   verificationPollStartedAt = 0
+  stopLoginRedirect()
   verify()
 })
 </script>

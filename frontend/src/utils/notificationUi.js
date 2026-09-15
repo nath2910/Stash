@@ -31,7 +31,11 @@ export function getNotificationDomain(notification = {}) {
     return 'administrative'
   }
 
-  if (type === 'SUBSCRIPTION_EXPIRING' || ctaRoute.startsWith('/abo')) {
+  if (
+    type === 'SUBSCRIPTION_EXPIRING' ||
+    ctaRoute.startsWith('/abo') ||
+    ctaRoute.startsWith('/mon-abonnement')
+  ) {
     return 'subscription'
   }
 

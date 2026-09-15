@@ -69,6 +69,7 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
             where v.id = n.entity_id
               and v.user_id = :userId
               and v.date_achat is not null
+              and v.date_vente is null
           )
         )
       """, nativeQuery = true)
