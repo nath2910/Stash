@@ -3919,6 +3919,84 @@ body.canvas-pan-cursor * {
     padding-inline-start: max(8px, env(safe-area-inset-left));
     padding-inline-end: max(8px, env(safe-area-inset-right));
   }
+
+  .canvas-root.is-template-active .template-rail,
+  .canvas-root.theme-light.is-template-active .template-rail,
+  .canvas-root.is-template-active .template-mode ~ .template-rail,
+  .canvas-root.theme-light.is-template-active .template-mode ~ .template-rail {
+    top: auto;
+    left: 10px;
+    right: 10px;
+    bottom: max(8px, env(safe-area-inset-bottom, 0px) + 8px);
+    width: auto;
+    height: 58px;
+    min-height: 0;
+    max-height: 58px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    padding: 6px 8px;
+    border-radius: 16px;
+    z-index: 90;
+  }
+
+  .canvas-root.is-template-active .template-rail::-webkit-scrollbar,
+  .canvas-root.theme-light.is-template-active .template-rail::-webkit-scrollbar {
+    display: none;
+  }
+
+  .canvas-root.is-template-active .template-rail__nav,
+  .canvas-root.is-template-active .template-rail__meta,
+  .canvas-root.is-template-active .template-rail__profiles,
+  .canvas-root.theme-light.is-template-active .template-rail__nav,
+  .canvas-root.theme-light.is-template-active .template-rail__meta,
+  .canvas-root.theme-light.is-template-active .template-rail__profiles {
+    display: inline-flex;
+    align-items: center;
+    align-content: center;
+    flex: 0 0 auto;
+    gap: 6px;
+    min-width: 0;
+    margin-top: 0;
+    padding-top: 0;
+    overflow: visible;
+  }
+
+  .canvas-root.is-template-active .template-rail__profiles,
+  .canvas-root.theme-light.is-template-active .template-rail__profiles {
+    margin-left: auto;
+  }
+
+  .canvas-root.is-template-active .template-rail__user,
+  .canvas-root.is-template-active .template-rail__nav-btn,
+  .canvas-root.is-template-active .template-rail__meta-btn,
+  .canvas-root.is-template-active .template-rail__profile-btn,
+  .canvas-root.theme-light.is-template-active .template-rail__user,
+  .canvas-root.theme-light.is-template-active .template-rail__nav-btn,
+  .canvas-root.theme-light.is-template-active .template-rail__meta-btn,
+  .canvas-root.theme-light.is-template-active .template-rail__profile-btn {
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+    border-radius: 12px;
+  }
+
+  .canvas-root.is-template-active .template-rail__user,
+  .canvas-root.theme-light.is-template-active .template-rail__user {
+    border-radius: 999px;
+  }
+
+  .canvas-root.is-template-active .template-rail__user-avatar,
+  .canvas-root.theme-light.is-template-active .template-rail__user-avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 0.9rem;
+  }
 }
 
 @media (max-width: 380px) {
@@ -3954,6 +4032,49 @@ body.canvas-pan-cursor * {
   .template-mode ~ .template-rail .template-rail__profile-btn {
     width: 30px;
     height: 30px;
+  }
+}
+
+@media (max-width: 640px) {
+  .canvas-root.is-template-active .template-rail,
+  .canvas-root.theme-light.is-template-active .template-rail,
+  .canvas-root.is-template-active .template-mode ~ .template-rail,
+  .canvas-root.theme-light.is-template-active .template-mode ~ .template-rail {
+    display: flex;
+    height: 50px;
+    max-height: 50px;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .canvas-root.is-template-active .template-rail__nav,
+  .canvas-root.is-template-active .template-rail__meta,
+  .canvas-root.is-template-active .template-rail__profiles,
+  .canvas-root.theme-light.is-template-active .template-rail__nav,
+  .canvas-root.theme-light.is-template-active .template-rail__meta,
+  .canvas-root.theme-light.is-template-active .template-rail__profiles {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    gap: 5px;
+  }
+
+  .canvas-root.is-template-active .template-rail__profiles,
+  .canvas-root.theme-light.is-template-active .template-rail__profiles {
+    margin-left: auto;
+  }
+
+  .canvas-root.is-template-active .template-rail__user,
+  .canvas-root.is-template-active .template-rail__nav-btn,
+  .canvas-root.is-template-active .template-rail__meta-btn,
+  .canvas-root.is-template-active .template-rail__profile-btn,
+  .canvas-root.theme-light.is-template-active .template-rail__user,
+  .canvas-root.theme-light.is-template-active .template-rail__nav-btn,
+  .canvas-root.theme-light.is-template-active .template-rail__meta-btn,
+  .canvas-root.theme-light.is-template-active .template-rail__profile-btn {
+    width: 32px;
+    height: 32px;
+    flex-basis: 32px;
   }
 }
 

@@ -119,9 +119,16 @@ function formatDateLabel(value: string) {
 }
 
 .stats-page-shell--template-mode {
-  height: auto;
-  min-height: 100%;
-  overflow: visible;
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.stats-page-shell--template-mode::-webkit-scrollbar {
+  display: none;
 }
 
 .stats-range-loader {
