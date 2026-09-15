@@ -804,6 +804,8 @@ onBeforeUnmount(() => {
   window.removeEventListener('snk:billing-access-required', onBillingAccessRequired)
   document.documentElement.classList.remove('layout-light-document-scroll')
   document.body.classList.remove('layout-light-document-scroll')
+  document.documentElement.classList.remove('layout-stats-template-scroll-lock')
+  document.body.classList.remove('layout-stats-template-scroll-lock')
   detachScroll()
   stopIdleWatch()
   clearNotificationInitTimer()
@@ -823,6 +825,15 @@ watch(
   (v) => {
     document.documentElement.classList.toggle('layout-light-document-scroll', !!v)
     document.body.classList.toggle('layout-light-document-scroll', !!v)
+  },
+  { immediate: true },
+)
+
+watch(
+  () => isStatsTemplateScroll.value,
+  (v) => {
+    document.documentElement.classList.toggle('layout-stats-template-scroll-lock', !!v)
+    document.body.classList.toggle('layout-stats-template-scroll-lock', !!v)
   },
   { immediate: true },
 )
@@ -1065,11 +1076,37 @@ body.layout-light-document-scroll::-webkit-scrollbar {
 }
 
 .layout-fullbleed--template-scroll {
-  height: auto;
-  min-height: 100dvh;
-  overflow-x: visible;
-  overflow-y: auto;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
   background: #f7f4ee;
+}
+
+.layout-fullbleed--template-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+html.layout-stats-template-scroll-lock,
+body.layout-stats-template-scroll-lock {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html.layout-stats-template-scroll-lock body,
+html.layout-stats-template-scroll-lock #app {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+html.layout-stats-template-scroll-lock::-webkit-scrollbar,
+body.layout-stats-template-scroll-lock::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
 }
 
 .layout-main,
@@ -1345,12 +1382,13 @@ body.layout-light-document-scroll::-webkit-scrollbar {
 
   .layout-mobile-menu-panel {
     display: grid;
-    position: fixed;
-    top: calc(env(safe-area-inset-top, 0px) + 0.62rem);
+    position: absolute;
+    top: 50%;
     left: max(4rem, env(safe-area-inset-left));
     right: max(4rem, env(safe-area-inset-right));
     width: auto;
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: center;
     gap: 0.38rem;
     overflow: visible;
     border: 0 !important;
@@ -1360,13 +1398,14 @@ body.layout-light-document-scroll::-webkit-scrollbar {
     padding: 0;
     box-shadow: none !important;
     backdrop-filter: none;
+    transform: translateY(-50%);
     will-change: opacity, transform, filter;
   }
 
   .layout-mobile-menu-panel a {
     display: inline-flex;
     min-width: 0;
-    min-height: 38px;
+    min-height: 40px;
     align-items: center;
     justify-content: center;
     border: 1px solid rgba(203, 213, 225, 0.76);
@@ -1377,6 +1416,16 @@ body.layout-light-document-scroll::-webkit-scrollbar {
     font-size: 0.82rem;
     text-align: center;
     white-space: nowrap;
+  }
+
+  .layout-mobile-menu-enter-from,
+  .layout-mobile-menu-leave-to {
+    transform: translate3d(0, calc(-50% - 0.4rem), 0) scale(0.96);
+  }
+
+  .layout-mobile-menu-enter-to,
+  .layout-mobile-menu-leave-from {
+    transform: translate3d(0, -50%, 0) scale(1);
   }
 
   .layout-mobile-menu-panel a.bg-emerald-500\/14 {
@@ -1451,7 +1500,7 @@ body.layout-light-document-scroll::-webkit-scrollbar {
   }
 
   .layout-mobile-menu-panel a {
-    min-height: 36px;
+    min-height: 38px;
     padding-inline: 0.35rem;
     font-size: 0.76rem;
   }

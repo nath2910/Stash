@@ -953,6 +953,18 @@ onBeforeUnmount(() => {
   }
 }
 
+@media (max-width: 960px) {
+  .dashboard-layout--fit-screen {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible;
+  }
+
+  .dashboard-layout--fit-screen .dashboard-layout__inner {
+    min-height: 0;
+  }
+}
+
 @media (max-width: 480px) {
   .dashboard-layout__inner {
     padding: 0.72rem;

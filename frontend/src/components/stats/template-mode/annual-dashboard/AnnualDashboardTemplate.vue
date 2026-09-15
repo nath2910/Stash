@@ -1050,29 +1050,20 @@ onBeforeUnmount(() => {
   --annual-detail-panel-min-height: clamp(420px, 54vh, 620px);
   --annual-detail-scroll-max-height: clamp(260px, 38vh, 430px);
   width: 100%;
-  height: 100%;
+  height: auto;
   min-width: 0;
-  min-height: 0;
-  overflow: auto;
-  overscroll-behavior: contain;
-  overscroll-behavior-x: none;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(100, 116, 139, 0.34) rgba(234, 229, 219, 0.9);
+  min-height: 100%;
+  overflow: visible;
+  overscroll-behavior: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   background: var(--annual-bg);
 }
 
 .annual-dashboard::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-.annual-dashboard::-webkit-scrollbar-track {
-  background: rgba(234, 229, 219, 0.9);
-}
-
-.annual-dashboard::-webkit-scrollbar-thumb {
-  border-radius: 999px;
-  background: rgba(100, 116, 139, 0.34);
+  width: 0;
+  height: 0;
+  display: none;
 }
 
 .annual-dashboard__inner {
@@ -1965,7 +1956,7 @@ onBeforeUnmount(() => {
   .annual-dashboard__inner {
     padding-left: clamp(12px, 3vw, 22px);
     padding-right: clamp(12px, 3vw, 22px);
-    padding-bottom: 94px;
+    padding-bottom: 118px;
   }
 }
 
@@ -2164,7 +2155,7 @@ onBeforeUnmount(() => {
 
 @media (min-width: 961px) {
   .annual-dashboard {
-    overflow: hidden;
+    overflow: visible;
   }
 
   .annual-dashboard :deep(.dashboard-layout) {
