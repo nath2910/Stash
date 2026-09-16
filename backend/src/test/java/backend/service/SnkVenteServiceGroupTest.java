@@ -127,8 +127,9 @@ class SnkVenteServiceGroupTest {
     SnkVente third = standalone(13, "ticket C", null, "TICKET");
     third.setParentId(50);
 
-    Mockito.when(venteRepo.findById(50)).thenReturn(Optional.of(parent));
-    Mockito.when(venteRepo.findByParent_IdOrderByUnitIndexAscIdAsc(50)).thenReturn(List.of(first, second, third));
+    Mockito.when(venteRepo.findByIdAndUser_Id(50, 1L)).thenReturn(Optional.of(parent));
+    Mockito.when(venteRepo.findByParent_IdAndUser_IdOrderByUnitIndexAscIdAsc(50, 1L))
+        .thenReturn(List.of(first, second, third));
 
     SnkVente payload = new SnkVente();
     payload.setNomItem("Lot final Roland Garros");

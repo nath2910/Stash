@@ -182,8 +182,7 @@ public class snkVenteService {
 
   @Transactional(readOnly = true)
   public SnkVente lire(Long userId, Integer id) {
-    return snkVenteRepository.findById(id)
-        .filter(v -> v.getUser() != null && userId.equals(v.getUser().getId()))
+    return snkVenteRepository.findByIdAndUser_Id(id, userId)
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Vente introuvable"));
   }
 
@@ -193,8 +192,7 @@ public class snkVenteService {
     if (!parent.isGroupParent()) {
       return List.of();
     }
-    return snkVenteRepository.findByParent_IdOrderByUnitIndexAscIdAsc(id).stream()
-        .filter(v -> v.getUser() != null && userId.equals(v.getUser().getId()))
+    return snkVenteRepository.findByParent_IdAndUser_IdOrderByUnitIndexAscIdAsc(id, userId).stream()
         .map(SnkVenteChildViewDto::fromEntity)
         .toList();
   }
@@ -227,12 +225,8 @@ public class snkVenteService {
 
   @Transactional
   public void deleteVente(Long userId, Integer id) {
-    SnkVente existing = snkVenteRepository.findById(id)
+    SnkVente existing = snkVenteRepository.findByIdAndUser_Id(id, userId)
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Vente introuvable"));
-
-    if (existing.getUser() == null || !userId.equals(existing.getUser().getId())) {
-      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Acces interdit");
-    }
 
     Integer parentIdToCheck = existing.getParentId();
     snkVenteRepository.delete(existing);
@@ -345,8 +339,7 @@ public class snkVenteService {
     if (parentId == null) return;
     if (snkVenteRepository.countByUser_IdAndParent_Id(userId, parentId) > 0) return;
 
-    snkVenteRepository.findById(parentId)
-        .filter(parent -> parent.getUser() != null && userId.equals(parent.getUser().getId()))
+    snkVenteRepository.findByIdAndUser_Id(parentId, userId)
         .filter(SnkVente::isGroupParent)
         .ifPresent(snkVenteRepository::delete);
   }
@@ -358,12 +351,8 @@ public class snkVenteService {
 
   @Transactional
   public SnkVente updateVente(Long userId, Integer id, SnkVente payload) {
-    SnkVente existing = snkVenteRepository.findById(id)
+    SnkVente existing = snkVenteRepository.findByIdAndUser_Id(id, userId)
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Vente introuvable"));
-
-    if (existing.getUser() == null || !userId.equals(existing.getUser().getId())) {
-      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Acces interdit");
-    }
 
     if (existing.isGroupParent()) {
       return updateGroupParent(userId, existing, payload);
@@ -515,8 +504,8 @@ public class snkVenteService {
   }
 
   private SnkVente updateGroupParent(Long userId, SnkVente existing, SnkVente payload) {
-    List<SnkVente> children = snkVenteRepository.findByParent_IdOrderByUnitIndexAscIdAsc(existing.getId()).stream()
-        .filter(child -> child.getUser() != null && userId.equals(child.getUser().getId()))
+    List<SnkVente> children = snkVenteRepository
+        .findByParent_IdAndUser_IdOrderByUnitIndexAscIdAsc(existing.getId(), userId).stream()
         .collect(Collectors.toCollection(ArrayList::new));
 
     applyFields(existing, payload);
@@ -555,15 +544,13 @@ public class snkVenteService {
   private void syncGroupParentAggregates(Long userId, Integer parentId) {
     if (parentId == null) return;
 
-    SnkVente parent = snkVenteRepository.findById(parentId)
-        .filter(candidate -> candidate.getUser() != null && userId.equals(candidate.getUser().getId()))
+    SnkVente parent = snkVenteRepository.findByIdAndUser_Id(parentId, userId)
         .filter(SnkVente::isGroupParent)
         .orElse(null);
     if (parent == null) return;
 
-    List<SnkVente> children = snkVenteRepository.findByParent_IdOrderByUnitIndexAscIdAsc(parentId).stream()
-        .filter(child -> child.getUser() != null && userId.equals(child.getUser().getId()))
-        .toList();
+    List<SnkVente> children = snkVenteRepository
+        .findByParent_IdAndUser_IdOrderByUnitIndexAscIdAsc(parentId, userId);
     if (children.isEmpty()) return;
 
     parent.setDateAchat(resolveParentDateAchat(children));

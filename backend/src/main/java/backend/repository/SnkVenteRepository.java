@@ -3,6 +3,7 @@ package backend.repository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 
 import org.springframework.data.domain.PageRequest;
@@ -105,6 +106,15 @@ public interface SnkVenteRepository extends JpaRepository<SnkVente, Integer> {
   List<SnkVente> findByUser_IdOrderByCreatedAtDesc(@Param("userId") Long userId, Pageable pageable);
 
   List<SnkVente> findByParent_IdOrderByUnitIndexAscIdAsc(Integer parentId);
+
+  /**
+   * Owner-scoped lookups are deliberately preferred to a plain findById followed
+   * by an in-memory ownership check. This keeps another user's row out of the
+   * persistence context altogether.
+   */
+  Optional<SnkVente> findByIdAndUser_Id(Integer id, Long userId);
+
+  List<SnkVente> findByParent_IdAndUser_IdOrderByUnitIndexAscIdAsc(Integer parentId, Long userId);
 
   List<SnkVente> findByUser_IdAndIdIn(Long userId, List<Integer> ids);
 

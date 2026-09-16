@@ -1,11 +1,11 @@
 export const AUTH_STORAGE_KEYS = ['snk_token', 'snk_user']
 export const AUTH_SYNC_EVENT = 'snk:auth-storage-sync'
 
-function safeLocalGet(key) {
+function removeLegacyLocalValue(key) {
   try {
-    return localStorage.getItem(key)
+    localStorage.removeItem(key)
   } catch {
-    return null
+    // ignore unavailable browser storage
   }
 }
 
@@ -18,32 +18,25 @@ function safeSessionGet(key) {
 }
 
 export function safeStorageGet(key) {
-  const localValue = safeLocalGet(key)
-  if (localValue != null) return localValue
+  // Access tokens are intentionally scoped to one browser tab. Do not restore
+  // legacy localStorage tokens: they survive browser restarts and remain
+  // unnecessarily available to any script that later runs on this origin.
+  removeLegacyLocalValue(key)
   return safeSessionGet(key)
 }
 
 export function safeStorageSet(key, value) {
   try {
-    localStorage.setItem(key, value)
+    sessionStorage.setItem(key, value)
     return
   } catch {
-    // Ignore and fallback to session storage.
-  }
-
-  try {
-    sessionStorage.setItem(key, value)
-  } catch {
-    // ignore
+    // Storage can be unavailable in private browsing; keep the current
+    // in-memory auth state rather than persisting a credential elsewhere.
   }
 }
 
 export function safeStorageRemove(key) {
-  try {
-    localStorage.removeItem(key)
-  } catch {
-    // ignore
-  }
+  removeLegacyLocalValue(key)
 
   try {
     sessionStorage.removeItem(key)

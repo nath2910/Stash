@@ -67,9 +67,9 @@ class SnkVenteServiceDeleteTest {
     child.setUser(user);
     child.setParentId(10);
 
-    Mockito.when(venteRepo.findById(11)).thenReturn(Optional.of(child));
+    Mockito.when(venteRepo.findByIdAndUser_Id(11, 1L)).thenReturn(Optional.of(child));
     Mockito.when(venteRepo.countByUser_IdAndParent_Id(1L, 10)).thenReturn(0L);
-    Mockito.when(venteRepo.findById(10)).thenReturn(Optional.of(parent));
+    Mockito.when(venteRepo.findByIdAndUser_Id(10, 1L)).thenReturn(Optional.of(parent));
 
     service.deleteVente(1L, 11);
 

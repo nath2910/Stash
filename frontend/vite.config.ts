@@ -3,6 +3,9 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 
 export default defineConfig({
+  // Production is served at the domain root. Keeping this explicit prevents a
+  // deployment environment from inheriting a development-relative asset path.
+  base: '/',
   plugins: [vue()],
   cacheDir: 'node_modules/.vite-local',
   server: {
@@ -16,6 +19,8 @@ export default defineConfig({
     },
   },
   build: {
+    assetsDir: 'assets',
+    manifest: true,
     sourcemap: false,
     chunkSizeWarningLimit: 900,
     rollupOptions: {

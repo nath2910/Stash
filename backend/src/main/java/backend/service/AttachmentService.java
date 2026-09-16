@@ -70,8 +70,7 @@ public class AttachmentService {
   }
 
   private SnkVente ensureItemOwnership(Long userId, Integer venteId) {
-    return snkVenteRepository.findById(venteId)
-        .filter(v -> v.getUser() != null && userId.equals(v.getUser().getId()))
+    return snkVenteRepository.findByIdAndUser_Id(venteId, userId)
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Item introuvable ou non autorisé"));
   }
 
