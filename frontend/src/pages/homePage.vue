@@ -128,7 +128,7 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { CheckCircle2, CircleAlert, X } from 'lucide-vue-next'
 import QuickSearchBar from '@/components/home/QuickSearchBar.vue'
@@ -167,6 +167,9 @@ const quickAddToast = ref({ visible: false, message: '', type: 'success' })
 const clockTick = ref(Date.now())
 const annualRange = computed(() => getCurrentYearRange(new Date(clockTick.value)))
 const currentUserId = computed(() => auth.user.value?.id ?? 'guest')
+const authSessionKey = computed(() =>
+  auth.token.value ? `${currentUserId.value}::${auth.token.value}` : 'guest',
+)
 const onboardingPendingStorageKey = computed(() =>
   scopedStorageKey(ONBOARD_PENDING_PREFIX, currentUserId.value),
 )
@@ -279,8 +282,6 @@ function scheduleStatsFallback() {
 }
 
 onMounted(() => {
-  chargerVentes()
-  scheduleStatsFallback()
   scheduleClockRefresh()
   if (typeof document !== 'undefined') {
     document.addEventListener('visibilitychange', handleVisibilityChange)
@@ -300,6 +301,21 @@ onMounted(() => {
     console.warn('onboarding check', error)
   }
 })
+
+watch(
+  authSessionKey,
+  () => {
+    clearStatsFallbackTimer()
+    stockItems.value = []
+    stockLoaded.value = false
+    stockError.value = ''
+    statsError.value = ''
+    apiSummary.value = null
+    void chargerVentes()
+    scheduleStatsFallback()
+  },
+  { immediate: true },
+)
 
 onBeforeUnmount(() => {
   if (quickAddToastTimer) {

@@ -5,6 +5,7 @@ import api from '@/services/api'
 import { invalidateStatsCache } from '@/services/StatsServices.js'
 import { invalidateSnkVenteListCache } from '@/services/SnkVenteServices.js'
 import { resetInventoryPreferencesServiceCache } from '@/services/inventoryPreferencesService.js'
+import { resetSessionDataBootstrap } from '@/services/sessionDataBootstrap.js'
 import {
   AUTH_STORAGE_KEYS,
   AUTH_SYNC_EVENT,
@@ -43,6 +44,7 @@ function resetUserScopedRuntimeState() {
   invalidateStatsCache()
   invalidateSnkVenteListCache()
   resetInventoryPreferencesServiceCache()
+  resetSessionDataBootstrap()
 }
 
 function loadFromStorage() {
@@ -54,7 +56,7 @@ function loadFromStorage() {
   if (!token.value && parsedUser) {
     safeStorageRemove('snk_user')
   }
-  if (previousToken !== token.value) {
+  if (previousToken !== token.value || userIdOf(previousUser) !== userIdOf(user.value)) {
     resetUserScopedRuntimeState()
   }
   syncBillingFromAuth(user.value, token.value, previousToken, previousUser)
@@ -71,7 +73,7 @@ function setAuth(payload) {
   token.value = payload?.token ? String(payload.token) : ''
   user.value = token.value ? (payload?.user ?? null) : null
 
-  if (previousToken !== token.value) {
+  if (previousToken !== token.value || userIdOf(previousUser) !== userIdOf(user.value)) {
     resetUserScopedRuntimeState()
   }
   writeAuthState({ token: token.value, user: user.value })

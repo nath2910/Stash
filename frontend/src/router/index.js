@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/store/authStore.js'
 import { useBillingStore } from '@/store/billingStore.js'
 import AuthService from '@/services/AuthService.js'
+import { warmSessionData } from '@/services/sessionDataBootstrap.js'
 
 const HomePage = () => import('@/pages/homePage.vue')
 const StatsPage = () => import('@/pages/statsPage.vue')
@@ -353,6 +354,9 @@ router.beforeEach(async (to) => {
     await billing.fetchStatus()
     if (!allowInactive && !hasAppAccess(billing)) {
       return { name: 'abo', query: { returnTo: to.fullPath } }
+    }
+    if (hasAppAccess(billing)) {
+      void warmSessionData()
     }
     // Si abo actif et il vient sur /abo, on redirige vers la vue abonnement
     if (to.name === 'abo' && hasAppAccess(billing)) {

@@ -433,9 +433,12 @@ const showDeleteModal = ref(false)
 const deleteMode = ref('name') // 'name' | 'bulk'
 const pendingOpenItemId = ref(null)
 
-const { user } = useAuthStore()
+const { user, token } = useAuthStore()
 const currentUser = user
 const currentUserId = computed(() => currentUser.value?.id ?? 'guest')
+const authSessionKey = computed(() =>
+  token.value ? `${currentUserId.value}::${token.value}` : 'guest',
+)
 const categoryLabels = ref(readStoredItemCategories(currentUserId.value))
 const storedSubcategories = ref(
   readStoredSubcategories(currentUserId.value, undefined, categoryLabels.value),
@@ -1126,14 +1129,21 @@ const chargerVentes = async () => {
   }
 }
 
-onMounted(chargerVentes)
-
 watch(
-  () => currentUserId.value,
-  (userId) => {
-    categoryLabels.value = readStoredItemCategories(userId)
-    storedSubcategories.value = readStoredSubcategories(userId, undefined, categoryLabels.value)
+  authSessionKey,
+  () => {
+    const nextUserId = currentUserId.value
+    categoryLabels.value = readStoredItemCategories(nextUserId)
+    storedSubcategories.value = readStoredSubcategories(
+      nextUserId,
+      undefined,
+      categoryLabels.value,
+    )
+    snkVentes.value = []
+    selectedIds.value = []
+    void chargerVentes()
   },
+  { immediate: true },
 )
 
 const onCategoryLabelsChange = (event) => {
