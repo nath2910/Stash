@@ -70,4 +70,28 @@ describe('billingStore', () => {
     expect(localStorage.removeItem).toHaveBeenCalledWith('snk_billing_status_cache')
     expect(billing.status.value).toBe('unknown')
   })
+
+  it('clears stale active access when a forced status refresh fails', async () => {
+    const module = await loadBillingStoreForUser({ id: 12 })
+    const billing = module.useBillingStore()
+
+    billing.seedFromUser({ id: 12, subscriptionStatus: 'active', hasAccess: true })
+    billingStatus.mockRejectedValueOnce(new Error('request rejected'))
+
+    await expect(billing.fetchStatus(true)).resolves.toBe('inactive')
+
+    expect(billing.status.value).toBe('inactive')
+    expect(billing.hasAccess.value).toBe(false)
+  })
+
+  it('marks billing access as required immediately after a protected API 402', async () => {
+    const module = await loadBillingStoreForUser({ id: 18 })
+    const billing = module.useBillingStore()
+
+    billing.seedFromUser({ id: 18, subscriptionStatus: 'active', hasAccess: true })
+
+    expect(billing.markAccessRequired()).toBe('inactive')
+    expect(billing.status.value).toBe('inactive')
+    expect(billing.hasAccess.value).toBe(false)
+  })
 })

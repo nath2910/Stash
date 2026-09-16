@@ -351,7 +351,8 @@ router.beforeEach(async (to) => {
 
   // Si page protégée, vérifier l'abo (sauf si allowInactive)
   if (requiresAuth) {
-    await billing.fetchStatus()
+    const forceBillingRefresh = !allowInactive && to.name === 'stats'
+    await billing.fetchStatus(forceBillingRefresh)
     if (!allowInactive && !hasAppAccess(billing)) {
       return { name: 'abo', query: { returnTo: to.fullPath } }
     }

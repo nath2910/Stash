@@ -32,7 +32,7 @@ public class DiscordAccessService {
   private final DiscordAllowedGuildRepository guildRepo;
   private final Cache<Long, Boolean> eligibilityCache = Caffeine.newBuilder()
       .maximumSize(10_000)
-      .expireAfterWrite(Duration.ofMinutes(1))
+      .expireAfterWrite(Duration.ofMinutes(30))
       .build();
   private final Cache<String, List<DiscordAllowedGuild>> allowedGuildsCache = Caffeine.newBuilder()
       .maximumSize(1)
@@ -56,7 +56,15 @@ public class DiscordAccessService {
     String discordId = user.getDiscordId();
     if (discordId == null || discordId.isBlank()) return false;
     long cacheKey = ((long) discordId.hashCode()) & 0x7FFFFFFFFFFFFFFFL;
-    return eligibilityCache.get(cacheKey, ignored -> computeEligibility(user));
+    Boolean cachedEligible = eligibilityCache.getIfPresent(cacheKey);
+    if (Boolean.TRUE.equals(cachedEligible)) {
+      return true;
+    }
+    boolean eligible = computeEligibility(user);
+    if (eligible) {
+      eligibilityCache.put(cacheKey, true);
+    }
+    return eligible;
   }
 
   /** Supprime manuellement l'entrée de cache pour un utilisateur donné. */

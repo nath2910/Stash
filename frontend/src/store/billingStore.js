@@ -148,6 +148,13 @@ async function fetchStatus(force = false, includePortal = false) {
       return status.value
     })
     .catch(() => {
+      if (force) {
+        applyStatus('inactive', '', false)
+        if (includePortal) {
+          portalUrl.value = ''
+        }
+        return status.value
+      }
       if (previousStatus !== 'unknown') return previousStatus
       applyStatus('inactive')
       if (includePortal) {
@@ -190,8 +197,28 @@ function reset() {
   inflightWithPortal = null
 }
 
+function markAccessRequired() {
+  applyStatus('inactive', '', false)
+  portalUrl.value = ''
+  loading.value = false
+  inflightBasic = null
+  inflightWithPortal = null
+  return status.value
+}
+
 loadFromStorage()
 
 export function useBillingStore() {
-  return { status, hasAccess, portalUrl, lastFetchedAt, loading, fetchStatus, seedStatus, seedFromUser, reset }
+  return {
+    status,
+    hasAccess,
+    portalUrl,
+    lastFetchedAt,
+    loading,
+    fetchStatus,
+    seedStatus,
+    seedFromUser,
+    reset,
+    markAccessRequired,
+  }
 }

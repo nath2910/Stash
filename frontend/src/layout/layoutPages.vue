@@ -769,11 +769,12 @@ const onBillingAccessRequired = () => {
   if (billingAccessRefreshInFlight || !auth.token?.value) return
   if (route.meta.allowInactive === true || isAuthRoute.value || isPublicDocumentRoute.value) return
 
-  billing.reset()
+  billing.markAccessRequired?.()
+  router.replace({ name: 'abo', query: { returnTo: route.fullPath } }).catch(() => {})
   billingAccessRefreshInFlight = billing
     .fetchStatus(true)
     .then(() => {
-      if (!hasBillingAccess() && route.meta.allowInactive !== true) {
+      if (!hasBillingAccess() && route.meta.allowInactive !== true && route.name !== 'abo') {
         router.replace({ name: 'abo', query: { returnTo: route.fullPath } }).catch(() => {})
       }
     })

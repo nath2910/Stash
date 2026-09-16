@@ -62,7 +62,7 @@ public class ActiveSubscriptionInterceptor implements HandlerInterceptor {
     try {
       billingService.refreshStatus(user);
     } catch (Exception e) {
-      log.warn("Unable to refresh Stripe access before protected request for user {}", user.getId());
+      log.warn("Unable to refresh Stripe access before protected request for user {}: {}", user.getId(), e.getMessage());
     }
   }
 }
