@@ -69,6 +69,7 @@ import { searchInventoryItems } from '@/utils/inventorySearch'
 const props = defineProps({
   items: { type: Array, default: () => [] },
   loading: { type: Boolean, default: false },
+  stockCount: { type: Number, default: null },
 })
 
 const emit = defineEmits(['select', 'add-requested'])
@@ -98,8 +99,8 @@ watch(
 )
 
 const stockLabel = computed(() => {
-  if (props.loading) return 'Chargement'
-  const count = props.items.length
+  if (props.loading && !Number.isFinite(props.stockCount)) return 'Chargement'
+  const count = Number.isFinite(props.stockCount) ? Number(props.stockCount) : props.items.length
   return `${formatNumber(count)} item${count > 1 ? 's' : ''}`
 })
 

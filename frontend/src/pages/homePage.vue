@@ -70,6 +70,7 @@
         <QuickSearchBar
           :items="stockItems"
           :loading="stockLoading"
+          :stock-count="homeInventoryCount"
           @select="openItemModal"
           @add-requested="focusQuickAddForm"
         />
@@ -140,6 +141,12 @@ import StatsServices from '@/services/StatsServices.js'
 import { useAuthStore } from '@/store/authStore'
 import { scopedStorageKey } from '@/RegleItem/storageScope'
 import { calculatePeriodStats, getCurrentYearRange } from '@/utils/homeDashboard'
+import {
+  normalizeHomeApiSummary,
+  resolveHomeInventoryCount,
+  resolveHomeKpiError,
+  shouldShowHomeImportPrompt,
+} from '@/utils/homeInventoryState'
 
 const router = useRouter()
 const route = useRoute()
@@ -147,6 +154,7 @@ const auth = useAuthStore()
 
 const ONBOARD_PENDING_PREFIX = 'snk_onboarding_pending'
 const ONBOARD_SEEN_PREFIX = 'snk_onboarding_seen'
+const HOME_SEARCH_STOCK_LIMIT = 1000
 
 const showOnboarding = ref(false)
 const quickAddFormRef = ref(null)
@@ -182,25 +190,28 @@ let statsFallbackTimer = null
 
 const localSummary = computed(() => calculatePeriodStats(stockItems.value, annualRange.value))
 
-const normalizedApiSummary = computed(() => {
-  const data = apiSummary.value
-  if (!data) return null
-  return {
-    ca: Number(data.ca ?? 0),
-    profit: Number(data.profit ?? 0),
-    profitMargin: Number(data.profitMargin ?? 0),
-    itemsVendues: Number(data.itemsVendues ?? 0),
-    itemsEnStock: Number(data.itemsEnStock ?? 0),
-    valeurStock: Number(data.valeurStock ?? 0),
-    estimatedStockValue: Number(data.valeurStock ?? 0),
-  }
-})
+const normalizedApiSummary = computed(() => normalizeHomeApiSummary(apiSummary.value))
 
-const kpiSummary = computed(() => (stockLoaded.value ? localSummary.value : normalizedApiSummary.value || localSummary.value))
-const kpiLoading = computed(() => (statsLoading.value || stockLoading.value) && !stockLoaded.value && !apiSummary.value)
-const kpiError = computed(() => stockError.value || statsError.value)
+const hasApiSummary = computed(() => Boolean(normalizedApiSummary.value))
+const kpiSummary = computed(() => normalizedApiSummary.value || localSummary.value)
+const kpiLoading = computed(() => statsLoading.value && !hasApiSummary.value)
+const kpiError = computed(() => resolveHomeKpiError({ statsError: statsError.value }))
+const homeInventoryCount = computed(() =>
+  resolveHomeInventoryCount({
+    stockLoaded: stockLoaded.value,
+    stockItems: stockItems.value,
+    apiSummary: apiSummary.value,
+  }),
+)
 const showImportPrompt = computed(
-  () => Boolean(auth.token.value) && stockLoaded.value && !stockLoading.value && stockItems.value.length === 0,
+  () =>
+    shouldShowHomeImportPrompt({
+      hasToken: Boolean(auth.token.value),
+      stockLoaded: stockLoaded.value,
+      stockLoading: stockLoading.value,
+      stockError: stockError.value,
+      stockItems: stockItems.value,
+    }),
 )
 
 function notifyStockChanged(items = stockItems.value) {
@@ -223,7 +234,7 @@ async function chargerVentes() {
   stockLoading.value = true
   stockError.value = ''
   try {
-    const { data } = await SnkVenteServices.getSnkVente()
+    const { data } = await SnkVenteServices.getSnkVente({ limit: HOME_SEARCH_STOCK_LIMIT })
     stockItems.value = Array.isArray(data) ? data : []
     stockLoaded.value = true
     apiSummary.value = null
@@ -236,8 +247,7 @@ async function chargerVentes() {
       return
     }
     console.error('Erreur chargement stock accueil', error)
-    stockError.value = "Impossible de charger l'inventaire."
-    stockItems.value = []
+    stockError.value = "Recherche inventaire temporairement indisponible."
     stockLoaded.value = false
   } finally {
     stockLoading.value = false
@@ -311,8 +321,8 @@ watch(
     stockError.value = ''
     statsError.value = ''
     apiSummary.value = null
+    void chargerStatsAnnuelles()
     void chargerVentes()
-    scheduleStatsFallback()
   },
   { immediate: true },
 )

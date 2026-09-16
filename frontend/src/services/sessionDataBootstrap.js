@@ -1,4 +1,3 @@
-import SnkVenteServices from './SnkVenteServices.js'
 import StatsServices from './StatsServices.js'
 import { readAuthToken, readStoredUser } from '@/utils/authStorage.js'
 import { getCurrentYearRange } from '@/utils/homeDashboard.js'
@@ -27,8 +26,6 @@ export function warmSessionData({ force = false } = {}) {
 
   const yearRange = getCurrentYearRange(new Date())
   const request = Promise.allSettled([
-    SnkVenteServices.getSnkVente(),
-    SnkVenteServices.getGroupedSnkVente(),
     StatsServices.summary(yearRange.from, yearRange.to),
     StatsServices.dateBounds(),
   ])
