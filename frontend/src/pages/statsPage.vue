@@ -214,11 +214,13 @@ function formatDateLabel(value: string) {
 }
 </script>
 
-<style scoped>
+<style>
 .stats-page-shell {
   position: relative;
   width: 100%;
-  height: 100%;
+  /* The canvas uses a percentage height. A min-height alone does not give
+     that child a resolvable height, which collapsed it to 0px. */
+  height: 100dvh;
   min-height: 100dvh;
   overflow: hidden;
   background: #f7f4ee;
@@ -230,19 +232,31 @@ function formatDateLabel(value: string) {
 }
 
 .stats-page-shell--template-mode {
-  height: 100dvh;
-  max-height: 100dvh;
+  position: absolute;
+  inset: 0;
+  height: auto;
+  max-height: none;
   min-height: 0;
-  overflow-y: auto;
+  overflow: hidden;
   overflow-x: hidden;
   overscroll-behavior-y: contain;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  -webkit-overflow-scrolling: touch;
 }
 
-.stats-page-shell--template-mode::-webkit-scrollbar {
-  display: none;
+@media (max-width: 960px) {
+  .stats-page-shell--template-mode {
+    position: relative;
+    inset: auto;
+    height: auto;
+    min-height: 100dvh;
+    overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .stats-page-shell--template-mode::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 .stats-range-loader {

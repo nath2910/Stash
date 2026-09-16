@@ -3,7 +3,6 @@
     class="canvas-root"
     :class="{
       'is-space-pan': spacePanActive,
-      'is-route-leaving': isRouteLeaving,
       'is-initializing': canvasInitializing,
       'is-template-active': templateActive,
       'theme-light': true,
@@ -186,7 +185,7 @@
             :group-selected="isGroupSelectionActive && isWidgetSelected(w.id)"
             :drag-armed="dragArmedId === w.id"
             :text-active="activeTextWidgetId === w.id"
-            :ui-active="!isRouteLeaving"
+            :ui-active="true"
             :settings-available="isWidgetSettingsAvailable(w)"
             :comp="getComp(w.type)"
             :from="widgetFrom(w)"
@@ -887,8 +886,8 @@ const router = useRouter()
 const isStatsDashboardRoute = computed(
   () => route.name === 'stats' || route.path.startsWith('/stats'),
 )
-const isRouteLeaving = ref(false)
 const canvasInitializing = ref(true)
+const unmountCleanups = new Set<() => void>()
 // Chaque utilisateur a une cle de layout isolee; guest reste en stockage local.
 const userId = computed(() => user.value?.id ?? 'guest')
 const categoryLabels = ref(readStoredItemCategories(userId.value))
@@ -2375,7 +2374,7 @@ watch(
 /* ===== Widget registry ===== */
 const paletteOpen = ref(false)
 const fullscreenActive = ref(false)
-const shouldShowStatsRail = computed(() => !fullscreenActive.value && !isRouteLeaving.value)
+const shouldShowStatsRail = computed(() => !fullscreenActive.value)
 const isCanvasEffectivelyEmpty = computed(
   () =>
     widgets.value.length === 0 ||
@@ -2914,7 +2913,7 @@ const SIMPLE_TEXT_SETTINGS = new Set(['content', 'fontSize', 'rotation', 'align'
 const SIMPLE_COMMON_HIDDEN_SETTINGS = new Set<string>()
 const isWidgetInEditMode = computed(
   () =>
-    isStatsDashboardRoute.value && editMode.value && !templateActive.value && !isRouteLeaving.value,
+    isStatsDashboardRoute.value && editMode.value && !templateActive.value,
 )
 
 function simplifySettingsFields(widget: Widget | null, fields: Array<Record<string, unknown>>) {
@@ -6922,7 +6921,7 @@ onMounted(async () => {
         scheduleVisibleRectUpdate()
       }
       board.addEventListener('panzoomchange', onPanzoomChange as EventListener)
-      onBeforeUnmount(() =>
+      unmountCleanups.add(() =>
         board.removeEventListener('panzoomchange', onPanzoomChange as EventListener),
       )
     }
@@ -6964,7 +6963,7 @@ onMounted(async () => {
     }
     resizeHandler()
     window.addEventListener('resize', resizeHandler, { passive: true })
-    onBeforeUnmount(() => {
+    unmountCleanups.add(() => {
       window.removeEventListener('resize', resizeHandler)
       if (resizeRaf != null) {
         cancelAnimationFrame(resizeRaf)
@@ -6984,8 +6983,9 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
-  isRouteLeaving.value = true
   resetTransientCanvasUi()
+  unmountCleanups.forEach((cleanup) => cleanup())
+  unmountCleanups.clear()
   window.dispatchEvent(
     new CustomEvent('snk:stats-template-mode', {
       detail: { active: false },
