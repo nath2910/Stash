@@ -774,7 +774,7 @@ import {
   toRefs,
   watch,
 } from 'vue'
-import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import WidgetFrame from './canvas/WidgetFrame.vue'
 import TemplateEmptyLayout from './template-mode/TemplateEmptyLayout.vue'
 import CompactDateInput from '@/components/ui/CompactDateInput.vue'
@@ -6874,11 +6874,6 @@ function onSelectionKeyDown(event: KeyboardEvent) {
   }
   openSettings(selectedWidget)
 }
-
-onBeforeRouteLeave(() => {
-  isRouteLeaving.value = true
-  resetTransientCanvasUi()
-})
 
 /* ===== Lifecycle ===== */
 onMounted(async () => {
