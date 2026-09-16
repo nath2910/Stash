@@ -48,13 +48,29 @@ import { INVENTORY_CHANGED_EVENT } from '@/utils/inventoryEvents'
 import { useStatsRange } from '@/composables/useStatsRange'
 import { computed, onBeforeUnmount, onErrorCaptured, onMounted, ref, watch } from 'vue'
 
+const CANVAS_WATCHDOG_VISIBLE_MS = 1200
+const CANVAS_STALLED_MS = 8000
+const CANVAS_AUTO_RETRY_MS = 10_000
+const MAX_AUTO_RETRIES = 2
+
 const { from, to } = useStatsRange()
 const rangeRefreshing = ref(false)
 const statsCanvasKey = ref(0)
 const templateModeActive = ref(false)
 const canvasError = ref('')
+const canvasReady = ref(false)
+const canvasStalled = ref(false)
+const watchdogVisible = ref(false)
 let rangeRefreshTimer: number | null = null
 let inventoryRefreshTimer: number | null = null
+let watchdogVisibleTimer: number | null = null
+let stalledTimer: number | null = null
+let autoRetryTimer: number | null = null
+let autoRetryCount = 0
+
+const showCanvasWatchdog = computed(
+  () => !canvasError.value && !canvasReady.value && watchdogVisible.value,
+)
 
 const rangeLabel = computed(() => {
   if (!from.value || !to.value) return 'Chargement de la nouvelle période…'
@@ -75,6 +91,7 @@ watch(
 )
 
 onErrorCaptured((error) => {
+  clearCanvasWatchdogTimers()
   canvasError.value = String((error as Error)?.message || error || 'Erreur inconnue')
   console.error('[stats] Canvas render failed', error)
   return false
@@ -83,6 +100,7 @@ onErrorCaptured((error) => {
 onBeforeUnmount(() => {
   if (rangeRefreshTimer) window.clearTimeout(rangeRefreshTimer)
   if (inventoryRefreshTimer) window.clearTimeout(inventoryRefreshTimer)
+  clearCanvasWatchdogTimers()
   window.removeEventListener(INVENTORY_CHANGED_EVENT, onInventoryChanged)
   window.removeEventListener('snk:stats-template-mode', onTemplateModeChange)
 })
@@ -90,13 +108,14 @@ onBeforeUnmount(() => {
 onMounted(() => {
   window.addEventListener(INVENTORY_CHANGED_EVENT, onInventoryChanged)
   window.addEventListener('snk:stats-template-mode', onTemplateModeChange)
+  armCanvasWatchdog()
 })
 
 function onInventoryChanged() {
   rangeRefreshing.value = true
   if (inventoryRefreshTimer) window.clearTimeout(inventoryRefreshTimer)
   inventoryRefreshTimer = window.setTimeout(() => {
-    statsCanvasKey.value += 1
+    remountCanvas({ resetRetries: true })
     rangeRefreshing.value = false
     inventoryRefreshTimer = null
   }, 120)
@@ -108,7 +127,58 @@ function onTemplateModeChange(event: Event) {
 
 function retryCanvas() {
   canvasError.value = ''
+  remountCanvas({ resetRetries: true })
+}
+
+function onCanvasReady() {
+  canvasReady.value = true
+  canvasStalled.value = false
+  watchdogVisible.value = false
+  autoRetryCount = 0
+  clearCanvasWatchdogTimers()
+}
+
+function remountCanvas({ resetRetries = false } = {}) {
+  if (resetRetries) autoRetryCount = 0
+  canvasReady.value = false
+  canvasStalled.value = false
+  watchdogVisible.value = false
   statsCanvasKey.value += 1
+  armCanvasWatchdog()
+}
+
+function clearCanvasWatchdogTimers() {
+  if (watchdogVisibleTimer) {
+    window.clearTimeout(watchdogVisibleTimer)
+    watchdogVisibleTimer = null
+  }
+  if (stalledTimer) {
+    window.clearTimeout(stalledTimer)
+    stalledTimer = null
+  }
+  if (autoRetryTimer) {
+    window.clearTimeout(autoRetryTimer)
+    autoRetryTimer = null
+  }
+}
+
+function armCanvasWatchdog() {
+  clearCanvasWatchdogTimers()
+  if (canvasReady.value || canvasError.value) return
+  watchdogVisibleTimer = window.setTimeout(() => {
+    if (canvasReady.value || canvasError.value) return
+    watchdogVisible.value = true
+  }, CANVAS_WATCHDOG_VISIBLE_MS)
+  stalledTimer = window.setTimeout(() => {
+    if (canvasReady.value || canvasError.value) return
+    canvasStalled.value = true
+  }, CANVAS_STALLED_MS)
+  autoRetryTimer = window.setTimeout(() => {
+    if (canvasReady.value || canvasError.value) return
+    if (autoRetryCount >= MAX_AUTO_RETRIES) return
+    autoRetryCount += 1
+    remountCanvas()
+  }, CANVAS_AUTO_RETRY_MS)
 }
 
 function formatDateLabel(value: string) {
@@ -127,7 +197,7 @@ function formatDateLabel(value: string) {
   position: relative;
   width: 100%;
   height: 100%;
-  min-height: 0;
+  min-height: 100dvh;
   overflow: hidden;
   background: #f7f4ee;
 }
@@ -204,6 +274,9 @@ function formatDateLabel(value: string) {
   padding: 1.5rem;
   text-align: center;
   color: #111827;
+  background:
+    radial-gradient(circle at 50% 32%, rgba(14, 165, 233, 0.12), transparent 34%),
+    #f7f4ee;
 }
 
 .stats-canvas-error strong {
@@ -231,6 +304,61 @@ function formatDateLabel(value: string) {
   background: #1f2937;
 }
 
+.stats-canvas-watchdog {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 18;
+  display: grid;
+  width: min(100% - 32px, 360px);
+  transform: translate(-50%, -50%);
+  place-items: center;
+  gap: 0.65rem;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  padding: 1.25rem;
+  text-align: center;
+  color: #0f172a;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.13);
+  backdrop-filter: blur(14px);
+}
+
+.stats-canvas-watchdog__ring {
+  width: 34px;
+  height: 34px;
+  border: 3px solid rgba(14, 165, 233, 0.18);
+  border-top-color: #0ea5e9;
+  border-radius: 999px;
+  animation: stats-canvas-spin 760ms linear infinite;
+}
+
+.stats-canvas-watchdog strong {
+  font-size: 0.98rem;
+  font-weight: 900;
+}
+
+.stats-canvas-watchdog span:not(.stats-canvas-watchdog__ring) {
+  color: #475569;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.stats-canvas-watchdog button {
+  margin-top: 0.2rem;
+  border: 1px solid rgba(17, 24, 39, 0.16);
+  border-radius: 8px;
+  background: #111827;
+  padding: 0.55rem 0.9rem;
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.stats-canvas-watchdog button:hover {
+  background: #1f2937;
+}
+
 .stats-range-loader-enter-active,
 .stats-range-loader-leave-active {
   transition:
@@ -250,6 +378,12 @@ function formatDateLabel(value: string) {
   }
   100% {
     box-shadow: 0 0 0 10px rgba(14, 165, 233, 0);
+  }
+}
+
+@keyframes stats-canvas-spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 </style>
