@@ -43,15 +43,37 @@
 </template>
 
 <script setup lang="ts">
-import StatsCanvas from '@/components/stats/StatsCanvas.vue'
 import { INVENTORY_CHANGED_EVENT } from '@/utils/inventoryEvents'
 import { useStatsRange } from '@/composables/useStatsRange'
-import { computed, onBeforeUnmount, onErrorCaptured, onMounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, h, onBeforeUnmount, onErrorCaptured, onMounted, ref, watch } from 'vue'
 
 const CANVAS_WATCHDOG_VISIBLE_MS = 1200
 const CANVAS_STALLED_MS = 8000
 const CANVAS_AUTO_RETRY_MS = 10_000
 const MAX_AUTO_RETRIES = 2
+
+const StatsCanvas = defineAsyncComponent({
+  loader: () => import('@/components/stats/StatsCanvas.vue'),
+  delay: 0,
+  timeout: 20_000,
+  loadingComponent: {
+    name: 'StatsCanvasLoadingFallback',
+    render: () =>
+      h('div', { class: 'stats-canvas-bootstrap', role: 'status', 'aria-live': 'polite' }, [
+        h('span', { class: 'stats-canvas-watchdog__ring', 'aria-hidden': 'true' }),
+        h('strong', 'Chargement des stats'),
+        h('span', 'Preparation de ton espace statistiques...'),
+      ]),
+  },
+  errorComponent: {
+    name: 'StatsCanvasErrorFallback',
+    render: () =>
+      h('div', { class: 'stats-canvas-bootstrap stats-canvas-bootstrap--error', role: 'alert' }, [
+        h('strong', 'Stats indisponibles'),
+        h('span', "Le module stats n'a pas charge correctement. Recharge la page."),
+      ]),
+  },
+})
 
 const { from, to } = useStatsRange()
 const rangeRefreshing = ref(false)
@@ -322,6 +344,38 @@ function formatDateLabel(value: string) {
   color: #0f172a;
   box-shadow: 0 24px 60px rgba(15, 23, 42, 0.13);
   backdrop-filter: blur(14px);
+}
+
+.stats-canvas-bootstrap {
+  position: absolute;
+  inset: 0;
+  z-index: 16;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 0.65rem;
+  padding: 1.25rem;
+  text-align: center;
+  color: #0f172a;
+  background:
+    radial-gradient(circle at 50% 38%, rgba(14, 165, 233, 0.12), transparent 34%),
+    #f7f4ee;
+}
+
+.stats-canvas-bootstrap strong {
+  font-size: 0.98rem;
+  font-weight: 900;
+}
+
+.stats-canvas-bootstrap span:not(.stats-canvas-watchdog__ring) {
+  max-width: min(100% - 32px, 360px);
+  color: #475569;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.stats-canvas-bootstrap--error strong {
+  color: #991b1b;
 }
 
 .stats-canvas-watchdog__ring {
