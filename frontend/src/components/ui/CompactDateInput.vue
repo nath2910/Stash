@@ -2,6 +2,8 @@
   <label class="cd-root" :class="{ 'is-light': light }" :data-size="size">
     <span v-if="label" class="cd-label">{{ label }}</span>
     <VueDatePicker
+      v-if="!pickerFailed"
+      ref="pickerRef"
       v-model="localValue"
       :time-picker="false"
       :time-config="timeConfig"
@@ -22,17 +24,27 @@
       model-type="yyyy-MM-dd"
       class="cd-picker"
     >
-      <template #trigger="{ openMenu }">
-        <button type="button" class="cd-input cd-input--btn" @click="openMenu()">
+      <template #trigger>
+        <button type="button" class="cd-input cd-input--btn" @click="openPicker">
           {{ displayValue || '--' }}
         </button>
       </template>
     </VueDatePicker>
+    <input
+      v-else
+      class="cd-input cd-input--native"
+      type="date"
+      :value="modelValue"
+      :min="minDate"
+      :max="maxDate"
+      :aria-label="label || $attrs['aria-label'] || 'Date'"
+      @input="onNativeInput"
+    />
   </label>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onErrorCaptured, ref } from 'vue'
 import { VueDatePicker } from '@vuepic/vue-datepicker'
 import '@vuepic/vue-datepicker/dist/main.css'
 import { fr } from 'date-fns/locale/fr'
@@ -49,6 +61,30 @@ const props = defineProps({
 })
 const emit = defineEmits(['update:modelValue'])
 const light = computed(() => props.light)
+const pickerRef = ref(null)
+const pickerFailed = ref(false)
+
+// The picker is used in several independent screens.  A failure in its
+// teleported menu must never take down the entire application: the native
+// date input keeps the affected form usable instead.
+onErrorCaptured((error) => {
+  console.error('[date-input] Date picker failed; using native fallback.', error)
+  pickerFailed.value = true
+  return false
+})
+
+function openPicker() {
+  try {
+    pickerRef.value?.openMenu?.()
+  } catch (error) {
+    console.error('[date-input] Unable to open date picker; using native fallback.', error)
+    pickerFailed.value = true
+  }
+}
+
+function onNativeInput(event) {
+  emit('update:modelValue', toYmd(event.target?.value))
+}
 
 const localValue = computed({
   get() {
@@ -77,7 +113,7 @@ function toYmd(val) {
 
 function formatDisplay(date) {
   if (!date) return ''
-  const d = typeof date === 'string' ? new Date(date) : date
+  const d = typeof date === 'string' ? parseYmdLocal(date) || new Date(date) : date
   if (Number.isNaN(d.getTime())) return ''
   const pad = (n) => String(n).padStart(2, '0')
   return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`
