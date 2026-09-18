@@ -125,10 +125,11 @@ public class BillingController {
 
   private BillingStatusResponse snapshot(User user, String portalUrl) {
     boolean portalAvailable = canOpenPortal(user);
+    boolean discordEligible = subscriptionAccessService.isDiscordEligible(user);
     boolean hasAccess = subscriptionAccessService.hasActiveSubscription(user);
     return new BillingStatusResponse(user.getSubscriptionStatus(), portalUrl,
         user.getSubscriptionCurrentPeriodEnd(), user.isSubscriptionCancelAtPeriodEnd(),
-        hasAccess, portalAvailable, portalAvailable ? "stripe" : hasAccess ? "discord" : "none");
+        hasAccess, portalAvailable, portalAvailable ? "stripe" : hasAccess ? "discord" : "none", discordEligible);
   }
 
   private boolean canOpenPortal(User user) {

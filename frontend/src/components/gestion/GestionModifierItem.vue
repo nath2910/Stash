@@ -129,6 +129,7 @@
                           :disabled="uploading || !editorItem?.id"
                           @click="fileInput?.click()"
                         >
+                          <LoadingSpinner v-if="uploading" />
                           {{ uploading ? 'Upload...' : 'Ajouter un fichier' }}
                         </button>
                       </div>
@@ -170,6 +171,7 @@
 <script setup>
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { ArrowLeft, Pencil, X } from 'lucide-vue-next'
+import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import SnkVenteServices from '@/services/SnkVenteServices.js'
 import ItemFormFields from '@/components/gestion/ItemFormFields.vue'
 import { formatEUR } from '@/utils/formatters'

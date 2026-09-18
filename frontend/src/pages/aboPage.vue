@@ -119,7 +119,8 @@
                 :disabled="promoValidating || !promoCode?.trim() || promoCode.trim().length < 3"
                 @click="validatePromoCode"
               >
-                {{ promoValidating ? '...' : 'Valider' }}
+                <LoadingSpinner v-if="promoValidating" />
+                {{ promoValidating ? 'Validation...' : 'Valider' }}
               </button>
             </div>
             <p v-if="promoError" class="text-xs" :class="promoValid ? 'text-emerald-400' : 'text-red-400'">
@@ -133,7 +134,8 @@
             :disabled="ctaDisabled"
             @click="startCheckout"
           >
-            <CreditCard class="h-4 w-4" />
+            <LoadingSpinner v-if="loading" />
+            <CreditCard v-else class="h-4 w-4" />
             {{ ctaLabel }}
           </button>
 
@@ -161,6 +163,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
+import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import {
   ArrowLeft,
   BarChart3,

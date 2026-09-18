@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { inferItemClassificationFromName } from '../src/RegleItem/itemNameInference'
 
 describe('itemNameInference', () => {
-  it('detects a sneaker and its family from a Jordan name', () => {
+  it('detects a sneaker without inventing a subcategory absent from the account', () => {
     expect(inferItemClassificationFromName('Nike Air Jordan 4 Bred')).toMatchObject({
       type: 'SNEAKER',
-      subcategory: 'Jordan',
+      subcategory: '',
     })
   })
 
@@ -25,8 +25,11 @@ describe('itemNameInference', () => {
     })
   })
 
-  it('detects electronics from common model names', () => {
-    expect(inferItemClassificationFromName('iPhone 15 Pro Max 256GB')).toMatchObject({
+  it('uses an added category when inferring a non-default item type', () => {
+    expect(inferItemClassificationFromName('iPhone 15 Pro Max 256GB', {
+      categoryLabels: { ELECTRONICS: 'Electronique' },
+      storedSubcategories: { ELECTRONICS: ['Smartphone'] },
+    })).toMatchObject({
       type: 'ELECTRONICS',
       subcategory: 'Smartphone',
     })

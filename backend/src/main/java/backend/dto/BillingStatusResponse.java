@@ -2,4 +2,4 @@ package backend.dto;
 
 public record BillingStatusResponse(String status, String portalUrl,
     java.time.OffsetDateTime currentPeriodEnd, boolean cancelAtPeriodEnd, boolean hasAccess,
-    boolean portalAvailable, String accessSource) {}
+    boolean portalAvailable, String accessSource, boolean discordEligible) {}

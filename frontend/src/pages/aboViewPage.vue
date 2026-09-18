@@ -51,6 +51,7 @@
               :disabled="portalBusy || !canOpenPortal"
               @click="openPortal"
             >
+              <LoadingSpinner v-if="portalBusy" />
               {{ portalBusy ? 'Ouverture...' : 'Ouvrir le portail Stripe' }}
             </button>
             <button
@@ -135,6 +136,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import { useBillingStore } from '@/store/billingStore'
 import { describeBillingError } from '@/utils/billingErrors'
 import BillingService from '@/services/BillingService'

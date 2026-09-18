@@ -59,6 +59,7 @@
             class="inline-flex w-full items-center justify-center rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-slate-500 hover:text-white disabled:opacity-60 sm:w-auto"
             @click="resendEmail"
           >
+            <LoadingSpinner v-if="resendLoading" />
             {{ resendLoading ? 'Envoi...' : 'Renvoyer le mail' }}
           </button>
           <router-link
@@ -84,6 +85,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import AuthService from '@/services/AuthService'
 import { useAuthStore } from '@/store/authStore'
 

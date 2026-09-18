@@ -207,6 +207,7 @@
               :disabled="loading"
               class="w-full inline-flex justify-center items-center gap-2 rounded-xl bg-violet-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-400 disabled:opacity-60 disabled:cursor-not-allowed"
             >
+              <LoadingSpinner v-if="loading" />
               {{ loading ? 'Connexion...' : 'Se connecter' }}
             </button>
           </form>
@@ -351,6 +352,7 @@
               :disabled="loading"
               class="w-full inline-flex justify-center items-center gap-2 rounded-xl bg-violet-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-400 disabled:opacity-60 disabled:cursor-not-allowed"
             >
+              <LoadingSpinner v-if="loading" />
               {{ loading ? 'Création du compte...' : 'Créer mon compte' }}
             </button>
           </form>
@@ -364,6 +366,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { AlertCircle, CheckCircle2 } from 'lucide-vue-next'
+import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import AuthService from '@/services/AuthService'
 import { useAuthStore } from '@/store/authStore'
 

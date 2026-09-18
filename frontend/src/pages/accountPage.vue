@@ -124,6 +124,7 @@
                 :disabled="deleting || !canDelete"
                 class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-red-500 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-red-400 focus:outline-none focus:ring-2 focus:ring-red-400 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
               >
+                <LoadingSpinner v-if="deleting" />
                 {{ deleting ? 'Suppression...' : 'Supprimer mon compte' }}
               </button>
             </form>
@@ -189,6 +190,7 @@
                   :disabled="loading"
                   class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-violet-500 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-400 disabled:cursor-not-allowed disabled:opacity-60"
                 >
+                  <LoadingSpinner v-if="loading" />
                   {{ loading ? 'Modification...' : 'Mettre a jour' }}
                 </button>
               </form>
@@ -202,6 +204,7 @@
 
 <script setup>
 import AccountDataActions from '@/components/legal/AccountDataActions.vue'
+import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { RefreshCw, UserRoundCheck } from 'lucide-vue-next'
@@ -247,8 +250,10 @@ const legalProfileError = ref('')
 const canDelete = computed(
   () => deleteConfirmChecked.value && deleteConfirmText.value.trim() === 'SUPPRIMER',
 )
+// The subscription area remains reachable for everyone except accounts that
+// receive their access from an authorised Discord connection.
 const showSubscriptionButton = computed(() =>
-  billing.hasAccess.value || ['active', 'trialing', 'past_due', 'canceled'].includes(billing.status.value),
+  currentUser.value?.provider !== 'DISCORD' && !billing.discordEligible.value,
 )
 const legalProfileCompleted = computed(() => Boolean(legalProfile.value.completed))
 const legalProfileOption = computed(() => getLegalProfileOption(legalProfile.value.legalProfileType))

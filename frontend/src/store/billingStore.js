@@ -4,6 +4,7 @@ import { readStoredUser } from '@/utils/authStorage'
 
 const status = ref('unknown') // unknown | active | past_due | canceled | inactive
 const hasAccess = ref(false)
+const discordEligible = ref(false)
 const portalUrl = ref('')
 const lastFetchedAt = ref(0)
 const loading = ref(false)
@@ -89,6 +90,7 @@ function persistStatus() {
     JSON.stringify({
       status: status.value,
       hasAccess: hasAccess.value,
+      discordEligible: discordEligible.value,
       fetchedAt: lastFetchedAt.value || Date.now(),
     }),
   )
@@ -101,6 +103,7 @@ function loadFromStorage() {
     if (!cached?.status || !cached?.fetchedAt) return
     status.value = normalizeStatus(cached.status)
     hasAccess.value = Boolean(cached.hasAccess) || accessFromStatus(cached.status)
+    discordEligible.value = Boolean(cached.discordEligible)
     lastFetchedAt.value = Number(cached.fetchedAt) || 0
   } catch {
     safeRemove(cacheKey())
@@ -111,9 +114,10 @@ function isFresh(ttlMs = STATUS_CACHE_TTL_MS) {
   return status.value !== 'unknown' && Date.now() - lastFetchedAt.value < ttlMs
 }
 
-function applyStatus(nextStatus, nextPortalUrl = '', nextHasAccess = undefined) {
+function applyStatus(nextStatus, nextPortalUrl = '', nextHasAccess = undefined, nextDiscordEligible = undefined) {
   status.value = normalizeStatus(nextStatus)
   hasAccess.value = typeof nextHasAccess === 'boolean' ? nextHasAccess : accessFromStatus(status.value)
+  discordEligible.value = typeof nextDiscordEligible === 'boolean' ? nextDiscordEligible : false
   lastFetchedAt.value = Date.now()
   if (nextPortalUrl) portalUrl.value = nextPortalUrl
   persistStatus()
@@ -141,7 +145,12 @@ async function fetchStatus(force = false, includePortal = false) {
   loading.value = true
   const request = BillingService.status(includePortal, force)
     .then((res) => {
-      applyStatus(res?.data?.status || 'inactive', res?.data?.portalUrl || '', res?.data?.hasAccess)
+      applyStatus(
+        res?.data?.status || 'inactive',
+        res?.data?.portalUrl || '',
+        res?.data?.hasAccess,
+        res?.data?.discordEligible,
+      )
       if (includePortal) {
         portalUrl.value = res?.data?.portalUrl || ''
       }
@@ -190,6 +199,7 @@ function reset() {
   scopedUserId = null
   status.value = 'unknown'
   hasAccess.value = false
+  discordEligible.value = false
   portalUrl.value = ''
   lastFetchedAt.value = 0
   loading.value = false
@@ -212,6 +222,7 @@ export function useBillingStore() {
   return {
     status,
     hasAccess,
+    discordEligible,
     portalUrl,
     lastFetchedAt,
     loading,

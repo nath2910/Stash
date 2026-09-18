@@ -86,7 +86,8 @@
               :disabled="confirmingId === candidate.id || ignoringId === candidate.id"
               @click="$emit('confirm', candidate.id)"
             >
-              <Check class="h-3.5 w-3.5" />
+              <LoadingSpinner v-if="confirmingId === candidate.id" size="xs" />
+              <Check v-else class="h-3.5 w-3.5" />
               <span>{{ confirmingId === candidate.id ? 'Validation...' : 'Valider' }}</span>
             </button>
             <button
@@ -95,7 +96,8 @@
               :disabled="confirmingId === candidate.id || ignoringId === candidate.id"
               @click="$emit('ignore', candidate.id)"
             >
-              <X class="h-3.5 w-3.5" />
+              <LoadingSpinner v-if="ignoringId === candidate.id" size="xs" />
+              <X v-else class="h-3.5 w-3.5" />
               <span>{{ ignoringId === candidate.id ? 'Ignore...' : 'Ignorer' }}</span>
             </button>
           </div>
@@ -107,6 +109,7 @@
 
 <script setup>
 import { AlertTriangle, Check, ExternalLink, Truck, X } from 'lucide-vue-next'
+import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 
 defineProps({
   candidates: {

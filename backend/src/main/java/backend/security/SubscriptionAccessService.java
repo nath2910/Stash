@@ -34,7 +34,7 @@ public class SubscriptionAccessService {
     }
   }
 
-  boolean isDiscordEligible(User user) {
+  public boolean isDiscordEligible(User user) {
     try {
       return discordAccessService.isEligible(user);
     } catch (Exception e) {

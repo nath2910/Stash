@@ -1,14 +1,7 @@
 export const DEFAULT_ITEM_TYPES = [
   { value: 'SNEAKER', label: 'Sneakers' },
-  { value: 'CLOTHING', label: 'Vetements' },
-  { value: 'ACCESSORY', label: 'Accessoires' },
-  { value: 'WATCH', label: 'Montres' },
-  { value: 'ELECTRONICS', label: 'Electronique' },
-  { value: 'COLLECTIBLE', label: 'Collection' },
-  { value: 'HOME', label: 'Maison' },
   { value: 'POKEMON_CARD', label: 'Pokemon' },
-  { value: 'TICKET', label: 'Tickets' },
-  { value: 'OTHER', label: 'Autre' },
+  { value: 'TICKET', label: 'Ticket' },
 ]
 
 export const ITEM_TYPES = DEFAULT_ITEM_TYPES

@@ -26,17 +26,20 @@ function memoryStorage(seed = {}) {
 describe('itemCategoryStore', () => {
   it('initializes persisted category labels with defaults', () => {
     const labels = readStoredItemCategories('u1', memoryStorage())
-    expect(labels.SNEAKER).toBe('Sneakers')
-    expect(labels.POKEMON_CARD).toBe('Pokemon')
+    expect(labels).toEqual({
+      SNEAKER: 'Sneakers',
+      POKEMON_CARD: 'Pokemon',
+      TICKET: 'Ticket',
+    })
   })
 
   it('renames and resets a fixed backend category label', () => {
     let labels = readStoredItemCategories('u1', memoryStorage())
-    labels = renameItemCategory(labels, 'OTHER', 'Objets perso')
-    expect(itemTypeLabel('OTHER', labels)).toBe('Objets perso')
+    labels = renameItemCategory(labels, 'TICKET', 'Billets')
+    expect(itemTypeLabel('TICKET', labels)).toBe('Billets')
 
-    labels = resetItemCategory(labels, 'OTHER')
-    expect(itemTypeLabel('OTHER', labels)).toBe('Autre')
+    labels = resetItemCategory(labels, 'TICKET')
+    expect(itemTypeLabel('TICKET', labels)).toBe('Ticket')
   })
 
   it('resolves options while preserving stable backend values', () => {

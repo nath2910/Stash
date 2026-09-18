@@ -17,7 +17,6 @@ import com.stripe.model.checkout.Session;
 import com.stripe.net.RequestOptions;
 import com.stripe.net.Webhook;
 import com.stripe.param.CouponCreateParams;
-import com.stripe.param.CouponListParams;
 import com.stripe.param.PromotionCodeListParams;
 import com.stripe.param.CustomerCreateParams;
 import com.stripe.param.SubscriptionListParams;
@@ -85,17 +84,6 @@ public class BillingService {
         return new ValidatedPromo(promotionCode.getCode(), coupon.getId(), amountOff, currency);
       }
 
-      // Also accept a coupon ID or coupon name for compatibility with older configurations.
-      var params = CouponListParams.builder().setLimit(100L).build();
-      var collection = Coupon.list(params);
-      for (Coupon c : collection.getData()) {
-        if (normalized.equals(c.getId().toUpperCase())
-            || (c.getName() != null && normalized.equals(c.getName().toUpperCase()))) {
-          long amountOff = c.getAmountOff() != null ? c.getAmountOff() : 0L;
-          String currency = c.getCurrency() != null ? c.getCurrency().toUpperCase() : "EUR";
-          return new ValidatedPromo(c.getId(), c.getId(), amountOff, currency);
-        }
-      }
       return null;
     } catch (Exception ex) {
       throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Validation du code promo impossible");
@@ -140,24 +128,15 @@ public class BillingService {
     return price;
   }
 
-  private Coupon validateAndGetCoupon(String code) throws Exception {
+  private PromotionCode validateAndGetPromotionCode(String code) throws Exception {
     requireConfigured();
     String normalized = code == null ? "" : code.strip().toUpperCase();
     try {
       PromotionCode promotionCode = findPromotionCode(normalized);
       if (promotionCode != null && promotionCode.getCoupon() != null) {
-        return promotionCode.getCoupon();
+        return promotionCode;
       }
 
-      // Also accept a coupon ID or coupon name for compatibility with older configurations.
-      var params = CouponListParams.builder().setLimit(100L).build();
-      var collection = Coupon.list(params);
-      for (Coupon c : collection.getData()) {
-        if (normalized.equals(c.getId().toUpperCase())
-            || (c.getName() != null && normalized.equals(c.getName().toUpperCase()))) {
-          return c;
-        }
-      }
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Code promo invalide");
     } catch (ResponseStatusException ex) {
       throw ex;
@@ -203,18 +182,18 @@ public class BillingService {
     if (currentSubscriptions.stream().anyMatch(this::blocksNewCheckout)) {
       throw new ResponseStatusException(HttpStatus.CONFLICT, "Un abonnement existe déjà. Gérez-le depuis votre compte.");
     }
-    // Validate promo code if provided. Stripe applies the linked coupon to the
-    // Checkout subscription; a promotion code is only the customer-facing key.
-    Coupon appliedCoupon = null;
+    // Only Stripe promotion codes are accepted and passed through to Checkout.
+    // This keeps all restrictions configured on the promotion code enforceable.
+    PromotionCode appliedPromotionCode = null;
     if (request.promoCode() != null && !request.promoCode().isBlank()) {
-      appliedCoupon = validateAndGetCoupon(request.promoCode().strip());
+      appliedPromotionCode = validateAndGetPromotionCode(request.promoCode().strip());
     }
     // A user lock serializes checkout, cancellation, deletion and webhook processing across replicas.
     for (Session open : openSessions(customerId)) {
       // Never reuse a session created without the currently requested discount.
       // Otherwise the code is validated successfully but the customer is sent
       // to an old Stripe session where no discount was configured.
-      if (appliedCoupon == null
+      if (appliedPromotionCode == null
           && TERMS_VERSION.equals(open.getMetadata().get("terms_version"))
           && price.getId().equals(open.getMetadata().get("price_id"))) return open;
       open.expire();
@@ -229,11 +208,11 @@ public class BillingService {
         .setSubscriptionData(SessionCreateParams.SubscriptionData.builder()
             .putMetadata("terms_version", TERMS_VERSION).putMetadata("terms_accepted_at", String.valueOf(acceptedAt)).build())
         .addLineItem(SessionCreateParams.LineItem.builder().setPrice(price.getId()).setQuantity(1L).build());
-    if (appliedCoupon != null) {
-      sessionBuilder.addDiscount(SessionCreateParams.Discount.builder().setCoupon(appliedCoupon.getId()).build());
+    if (appliedPromotionCode != null) {
+      sessionBuilder.addDiscount(SessionCreateParams.Discount.builder().setPromotionCode(appliedPromotionCode.getId()).build());
     }
     var params = sessionBuilder.build();
-    String discountKey = appliedCoupon == null ? "none" : appliedCoupon.getId();
+    String discountKey = appliedPromotionCode == null ? "none" : appliedPromotionCode.getId();
     return Session.create(params, RequestOptions.builder().setIdempotencyKey(
         "checkout:" + user.getId() + ":" + price.getId() + ":" + discountKey + ":" + acceptedAt / 1800).build());
   }

@@ -228,7 +228,8 @@
           {{ cancelLabel }}
         </button>
         <button type="submit" class="item-primary-button" :disabled="saving">
-          <Save v-if="mode === 'edit'" class="h-4 w-4" aria-hidden="true" />
+          <LoadingSpinner v-if="saving" />
+          <Save v-else-if="mode === 'edit'" class="h-4 w-4" aria-hidden="true" />
           <Plus v-else class="h-4 w-4" aria-hidden="true" />
           <span>{{ saving ? savingLabel : submitLabel }}</span>
         </button>
@@ -241,6 +242,7 @@
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { Minus, Plus, Save, SlidersHorizontal } from 'lucide-vue-next'
 import CompactDateInput from '@/components/ui/CompactDateInput.vue'
+import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import ItemCategorySelect from '@/components/gestion/ItemCategorySelect.vue'
 import ItemSubcategorySelect from '@/components/gestion/ItemSubcategorySelect.vue'
 import { useAuthStore } from '@/store/authStore'

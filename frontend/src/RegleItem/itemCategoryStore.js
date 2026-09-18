@@ -146,7 +146,7 @@ function dispatchCategoriesChange(userId, labels) {
   )
 }
 
-function syncCategoriesWithServer(target, userId, localValue, defaults) {
+function syncCategoriesWithServer(target, userId, localValue) {
   if (!target || typeof window === 'undefined') return
 
   void syncInventoryPreference(userId, INVENTORY_ITEM_CATEGORIES_SETTINGS_KEY, localValue, {
@@ -157,8 +157,10 @@ function syncCategoriesWithServer(target, userId, localValue, defaults) {
       if (!persistCategories(target, userId, sanitized)) return
       dispatchCategoriesChange(userId, sanitized)
     },
-    shouldSeed(value) {
-      return JSON.stringify(sanitizeItemCategoryLabels(value)) !== JSON.stringify(defaults)
+    shouldSeed() {
+      // A fresh account must get its own server-side copy, including when the
+      // value happens to match the defaults. The server state is user-owned.
+      return true
     },
   })
 }
@@ -178,7 +180,7 @@ export function readStoredItemCategories(userId, storage) {
         if (key !== currentKey || raw !== JSON.stringify(sanitized)) {
           persistCategories(target, userId, sanitized)
         }
-        if (!storage) syncCategoriesWithServer(target, userId, sanitized, defaults)
+        if (!storage) syncCategoriesWithServer(target, userId, sanitized)
         return sanitized
       } catch {
         target.removeItem?.(key)
@@ -186,11 +188,11 @@ export function readStoredItemCategories(userId, storage) {
     }
 
     persistCategories(target, userId, defaults)
-    if (!storage) syncCategoriesWithServer(target, userId, defaults, defaults)
+    if (!storage) syncCategoriesWithServer(target, userId, defaults)
     return defaults
   } catch {
     persistCategories(target, userId, defaults)
-    if (!storage) syncCategoriesWithServer(target, userId, defaults, defaults)
+    if (!storage) syncCategoriesWithServer(target, userId, defaults)
     return defaults
   }
 }

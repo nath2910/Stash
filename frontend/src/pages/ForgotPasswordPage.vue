@@ -49,6 +49,7 @@
             :disabled="loading"
             class="w-full inline-flex justify-center items-center gap-2 rounded-xl bg-amber-400 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:opacity-60 disabled:cursor-not-allowed"
           >
+            <LoadingSpinner v-if="loading" />
             {{ loading ? 'Envoi...' : 'Envoyer' }}
           </button>
         </form>
@@ -65,6 +66,7 @@
 
 <script setup>
 import { ref } from 'vue'
+import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import AuthService from '@/services/AuthService'
 
 const email = ref('')

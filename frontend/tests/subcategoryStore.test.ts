@@ -33,8 +33,11 @@ describe('subcategoryStore', () => {
 
   it('initializes persisted lists with defaults', () => {
     const stored = readStoredSubcategories('u1', memoryStorage())
-    expect(stored.SNEAKER).toContain('Jordan')
-    expect(stored.TICKET).toContain('Concert')
+    expect(stored).toEqual({
+      SNEAKER: ['Air Force 1'],
+      POKEMON_CARD: ['ETB'],
+      TICKET: ['Concert'],
+    })
   })
 
   it('merges saved and discovered values by main category', () => {
@@ -45,7 +48,7 @@ describe('subcategoryStore', () => {
     ])
 
     expect(resolveSubcategoryOptions('SNEAKER', { stored, discovered })).toEqual(
-      expect.arrayContaining(['Jordan', 'Running', 'SB Dunk']),
+      expect.arrayContaining(['Air Force 1', 'Running', 'SB Dunk']),
     )
     expect(resolveSubcategoryOptions('TICKET', { stored, discovered })).toEqual(
       expect.arrayContaining(['Festival']),
@@ -68,7 +71,7 @@ describe('subcategoryStore', () => {
 
     map = removeSubcategory(map, 'OTHER', 'Objet rare')
     expect(map.OTHER).not.toContain('Objet rare')
-    expect(map.SNEAKER).toContain('Jordan')
+    expect(map.SNEAKER).toContain('Air Force 1')
   })
 
   it('stores subcategories for custom main categories', () => {
@@ -120,8 +123,8 @@ describe('subcategoryStore', () => {
 
     const map = readStoredSubcategories('u1', storage)
 
-    expect(map.SNEAKER).toContain('Jordan')
-    expect(storage.getItem(subcategoryStorageKey('u1'))).toContain('"Jordan"')
+    expect(map.SNEAKER).toContain('Air Force 1')
+    expect(storage.getItem(subcategoryStorageKey('u1'))).toContain('"Air Force 1"')
   })
 
   it('recovers from a corrupted current subcategory key when a legacy key is still valid', () => {

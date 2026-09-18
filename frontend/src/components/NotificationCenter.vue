@@ -126,6 +126,7 @@
               :disabled="loading"
               @click="$emit('load-more')"
             >
+              <LoadingSpinner v-if="loading" />
               {{ loading ? 'Chargement...' : 'Charger plus' }}
             </button>
           </div>
@@ -138,6 +139,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { Archive, Check, CreditCard, ExternalLink, FileCheck2, Inbox, PackageSearch, X } from 'lucide-vue-next'
+import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import {
   formatNotificationDate,
   getNotificationDomain,

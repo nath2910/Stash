@@ -32,7 +32,8 @@
         :disabled="connecting"
         @click="connectWithEmail"
       >
-        <LinkIcon class="h-4 w-4" />
+        <LoadingSpinner v-if="connecting" />
+        <LinkIcon v-else class="h-4 w-4" />
         <span>{{
           connecting ? 'Connexion...' : accounts.length ? 'Reconnecter Gmail' : 'Connecter Gmail'
         }}</span>
@@ -141,6 +142,7 @@
 <script setup>
 import { ref } from 'vue'
 import { LinkIcon, Mail, RefreshCw, Trash2 } from 'lucide-vue-next'
+import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 
 defineProps({
   accounts: {

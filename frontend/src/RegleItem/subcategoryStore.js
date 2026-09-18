@@ -16,16 +16,9 @@ const LEGACY_STORAGE_PREFIX = 'snk_item_subcategories_v1'
 const MAX_SUBCATEGORY_LENGTH = 60
 
 export const DEFAULT_SUBCATEGORIES = {
-  SNEAKER: ['Jordan', 'Dunk', 'Yeezy', 'Running', 'New Balance', 'Asics'],
-  CLOTHING: ['Hoodie', 'T-shirt', 'Veste', 'Pantalon', 'Casquette'],
-  ACCESSORY: ['Sac', 'Bijou', 'Lunettes', 'Ceinture'],
-  WATCH: ['Automatique', 'Quartz', 'Connectee', 'Vintage'],
-  ELECTRONICS: ['Console', 'Smartphone', 'Audio', 'Photo', 'Ordinateur'],
-  COLLECTIBLE: ['Figurine', 'Carte', 'Vinyle', 'Art toy', 'Edition limitee'],
-  HOME: ['Mobilier', 'Decoration', 'Luminaire', 'Cuisine'],
-  POKEMON_CARD: ['Booster', 'Display', 'Carte gradee', 'Coffret', 'ETB'],
-  TICKET: ['Concert', 'Evenement sportif', 'Festival', 'Theatre', 'Spectacle'],
-  OTHER: ['Collection', 'Accessoire', 'Mode', 'Electronique'],
+  SNEAKER: ['Air Force 1'],
+  POKEMON_CARD: ['ETB'],
+  TICKET: ['Concert'],
 }
 
 export function normalizeItemType(type) {
@@ -131,7 +124,7 @@ function dispatchSubcategoriesChange(userId, subcategories) {
   )
 }
 
-function syncSubcategoriesWithServer(target, userId, localValue, defaults, categoryLabels) {
+function syncSubcategoriesWithServer(target, userId, localValue, categoryLabels) {
   if (!target || typeof window === 'undefined') return
 
   void syncInventoryPreference(userId, INVENTORY_SUBCATEGORIES_SETTINGS_KEY, localValue, {
@@ -142,11 +135,9 @@ function syncSubcategoriesWithServer(target, userId, localValue, defaults, categ
       if (!persistSubcategories(target, userId, sanitized)) return
       dispatchSubcategoriesChange(userId, sanitized)
     },
-    shouldSeed(value) {
-      return (
-        JSON.stringify(sanitizeSubcategoryMap(value, DEFAULT_SUBCATEGORIES, categoryLabels)) !==
-        JSON.stringify(defaults)
-      )
+    shouldSeed() {
+      // Persist the initial set for each account, even when it is unchanged.
+      return true
     },
   })
 }
@@ -167,7 +158,7 @@ export function readStoredSubcategories(userId, storage, categoryLabels) {
           persistSubcategories(target, userId, sanitized)
         }
         if (!storage) {
-          syncSubcategoriesWithServer(target, userId, sanitized, defaults, categoryLabels)
+          syncSubcategoriesWithServer(target, userId, sanitized, categoryLabels)
         }
         return sanitized
       } catch {
@@ -176,11 +167,11 @@ export function readStoredSubcategories(userId, storage, categoryLabels) {
     }
 
     persistSubcategories(target, userId, defaults)
-    if (!storage) syncSubcategoriesWithServer(target, userId, defaults, defaults, categoryLabels)
+    if (!storage) syncSubcategoriesWithServer(target, userId, defaults, categoryLabels)
     return defaults
   } catch {
     persistSubcategories(target, userId, defaults)
-    if (!storage) syncSubcategoriesWithServer(target, userId, defaults, defaults, categoryLabels)
+    if (!storage) syncSubcategoriesWithServer(target, userId, defaults, categoryLabels)
     return defaults
   }
 }

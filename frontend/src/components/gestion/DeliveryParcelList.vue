@@ -31,6 +31,7 @@
             :disabled="!selectedIds.length || deletingSelection"
             @click="$emit('delete-selected')"
           >
+            <LoadingSpinner v-if="deletingSelection" size="xs" />
             {{ deletingSelection ? 'Suppression...' : `Supprimer (${selectedIds.length})` }}
           </button>
         </template>
@@ -159,6 +160,7 @@
 <script setup>
 import { computed } from 'vue'
 import { PackageSearch, Truck } from 'lucide-vue-next'
+import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import {
   carrierLabel,
   formatDeliveryDate,
