@@ -24,7 +24,7 @@
       class="cd-picker"
     >
       <template #dp-input="{ openMenu }">
-        <button type="button" class="cd-input cd-input--btn" @click="openPicker(openMenu)">
+        <button type="button" class="cd-input cd-input--btn" @click.stop="openPicker(openMenu)">
           {{ displayValue || '--' }}
         </button>
       </template>

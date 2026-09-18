@@ -16,7 +16,7 @@ describe('compact date input recovery', () => {
 
   it('uses the documented date-picker input slot and retains a native fallback', () => {
     expect(source).toContain('#dp-input="{ openMenu }"')
-    expect(source).toContain('@click="openPicker(openMenu)"')
+    expect(source).toContain('@click.stop="openPicker(openMenu)"')
     expect(source).toContain('type="date"')
     expect(source).toContain('@input="onNativeInput"')
   })
