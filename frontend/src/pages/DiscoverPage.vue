@@ -95,23 +95,6 @@
         </div>
       </section>
 
-      <section class="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
-        <div class="rounded-2xl border border-white/10 bg-white/[0.04] p-5 sm:p-7">
-          <p class="text-xs font-black uppercase tracking-[0.24em] text-slate-500">Pour qui</p>
-          <h2 class="mt-3 text-2xl font-black">Pensé pour les vendeurs qui veulent savoir où ils en sont.</h2>
-          <p class="mt-4 text-sm leading-7 text-slate-300">
-            Sneakers, collectibles, pièces, accessoires ou stock multi-catégories : l'idée est
-            simple, garder une base fiable et lisible avant que tout devienne compliqué.
-          </p>
-        </div>
-
-        <div class="grid gap-3 sm:grid-cols-2">
-          <div v-for="proof in trustPoints" :key="proof" class="rounded-xl border border-white/10 bg-[#0d1424] p-4 text-sm font-bold leading-6 text-slate-200">
-            {{ proof }}
-          </div>
-        </div>
-      </section>
-
       <section class="rounded-2xl border border-emerald-300/20 bg-emerald-300/[0.07] p-5 sm:p-7">
         <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
@@ -180,10 +163,4 @@ const features = [
   },
 ]
 
-const trustPoints = [
-  'Accès réservé aux comptes autorisés.',
-  'Données séparées par utilisateur.',
-  'Paiement et abonnement gérés via Stripe.',
-  'Interface pensée pour mobile et ordinateur.',
-]
 </script>
