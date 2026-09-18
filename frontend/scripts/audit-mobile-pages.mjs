@@ -395,11 +395,11 @@ async function setSessionState(page, routeConfig) {
   await page.evaluateOnNewDocument(
     (authEnabled, fakeToken, fakeUser, subscriptionStatus) => {
       if (authEnabled) {
-        localStorage.setItem('snk_token', fakeToken)
-        localStorage.setItem('snk_user', JSON.stringify(fakeUser))
+        sessionStorage.setItem('snk_token', fakeToken)
+        sessionStorage.setItem('snk_user', JSON.stringify(fakeUser))
       } else {
-        localStorage.removeItem('snk_token')
-        localStorage.removeItem('snk_user')
+        sessionStorage.removeItem('snk_token')
+        sessionStorage.removeItem('snk_user')
       }
       localStorage.setItem(
         'snk_billing_status_cache',

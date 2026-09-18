@@ -242,20 +242,14 @@ function formatDateLabel(value: string) {
   overscroll-behavior-y: contain;
 }
 
-@media (max-width: 960px) {
+@media (max-width: 960px), (max-height: 900px) {
   .stats-page-shell--template-mode {
     position: relative;
     inset: auto;
     height: auto;
     min-height: 100dvh;
-    overflow-y: auto;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .stats-page-shell--template-mode::-webkit-scrollbar {
-    display: none;
+    overflow: visible;
+    overscroll-behavior: auto;
   }
 }
 

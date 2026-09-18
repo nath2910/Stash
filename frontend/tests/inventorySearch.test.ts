@@ -44,7 +44,7 @@ describe('inventorySearch', () => {
 
   it('searches across metadata and item type labels', () => {
     const skuResults = searchInventoryItems(items, 'dz5485').map((item) => item.id)
-    const typeResults = searchInventoryItems(items, 'collection').map((item) => item.id)
+    const typeResults = searchInventoryItems(items, 'collectible').map((item) => item.id)
 
     expect(skuResults[0]).toBe(1)
     expect(typeResults[0]).toBe(2)

@@ -188,7 +188,6 @@ const onboardingSeenStorageKey = computed(() =>
 )
 let quickAddToastTimer = null
 let clockTimer = null
-let statsFallbackTimer = null
 
 const localSummary = computed(() => calculatePeriodStats(stockItems.value, annualRange.value))
 
@@ -279,23 +278,6 @@ async function chargerStatsAnnuelles() {
   }
 }
 
-function clearStatsFallbackTimer() {
-  if (!statsFallbackTimer) return
-  window.clearTimeout(statsFallbackTimer)
-  statsFallbackTimer = null
-}
-
-function scheduleStatsFallback() {
-  if (typeof window === 'undefined' || !auth.token.value || stockLoaded.value) return
-  clearStatsFallbackTimer()
-  statsFallbackTimer = window.setTimeout(() => {
-    statsFallbackTimer = null
-    if (!stockLoaded.value) {
-      void chargerStatsAnnuelles()
-    }
-  }, 650)
-}
-
 onMounted(() => {
   scheduleClockRefresh()
   if (typeof document !== 'undefined') {
@@ -320,7 +302,6 @@ onMounted(() => {
 watch(
   authSessionKey,
   () => {
-    clearStatsFallbackTimer()
     stockItems.value = []
     stockLoaded.value = false
     stockError.value = ''
@@ -339,7 +320,6 @@ onBeforeUnmount(() => {
   if (clockTimer) {
     window.clearTimeout(clockTimer)
   }
-  clearStatsFallbackTimer()
   if (typeof document !== 'undefined') {
     document.removeEventListener('visibilitychange', handleVisibilityChange)
   }

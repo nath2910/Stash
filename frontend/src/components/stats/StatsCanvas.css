@@ -3831,7 +3831,7 @@ body.canvas-pan-cursor * {
   }
 }
 
-@media (max-width: 960px) {
+@media (max-width: 960px), (max-height: 900px) {
   .canvas-root.is-template-active .template-mode,
   .canvas-root.theme-light.is-template-active .template-mode {
     position: relative;

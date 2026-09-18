@@ -74,7 +74,7 @@ import { X } from 'lucide-vue-next'
 import ItemFormFields from '@/components/gestion/ItemFormFields.vue'
 import SnkVenteServices from '@/services/SnkVenteServices.js'
 
-const props = defineProps({
+defineProps({
   items: { type: Array, default: () => [] },
 })
 

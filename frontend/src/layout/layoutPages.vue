@@ -521,8 +521,6 @@ const currentUser = computed(() => {
   const u = auth.user
   return u && typeof u === 'object' && 'value' in u ? u.value : u
 })
-const currentUserId = computed(() => currentUser.value?.id ?? 'guest')
-
 const initials = computed(() => {
   const u = currentUser.value
   if (!u) return 'NN'
@@ -1085,6 +1083,18 @@ body.layout-light-document-scroll::-webkit-scrollbar {
 
 .layout-fullbleed--template-scroll::-webkit-scrollbar {
   display: none;
+}
+
+/* Templates are intentionally a fixed, scrollbar-free workspace when there
+   is enough room. On compact windows the workspace itself becomes the scroll
+   container so content below the fold is never clipped by the app shell. */
+@media (max-width: 960px), (max-height: 900px) {
+  .layout-fullbleed--template-scroll {
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 html.layout-stats-template-scroll-lock,

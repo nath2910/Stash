@@ -50,7 +50,7 @@ test('EURL affiche une preparation comptable et aucune action URSSAF', () => {
   assert.equal(summary.title, 'Preparation comptable T2 2026')
   assert.equal(actions.some((action) => action.id.includes('urssaf') || action.documentType === 'urssaf-summary'), false)
   assert.equal(rows.some((row) => row.id === 'accounting-export-csv'), true)
-  assert.equal(autopilot.title, 'Autopilote legal societe')
+  assert.equal(autopilot.title, 'Assistant légal société')
   assert.equal(autopilot.steps.some((step) => step.id === 'official' && step.owner === 'Utilisateur'), true)
 })
 

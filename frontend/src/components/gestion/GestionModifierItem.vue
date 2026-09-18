@@ -78,6 +78,9 @@
                     >
                       <div class="min-w-0">
                         <p>{{ childLabel(child) }}</p>
+                        <small v-if="childDescriptionPreview(child)">
+                          {{ childDescriptionPreview(child) }}
+                        </small>
                         <span>
                           {{ childStatusLabel(child) }}
                         </span>
@@ -323,6 +326,12 @@ function childLabel(child) {
   return child?.nomItem || child?.nom_item || 'Sous-item'
 }
 
+function childDescriptionPreview(child) {
+  const description = String(child?.description || '').replace(/\s+/g, ' ').trim()
+  if (!description) return ''
+  return description.length > 30 ? `${description.slice(0, 30).trimEnd()}…` : description
+}
+
 function childStatusLabel(child) {
   const unitIndex = Number(child?.unitIndex ?? 0)
   const lineLabel = unitIndex > 0 ? `Ligne ${unitIndex}` : 'Ligne'
@@ -481,8 +490,10 @@ function formatSize(bytes) {
   isolation: isolate;
   display: flex;
   flex-direction: column;
-  max-height: 100dvh;
-  min-height: min(680px, 100dvh);
+  max-height: calc(100dvh - 2rem);
+  /* Let compact group summaries hug their content. The form itself is the scroll area only
+     when its contents are taller than the available viewport. */
+  min-height: 0;
   border-color: rgba(125, 211, 252, 0.38);
   background:
     linear-gradient(135deg, rgba(14, 165, 233, 0.08), transparent 42%),
@@ -606,6 +617,7 @@ function formatSize(bytes) {
 .group-overview {
   display: grid;
   gap: 1rem;
+  min-height: 0;
 }
 
 .group-summary-card,
@@ -648,6 +660,22 @@ function formatSize(bytes) {
   font-size: 0.8rem;
   font-weight: 700;
   line-height: 1.35;
+}
+
+.group-child-row small {
+  display: block;
+  margin-top: 0.18rem;
+  overflow: hidden;
+  color: #475569;
+  font-size: 0.78rem;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.group-child-row small + span {
+  display: block;
+  margin-top: 0.2rem;
 }
 
 .group-children-list {
@@ -831,7 +859,7 @@ function formatSize(bytes) {
 @media (max-width: 639px) {
   .modal-card {
     max-height: 100dvh;
-    min-height: min(680px, 100dvh);
+    min-height: 0;
     padding-bottom: max(env(safe-area-inset-bottom), 0.75rem);
   }
 

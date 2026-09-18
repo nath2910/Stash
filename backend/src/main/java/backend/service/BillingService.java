@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.stripe.Stripe;
+import com.stripe.exception.InvalidRequestException;
 import com.stripe.model.Coupon;
 import com.stripe.model.Customer;
 import com.stripe.model.Price;
@@ -294,13 +295,34 @@ public class BillingService {
     copyState(user, principal);
   }
 
-  /** Account deletion holds the same user lock as checkout and webhooks. Stripe invoices are retained. */
-  public void cancelForAccountDeletion(User user) throws Exception {
+  /**
+   * Permanently removes the Stripe customer during account deletion.
+   *
+   * The subscriptions and incomplete Checkout sessions are closed explicitly before deleting the
+   * customer. Stripe then removes saved payment details; its legally required payment and invoice
+   * history remains in Stripe. A previously deleted or manually removed customer is safe to retry.
+   */
+  public void deleteCustomerForAccountDeletion(User user) throws Exception {
     if (!present(user.getStripeCustomerId())) return;
     requireConfigured();
-    for (Session open : openSessions(user.getStripeCustomerId())) open.expire();
-    for (Subscription subscription : subscriptions(user.getStripeCustomerId())) {
+    String customerId = user.getStripeCustomerId();
+    for (Session open : openSessions(customerId)) open.expire();
+    for (Subscription subscription : subscriptions(customerId)) {
       if (!terminal(subscription.getStatus())) subscription.cancel();
+    }
+    try {
+      Customer customer = Customer.retrieve(customerId);
+      if (!Boolean.TRUE.equals(customer.getDeleted())) {
+        Customer deleted = customer.delete(RequestOptions.builder()
+            .setIdempotencyKey("account-delete-customer:" + user.getId()).build());
+        if (!Boolean.TRUE.equals(deleted.getDeleted())) {
+          throw new IllegalStateException("Stripe customer deletion was not confirmed");
+        }
+      }
+    } catch (InvalidRequestException ex) {
+      // A customer already removed manually from Stripe has no payment details or subscription
+      // left to expose. Other invalid requests must still abort the local deletion.
+      if (!Integer.valueOf(404).equals(ex.getStatusCode())) throw ex;
     }
   }
 

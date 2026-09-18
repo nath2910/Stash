@@ -37,15 +37,16 @@ describe('authStorage', () => {
     vi.stubGlobal('window', { dispatchEvent })
   })
 
-  it('reads the auth token from local storage first, then session storage', () => {
+  it('reads the auth token from session storage and removes a legacy local value', () => {
     localStorageMock.setItem('snk_token', 'local-token')
     sessionStorageMock.setItem('snk_token', 'session-token')
 
-    expect(readAuthToken()).toBe('local-token')
-
-    localStorageMock.removeItem('snk_token')
     expect(readAuthToken()).toBe('session-token')
-    expect(safeStorageGet('snk_token')).toBe('session-token')
+    expect(localStorageMock.removeItem).toHaveBeenCalledWith('snk_token')
+
+    sessionStorageMock.removeItem('snk_token')
+    expect(readAuthToken()).toBe('')
+    expect(safeStorageGet('snk_token')).toBeNull()
   })
 
   it('writes and clears token/user consistently and emits a sync event', () => {
@@ -54,7 +55,7 @@ describe('authStorage', () => {
       user: { id: 7, email: 'user@example.com' },
     })
 
-    expect(localStorageMock.setItem).toHaveBeenCalledWith('snk_token', 'abc123')
+    expect(sessionStorageMock.setItem).toHaveBeenCalledWith('snk_token', 'abc123')
     expect(readStoredUser()).toEqual({ id: 7, email: 'user@example.com' })
     expect(dispatchEvent).toHaveBeenCalledTimes(1)
     expect(dispatchEvent.mock.calls[0][0].type).toBe(AUTH_SYNC_EVENT)
@@ -68,11 +69,7 @@ describe('authStorage', () => {
     expect(dispatchEvent).toHaveBeenCalledTimes(2)
   })
 
-  it('falls back to session storage when local storage set fails', () => {
-    localStorageMock.setItem.mockImplementation(() => {
-      throw new Error('local storage unavailable')
-    })
-
+  it('keeps credentials scoped to the browser session', () => {
     writeAuthState({
       token: 'fallback-token',
       user: { id: 9 },

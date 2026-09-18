@@ -25,7 +25,7 @@ function createStorage(initialValues: Record<string, string> = {}) {
 
 async function loadBillingStoreForUser(user: { id: number; subscriptionStatus?: string; hasAccess?: boolean }) {
   vi.resetModules()
-  localStorage.setItem('snk_user', JSON.stringify(user))
+  sessionStorage.setItem('snk_user', JSON.stringify(user))
   return import('../src/store/billingStore')
 }
 

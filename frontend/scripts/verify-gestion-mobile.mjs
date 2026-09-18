@@ -117,8 +117,8 @@ try {
   })
 
   await page.evaluateOnNewDocument((token, user) => {
-    localStorage.setItem('snk_token', token)
-    localStorage.setItem('snk_user', JSON.stringify(user))
+    sessionStorage.setItem('snk_token', token)
+    sessionStorage.setItem('snk_user', JSON.stringify(user))
     localStorage.setItem(
       'snk_billing_status_cache',
       JSON.stringify({ status: 'active', fetchedAt: Date.now() }),
