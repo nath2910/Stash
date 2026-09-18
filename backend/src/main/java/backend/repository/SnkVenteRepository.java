@@ -375,6 +375,7 @@ List<LabelCount> topItemsByCategorie(
   SELECT COALESCE(SUM(t.prix_resell), 0)
   FROM public.tableauventes t
   WHERE t.user_id = :userId
+    AND COALESCE(t.is_group_parent, FALSE) = FALSE
     AND t.date_vente BETWEEN :start AND :end
     AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Sans sous-categorie') = ANY(:categories))
     AND (:typesAll = true OR COALESCE(t.type, 'OTHER') = ANY(:types))
@@ -392,6 +393,7 @@ BigDecimal caBetween(@Param("userId") Long userId,
   SELECT COALESCE(SUM(t.prix_resell - t.prix_retail), 0)
   FROM public.tableauventes t
   WHERE t.user_id = :userId
+    AND COALESCE(t.is_group_parent, FALSE) = FALSE
     AND t.date_vente BETWEEN :start AND :end
     AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Sans sous-categorie') = ANY(:categories))
     AND (:typesAll = true OR COALESCE(t.type, 'OTHER') = ANY(:types))
@@ -410,6 +412,7 @@ BigDecimal profitBetween(@Param("userId") Long userId,
   SELECT COALESCE(SUM(COALESCE(t.prix_retail, 0)), 0)
   FROM public.tableauventes t
   WHERE t.user_id = :userId
+    AND COALESCE(t.is_group_parent, FALSE) = FALSE
     AND t.date_vente BETWEEN :start AND :end
     AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Sans sous-categorie') = ANY(:categories))
     AND (:typesAll = true OR COALESCE(t.type, 'OTHER') = ANY(:types))
@@ -428,6 +431,7 @@ BigDecimal costBetween(@Param("userId") Long userId,
   SELECT COUNT(*)
   FROM public.tableauventes t
   WHERE t.user_id = :userId
+    AND COALESCE(t.is_group_parent, FALSE) = FALSE
     AND t.date_vente BETWEEN :start AND :end
     AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Sans sous-categorie') = ANY(:categories))
     AND (:typesAll = true OR COALESCE(t.type, 'OTHER') = ANY(:types))
@@ -444,6 +448,7 @@ long countSoldBetween(@Param("userId") Long userId,
   SELECT COUNT(*)
   FROM public.tableauventes t
   WHERE t.user_id = :userId
+    AND COALESCE(t.is_group_parent, FALSE) = FALSE
     AND t.date_vente IS NULL
     AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Sans sous-categorie') = ANY(:categories))
     AND (:typesAll = true OR COALESCE(t.type, 'OTHER') = ANY(:types))
@@ -458,6 +463,7 @@ long countInStock(@Param("userId") Long userId,
   SELECT COALESCE(SUM(COALESCE(t.prix_retail, 0)), 0)
   FROM public.tableauventes t
   WHERE t.user_id = :userId
+    AND COALESCE(t.is_group_parent, FALSE) = FALSE
     AND t.date_vente IS NULL
     AND (:categoriesAll = true OR COALESCE(NULLIF(trim(t.categorie), ''), 'Sans sous-categorie') = ANY(:categories))
     AND (:typesAll = true OR COALESCE(t.type, 'OTHER') = ANY(:types))
@@ -488,6 +494,7 @@ LocalDate minVenteDate(@Param("userId") Long userId);
   SELECT COUNT(*)
   FROM public.tableauventes t
   WHERE t.user_id = :userId
+    AND COALESCE(t.is_group_parent, FALSE) = FALSE
     AND t.date_achat IS NOT NULL
     AND t.date_achat <= :asOf
     AND (t.date_vente IS NULL OR t.date_vente > :asOf)
@@ -505,6 +512,7 @@ long countInStockAt(@Param("userId") Long userId,
   SELECT COALESCE(SUM(COALESCE(t.prix_retail, 0)), 0)
   FROM public.tableauventes t
   WHERE t.user_id = :userId
+    AND COALESCE(t.is_group_parent, FALSE) = FALSE
     AND t.date_achat IS NOT NULL
     AND t.date_achat <= :asOf
     AND (t.date_vente IS NULL OR t.date_vente > :asOf)

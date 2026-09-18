@@ -71,6 +71,7 @@
           :items="stockItems"
           :loading="stockLoading"
           :stock-count="homeInventoryCount"
+          :total-count="homeInventoryTotal"
           @select="openItemModal"
           @add-requested="focusQuickAddForm"
         />
@@ -142,6 +143,7 @@ import { useAuthStore } from '@/store/authStore'
 import { scopedStorageKey } from '@/RegleItem/storageScope'
 import { calculatePeriodStats, getCurrentYearRange } from '@/utils/homeDashboard'
 import {
+  countHomeInventoryUnits,
   normalizeHomeApiSummary,
   resolveHomeInventoryCount,
   resolveHomeKpiError,
@@ -203,6 +205,9 @@ const homeInventoryCount = computed(() =>
     apiSummary: apiSummary.value,
   }),
 )
+const homeInventoryTotal = computed(() =>
+  stockLoaded.value ? countHomeInventoryUnits(stockItems.value) : null,
+)
 const showImportPrompt = computed(
   () =>
     shouldShowHomeImportPrompt({
@@ -234,7 +239,7 @@ async function chargerVentes() {
   stockLoading.value = true
   stockError.value = ''
   try {
-    const { data } = await SnkVenteServices.getSnkVente({ limit: HOME_SEARCH_STOCK_LIMIT })
+    const { data } = await SnkVenteServices.getGroupedSnkVente({ limit: HOME_SEARCH_STOCK_LIMIT })
     stockItems.value = Array.isArray(data) ? data : []
     stockLoaded.value = true
     apiSummary.value = null

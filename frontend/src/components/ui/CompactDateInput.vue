@@ -3,7 +3,6 @@
     <span v-if="label" class="cd-label">{{ label }}</span>
     <VueDatePicker
       v-if="!pickerFailed"
-      ref="pickerRef"
       v-model="localValue"
       :time-picker="false"
       :time-config="timeConfig"
@@ -24,8 +23,8 @@
       model-type="yyyy-MM-dd"
       class="cd-picker"
     >
-      <template #trigger>
-        <button type="button" class="cd-input cd-input--btn" @click="openPicker">
+      <template #dp-input="{ openMenu }">
+        <button type="button" class="cd-input cd-input--btn" @click="openPicker(openMenu)">
           {{ displayValue || '--' }}
         </button>
       </template>
@@ -61,7 +60,6 @@ const props = defineProps({
 })
 const emit = defineEmits(['update:modelValue'])
 const light = computed(() => props.light)
-const pickerRef = ref(null)
 const pickerFailed = ref(false)
 
 // The picker is used in several independent screens.  A failure in its
@@ -73,9 +71,12 @@ onErrorCaptured((error) => {
   return false
 })
 
-function openPicker() {
+function openPicker(openMenu) {
   try {
-    pickerRef.value?.openMenu?.()
+    if (typeof openMenu !== 'function') {
+      throw new TypeError('Date picker menu API is unavailable')
+    }
+    openMenu()
   } catch (error) {
     console.error('[date-input] Unable to open date picker; using native fallback.', error)
     pickerFailed.value = true

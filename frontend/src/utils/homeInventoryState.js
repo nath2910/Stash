@@ -1,3 +1,5 @@
+import { isGroupedItem, isVendue, itemQuantityOf, soldCountOf } from './snkVente'
+
 export function normalizeHomeApiSummary(data) {
   if (!data) return null
   return {
@@ -11,10 +13,27 @@ export function normalizeHomeApiSummary(data) {
   }
 }
 
+export function countHomeInventoryUnits(items = []) {
+  if (!Array.isArray(items)) return 0
+  return items.reduce((total, item) => total + itemQuantityOf(item), 0)
+}
+
+export function countHomeStockUnits(items = []) {
+  if (!Array.isArray(items)) return 0
+  return items.reduce((total, item) => {
+    if (isGroupedItem(item)) {
+      return total + Math.max(0, itemQuantityOf(item) - soldCountOf(item))
+    }
+    return total + (isVendue(item) ? 0 : 1)
+  }, 0)
+}
+
 export function resolveHomeInventoryCount({ stockLoaded, stockItems = [], apiSummary = null }) {
-  if (stockLoaded) return Array.isArray(stockItems) ? stockItems.length : 0
   const normalized = normalizeHomeApiSummary(apiSummary)
-  if (normalized) return normalized.itemsEnStock
+  if (apiSummary && Number.isFinite(Number(apiSummary.itemsEnStock))) {
+    return normalized.itemsEnStock
+  }
+  if (stockLoaded) return countHomeStockUnits(stockItems)
   return null
 }
 
