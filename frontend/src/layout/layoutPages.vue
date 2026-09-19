@@ -1365,6 +1365,11 @@ body.layout-stats-template-scroll-lock::-webkit-scrollbar {
   white-space: nowrap;
 }
 
+.layout-footer-pill a:hover {
+  background-color: #7c3aed;
+  color: #ffffff;
+}
+
 @media (max-width: 767px) {
   .layout-shell-row {
     padding-inline-start: max(12px, env(safe-area-inset-left));
