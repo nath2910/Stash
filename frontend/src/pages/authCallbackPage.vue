@@ -22,18 +22,11 @@ function decodeUserPayload(value) {
   }
 }
 
-function normalizeSubscriptionStatus(value) {
-  return String(value || '').trim().toLowerCase()
-}
-
-function userHasAppAccess(user) {
-  return Boolean(user?.hasAccess) || ['active', 'trialing'].includes(normalizeSubscriptionStatus(user?.subscriptionStatus))
-}
-
-function resolvePostAuthTarget(user) {
-  return userHasAppAccess(user)
-    ? { name: 'home' }
-    : { name: 'abo' }
+function resolvePostAuthTarget() {
+  // The OAuth profile does not contain the live Discord eligibility result.
+  // Always request the intended app route; its guard resolves access before
+  // redirecting a genuinely inactive account to the subscription page.
+  return { name: 'home' }
 }
 
 function persistPostAuthRedirect(target) {
@@ -50,8 +43,8 @@ function persistPostAuthRedirect(target) {
   }
 }
 
-function targetPath(target) {
-  return target?.name === 'abo' ? '/abo' : '/'
+function targetPath() {
+  return '/'
 }
 
 async function navigateAfterSso(target) {
@@ -92,14 +85,14 @@ onMounted(async () => {
 
   if (userPayload) {
     auth.setAuth({ user: userPayload, token })
-    await navigateAfterSso(resolvePostAuthTarget(userPayload))
+    await navigateAfterSso(resolvePostAuthTarget())
     return
   }
 
   try {
     const me = await AuthService.me()
     auth.setAuth({ user: me, token })
-    await navigateAfterSso(resolvePostAuthTarget(me))
+    await navigateAfterSso(resolvePostAuthTarget())
   } catch (e) {
     console.error('Erreur /auth/me après SSO', e)
     auth.logout()

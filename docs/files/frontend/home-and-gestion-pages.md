@@ -41,12 +41,7 @@ Dashboard d'action rapide.
 - Affiche C.A. du mois, benefices, items en stock et stock en euros.
 - Utilise les stats API au chargement puis la synthese locale si le stock est charge.
 
-## 6) Legacy accueil
-- `AcceuilWidgetLateral.vue` reste present mais n'est plus utilise par la route `/`.
-
----
-
-## 7) `pages/gestionPage.vue`
+## 6) `pages/gestionPage.vue`
 
 ### Role
 Page orchestration gestion stock.

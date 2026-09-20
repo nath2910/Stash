@@ -108,7 +108,6 @@ Ce document cartographie les fichiers utiles du repository (hors `node_modules`,
 ### 2.3 Resources backend
 - `backend/src/main/resources/application.yml`
 - `backend/src/main/resources/compose.yaml`
-- `backend/src/main/resources/ss.sql` (vide)
 
 #### Flyway migrations
 - `V1__init.sql`
@@ -169,9 +168,7 @@ Ce document cartographie les fichiers utiles du repository (hors `node_modules`,
 - `assets/main.css`
 
 #### components (racine)
-- `AcceuilWidgetLateral.vue`
 - `AuthForm.vue`
-- `StatBadge.vue`
 
 #### components/ui
 - `ui/CompactDateInput.vue`

@@ -15,14 +15,14 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SnkVenteImportDto {
-  @NotBlank
-  @Size(max = 200)
+  @NotBlank(message = "nom de l'item manquant")
+  @Size(max = 200, message = "nom de l'item trop long (200 caractères maximum)")
   private String nomItem;
 
-  @PositiveOrZero
+  @PositiveOrZero(message = "prix d'achat négatif")
   private BigDecimal prixRetail;
 
-  @PositiveOrZero
+  @PositiveOrZero(message = "prix de vente négatif")
   private BigDecimal prixResell;
 
   @JsonFormat(pattern = "yyyy-MM-dd")
@@ -31,13 +31,13 @@ public class SnkVenteImportDto {
   @JsonFormat(pattern = "yyyy-MM-dd")
   private LocalDate dateVente;
 
-  @Size(max = 500)
+  @Size(max = 500, message = "description trop longue (500 caractères maximum)")
   private String description;
 
-  @Size(max = 60)
+  @Size(max = 60, message = "catégorie trop longue (60 caractères maximum)")
   private String categorie;
 
-  @Size(max = 80)
+  @Size(max = 80, message = "type trop long (80 caractères maximum)")
   private String type;
   private Map<String, Object> metadata;
 

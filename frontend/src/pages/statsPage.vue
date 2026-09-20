@@ -242,7 +242,9 @@ function formatDateLabel(value: string) {
   overscroll-behavior-y: contain;
 }
 
-@media (max-width: 960px), (max-height: 900px) {
+/* A short desktop viewport still uses the fitted template. Page scrolling is
+   reserved for the compact/narrow layout, where cards intentionally stack. */
+@media (max-width: 960px) {
   .stats-page-shell--template-mode {
     position: relative;
     inset: auto;

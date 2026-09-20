@@ -3,6 +3,10 @@ import { useAuthStore } from '@/store/authStore.js'
 import { useBillingStore } from '@/store/billingStore.js'
 import AuthService from '@/services/AuthService.js'
 import { warmSessionData } from '@/services/sessionDataBootstrap.js'
+import PrivacyPage from '@/pages/privacyPage.vue'
+import LegalPage from '@/pages/LegalPage.vue'
+import TermsPage from '@/pages/TermsPage.vue'
+import CookiesPage from '@/pages/CookiesPage.vue'
 
 const HomePage = () => import('@/pages/homePage.vue')
 const StatsPage = () => import('@/pages/statsPage.vue')
@@ -15,7 +19,6 @@ const AccountPage = () => import('@/pages/accountPage.vue')
 const AboutPage = () => import('@/pages/aboutPage.vue')
 const AuthCallbackPage = () => import('@/pages/authCallbackPage.vue')
 const ForgotPasswordPage = () => import('@/pages/ForgotPasswordPage.vue')
-const PrivacyPage = () => import('@/pages/privacyPage.vue')
 const ResetPasswordPage = () => import('@/pages/ResetPasswordPage.vue')
 const VerifyEmailPage = () => import('@/pages/VerifyEmailPage.vue')
 
@@ -161,9 +164,9 @@ const router = createRouter({
       component: PrivacyPage,
       meta: { allowScroll: true, wideContent: true, publicDocument: true },
     },
-    { path: '/legal', name: 'legal', component: () => import('@/pages/LegalPage.vue'), meta: { allowScroll: true, wideContent: true, publicDocument: true } },
-    { path: '/legal/cgu', alias: '/legal/cgv', name: 'cgu', component: () => import('@/pages/TermsPage.vue'), meta: { allowScroll: true, wideContent: true, publicDocument: true } },
-    { path: '/cookies', name: 'cookies', component: () => import('@/pages/CookiesPage.vue'), meta: { allowScroll: true, wideContent: true, publicDocument: true } },
+    { path: '/legal', name: 'legal', component: LegalPage, meta: { allowScroll: true, wideContent: true, publicDocument: true } },
+    { path: '/legal/cgu', alias: '/legal/cgv', name: 'cgu', component: TermsPage, meta: { allowScroll: true, wideContent: true, publicDocument: true } },
+    { path: '/cookies', name: 'cookies', component: CookiesPage, meta: { allowScroll: true, wideContent: true, publicDocument: true } },
     {
       path: '/admin',
       name: 'admin',

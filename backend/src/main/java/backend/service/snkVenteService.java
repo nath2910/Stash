@@ -381,7 +381,6 @@ public class snkVenteService {
 
   @Transactional
   public int importBulk(Long userId, List<SnkVenteImportDto> items) {
-    User user = getUserOrThrow(userId);
     if (items == null || items.isEmpty()) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Aucun item fourni");
     }
@@ -393,10 +392,15 @@ public class snkVenteService {
       );
     }
 
-    List<SnkVente> entities = items.stream()
-        .filter(Objects::nonNull)
-        .map(this::trimDto)
-        .filter(dto -> dto.getNomItem() != null && !dto.getNomItem().isEmpty())
+    List<SnkVenteImportDto> normalizedItems = new ArrayList<>(items.size());
+    for (int index = 0; index < items.size(); index += 1) {
+      SnkVenteImportDto dto = items.get(index);
+      validateImportDto(dto, index + 1);
+      normalizedItems.add(trimDto(dto));
+    }
+
+    User user = getUserOrThrow(userId);
+    List<SnkVente> entities = normalizedItems.stream()
         .map(dto -> {
           SnkVente v = new SnkVente();
           v.setUser(user);
@@ -405,10 +409,6 @@ public class snkVenteService {
           return v;
         })
         .collect(Collectors.toList());
-
-    if (entities.isEmpty()) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Aucune ligne valide dans le fichier");
-    }
 
     snkVenteRepository.saveAll(entities);
     statsCacheEviction.evictUser(userId);
@@ -672,6 +672,44 @@ public class snkVenteService {
     dto.setCategorie(dto.getCategorie() != null ? dto.getCategorie().trim() : null);
     dto.setDescription(dto.getDescription() != null ? dto.getDescription().trim() : null);
     return dto;
+  }
+
+  /**
+   * The controller validates HTTP requests too, but this guard keeps the bulk
+   * import atomic when the service is called from another entry point or a
+   * malformed client bypasses bean validation. Invalid rows are never silently
+   * discarded: the whole transaction is refused with the exact payload line.
+   */
+  private void validateImportDto(SnkVenteImportDto dto, int lineNumber) {
+    if (dto == null) {
+      throw invalidImportLine(lineNumber, "ligne vide");
+    }
+    String name = trimToNull(dto.getNomItem());
+    if (name == null) {
+      throw invalidImportLine(lineNumber, "nom de l'item manquant");
+    }
+    if (name.length() > 200) {
+      throw invalidImportLine(lineNumber, "nom de l'item trop long (200 caractères maximum)");
+    }
+    if (dto.getPrixRetail() != null && dto.getPrixRetail().signum() < 0) {
+      throw invalidImportLine(lineNumber, "prix d'achat négatif");
+    }
+    if (dto.getPrixResell() != null && dto.getPrixResell().signum() < 0) {
+      throw invalidImportLine(lineNumber, "prix de vente négatif");
+    }
+    if (dto.getDescription() != null && dto.getDescription().trim().length() > 500) {
+      throw invalidImportLine(lineNumber, "description trop longue (500 caractères maximum)");
+    }
+    if (dto.getCategorie() != null && dto.getCategorie().trim().length() > 60) {
+      throw invalidImportLine(lineNumber, "catégorie trop longue (60 caractères maximum)");
+    }
+    if (dto.getType() != null && dto.getType().trim().length() > MAX_TYPE_LENGTH) {
+      throw invalidImportLine(lineNumber, "type trop long (80 caractères maximum)");
+    }
+  }
+
+  private ResponseStatusException invalidImportLine(int lineNumber, String reason) {
+    return new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ligne " + lineNumber + " : " + reason);
   }
 
   private void applyFields(

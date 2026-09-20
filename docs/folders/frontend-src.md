@@ -101,8 +101,6 @@
 
 ## 7) Components globaux
 - `components/AuthForm.vue`: login/signup complet + OAuth buttons.
-- `components/AcceuilWidgetLateral.vue`: cartes KPI laterales home.
-- `components/StatBadge.vue`: badge KPI reusable.
 - `components/ui/CompactDateInput.vue`: input date compact custom.
 
 ## 8) Assets et utilitaires

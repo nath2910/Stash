@@ -28,4 +28,11 @@ const AsyncVChart = defineAsyncComponent(async () => {
   return module.default
 })
 
-createApp(App).use(router).component('VChart', AsyncVChart).mount('#app')
+const app = createApp(App).use(router).component('VChart', AsyncVChart)
+
+// The first protected route waits for the authoritative access decision. Keep
+// the static MyStash boot screen visible during that check instead of mounting
+// the layout with an empty RouterView (or briefly showing /abo).
+router.isReady().finally(() => {
+  app.mount('#app')
+})

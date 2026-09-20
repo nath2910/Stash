@@ -283,6 +283,7 @@
                 >
                   <afficherTout
                     :snkVentes="visibleFilteredVentes"
+                    :selection-scope-ids="filteredSelectionIds"
                     :loading="inventoryLoading"
                     selectable
                     v-model="selectedIds"
@@ -1270,6 +1271,17 @@ const gestionHero = computed(() => {
 const filteredVentes = computed(() => buildFilteredVentes())
 const visibleFilteredVentes = computed(() => filteredVentes.value.slice(0, renderLimit.value))
 const hasMoreFilteredVentes = computed(() => !inventoryLoading.value && visibleFilteredVentes.value.length < filteredVentes.value.length)
+const selectableIdsFromRows = (rows) =>
+  Array.from(
+    new Set(
+      rows.flatMap((vente) =>
+        isGroupedItem(vente)
+          ? [vente.id, ...childItemsOf(vente).map((child) => child.id)]
+          : [vente.id],
+      ),
+    ),
+  ).filter((id) => id !== null && id !== undefined)
+const filteredSelectionIds = computed(() => selectableIdsFromRows(filteredVentes.value))
 
 const loadMoreFilteredVentes = () => {
   renderLimit.value = Math.min(renderLimit.value + RENDER_BATCH_SIZE, filteredVentes.value.length)
@@ -1301,11 +1313,11 @@ const resetFilters = () => {
   filters.value = emptyFilters()
 }
 
-// Selection logique : si tu filtres, on garde seulement ce qui est visible
+// La selection reste limitee aux resultats du filtre, pas seulement au lot rendu a l'ecran.
 watch(filteredVentes, (list) => {
   renderLimit.value = Math.min(INITIAL_RENDER_LIMIT, Math.max(list.length, INITIAL_RENDER_LIMIT))
-  const visible = new Set(list.map((v) => v.id))
-  selectedIds.value = selectedIds.value.filter((id) => visible.has(id))
+  const selectableIds = new Set(selectableIdsFromRows(list))
+  selectedIds.value = selectedIds.value.filter((id) => selectableIds.has(id))
   requestAnimationFrame(updateBackToTopState)
 })
 

@@ -25,10 +25,7 @@ Fichier central de configuration Spring.
 ## 2) `compose.yaml`
 Compose minimal backend (postgres + adminer), distinct du compose racine.
 
-## 3) `ss.sql`
-Fichier present mais vide (artefact probable).
-
-## 4) Dossier `db/migration/`
+## 3) Dossier `db/migration/`
 
 ### `V1__init.sql`
 - Schema initial issu dump PostgreSQL (`users`, `tableauventes`, sequences, contraintes).

@@ -1,7 +1,10 @@
 package backend.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -14,6 +17,7 @@ import org.springframework.web.server.ResponseStatusException;
 public class GlobalExceptionHandler {
 
   private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+  private static final Pattern IMPORT_LINE_PATH = Pattern.compile(".*\\[(\\d+)]\\..*");
 
   @ExceptionHandler(ResponseStatusException.class)
   public ResponseEntity<?> handleResponseStatus(ResponseStatusException ex, HttpServletRequest request) {
@@ -55,11 +59,34 @@ public class GlobalExceptionHandler {
       jakarta.validation.ConstraintViolationException.class,
       org.springframework.web.method.annotation.HandlerMethodValidationException.class})
   public ResponseEntity<?> invalidInput(Exception ex) {
-    return ResponseEntity.badRequest().body(Map.of("error", "invalid_input", "message", "Données invalides ou incomplètes"));
+    List<String> details = validationDetails(ex);
+    String message = details.isEmpty() ? "Données invalides ou incomplètes" : details.get(0);
+    return ResponseEntity.badRequest().body(Map.of(
+        "error", "invalid_input",
+        "message", message,
+        "details", details
+    ));
   }
 
   @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
   public ResponseEntity<?> oversizedUpload(Exception ex) {
     return ResponseEntity.status(413).body(Map.of("message", "Fichier trop volumineux"));
+  }
+
+  private List<String> validationDetails(Exception ex) {
+    if (!(ex instanceof org.springframework.web.bind.MethodArgumentNotValidException validation)) {
+      return List.of();
+    }
+
+    return validation.getBindingResult().getFieldErrors().stream()
+        .limit(20)
+        .map(error -> {
+          Matcher matcher = IMPORT_LINE_PATH.matcher(error.getField());
+          if (matcher.matches()) {
+            return "Ligne " + (Integer.parseInt(matcher.group(1)) + 1) + " : " + error.getDefaultMessage();
+          }
+          return error.getField() + " : " + error.getDefaultMessage();
+        })
+        .toList();
   }
 }

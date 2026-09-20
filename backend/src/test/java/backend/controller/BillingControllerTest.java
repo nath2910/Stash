@@ -37,15 +37,15 @@ class BillingControllerTest {
   }
 
   @Test
-  void statusReturns503WhenStripeIsNotConfigured() {
+  void statusReturnsDiscordAccessWhenStripeIsNotConfigured() {
     Mockito.when(billingService.isConfigured()).thenReturn(false);
+    Mockito.when(subscriptionAccessService.hasActiveSubscription(user)).thenReturn(true);
 
-    ResponseStatusException ex = Assertions.assertThrows(
-        ResponseStatusException.class,
-        () -> controller.status(user, false)
-    );
+    BillingStatusResponse response = controller.status(user, false);
 
-    Assertions.assertEquals(HttpStatus.SERVICE_UNAVAILABLE, ex.getStatusCode());
+    Assertions.assertTrue(response.hasAccess());
+    Assertions.assertFalse(response.portalAvailable());
+    Assertions.assertEquals("discord", response.accessSource());
   }
 
   @Test

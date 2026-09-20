@@ -1,7 +1,18 @@
 <template>
   <section class="legal-document">
     <header>
-      <p class="kicker">MyStash - Transparence et informations legales</p>
+      <div class="legal-document__topline">
+        <p class="kicker">MyStash - Transparence et informations legales</p>
+        <button
+          type="button"
+          class="legal-app-return"
+          :disabled="returningToApp"
+          @click="returnToApp"
+        >
+          {{ returningToApp ? 'Ouverture…' : isAuthenticated ? 'Retour à l’application' : 'Se connecter' }}
+          <span aria-hidden="true">→</span>
+        </button>
+      </div>
       <h1>{{ title }}</h1>
       <p v-if="description" class="description">{{ description }}</p>
       <p class="version">Derniere mise a jour : 9 septembre 2026</p>
@@ -19,19 +30,52 @@
 </template>
 
 <script setup>
-import { RouterLink } from 'vue-router'
+import { computed, ref } from 'vue'
+import { RouterLink, useRouter } from 'vue-router'
+import { useAuthStore } from '@/store/authStore'
+import { useBillingStore } from '@/store/billingStore'
 
 defineProps({
   title: { type: String, required: true },
   description: { type: String, default: '' },
 })
+
+const auth = useAuthStore()
+const billing = useBillingStore()
+const router = useRouter()
+const isAuthenticated = computed(() => Boolean(auth.token.value))
+const returningToApp = ref(false)
+
+async function returnToApp() {
+  if (returningToApp.value) return
+
+  if (!isAuthenticated.value) {
+    await router.push({ name: 'auth', query: { mode: 'login' } })
+    return
+  }
+
+  returningToApp.value = true
+  try {
+    // Resolve billing before leaving this public page. The home guard can then use
+    // the fresh cached answer instead of briefly sending an entitled user to /abo.
+    await billing.fetchStatus()
+    await router.push({ name: 'home' })
+  } finally {
+    returningToApp.value = false
+  }
+}
 </script>
 
 <style scoped>
 .legal-document { max-width: 900px; margin: auto; padding: clamp(2rem, 5vw, 4rem) 1rem 5rem; color: #334155; }
 header, nav, .legal-content { padding: clamp(1.2rem, 3vw, 2rem); margin-bottom: 1rem; border: 1px solid #e2e8f0; border-radius: 1rem; background: #ffffff; box-shadow: 0 18px 48px rgba(15, 23, 42, .06); }
+.legal-document__topline { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 h1 { font-size: clamp(1.8rem, 4vw, 3rem); color: #0f172a; font-weight: 800; margin: .6rem 0; }
 .kicker { color: #1d4ed8; font-size: .75rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.legal-app-return { display: inline-flex; flex: 0 0 auto; align-items: center; gap: .45rem; border: 1px solid #bfdbfe; border-radius: .7rem; background: #eff6ff; color: #1d4ed8; padding: .55rem .75rem; font: inherit; font-size: .8rem; font-weight: 800; line-height: 1; text-decoration: none; cursor: pointer; transition: background-color .16s ease, border-color .16s ease, transform .16s ease; }
+.legal-app-return:hover:not(:disabled) { border-color: #60a5fa; background: #dbeafe; color: #1e40af; transform: translateY(-1px); }
+.legal-app-return:disabled { cursor: wait; opacity: .72; }
+.legal-app-return:focus-visible { outline: 3px solid rgba(59, 130, 246, .35); outline-offset: 3px; }
 .description { max-width: 680px; color: #475569; font-size: 1.05rem; line-height: 1.65; }
 .version { margin-top: 1rem; color: #64748b; font-size: .82rem; }
 nav { display: flex; gap: 1rem; flex-wrap: wrap; }
@@ -51,6 +95,7 @@ nav { display: flex; gap: 1rem; flex-wrap: wrap; }
 @media (max-width: 680px) {
   .legal-document { padding: 1rem 0.85rem 3rem; }
   header, nav, .legal-content { padding: 1rem; border-radius: .8rem; }
+  .legal-document__topline { align-items: flex-start; flex-direction: column; }
   nav { display: grid; gap: .45rem; }
   :deep(nav a) { width: 100%; padding: .55rem .65rem; }
   :deep(table),

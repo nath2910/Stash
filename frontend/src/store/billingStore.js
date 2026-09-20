@@ -190,7 +190,21 @@ function seedStatus(nextStatus) {
 
 function seedFromUser(user) {
   scopedUserId = normalizeUserId(user?.id)
-  return applyStatus(user?.subscriptionStatus, '', user?.hasAccess)
+  // UserMe exposes the Stripe status but not the live Discord entitlement. In
+  // particular, an authorized Discord user legitimately has "inactive" here.
+  // Never cache that incomplete profile as an access refusal: the router must
+  // call /billing/status once and obtain the authoritative hasAccess flag.
+  if (typeof user?.hasAccess !== 'boolean') {
+    if (hasAccess.value) return status.value
+    status.value = 'unknown'
+    hasAccess.value = false
+    discordEligible.value = false
+    portalUrl.value = ''
+    lastFetchedAt.value = 0
+    persistStatus()
+    return status.value
+  }
+  return applyStatus(user?.subscriptionStatus, '', user.hasAccess)
 }
 
 function reset() {
@@ -207,15 +221,6 @@ function reset() {
   inflightWithPortal = null
 }
 
-function markAccessRequired() {
-  applyStatus('inactive', '', false)
-  portalUrl.value = ''
-  loading.value = false
-  inflightBasic = null
-  inflightWithPortal = null
-  return status.value
-}
-
 loadFromStorage()
 
 export function useBillingStore() {
@@ -230,6 +235,5 @@ export function useBillingStore() {
     seedStatus,
     seedFromUser,
     reset,
-    markAccessRequired,
   }
 }

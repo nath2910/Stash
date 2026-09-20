@@ -4,11 +4,12 @@
       <div class="app-topbar">
         <button
           type="button"
+          :disabled="returningHome"
           @click="goBack"
           class="app-touch-btn inline-flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-xs font-medium text-slate-200 transition hover:border-violet-400/50 hover:text-white"
         >
           <span class="text-sm">&lt;-</span>
-          <span>Retour</span>
+          <span>{{ returningHome ? 'Ouverture...' : 'Retour' }}</span>
         </button>
       </div>
 
@@ -246,6 +247,7 @@ const deleteError = ref('')
 const legalProfile = ref(normalizeLegalProfile(currentUser.value || {}))
 const legalProfileLoading = ref(false)
 const legalProfileError = ref('')
+const returningHome = ref(false)
 
 const canDelete = computed(
   () => deleteConfirmChecked.value && deleteConfirmText.value.trim() === 'SUPPRIMER',
@@ -348,11 +350,16 @@ const submitDelete = async () => {
   }
 }
 
-const goBack = () => {
-  if (window.history.length > 1) {
-    router.back()
-  } else {
-    router.push({ name: 'home' })
+const goBack = async () => {
+  if (returningHome.value) return
+  returningHome.value = true
+  try {
+    // Do not follow browser history: it can contain /abo?returnTo=... .
+    // Resolve access first, then navigate directly to the home route.
+    await billing.fetchStatus()
+    await router.push({ name: 'home' })
+  } finally {
+    returningHome.value = false
   }
 }
 

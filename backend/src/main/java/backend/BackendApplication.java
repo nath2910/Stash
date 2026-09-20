@@ -18,3 +18,5 @@ public class BackendApplication {
     application.run(args);
   }
 }
+
+//.\mvnw.cmd spring-boot:run

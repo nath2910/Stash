@@ -36,6 +36,7 @@ export type ImportPreview = {
   validItems: number
   duplicateRows: number
   unknownHeaders: string[]
+  mappingWarnings: string[]
   mapping: ImportMapping
   rows: ImportPreviewRow[]
   payload: ImportPayloadItem[]
@@ -229,9 +230,35 @@ export function toNumberSmart(value: unknown) {
   if (value == null) return null
   let text = String(value).trim()
   if (!text) return null
-  text = text.replace(/\s/g, '').replace(/[^\d,.\-+]/g, '')
-  if (text.includes(',') && !text.includes('.')) text = text.replace(',', '.')
-  text = text.replace(/,(?=\d{3}\b)/g, '').replace(/(?<=\d)\.(?=\d{3}\b)/g, '')
+  text = text.replace(/[\s\u00a0\u202f']/g, '').replace(/[^\d,.\-+]/g, '')
+  if (!/[\d]/.test(text)) return null
+
+  const commaCount = (text.match(/,/g) ?? []).length
+  const dotCount = (text.match(/\./g) ?? []).length
+  const lastComma = text.lastIndexOf(',')
+  const lastDot = text.lastIndexOf('.')
+
+  // The last separator is almost always the decimal one when both are used:
+  // 1,234.50 (US) and 1.234,50 (FR/EU) must both become 1234.50.
+  if (commaCount && dotCount) {
+    const decimalSeparator = lastComma > lastDot ? ',' : '.'
+    const groupingSeparator = decimalSeparator === ',' ? '.' : ','
+    text = text.replace(new RegExp(`\\${groupingSeparator}`, 'g'), '')
+    if (decimalSeparator === ',') text = text.replace(',', '.')
+  } else if (commaCount || dotCount) {
+    const separator = commaCount ? ',' : '.'
+    const groupsAsThousands = new RegExp(`^[+-]?\\d{1,3}(?:\\${separator}\\d{3})+$`).test(text)
+    if (groupsAsThousands) {
+      text = text.replace(new RegExp(`\\${separator}`, 'g'), '')
+    } else if (separator === ',') {
+      // French decimal notation; only the final comma can be decimal.
+      const last = text.lastIndexOf(',')
+      text = text.slice(0, last).replace(/,/g, '') + '.' + text.slice(last + 1)
+    } else if (dotCount > 1) {
+      const last = text.lastIndexOf('.')
+      text = text.slice(0, last).replace(/\./g, '') + '.' + text.slice(last + 1)
+    }
+  }
   const number = Number(text)
   return Number.isFinite(number) ? number : null
 }
@@ -260,7 +287,32 @@ export function parseDateSmart(value: unknown) {
 
   const text = String(value).trim()
   if (!text) return null
-  if (/^\d{4}-\d{2}-\d{2}/.test(text)) return text.slice(0, 10)
+
+  // A frequent spreadsheet typo is a missing separator before the year
+  // (for example 22/032024). It is still unambiguous and safe to normalize.
+  const compactFrenchDateMatch = text.match(/^(\d{1,2})[/.-](\d{1,2})(\d{4})$/)
+  if (compactFrenchDateMatch) {
+    const [, dayPart, monthPart, yearPart] = compactFrenchDateMatch
+    const day = Number(dayPart)
+    const month = Number(monthPart)
+    const year = Number(yearPart)
+    const date = new Date(year, month - 1, day)
+    return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day
+      ? formatLocalIsoDate(date)
+      : null
+  }
+
+  const isoMatch = text.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/)
+  if (isoMatch) {
+    const [, yearPart, monthPart, dayPart] = isoMatch
+    const year = Number(yearPart)
+    const month = Number(monthPart)
+    const day = Number(dayPart)
+    const date = new Date(year, month - 1, day)
+    return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day
+      ? formatLocalIsoDate(date)
+      : null
+  }
 
   if (/^\d{4,6}(\.\d+)?$/.test(text)) {
     const iso = excelSerialToIso(Number(text))
@@ -269,8 +321,12 @@ export function parseDateSmart(value: unknown) {
 
   const parts = text.replace(/\./g, '/').replace(/-/g, '/').split('/')
   if (parts.length === 3) {
-    const [dayPart, monthPart, yearPart] = parts
+    let [dayPart, monthPart, yearPart] = parts
     if (yearPart.length === 4) {
+      // Keep the French day/month default, but accept unambiguous US exports such as 05/16/2026.
+      if (Number(monthPart) > 12 && Number(dayPart) <= 12) {
+        ;[dayPart, monthPart] = [monthPart, dayPart]
+      }
       const day = Number(dayPart)
       const month = Number(monthPart)
       const year = Number(yearPart)
@@ -282,6 +338,15 @@ export function parseDateSmart(value: unknown) {
   }
 
   return formatLocalIsoDate(new Date(text))
+}
+
+function isAmbiguousSlashDate(value: unknown) {
+  const text = String(value ?? '').trim()
+  const match = text.match(/^(\d{1,2})[/.\-](\d{1,2})[/.\-](\d{4})$/)
+  if (!match) return false
+  const first = Number(match[1])
+  const second = Number(match[2])
+  return first >= 1 && first <= 12 && second >= 1 && second <= 12 && first !== second
 }
 
 function parseMetadata(value: unknown) {
@@ -460,9 +525,19 @@ export function resolveImportMapping(headers: string[]) {
     'nom article',
     'nom produit',
     'nom du produit',
+    'nom de la paire',
+    'nom paire',
+    'paire',
     'item',
     'item name',
     'item title',
+    'title',
+    'listing title',
+    'article title',
+    'product title',
+    'product title en',
+    'product name en',
+    'variant title',
     'produit',
     'product name',
     'product',
@@ -475,6 +550,12 @@ export function resolveImportMapping(headers: string[]) {
     'titre',
     'sneaker',
     'sneakers',
+    'article',
+    'designation',
+    'libelle',
+    'libelle article',
+    'objet',
+    'object name',
   ])
   const brand = findHeader(headers, [
     'marque',
@@ -484,6 +565,12 @@ export function resolveImportMapping(headers: string[]) {
     'maker',
     'categorie',
     'category',
+    'product category',
+    'product category name',
+    'product group',
+    'collection',
+    'vendor',
+    'marque produit',
   ])
   const retail = findHeader(headers, [
     'prix retail',
@@ -496,6 +583,16 @@ export function resolveImportMapping(headers: string[]) {
     'montant achat',
     'montant paye',
     'prix fournisseur',
+    'cout unitaire',
+    'cout acquisition',
+    "cout d'acquisition",
+    'cout d acquisition',
+    'cout par article',
+    'cout par item',
+    'cost per item',
+    'unit cost',
+    'landed cost',
+    'acquisition cost',
     'purchase price',
     'purchase amount',
     'buy price',
@@ -524,6 +621,14 @@ export function resolveImportMapping(headers: string[]) {
     'prix de vente estime',
     'prix vente reel',
     'prix de vente reel',
+    'payout',
+    'net payout',
+    'net proceeds',
+    'montant net',
+    'revenu net',
+    'prix final',
+    'final price',
+    'transaction price',
     'prixResell',
     'prix revente estime',
     'prix revente reel',
@@ -533,6 +638,10 @@ export function resolveImportMapping(headers: string[]) {
     'resell price',
     'sell price',
     'selling price',
+    'variant price',
+    'listing price',
+    'current price',
+    'item price',
     'sale amount',
     'sell',
     'sold',
@@ -555,6 +664,12 @@ export function resolveImportMapping(headers: string[]) {
     'date buy',
     'acquired',
     'acquisition',
+    'order date',
+    'order created at',
+    'date commande',
+    'date acquisition',
+    'date reception',
+    'received at',
     'date',
   ])
   const dateVente = findHeader(headers, [
@@ -568,6 +683,11 @@ export function resolveImportMapping(headers: string[]) {
     'resell date',
     'sold at',
     'date sold',
+    'sold on',
+    'transaction date',
+    'date transaction',
+    'fulfilled at',
+    'date expediee',
   ])
   const mapping = {
     name,
@@ -576,8 +696,28 @@ export function resolveImportMapping(headers: string[]) {
     resell,
     dateAchat,
     dateVente: dateAchat && dateVente === dateAchat ? '' : dateVente,
-    notes: findHeader(headers, ['description', 'desc', 'notes', 'note', 'commentaire', 'comment']),
-    type: findHeader(headers, ['type', 'type item', "type d'item"]),
+    notes: findHeader(headers, [
+      'description',
+      'desc',
+      'notes',
+      'note',
+      'commentaire',
+      'comment',
+      'body html',
+      'body',
+      'details',
+      'tags',
+      'memo',
+    ]),
+    type: findHeader(headers, [
+      'type',
+      'type item',
+      "type d'item",
+      'product type',
+      'item type',
+      'article type',
+      'department',
+    ]),
     metadata: findHeader(headers, ['metadata', 'meta']),
     size: findHeader(headers, ['pointure', 'taille', 'size', 'eu size', 'us size', 'uk size']),
     sku: findHeader(headers, [
@@ -589,6 +729,10 @@ export function resolveImportMapping(headers: string[]) {
       'ref',
       'style code',
       'code',
+      'custom label',
+      'variant sku',
+      'item number',
+      'product code',
     ]),
     condition: findHeader(headers, ['etat', 'condition', 'state', 'status', 'statut']),
     colorway: findHeader(headers, ['coloris', 'colorway', 'couleur']),
@@ -600,8 +744,23 @@ export function resolveImportMapping(headers: string[]) {
       'quantity',
       'stock',
       'nombre',
+      'inventory qty',
+      'inventory quantity',
+      'variant inventory qty',
+      'available quantity',
+      'units',
     ]),
-    supplier: findHeader(headers, ['fournisseur', 'supplier', 'source', 'vendeur', 'seller']),
+    supplier: findHeader(headers, [
+      'fournisseur',
+      'supplier',
+      'source',
+      'vendeur',
+      'seller',
+      'purchase source',
+      'buying source',
+      'store',
+      'shop',
+    ]),
   }
 
   return dedupeMapping(mapping, [
@@ -639,11 +798,58 @@ function dedupeMapping(mapping: ImportMapping, priority: string[]) {
   return deduped
 }
 
+const MAPPING_PRIORITY = [
+  'name',
+  'brand',
+  'size',
+  'retail',
+  'resell',
+  'quantity',
+  'condition',
+  'sku',
+  'dateAchat',
+  'dateVente',
+  'supplier',
+  'notes',
+  'type',
+  'colorway',
+  'boxCondition',
+  'metadata',
+]
+
+const MAPPING_FIELD_LABELS: Record<string, string> = {
+  name: "le nom de l’item",
+  brand: 'la marque / catégorie',
+  retail: "le prix d’achat",
+  resell: 'le prix de vente',
+  dateAchat: "la date d’achat",
+  dateVente: 'la date de vente',
+  quantity: 'la quantité',
+  type: "le type d’item",
+}
+
 export function normalizeMapping(headers: string[], mapping: ImportMapping) {
   const allowed = new Set(headers)
-  return Object.fromEntries(
+  const safeMapping = Object.fromEntries(
     Object.entries(mapping).map(([key, value]) => [key, allowed.has(value) ? value : '']),
   ) as ImportMapping
+  return dedupeMapping(safeMapping, MAPPING_PRIORITY)
+}
+
+function buildMappingWarnings(headers: string[], mapping: ImportMapping) {
+  const warnings: string[] = []
+  if (!mapping.name) warnings.push('La colonne du nom de l’item doit être choisie avant l’import.')
+
+  const genericHeaders = new Set(['name', 'nom', 'model', 'modele', 'date', 'prix', 'price', 'amount'])
+  Object.entries(mapping).forEach(([field, header]) => {
+    if (header && genericHeaders.has(normalizeImportText(header))) {
+      warnings.push(
+        `« ${header} » a été associé à ${MAPPING_FIELD_LABELS[field] ?? field} : vérifie ce choix si le fichier contient plusieurs colonnes proches.`,
+      )
+    }
+  })
+
+  return warnings
 }
 
 export function recognizedImportHeaders(headers: string[], mapping: ImportMapping) {
@@ -666,6 +872,12 @@ export function recognizedImportHeaders(headers: string[], mapping: ImportMappin
 
 function isEmptyImportRow(row: CsvRow, headers: string[]) {
   return !headers.some((header) => String(row?.[header] ?? '').trim())
+}
+
+function hasMappedImportValue(row: CsvRow, mapping: ImportMapping) {
+  return Object.values(mapping).some(
+    (header) => header && String(row?.[header] ?? '').trim(),
+  )
 }
 
 function normalizeItemType(value: unknown) {
@@ -785,6 +997,12 @@ function buildPreviewItem(row: CsvRow, headers: string[], mapping: ImportMapping
 
   const dateAchat = parseOptionalDate(row, mapping.dateAchat, "Date d'achat", errors)
   const dateVente = parseOptionalDate(row, mapping.dateVente, 'Date de vente', errors)
+  if (mapping.dateAchat && isAmbiguousSlashDate(readCell(row, mapping.dateAchat))) {
+    warnings.push("Date d'achat ambiguë : interprétée au format jour/mois/année")
+  }
+  if (mapping.dateVente && isAmbiguousSlashDate(readCell(row, mapping.dateVente))) {
+    warnings.push('Date de vente ambiguë : interprétée au format jour/mois/année')
+  }
   if (dateAchat && dateVente && dateVente < dateAchat) {
     warnings.push('Date de vente anterieure a la date achat')
   }
@@ -812,6 +1030,7 @@ export function analyzeImportRows(
 ): ImportPreview {
   const mapping = normalizeMapping(headers, mappingOverride ?? resolveImportMapping(headers))
   const recognizedHeaders = recognizedImportHeaders(headers, mapping)
+  const mappingWarnings = buildMappingWarnings(headers, mapping)
   const unknownHeaders = headers.filter(
     (header) => String(header).trim() && !recognizedHeaders.has(header),
   )
@@ -822,7 +1041,13 @@ export function analyzeImportRows(
   let duplicateRows = 0
   const rowsWithNumbers = rows
     .map((row, index) => ({ row, rowNumber: index + 2 }))
-    .filter(({ row }) => !isEmptyImportRow(row, headers))
+    .filter(
+      ({ row }) =>
+        !isEmptyImportRow(row, headers) &&
+        // Summary formulas or notes placed beside a table must not become fake rows.
+        // If a name column is known, retain only rows carrying at least one mapped value.
+        (!mapping.name || hasMappedImportValue(row, mapping)),
+    )
 
   if (!mapping.name) {
     return {
@@ -833,6 +1058,7 @@ export function analyzeImportRows(
       validItems: 0,
       duplicateRows: 0,
       unknownHeaders,
+      mappingWarnings,
       mapping,
       rows: rowsWithNumbers.slice(0, 12).map(({ rowNumber }) => ({
         rowNumber,
@@ -888,8 +1114,31 @@ export function analyzeImportRows(
     validItems: payload.length,
     duplicateRows,
     unknownHeaders,
+    mappingWarnings,
     mapping,
     rows: previewRows,
     payload,
   }
+}
+
+/**
+ * Produces a compact, spreadsheet-friendly correction report. Only rows that
+ * need attention are included, so it can safely be sent back to a user.
+ */
+export function buildImportIssueReportCsv(preview: ImportPreview) {
+  const rows = (preview?.rows ?? []).filter((row) => row.errors.length || row.warnings.length)
+  const headers = ['ligne', 'item', 'statut', 'action', 'erreurs', 'avertissements']
+  const lines = rows.map((row) => {
+    const values = [
+      row.rowNumber,
+      row.name,
+      row.status === 'valid' ? 'valide' : 'invalide',
+      row.status === 'valid' ? 'importe avec avertissement' : 'non importe',
+      row.errors.join(' | '),
+      row.warnings.join(' | '),
+    ]
+    return values.map(quoteCsvCell).join(';')
+  })
+
+  return '\uFEFF' + [headers.join(';'), ...lines].join('\r\n')
 }

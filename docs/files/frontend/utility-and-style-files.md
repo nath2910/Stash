@@ -68,10 +68,7 @@ Input date compact custom (integration datepicker).
 
 ---
 
-## 6) `src/components/StatBadge.vue`
-- Petit composant de badge KPI avec ton dynamique.
-
-## 7) CSS globaux
+## 6) CSS globaux
 
 ### `src/assets/base.css`
 - reset/base styles + variables globales.

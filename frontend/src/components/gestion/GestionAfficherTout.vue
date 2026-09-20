@@ -12,7 +12,7 @@
       <button
         type="button"
         class="gestion-selection-toggle"
-        :disabled="!visibleIds.length"
+        :disabled="!selectionScopeIds.length"
         @click="toggleAll"
       >
         {{ allSelected && modelValue.length ? 'Tout deselectionner' : 'Tout selectionner' }}
@@ -170,11 +170,7 @@
                   <span class="gestion-child-meta-separator">-</span>
                   {{ formatCurrency(child.prixRetail ?? child.prix_retail) }}
                   -
-                  {{
-                    isVendue(child)
-                      ? `${formatCurrency(child.prixResell ?? child.prix_resell)} vendu`
-                      : 'non vendu'
-                  }}
+                  {{ resellStatusLabel(child) }}
                 </p>
               </button>
 
@@ -437,11 +433,7 @@
               </td>
 
               <td class="gestion-cell-resell px-4 py-3 text-right">
-                {{
-                  isVendue(child)
-                    ? formatCurrency(child.prixResell ?? child.prix_resell)
-                    : '--'
-                }}
+                {{ formatCurrency(child.prixResell ?? child.prix_resell) }}
               </td>
 
               <td class="gestion-cell-date px-4 py-3 text-center text-xs text-gray-300">
@@ -535,6 +527,9 @@ const props = defineProps({
   loading: { type: Boolean, default: false },
   selectable: { type: Boolean, default: false },
   modelValue: { type: Array, default: () => [] },
+  // The parent may provide every matching ID while this component only renders a batch.
+  // It keeps “Tout sélectionner” independent from virtual/incremental rendering.
+  selectionScopeIds: { type: Array, default: () => [] },
 })
 
 const emit = defineEmits(['edit', 'update:modelValue', 'delete'])
@@ -560,9 +555,14 @@ const visibleIds = computed(() => {
   return ids
 })
 
+const selectionScopeIds = computed(() => {
+  const source = props.selectionScopeIds.length ? props.selectionScopeIds : visibleIds.value
+  return Array.from(new Set(source.filter((id) => id !== null && id !== undefined)))
+})
+
 const allSelected = computed(() => {
-  if (!visibleIds.value.length) return false
-  return visibleIds.value.every((id) => selectedSet.value.has(id))
+  if (!selectionScopeIds.value.length) return false
+  return selectionScopeIds.value.every((id) => selectedSet.value.has(id))
 })
 
 const onDesktopChange = (event) => {
@@ -600,14 +600,14 @@ const toggleGroup = (vente) => {
 
 const toggleAll = () => {
   if (allSelected.value) {
-    const visible = new Set(visibleIds.value)
-    const next = props.modelValue.filter((id) => !visible.has(id))
+    const scope = new Set(selectionScopeIds.value)
+    const next = props.modelValue.filter((id) => !scope.has(id))
     emit('update:modelValue', next)
     return
   }
 
   const next = new Set(props.modelValue)
-  visibleIds.value.forEach((id) => next.add(id))
+  selectionScopeIds.value.forEach((id) => next.add(id))
   emit('update:modelValue', Array.from(next))
 }
 
@@ -669,11 +669,20 @@ const retailLabel = (vente) => {
 
 const resellLabel = (vente) => {
   if (!isGroup(vente)) {
-    return isVendue(vente) ? formatCurrency(vente.prixResell ?? vente.prix_resell) : '--'
+    // A resale price may be an estimate. A sale date only indicates that the item is sold;
+    // it must not hide an imported estimate from the inventory table.
+    return formatCurrency(vente.prixResell ?? vente.prix_resell)
   }
   if (!soldCount(vente)) return '--'
   if (soldCount(vente) < quantityOf(vente)) return `${soldCount(vente)}/${quantityOf(vente)} vendus`
   return formatCurrency(totalResellOf(vente))
+}
+
+const resellStatusLabel = (vente) => {
+  const value = vente?.prixResell ?? vente?.prix_resell
+  const formatted = formatCurrency(value)
+  if (formatted === '--') return isVendue(vente) ? 'vendu' : 'non vendu'
+  return `${formatted} ${isVendue(vente) ? 'vendu' : 'estimé'}`
 }
 
 const saleDateLabel = (vente) => {

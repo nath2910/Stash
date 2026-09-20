@@ -35,9 +35,9 @@ public class BillingController {
       @RequestParam(name = "includePortal", defaultValue = "false") boolean includePortal,
       @RequestParam(name = "forceRefresh", defaultValue = "false") boolean forceRefresh
   ) {
-    if (!billingService.isConfigured()) {
-      throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Stripe non configuré");
-    }
+    // This endpoint is also the access check for Discord-authorized accounts.
+    // It must remain available when Stripe is not configured: billing features
+    // can be unavailable while the application itself is still accessible.
     if (hasStripeCustomer(user)) {
       try {
         billingService.refreshStatus(user);

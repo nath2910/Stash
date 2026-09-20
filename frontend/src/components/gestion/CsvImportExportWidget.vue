@@ -138,14 +138,21 @@
             v-if="preview.invalidRows"
             class="rounded-xl border border-amber-300/20 bg-amber-300/10 p-3 text-xs text-amber-100"
           >
-            {{ preview.invalidRows }} ligne(s) invalide(s) ne seront pas importees. Corrige le fichier ou ajuste le mapping si besoin.
+            <p>{{ preview.invalidRows }} ligne(s) invalide(s) ne seront jamais envoyées. Les lignes valides restent importables.</p>
+            <button
+              type="button"
+              class="mt-2 rounded-lg border border-amber-300/30 bg-white/10 px-2.5 py-1.5 text-[11px] font-semibold text-amber-100 transition hover:bg-white/20"
+              @click="downloadIssueReport"
+            >
+              Télécharger le rapport d’erreurs
+            </button>
           </div>
 
           <div class="rounded-xl border border-white/10 bg-slate-900/60 p-3 text-xs text-slate-200">
             <div class="flex items-center justify-between gap-3">
               <div>
-                <div class="font-semibold text-white">Mapping des colonnes</div>
-                <p class="mt-1 text-slate-400">Corrige les colonnes reconnues avant de confirmer.</p>
+                <div class="font-semibold text-white">Ce que nous avons reconnu</div>
+                <p class="mt-1 text-slate-400">Les associations sont proposées automatiquement. Tu peux les modifier sans toucher au fichier.</p>
               </div>
               <button
                 type="button"
@@ -154,6 +161,12 @@
               >
                 Reanalyser
               </button>
+            </div>
+            <div
+              v-if="preview.mappingWarnings.length"
+              class="mt-3 rounded-lg border border-amber-300/20 bg-amber-300/10 p-2 text-amber-100"
+            >
+              <p v-for="warning in preview.mappingWarnings" :key="warning">{{ warning }}</p>
             </div>
             <div class="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
               <label
@@ -191,7 +204,7 @@
               </span>
             </div>
             <p class="mt-2 text-slate-400">
-              Google Sheets et Apple Numbers : exporte en CSV ou XLSX, sans identifiant ni secret.
+              Compatible avec les exports classiques de tableur, Shopify et places de marché. Les colonnes non utilisées ne sont jamais importées.
             </p>
           </div>
 
@@ -279,6 +292,7 @@ import type { ParseResult } from 'papaparse'
 import SnkVenteServices from '@/services/SnkVenteServices.js'
 import {
   analyzeImportRows,
+  buildImportIssueReportCsv,
   buildStockExportCsv,
   detectDelimiter,
   extractTableFrom2D,
@@ -322,6 +336,20 @@ function exportCsv() {
   a.click()
   a.remove()
 
+  URL.revokeObjectURL(url)
+}
+
+function downloadIssueReport() {
+  if (!preview.value) return
+  const content = buildImportIssueReportCsv(preview.value)
+  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `rapport_import_${new Date().toISOString().slice(0, 10)}.csv`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
   URL.revokeObjectURL(url)
 }
 
@@ -627,6 +655,30 @@ function errorMessage(err: unknown, fallback: string) {
   )
 }
 
+function importErrorMessage(err: unknown) {
+  if (!err || typeof err !== 'object') return 'Import impossible. Vérifie le fichier puis réessaie.'
+  const error = err as {
+    code?: unknown
+    response?: { status?: number; data?: { message?: unknown; error?: unknown } }
+    message?: unknown
+  }
+  const status = Number(error.response?.status)
+  const serverMessage = String(error.response?.data?.message ?? error.response?.data?.error ?? '').trim()
+
+  if (status === 400) {
+    return `Import refusé : ${serverMessage || 'les données ne respectent pas le format attendu'}. Aucune ligne n’a été ajoutée.`
+  }
+  if (status === 401 || status === 403) return 'Ta session a expiré. Reconnecte-toi avant de relancer l’import.'
+  if (status === 413) return 'Le fichier ou le lot est trop volumineux. Réduis-le à 500 items maximum.'
+  if (status >= 500) return 'Le serveur a rencontré un problème. Actualise ton stock avant de relancer l’import.'
+
+  const message = String(error.message ?? '').trim()
+  if (!error.response && (message === 'Network Error' || String(error.code ?? '') === 'ECONNABORTED')) {
+    return 'La connexion a été interrompue. Actualise ton stock avant de relancer, afin d’éviter un doublon.'
+  }
+  return message || 'Import impossible. Vérifie le fichier puis réessaie.'
+}
+
 async function preparePreview(file: File) {
   parsing.value = true
   errorMsg.value = ''
@@ -677,7 +729,10 @@ async function importNow() {
     const res = await SnkVenteServices.importBulk(payload)
 
     const created = res?.data?.created ?? null
-    if (created === 0) throw new Error('Import fait mais 0 ligne créee.')
+    if (created === 0) throw new Error('Import fait mais 0 ligne créée.')
+    if (created !== null && created !== payload.length) {
+      throw new Error('Le serveur a retourné un nombre de lignes inattendu. Actualise le stock avant de relancer.')
+    }
 
     successMsg.value = `Import OK (${created ?? payload.length} item(s))`
     emit('imported')
@@ -690,7 +745,7 @@ async function importNow() {
     stopProgress(100)
   } catch (err: unknown) {
     console.error(err)
-    errorMsg.value = errorMessage(err, 'Erreur import')
+    errorMsg.value = importErrorMessage(err)
     stopProgress(0)
   } finally {
     importing.value = false

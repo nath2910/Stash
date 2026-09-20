@@ -5,6 +5,7 @@ import backend.entity.SnkVente;
 import backend.entity.User;
 import backend.repository.SnkVenteRepository;
 import backend.repository.UserRepository;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -52,6 +53,21 @@ class SnkVenteServiceImportTest {
   }
 
   @Test
+  void rejectsInvalidRowsInsteadOfSilentlySkippingThem() {
+    SnkVenteImportDto invalid = new SnkVenteImportDto(
+        "   ", null, null, null, null, null, null, null, null
+    );
+
+    ResponseStatusException exception = Assertions.assertThrows(
+        ResponseStatusException.class,
+        () -> service.importBulk(1L, List.of(invalid))
+    );
+
+    Assertions.assertEquals("Ligne 1 : nom de l'item manquant", exception.getReason());
+    Mockito.verifyNoInteractions(venteRepo);
+  }
+
+  @Test
   void importsTrimmedNames() {
     SnkVenteImportDto dto = new SnkVenteImportDto(
         "  Test  ",
@@ -72,6 +88,29 @@ class SnkVenteServiceImportTest {
     List<SnkVente> saved = captor.getValue();
     Assertions.assertEquals(1, saved.size());
     Assertions.assertEquals("Test", saved.get(0).getNomItem());
+  }
+
+  @Test
+  void keepsAnEstimatedResellPriceWithoutASaleDate() {
+    SnkVenteImportDto dto = new SnkVenteImportDto(
+        "Dunk low",
+        new BigDecimal("100.00"),
+        new BigDecimal("185.00"),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+
+    service.importBulk(1L, List.of(dto));
+
+    ArgumentCaptor<List<SnkVente>> captor = ArgumentCaptor.forClass(List.class);
+    Mockito.verify(venteRepo).saveAll(captor.capture());
+    SnkVente saved = captor.getValue().get(0);
+    Assertions.assertEquals(new BigDecimal("185.00"), saved.getPrixResell());
+    Assertions.assertNull(saved.getDateVente());
   }
 
   @Test

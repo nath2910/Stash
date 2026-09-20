@@ -281,11 +281,11 @@
         "
       >
         <span class="font-jetbrains-mono">&copy; {{ new Date().getFullYear() }} - MyStash</span>
-        <RouterLink to="/a-propos" class="hover:underline">À propos</RouterLink>
-        <RouterLink to="/confidentialite" class="hover:underline">Confidentialité</RouterLink>
-        <RouterLink to="/legal" class="hover:underline">Mentions légales</RouterLink>
-        <RouterLink to="/legal/cgu" class="hover:underline">Conditions d’utilisation</RouterLink>
-        <a href="mailto:nathantalvasson@gmail.com" class="hover:underline">Contact</a>
+        <RouterLink to="/a-propos" class="layout-footer-link">À propos</RouterLink>
+        <RouterLink to="/confidentialite" class="layout-footer-link">Confidentialité</RouterLink>
+        <RouterLink to="/legal" class="layout-footer-link">Mentions légales</RouterLink>
+        <RouterLink to="/legal/cgu" class="layout-footer-link">Conditions d’utilisation</RouterLink>
+        <a href="mailto:nathantalvasson@gmail.com" class="layout-footer-link">Contact</a>
       </div>
     </footer>
 
@@ -767,17 +767,21 @@ const onBillingAccessRequired = () => {
   if (billingAccessRefreshInFlight || !auth.token?.value) return
   if (route.meta.allowInactive === true || isAuthRoute.value || isPublicDocumentRoute.value) return
 
-  billing.markAccessRequired?.()
-  router.replace({ name: 'abo', query: { returnTo: route.fullPath } }).catch(() => {})
+  // A protected request can race with a freshly restored Discord session. Do not
+  // show the subscription page until the authoritative status check confirms that
+  // access is really unavailable: redirecting first caused a visible /abo flash.
+  const returnTo = route.fullPath
   billingAccessRefreshInFlight = billing
     .fetchStatus(true)
     .then(() => {
       if (!hasBillingAccess() && route.meta.allowInactive !== true && route.name !== 'abo') {
-        router.replace({ name: 'abo', query: { returnTo: route.fullPath } }).catch(() => {})
+        router.replace({ name: 'abo', query: { returnTo } }).catch(() => {})
       }
     })
     .catch(() => {
-      router.replace({ name: 'abo', query: { returnTo: route.fullPath } }).catch(() => {})
+      // Keep the current page on a temporary verification failure. Backend routes
+      // remain protected, and an entitled user must never be sent to checkout
+      // just because Discord or the network answered late.
     })
     .finally(() => {
       billingAccessRefreshInFlight = null
@@ -1365,9 +1369,24 @@ body.layout-stats-template-scroll-lock::-webkit-scrollbar {
   white-space: nowrap;
 }
 
-.layout-footer-pill a:hover {
-  background-color: #7c3aed;
-  color: #ffffff;
+.layout-footer-pill .layout-footer-link {
+  color: inherit;
+  text-decoration-line: underline;
+  text-decoration-color: transparent;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
+.layout-footer-pill .layout-footer-link:hover {
+  background-color: transparent;
+  color: #0f766e;
+  text-decoration-color: currentColor;
+  transform: none;
+}
+
+.layout-footer-pill .layout-footer-link:focus-visible {
+  outline-color: rgba(13, 148, 136, 0.65);
+  outline-offset: 4px;
 }
 
 @media (max-width: 767px) {

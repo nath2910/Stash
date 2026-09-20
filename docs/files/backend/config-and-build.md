@@ -111,17 +111,7 @@ Ne jamais exposer ce fichier. Le remplacer en prod par secret manager.
 
 ---
 
-## 7) `backend/src/main/resources/ss.sql`
-
-### Etat
-Fichier vide. Probable artefact.
-
-### Action recommandee
-Supprimer ou documenter explicitement son usage.
-
----
-
-## 8) Fichiers outillage
+## 7) Fichiers outillage
 
 ### `backend/.mvn/wrapper/maven-wrapper.properties`
 - Version wrapper Maven fixe (`3.9.11`).

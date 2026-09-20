@@ -71,6 +71,22 @@ describe('billingStore', () => {
     expect(billing.status.value).toBe('unknown')
   })
 
+  it('does not treat an inactive Stripe profile as a denial before Discord is checked', async () => {
+    const module = await loadBillingStoreForUser({ id: 9, subscriptionStatus: 'inactive' })
+    const billing = module.useBillingStore()
+
+    billing.seedFromUser({ id: 9, subscriptionStatus: 'inactive' })
+
+    expect(billing.status.value).toBe('unknown')
+    expect(billing.hasAccess.value).toBe(false)
+
+    billingStatus.mockResolvedValueOnce({
+      data: { status: 'inactive', hasAccess: true, discordEligible: true },
+    })
+    await expect(billing.fetchStatus()).resolves.toBe('inactive')
+    expect(billing.hasAccess.value).toBe(true)
+  })
+
   it('clears stale active access when a forced status refresh fails', async () => {
     const module = await loadBillingStoreForUser({ id: 12 })
     const billing = module.useBillingStore()
@@ -84,14 +100,4 @@ describe('billingStore', () => {
     expect(billing.hasAccess.value).toBe(false)
   })
 
-  it('marks billing access as required immediately after a protected API 402', async () => {
-    const module = await loadBillingStoreForUser({ id: 18 })
-    const billing = module.useBillingStore()
-
-    billing.seedFromUser({ id: 18, subscriptionStatus: 'active', hasAccess: true })
-
-    expect(billing.markAccessRequired()).toBe('inactive')
-    expect(billing.status.value).toBe('inactive')
-    expect(billing.hasAccess.value).toBe(false)
-  })
 })

@@ -2,29 +2,22 @@
   <div class="auth-screen flex min-h-dvh items-stretch overflow-y-auto overflow-x-visible bg-slate-950 px-4 py-5 pb-20 sm:items-center sm:py-6 sm:pb-6">
     <router-link
       :to="{ name: 'discover' }"
-      class="auth-discover-link fixed bottom-4 left-4 right-4 z-20 mx-auto inline-flex w-max max-w-[calc(100vw-2rem)] items-center justify-center whitespace-nowrap rounded-lg border border-violet-400/50 bg-violet-500/15 px-3 py-1.5 text-xs font-medium text-violet-100 shadow-lg shadow-black/25 transition hover:border-violet-300/80 hover:bg-violet-500/25 sm:bottom-6 sm:left-6 sm:right-auto sm:mx-0"
+      class="auth-discover-link"
     >
-      Decouvrir l'offre
+      <span class="auth-discover-link__icon" aria-hidden="true">✦</span>
+      <span class="auth-discover-link__copy">
+        <small>MyStash Pro</small>
+        <strong>Découvrir l’offre</strong>
+      </span>
+      <ArrowUpRight class="auth-discover-link__arrow" aria-hidden="true" />
     </router-link>
     <div class="auth-shell mx-auto w-full max-w-5xl">
       <div class="auth-grid grid min-w-0 items-center gap-5 md:grid-cols-[0.9fr_1.1fr] md:gap-6">
         <div class="auth-copy text-slate-200">
-          <p class="text-xs uppercase tracking-[0.3em] text-violet-300/80">Compte</p>
-          <h1 class="mt-2 text-2xl font-semibold text-white sm:text-3xl">
-            {{ mode === 'login' ? 'Connexion' : 'Inscription' }}
-          </h1>
-          <p class="mt-2 text-sm text-slate-400">
-            {{
-              mode === 'login'
-                ? 'Accède à ton espace Stash.'
-                : 'Crée ton compte en quelques secondes.'
-            }}
-          </p>
-          <div
-            class="mt-4 hidden md:inline-flex items-center rounded-2xl border border-violet-400/30 bg-violet-400/10 px-4 py-2 text-xs text-violet-200"
-          >
-            {{ mode === 'login' ? 'Connexion sécurisée' : 'Création rapide' }}
-          </div>
+          <router-link :to="{ name: 'discover' }" class="auth-brand" aria-label="Découvrir MyStash">
+            <img class="auth-brand__logo" src="/favicon-192.png" alt="" aria-hidden="true" />
+            <span class="auth-brand__wordmark">My<span>Stash</span></span>
+          </router-link>
         </div>
 
         <div
@@ -365,7 +358,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { AlertCircle, CheckCircle2 } from 'lucide-vue-next'
+import { AlertCircle, ArrowUpRight, CheckCircle2 } from 'lucide-vue-next'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import AuthService from '@/services/AuthService'
 import { useAuthStore } from '@/store/authStore'
@@ -734,6 +727,153 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.auth-screen {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 18% 34%, rgba(109, 93, 252, 0.15), transparent 24rem),
+    radial-gradient(circle at 78% 64%, rgba(14, 165, 233, 0.09), transparent 28rem),
+    #020617;
+}
+
+.auth-screen::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.38;
+  background-image: linear-gradient(rgba(148, 163, 184, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.045) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: linear-gradient(90deg, #000, transparent 76%);
+}
+
+.auth-shell {
+  position: relative;
+  z-index: 1;
+}
+
+.auth-copy {
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  max-width: 25rem;
+}
+
+.auth-brand {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.9rem;
+  color: #f8fafc;
+  text-decoration: none;
+}
+
+.auth-brand:hover {
+  background: transparent;
+  color: #f8fafc;
+  transform: none;
+}
+
+.auth-brand__logo {
+  display: block;
+  width: 5.1rem;
+  height: 5.1rem;
+  flex: 0 0 auto;
+  filter: drop-shadow(0 10px 18px rgba(109, 93, 252, 0.28));
+}
+
+.auth-brand__wordmark {
+  font-size: 2.2rem;
+  font-weight: 840;
+  letter-spacing: -0.045em;
+}
+
+.auth-brand__wordmark span {
+  color: #a78bfa;
+}
+
+.auth-card {
+  box-shadow:
+    0 26px 60px rgba(2, 6, 23, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.045);
+}
+
+.auth-discover-link {
+  position: fixed;
+  z-index: 20;
+  bottom: 1.5rem;
+  left: 1.5rem;
+  display: inline-flex;
+  width: fit-content;
+  min-height: 3.65rem;
+  align-items: center;
+  gap: 0.72rem;
+  border: 1px solid rgba(167, 139, 250, 0.5);
+  border-radius: 1rem;
+  background: linear-gradient(135deg, rgba(109, 93, 252, 0.28), rgba(67, 56, 202, 0.16));
+  color: #f5f3ff;
+  padding: 0.55rem 0.72rem;
+  text-decoration: none;
+  box-shadow:
+    0 14px 32px rgba(2, 6, 23, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.auth-discover-link:hover {
+  border-color: rgba(196, 181, 253, 0.82);
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.56), rgba(79, 70, 229, 0.38));
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow:
+    0 18px 38px rgba(76, 29, 149, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.auth-discover-link__icon {
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  place-items: center;
+  border-radius: 0.72rem;
+  background: rgba(255, 255, 255, 0.12);
+  color: #ddd6fe;
+  font-size: 1rem;
+}
+
+.auth-discover-link__copy {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 8.8rem;
+}
+
+.auth-discover-link__copy small {
+  color: #c4b5fd;
+  font-size: 0.62rem;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.auth-discover-link__copy strong {
+  color: inherit;
+  font-size: 0.82rem;
+  font-weight: 760;
+}
+
+.auth-discover-link__arrow {
+  width: 1.05rem;
+  height: 1.05rem;
+  margin-right: 0.08rem;
+  color: #ddd6fe;
+  transition: transform 160ms ease;
+}
+
+.auth-discover-link:hover .auth-discover-link__arrow {
+  transform: translate(1px, -1px);
+}
+
 .auth-notice {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -825,17 +965,7 @@ onMounted(() => {
 
   .auth-copy {
     display: grid;
-    gap: 0.35rem;
-  }
-
-  .auth-copy h1 {
-    margin-top: 0;
-    font-size: clamp(1.9rem, 10vw, 2.55rem);
-  }
-
-  .auth-copy p:last-child {
-    margin-top: 0;
-    font-size: 1rem;
+    gap: 0;
   }
 
   .auth-card {
@@ -859,8 +989,9 @@ onMounted(() => {
     margin-top: 1.1rem;
     width: 100%;
     max-width: none;
-    min-height: 44px;
+    min-height: 54px;
     border-radius: 14px;
+    justify-content: center;
   }
 }
 
