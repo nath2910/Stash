@@ -18,8 +18,4 @@ const updatedHeaders = headers.replace(
   `connect-src 'self' ${apiOrigin};`,
 )
 
-if (updatedHeaders === headers) {
-  throw new Error('Unable to configure the API origin in dist/_headers.')
-}
-
 await writeFile(headersPath, updatedHeaders)
