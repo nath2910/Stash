@@ -321,7 +321,8 @@ export function parseDateSmart(value: unknown) {
 
   const parts = text.replace(/\./g, '/').replace(/-/g, '/').split('/')
   if (parts.length === 3) {
-    let [dayPart, monthPart, yearPart] = parts
+    let [dayPart, monthPart] = parts
+    const yearPart = parts[2]
     if (yearPart.length === 4) {
       // Keep the French day/month default, but accept unambiguous US exports such as 05/16/2026.
       if (Number(monthPart) > 12 && Number(dayPart) <= 12) {
