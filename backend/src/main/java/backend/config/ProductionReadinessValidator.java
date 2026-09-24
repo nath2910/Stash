@@ -22,6 +22,7 @@ public class ProductionReadinessValidator {
   private final String frontendBaseUrl;
   private final String backendPublicBaseUrl;
   private final String allowedOrigins;
+  private final boolean subscriptionsEnforced;
   private final StripeProperties stripeProperties;
 
   public ProductionReadinessValidator(
@@ -30,6 +31,7 @@ public class ProductionReadinessValidator {
       @Value("${app.frontend.base-url}") String frontendBaseUrl,
       @Value("${app.backend.public-base-url}") String backendPublicBaseUrl,
       @Value("${app.cors.allowed-origins:}") String allowedOrigins,
+      @Value("${app.subscriptions.enforced:true}") boolean subscriptionsEnforced,
       StripeProperties stripeProperties
   ) {
     this.environment = environment;
@@ -37,6 +39,7 @@ public class ProductionReadinessValidator {
     this.frontendBaseUrl = frontendBaseUrl;
     this.backendPublicBaseUrl = backendPublicBaseUrl;
     this.allowedOrigins = allowedOrigins;
+    this.subscriptionsEnforced = subscriptionsEnforced;
     this.stripeProperties = stripeProperties;
   }
 
@@ -54,6 +57,9 @@ public class ProductionReadinessValidator {
     validatePublicHttpsUrl(frontendBaseUrl, "APP_FRONTEND_BASE_URL");
     validatePublicHttpsUrl(backendPublicBaseUrl, "APP_BACKEND_PUBLIC_BASE_URL");
     validateCorsOrigins(allowedOrigins);
+    if (!subscriptionsEnforced) {
+      throw new IllegalStateException("APP_SUBSCRIPTIONS_ENFORCED must remain true in prod");
+    }
     validateMailConfiguration(environment);
     validateStripeProductionConfiguration(stripeProperties);
   }

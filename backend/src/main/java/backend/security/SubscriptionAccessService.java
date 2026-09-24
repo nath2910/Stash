@@ -4,6 +4,8 @@ import backend.entity.User;
 import backend.service.DiscordAccessService;
 import java.time.OffsetDateTime;
 import org.springframework.http.HttpStatus;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -11,13 +13,24 @@ import org.springframework.web.server.ResponseStatusException;
 public class SubscriptionAccessService {
 
   private final DiscordAccessService discordAccessService;
+  private final boolean subscriptionsEnforced;
 
   public SubscriptionAccessService(DiscordAccessService discordAccessService) {
+    this(discordAccessService, true);
+  }
+
+  @Autowired
+  public SubscriptionAccessService(
+      DiscordAccessService discordAccessService,
+      @Value("${app.subscriptions.enforced:true}") boolean subscriptionsEnforced
+  ) {
     this.discordAccessService = discordAccessService;
+    this.subscriptionsEnforced = subscriptionsEnforced;
   }
 
   public boolean hasActiveSubscription(User user) {
     if (user == null) return false;
+    if (!subscriptionsEnforced) return true;
     if (hasUsableStripeAccess(user)) {
       return true;
     }

@@ -62,6 +62,15 @@ class SubscriptionAccessServiceTest {
     Assertions.assertEquals(HttpStatus.UNAUTHORIZED, ex.getStatusCode());
   }
 
+  @Test
+  void allowsAuthenticatedUserWhenTheStagingBypassIsEnabled() {
+    SubscriptionAccessService bypassedService = new SubscriptionAccessService(discordAccessService, false);
+    User user = userWithStatus("inactive");
+
+    Assertions.assertDoesNotThrow(() -> bypassedService.requireActiveSubscription(user));
+    Assertions.assertTrue(bypassedService.hasActiveSubscription(user));
+  }
+
   private User userWithStatus(String status) {
     User user = new User();
     user.setSubscriptionCurrentPeriodEnd(java.time.OffsetDateTime.now().plusDays(1));
